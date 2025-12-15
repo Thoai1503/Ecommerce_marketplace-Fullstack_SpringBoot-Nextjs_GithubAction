@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Debug secrets
+        run: |
+          echo "USER=${{ secrets.DOCKERHUB_USERNAME }}"
+          echo "TOKEN=${{ secrets.DOCKERHUB_TOKEN }}"
       # 1. Checkout code
       - name: Checkout source
         uses: actions/checkout@v4
