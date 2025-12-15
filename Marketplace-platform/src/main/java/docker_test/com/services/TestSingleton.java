@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class TestSingleton {
-    private int counter = 0;
+    private int counter = 5;
 
 	public void incrementCounter() {
 		counter++;
