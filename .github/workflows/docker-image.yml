@@ -1,0 +1,62 @@
+name: CI/CD Ecommerce (Spring Boot + Next.js)
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # 2. Login Docker Hub
+      - name: Login Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 3. Setup Docker Buildx
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 4. Build & Push BACKEND
+      - name: Build & Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./Marketplace-platform
+          push: true
+          tags: |
+            thoaimanhlong/ecommerce-backend:latest
+            thoaimanhlong/ecommerce-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 5. Build & Push FRONTEND
+      - name: Build & Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./marketfrontend
+          push: true
+          tags: |
+            thoaimanhlong/ecommerce-frontend:latest
+            thoaimanhlong/ecommerce-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 6. Deploy to VPS
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd ${{ secrets.VPS_APP_DIR }}
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
