@@ -22,13 +22,6 @@ public class TestController {
 	  System.out.println("Counter value: " + testSingleton.getCounter());
 	  return "Counter value: " + testSingleton.getCounter();
   }
-	@Autowired
-	private final docker_test.com.service.TestSingleton testSingleton;
-
-	public TestController(docker_test.com.service.TestSingleton testSingleton) {
-		this.testSingleton = testSingleton;
-
-	}
 
 	
 }
