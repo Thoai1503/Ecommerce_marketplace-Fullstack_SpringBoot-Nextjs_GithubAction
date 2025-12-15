@@ -1,4 +1,4 @@
-package docker_test.com.controller;
+package docker_test.com.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class TestController {
 
 @Autowired
-  private final docker_test.com.service.TestSingleton testSingleton;
+  private final docker_test.com.services.TestSingleton testSingleton;
  
- public TestController(docker_test.com.service.TestSingleton testSingleton) {
+ public TestController(docker_test.com.services.TestSingleton testSingleton) {
 	 this.testSingleton = testSingleton;
 	 
  }
