@@ -5,7 +5,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-
 @RestController
 @RequestMapping("/test")
 public class TestController {
@@ -23,4 +22,18 @@ public class TestController {
 	  System.out.println("Counter value: " + testSingleton.getCounter());
 	  return "Counter value: " + testSingleton.getCounter();
   }
+	@Autowired
+	private final docker_test.com.service.TestSingleton testSingleton;
+
+	public TestController(docker_test.com.service.TestSingleton testSingleton) {
+		this.testSingleton = testSingleton;
+
+	}
+
+	@GetMapping("/singleton")
+	public String testSingleton() {
+		testSingleton.incrementCounter();
+		System.out.println("Counter value: " + testSingleton.getCounter());
+		return "Counter value: " + testSingleton.getCounter();
+	}
 }
