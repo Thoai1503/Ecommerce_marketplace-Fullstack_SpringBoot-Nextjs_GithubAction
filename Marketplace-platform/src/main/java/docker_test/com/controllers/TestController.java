@@ -30,10 +30,5 @@ public class TestController {
 
 	}
 
-	@GetMapping("/singleton")
-	public String testSingleton() {
-		testSingleton.incrementCounter();
-		System.out.println("Counter value: " + testSingleton.getCounter());
-		return "Counter value: " + testSingleton.getCounter();
-	}
+	
 }
