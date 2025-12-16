@@ -1,0 +1,27 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ develop, feature/* ]
+    paths:
+      - "marketfrontend/**"
+  pull_request:
+    paths:
+      - "marketfrontend/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Build Next.js
+        working-directory: marketfrontend
+        run: |
+          npm install
+          npm run build
