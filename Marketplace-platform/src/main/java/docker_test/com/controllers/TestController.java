@@ -1,5 +1,7 @@
 package docker_test.com.controllers;
 
+import java.sql.SQLException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +23,13 @@ public class TestController {
 	  testSingleton.incrementCounter();
 	  System.out.println("Counter value: " + testSingleton.getCounter());
 	  return "Counter value: " + testSingleton.getCounter();
+  }
+    @GetMapping("/dbconnect")
+  public String testSingletons() throws SQLException {
+//           var re = serverDataSource.getConnection();
+//           boolean valid = re.isValid(2); // timeout 2s
+  //   	  System.out.println("Connect: " + re);
+	  return "Connect: ";
   }
 
 	
