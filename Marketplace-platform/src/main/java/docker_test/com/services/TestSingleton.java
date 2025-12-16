@@ -1,4 +1,4 @@
-package docker_test.com.service;
+package docker_test.com.services;
 
 import org.springframework.stereotype.Service;
 
