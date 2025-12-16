@@ -26,10 +26,10 @@ public class TestController {
   }
     @GetMapping("/dbconnect")
   public String testSingletons() throws SQLException {
-           var re = serverDataSource.getConnection();
-           boolean valid = re.isValid(2); // timeout 2s
-     	  System.out.println("Connect: " + re);
-	  return "Connect: " + valid;
+//           var re = serverDataSource.getConnection();
+//           boolean valid = re.isValid(2); // timeout 2s
+  //   	  System.out.println("Connect: " + re);
+	  return "Connect: ";
   }
 
 	
