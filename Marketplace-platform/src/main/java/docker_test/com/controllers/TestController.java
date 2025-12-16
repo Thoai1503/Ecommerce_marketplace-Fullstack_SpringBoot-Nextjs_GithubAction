@@ -22,6 +22,13 @@ public class TestController {
 	  System.out.println("Counter value: " + testSingleton.getCounter());
 	  return "Counter value: " + testSingleton.getCounter();
   }
+    @GetMapping("/dbconnect")
+  public String testSingletons() throws SQLException {
+           var re = serverDataSource.getConnection();
+           boolean valid = re.isValid(2); // timeout 2s
+     	  System.out.println("Connect: " + re);
+	  return "Connect: " + valid;
+  }
 
 	
 }
