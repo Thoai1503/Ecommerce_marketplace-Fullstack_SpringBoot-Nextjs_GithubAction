@@ -33,7 +33,7 @@ export default async function UserLayout({
         id="header"
         className="header d-flex align-items-center sticky-top"
       >
-        <h1>Navbar Thoai</h1>
+        <h1>Navbar Thoai Pro Dev</h1>
       </header>
       <main className="main">{children}</main>
       <Script src="/assets/js/main.js" strategy="afterInteractive" />
