@@ -156,24 +156,26 @@ export default function RootLayout({
             transform: translateY(-4px);
         }
         
-        .category-item {
-            border: 1px solid #e5e7eb;
-            padding: 1rem;
+         .category-item {
             text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f5f5f5;
+            cursor: pointer;
             transition: all 0.3s;
-            background: white;
         }
         
         .category-item:hover {
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            z-index: 10;
+            background: var(--primary-color);
+            color: white;
         }
         
         .category-item img {
-            width: 64px;
-            height: 64px;
+            width: 60px;
+            height: 60px;
             object-fit: cover;
-            transition: transform 0.3s;
+            border-radius: 8px;
+            margin-bottom: 10px;
         }
         
         .category-item:hover img {
