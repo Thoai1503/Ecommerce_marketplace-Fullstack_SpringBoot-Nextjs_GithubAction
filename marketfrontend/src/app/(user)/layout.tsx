@@ -27,17 +27,13 @@ export default async function UserLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const role = cookieStore.get("role")?.value;
-  console.log("Role: " + role);
-  if (role == "admin") return redirect("/login");
   return (
     <>
       <header
         id="header"
         className="header d-flex align-items-center sticky-top"
       >
-        <h1>Navbar Thoai</h1>
+        <h1>Navbar Thoai Pro Dev</h1>
       </header>
       <main className="main">{children}</main>
       <Script src="/assets/js/main.js" strategy="afterInteractive" />
