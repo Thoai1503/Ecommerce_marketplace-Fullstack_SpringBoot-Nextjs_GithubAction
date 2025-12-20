@@ -27,10 +27,6 @@ export default async function UserLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const role = cookieStore.get("role")?.value;
-  console.log("Role: " + role);
-  if (role == "admin") return redirect("/login");
   return (
     <>
       <header
