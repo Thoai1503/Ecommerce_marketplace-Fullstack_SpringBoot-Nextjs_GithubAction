@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,11 +24,31 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+    <html lang="en" className="mdl-js">
+      <head>
+        <link rel="stylesheet" href="/assets/css/main.css" />
+        <link
+          href="/assets/vendor/bootstrap/css/bootstrap.min.css"
+          rel="stylesheet"
+        />
+        <link
+          href="/assets/vendor/bootstrap-icons/bootstrap-icons.css"
+          rel="stylesheet"
+        />
+        <link href="/assets/vendor/aos/aos.css" rel="stylesheet" />
+        <link
+          href="/assets/vendor/glightbox/css/glightbox.min.css"
+          rel="stylesheet"
+        />
+        <link
+          href="/assets/vendor/swiper/swiper-bundle.min.css"
+          rel="stylesheet"
+        />
+      </head>
+      <body className={`index-page`}>
+        <main className="main">{children}</main>
+
+        <Script src="/assets/js/main.js" strategy="afterInteractive" />
       </body>
     </html>
   );
