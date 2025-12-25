@@ -1,11 +1,7 @@
 package docker_test.com.utils;
 
 public final class StringValue {
-		public static String MySQL_Sever="mysql-2acda025-vothoai1503-2915.l.aivencloud.com";
-		public static String DATABASE_MySQL="ecommerce";
-		public static String USER_MySQL="avnadmin";
-		public static String PWD_MySQL="Dien Password";
-		public static String PORT_MySQL="18161";
+
 		//User table 
 		public static final String USER_ID_COL = "user_id";
 	    public static final String USER_EMAIL_COL = "email";
