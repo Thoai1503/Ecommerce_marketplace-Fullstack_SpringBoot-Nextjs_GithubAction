@@ -18,7 +18,7 @@ public class TestController {
   private final docker_test.com.services.TestSingleton testSingleton;
 
 private DBConnection dbConnect;
- 
+ //test
  public TestController(docker_test.com.services.TestSingleton testSingleton) {
 	 this.testSingleton = testSingleton;
 	 this.dbConnect =DBConnection.getInstance();
