@@ -1,5 +1,6 @@
 import Sidebar from "@/components/admin/Sidebar";
 import "../admin/Home.modules.css";
+import { RootPrivider } from "@/components/context/RootProvider";
 
 export default async function AdminLayout({
   children,
@@ -8,8 +9,10 @@ export default async function AdminLayout({
 }>) {
   return (
     <>
-      <Sidebar />
-      <div className="main-content">{children}</div>
+      <RootPrivider>
+        <Sidebar />
+        <div className="main-content">{children}</div>
+      </RootPrivider>
     </>
   );
 }
