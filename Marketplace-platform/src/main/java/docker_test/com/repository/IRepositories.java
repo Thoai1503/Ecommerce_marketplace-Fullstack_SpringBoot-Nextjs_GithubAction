@@ -7,6 +7,6 @@ public interface IRepositories<T> {
 	void Update(T item);
 	boolean Delete(T item);
 	T GetById(Object item);
-	HashSet GetAll();
+	HashSet<T> GetAll();
 	
 }
