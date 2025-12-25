@@ -17,11 +17,11 @@ public class TestController {
 @Autowired
   private final docker_test.com.services.TestSingleton testSingleton;
 
-private Connection dbConnect;
+private DBConnection dbConnect;
  
  public TestController(docker_test.com.services.TestSingleton testSingleton) {
 	 this.testSingleton = testSingleton;
-	 this.dbConnect =DBConnection.getConn();
+	 this.dbConnect =DBConnection.getInstance();
 	 
  }
   @GetMapping("/singleton")
@@ -35,7 +35,7 @@ private Connection dbConnect;
 //           var re = serverDataSource.getConnection();
 //           boolean valid = re.isValid(2); // timeout 2s
   //   	  System.out.println("Connect: " + re);
-    	var re = dbConnect.isValid(2);
+    	var re = dbConnect.getConn().isValid(2);
 	  return "Connect: "+ re;
   }
 
