@@ -10,6 +10,15 @@ public final class DBConnection {
 
     private static DBConnection instance;
     private static final Properties props = new Properties();
+    
+    private static String getEnvOrProp(String envKey, String propKey) {
+        String env = System.getenv(envKey);
+        if (env != null && !env.isBlank()) {
+            return env;
+        }
+        return props.getProperty(propKey);
+    }
+
 
     // Load config 1 lần duy nhất
     static {
@@ -39,17 +48,25 @@ public final class DBConnection {
     public static Connection getConn() {
         try {
             MysqlDataSource ds = new MysqlDataSource();
-            ds.setServerName(props.getProperty("mysql.host"));
-            ds.setPortNumber(Integer.parseInt(props.getProperty("mysql.port")));
-            ds.setDatabaseName(props.getProperty("mysql.database"));
-            ds.setUser(props.getProperty("mysql.username"));
-            ds.setPassword(props.getProperty("mysql.password"));
+
+            ds.setServerName(getEnvOrProp("DB_HOST", "mysql.host"));
+
+            String port = getEnvOrProp("DB_PORT", "mysql.port");
+            ds.setPortNumber(Integer.parseInt(port));
+
+            ds.setDatabaseName(getEnvOrProp("DB_NAME", "mysql.database"));
+            ds.setUser(getEnvOrProp("DB_USER", "mysql.username"));
+            ds.setPassword(getEnvOrProp("DB_PASSWORD", "mysql.password"));
+
             ds.setUseSSL(false);
-            System.out.print("Conneting ..");
+
+            System.out.println("✅ Connecting to DB on port " + port);
             return ds.getConnection();
+
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
+
 }
