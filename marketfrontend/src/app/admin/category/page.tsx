@@ -1,15 +1,8 @@
 "use client";
-import React, { useState } from "react";
-
-interface Category {
-  id: number;
-  name: string;
-  slug: string;
-  productCount: number;
-  isVisible: boolean;
-  children?: Category[];
-  isExpanded?: boolean;
-}
+import React, { useEffect, useState } from "react";
+import { convertDbCategoriesToComponentFormat } from "@/helper/utils";
+import type { DbCategory, Category } from "@/helper/utils";
+import { getAllCategory } from "@/service/category";
 
 const page = () => {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>({
@@ -81,6 +74,17 @@ const page = () => {
     },
   ]);
 
+  useEffect(() => {
+    const loadCategories = async () => {
+      const re = await getAllCategory();
+      console.log("res: " + JSON.stringify(re));
+      setCategories((pre) => [
+        ...pre,
+        ...convertDbCategoriesToComponentFormat(re),
+      ]);
+    };
+    loadCategories();
+  }, []);
   const [formData, setFormData] = useState({
     parentId: 1,
     name: "Điện thoại di động",
