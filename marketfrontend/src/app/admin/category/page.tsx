@@ -3,8 +3,11 @@ import React, { useEffect, useState } from "react";
 import { convertDbCategoriesToComponentFormat } from "@/helper/utils";
 import type { DbCategory, Category } from "@/helper/utils";
 import { getAllCategory } from "@/service/category";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { categoryQuery } from "@/query/category";
 
 const page = () => {
+  const { data, isPending } = useQuery(categoryQuery.list);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>({
     id: 24,
     name: "Điện thoại di động",
@@ -14,77 +17,73 @@ const page = () => {
   });
 
   const [categories, setCategories] = useState<Category[]>([
-    {
-      id: 1,
-      name: "Điện tử & Thiết bị số",
-      slug: "dien-tu-thiet-bi-so",
-      productCount: 45,
-      isVisible: true,
-      isExpanded: true,
-      children: [
-        {
-          id: 24,
-          name: "Điện thoại di động",
-          slug: "dien-thoai-di-dong",
-          productCount: 0,
-          isVisible: true,
-          isExpanded: true,
-          children: [
-            {
-              id: 3,
-              name: "Smartphones",
-              slug: "smartphones",
-              productCount: 0,
-              isVisible: true,
-            },
-            {
-              id: 4,
-              name: "Phụ kiện điện thoại",
-              slug: "phu-kien-dien-thoai",
-              productCount: 0,
-              isVisible: true,
-            },
-          ],
-        },
-        {
-          id: 5,
-          name: "Máy tính bảng",
-          slug: "may-tinh-bang",
-          productCount: 0,
-          isVisible: true,
-          isExpanded: false,
-        },
-      ],
-    },
-    {
-      id: 2,
-      name: "Thời trang Nam",
-      slug: "thoi-trang-nam",
-      productCount: 120,
-      isVisible: false,
-      isExpanded: false,
-    },
-    {
-      id: 6,
-      name: "Nhà cửa & Đời sống",
-      slug: "nha-cua-doi-song",
-      productCount: 89,
-      isVisible: true,
-      isExpanded: false,
-    },
+    // {
+    //   id: 1,
+    //   name: "Điện tử & Thiết bị số",
+    //   slug: "dien-tu-thiet-bi-so",
+    //   productCount: 45,
+    //   isVisible: true,
+    //   isExpanded: true,
+    //   children: [
+    //     {
+    //       id: 24,
+    //       name: "Điện thoại di động",
+    //       slug: "dien-thoai-di-dong",
+    //       productCount: 0,
+    //       isVisible: true,
+    //       isExpanded: true,
+    //       children: [
+    //         {
+    //           id: 3,
+    //           name: "Smartphones",
+    //           slug: "smartphones",
+    //           productCount: 0,
+    //           isVisible: true,
+    //         },
+    //         {
+    //           id: 4,
+    //           name: "Phụ kiện điện thoại",
+    //           slug: "phu-kien-dien-thoai",
+    //           productCount: 0,
+    //           isVisible: true,
+    //         },
+    //       ],
+    //     },
+    //     {
+    //       id: 5,
+    //       name: "Máy tính bảng",
+    //       slug: "may-tinh-bang",
+    //       productCount: 0,
+    //       isVisible: true,
+    //       isExpanded: false,
+    //     },
+    //   ],
+    // },
+    // {
+    //   id: 2,
+    //   name: "Thời trang Nam",
+    //   slug: "thoi-trang-nam",
+    //   productCount: 120,
+    //   isVisible: false,
+    //   isExpanded: false,
+    // },
+    // {
+    //   id: 6,
+    //   name: "Nhà cửa & Đời sống",
+    //   slug: "nha-cua-doi-song",
+    //   productCount: 89,
+    //   isVisible: true,
+    //   isExpanded: false,
+    // },
   ]);
 
   useEffect(() => {
-    const loadCategories = async () => {
-      const re = await getAllCategory();
-      console.log("res: " + JSON.stringify(re));
-      setCategories((pre) => [
-        ...pre,
-        ...convertDbCategoriesToComponentFormat(re),
-      ]);
-    };
-    loadCategories();
-  }, []);
+    setCategories((pre) => [
+      ...pre,
+      ...convertDbCategoriesToComponentFormat(data || []),
+    ]);
+  }, [data]);
+
   const [formData, setFormData] = useState({
     parentId: 1,
     name: "Điện thoại di động",
@@ -203,6 +202,19 @@ const page = () => {
       </div>
     );
   };
+
+  if (isPending) {
+    return (
+      <div
+        className="d-flex justify-content-center align-items-center"
+        style={{ minHeight: "100vh" }}
+      >
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
