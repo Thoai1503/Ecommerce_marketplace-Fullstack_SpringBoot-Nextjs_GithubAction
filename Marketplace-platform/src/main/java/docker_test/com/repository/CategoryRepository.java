@@ -63,6 +63,7 @@ public class CategoryRepository implements IRepositories<Category>{
 			  while (rs.next()) {
 		             Category ca = new Category();
 		             ca.setId(rs.getInt("id"));
+		             ca.setParent_id(rs.getInt("parent_id"));
 		             ca.setCategory_name(rs.getString("category_name"));
 		             ca.setCategory_slug(rs.getString("category_slug"));
 		             ca.setLevel(rs.getInt("level"));
