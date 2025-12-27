@@ -3,6 +3,8 @@ package docker_test.com.repository;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashSet;
 
 import docker_test.com.configs.DBConnection;
@@ -27,15 +29,46 @@ public class CategoryRepository implements IRepositories<Category>{
 	
 	
 	@Override
-	public void Create(Category item) {
-		// TODO Auto-generated method stub
+	public Category Create(Category item) throws SQLException {
+	String sql ="insert into categories (parent_id, category_name,category_slug,level) values (?,?,?,?)";
+	try(Connection con = dbConnection.getConn();
+			PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)	
+			){
+		ps.setInt(1, item.getParent_id());
+		ps.setString(2, item.getCategory_name());
+		ps.setString(3, item.getCategory_slug());
+		ps.setInt(4,item.getLevel());
+		int rows = ps.executeUpdate();
+		if(rows>0) {
+		
+			 if (rows > 0) {
+		            try (ResultSet rs = ps.getGeneratedKeys()) {
+		                if (rs.next()) {
+		                    int id = rs.getInt(1);
+		                    item.setId(id);
+		                    System.out.println("ID của bản ghi mới: " + id);
+		                }
+		            }
+		            return item;
+		        }
+		}
+		
 		
 	}
+	catch(Exception ex) {
+		throw ex;
+	}
+	
+		 return null;
+	}
+
 
 	@Override 
-	public void Update(Category item) {
+	public Category Update(Category item) {
 		// TODO Auto-generated method stub
 		
+		
+		 return null;
 	}
 
 	@Override
