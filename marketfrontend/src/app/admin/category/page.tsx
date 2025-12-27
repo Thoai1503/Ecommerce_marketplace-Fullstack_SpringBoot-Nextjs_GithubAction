@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { convertDbCategoriesToComponentFormat } from "@/helper/utils";
 import type { DbCategory, Category } from "@/helper/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -23,106 +23,58 @@ import {
   Image,
 } from "lucide-react";
 import { Skeleton } from "@mui/material";
-
-type FormMode = "create" | "edit";
-
+import { useCategoryPage } from "@/hooks/admin/category_page/useCategoryPage";
+import {
+  CButton,
+  CToast,
+  CToastBody,
+  CToaster,
+  CToastHeader,
+} from "@coreui/react";
 const Page: React.FC = () => {
-  const { data, isPending } = useQuery(categoryQuery.list);
-
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null
+  const exampleToast = (message = "default") => (
+    <CToast>
+      <CToastHeader closeButton>
+        <svg
+          className="rounded me-2"
+          width="20"
+          height="20"
+          xmlns="http://www.w3.org/2000/svg"
+          preserveAspectRatio="xMidYMid slice"
+          focusable="false"
+          role="img"
+        >
+          <rect width="100%" height="100%" fill="#007aff"></rect>
+        </svg>
+        <div className="fw-bold me-auto">CoreUI for React.js</div>
+        <small>7 min ago</small>
+      </CToastHeader>
+      <CToastBody>{message}</CToastBody>
+    </CToast>
   );
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [formMode, setFormMode] = useState<FormMode>("create");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const [formData, setFormData] = useState({
-    id: null as number | null,
-    parent_id: 0,
-    name: "",
-    slug: "",
-    isVisible: true,
+  const [toast, addToast] = useState<any>();
+  const toaster = useRef(null);
+  const {
+    searchQuery,
+    setSearchQuery,
+    categories,
+    isPending,
+    toggleCategory,
+    selectedCategory,
+    handleSelectCategory,
+    setSelectedCategory,
+    resetToCreateMode,
+    handleDelete,
+    handleNameChange,
+    handleSubmit,
+    formData,
+    setFormData,
+    formMode,
+    setFormMode,
+    data,
+  } = useCategoryPage((message: string) => {
+    addToast(exampleToast(message));
   });
-
-  useEffect(() => {
-    if (data) {
-      setCategories([...convertDbCategoriesToComponentFormat(data)]);
-    }
-  }, [data]);
-
-  const resetToCreateMode = () => {
-    setFormMode("create");
-    setSelectedCategory(null);
-    setFormData({
-      id: null,
-      parent_id: 0,
-      name: "",
-      slug: "",
-      isVisible: true,
-    });
-  };
-
-  const handleSelectCategory = (category: Category) => {
-    setFormMode("edit");
-    setSelectedCategory(category);
-    setFormData({
-      id: category.id,
-      parent_id: category.parent_id || 0,
-      name: category.name,
-      slug: category.slug,
-      isVisible: category.isVisible,
-    });
-  };
-
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/đ/g, "d")
-      .replace(/[^a-z0-9\s-]/g, "")
-      .trim()
-      .replace(/\s+/g, "-");
-  };
-
-  const handleNameChange = (name: string) => {
-    setFormData({
-      ...formData,
-      name,
-      slug: generateSlug(name),
-    });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (formMode === "create") {
-      console.log("Creating new category:", formData);
-    } else {
-      console.log("Updating category:", formData);
-    }
-  };
-
-  const handleDelete = (categoryId: number) => {
-    if (confirm("Bạn có chắc chắn muốn xóa danh mục này?")) {
-      console.log("Deleting category:", categoryId);
-    }
-  };
-
-  const toggleCategory = (id: number) => {
-    const updateCategories = (cats: Category[]): Category[] => {
-      return cats.map((cat) => {
-        if (cat.id === id) {
-          return { ...cat, isExpanded: !cat.isExpanded };
-        }
-        if (cat.children && cat.children.length > 0) {
-          return { ...cat, children: updateCategories(cat.children) };
-        }
-        return cat;
-      });
-    };
-    setCategories(updateCategories(categories));
-  };
 
   const renderCategory = (category: Category, level: number = 0) => {
     const hasChildren = category.children && category.children.length > 0;
@@ -245,6 +197,7 @@ const Page: React.FC = () => {
                         parent_id: category.id,
                         name: "",
                         slug: "",
+                        level: category.level,
                         isVisible: true,
                       });
                       setSelectedCategory(null);
@@ -485,18 +438,30 @@ const Page: React.FC = () => {
                       </label>
                       <select
                         className="form-select"
-                        value={formData.parent_id}
-                        onChange={(e) =>
+                        value={formData.parent_id ?? 0}
+                        onChange={(e) => {
+                          const selectedOption = e.target.selectedOptions[0];
+                          const parentId = Number(e.target.value);
+                          const parentLevel = selectedOption
+                            ? Number(selectedOption.dataset.level || 0)
+                            : 0;
+
                           setFormData({
                             ...formData,
-                            parent_id: Number(e.target.value),
-                          })
-                        }
+                            parent_id: parentId,
+                            level: parentId === 0 ? 0 : parentLevel + 1,
+                          });
+                        }}
                       >
                         <option value={0}>-- Danh mục gốc --</option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
+                        {data?.map((cat) => (
+                          <option
+                            key={cat.id}
+                            value={cat.id}
+                            data-level={cat.level}
+                          >
+                            {"─".repeat(cat.level * 2)} {cat.category_name} (cấp{" "}
+                            {cat.level})
                           </option>
                         ))}
                       </select>
@@ -653,6 +618,12 @@ const Page: React.FC = () => {
           </div>
         </main>
       </div>
+      <CToaster
+        className="p-3"
+        placement="top-end"
+        push={toast}
+        ref={toaster}
+      />
     </>
   );
 };

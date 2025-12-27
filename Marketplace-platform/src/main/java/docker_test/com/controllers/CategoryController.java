@@ -1,5 +1,7 @@
 package docker_test.com.controllers;
 
+import java.sql.SQLException;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,7 +28,7 @@ public class CategoryController {
 	   return ResponseEntity.ok(list);
    }
    @PostMapping("")
-   public  ResponseEntity create(@RequestBody Category item) throws Exception {
+   public  ResponseEntity create(@RequestBody Category item) throws SQLException {
 	   
 	   var list = categoryRepository.Create(item);
 	   
