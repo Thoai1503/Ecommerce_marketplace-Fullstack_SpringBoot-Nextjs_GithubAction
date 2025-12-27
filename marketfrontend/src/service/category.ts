@@ -9,3 +9,12 @@ export const getAllCategory = async (): Promise<DbCategory[]> => {
       throw error;
     });
 };
+
+export const createCategory = async (item: DbCategory): Promise<DbCategory> => {
+  return await http
+    .post("/categories", item)
+    .then((res) => res.data)
+    .catch((error) => {
+      throw error;
+    });
+};
