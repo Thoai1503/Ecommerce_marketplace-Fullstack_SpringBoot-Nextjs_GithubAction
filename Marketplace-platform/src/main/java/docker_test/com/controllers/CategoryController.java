@@ -2,9 +2,12 @@ package docker_test.com.controllers;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import docker_test.com.models.Category;
 import docker_test.com.repository.CategoryRepository;
 
 @RestController
@@ -22,4 +25,12 @@ public class CategoryController {
 	   
 	   return ResponseEntity.ok(list);
    }
+   @PostMapping("")
+   public  ResponseEntity create(@RequestBody Category item) throws Exception {
+	   
+	   var list = categoryRepository.Create(item);
+	   
+	   return ResponseEntity.ok(list);
+   }
+   
 }
