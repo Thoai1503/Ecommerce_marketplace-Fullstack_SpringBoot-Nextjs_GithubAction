@@ -1,7 +1,7 @@
 package docker_test.com.models;
 
 public class Category {
-    public Category(int id, int parent_id, String category_name, String category_slug, int level, int is_active) {
+    public Category(Integer id, int parent_id, String category_name, String category_slug, int level, int is_active) {
 		super();
 		this.id = id;
 		this.parent_id = parent_id;
@@ -49,7 +49,7 @@ public class Category {
 	public void setIs_active(int is_active) {
 		this.is_active = is_active;
 	}
-	private int id ;
+	private Integer id ;
     private int parent_id ;
     private String category_name;
     private String category_slug;
