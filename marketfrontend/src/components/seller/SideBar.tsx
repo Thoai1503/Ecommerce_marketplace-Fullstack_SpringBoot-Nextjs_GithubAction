@@ -154,7 +154,12 @@ export default function Sidebar() {
   return (
     <div
       className="bg-white border-end"
-      style={{ width: "250px", overflowY: "auto", height: "100vh" }}
+      style={{
+        width: "250px",
+        overflowY: "auto",
+        height: "100vh",
+        display: "none",
+      }}
     >
       {/* Logo/Brand */}
       <div className="p-3 border-bottom">

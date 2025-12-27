@@ -43,7 +43,7 @@ private DBConnection dbConnect;
     	
     	while(rs.next()) {
 			
-    		System.out.println(rs.getInt("id")+" "+rs.getString("category_name"));
+    		System.out.println(rs.getInt("id") +" "+rs.getString("category_name"));
 			
 		}
     	
