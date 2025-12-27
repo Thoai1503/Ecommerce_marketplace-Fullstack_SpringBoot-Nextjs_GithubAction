@@ -13,6 +13,7 @@ export interface Category {
   id: number;
   name: string;
   slug: string;
+  level: number;
   parent_id?: number;
   productCount: number;
   isVisible: boolean;
@@ -35,6 +36,7 @@ export function convertDbCategoriesToComponentFormat(
       slug: dbCat.category_slug,
       productCount: 0, // You'll need to add this from your database
       isVisible: dbCat.is_active === 1,
+      level: dbCat.level,
       isExpanded: false,
       children: [],
     });
