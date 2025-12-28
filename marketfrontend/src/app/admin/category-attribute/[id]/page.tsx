@@ -1,5 +1,4 @@
 "use client";
-
 import { useSearchParams } from "next/navigation";
 import React, { useState } from "react";
 import {
@@ -15,7 +14,6 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { unitsQuery } from "@/query/unit";
-import { categoryAttributeQuery } from "@/query/categoryAttribute";
 
 // Types
 interface AttributeValue {
@@ -52,14 +50,7 @@ interface Category {
 }
 
 const CategoryAttributeManager = () => {
-  const searchParams = useSearchParams();
-  const category = searchParams.get("category"); // "1"
   const { data: unitList } = useQuery(unitsQuery.list);
-
-  const { data } = useQuery(
-    categoryAttributeQuery.by_category(Number(category))
-  );
-
   // Sample data
   const [selectedCategory] = useState<Category>({
     id: 24,
@@ -501,8 +492,7 @@ const CategoryAttributeManager = () => {
               <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4">
                 <div>
                   <h1 className="h3 fw-semibold mb-1">
-                    Thuộc tính: {selectedCategory.name} - Category ID:{" "}
-                    {category}
+                    Thuộc tính: {selectedCategory.name}
                   </h1>
                   <p className="text-secondary mb-0 small">
                     Quản lý các thuộc tính cho sản phẩm thuộc danh mục này
@@ -721,134 +711,6 @@ const CategoryAttributeManager = () => {
                               </div>
                             </div>
                           ))}
-                        {/* {data?.map((item) => (
-                          <div
-                            key={item.id}
-                            className={`attribute-item rounded p-3 ${
-                              selectedAttribute?.id === item.id
-                                ? "selected"
-                                : ""
-                            }`}
-                            style={{ cursor: "pointer" }}
-                            onClick={() => handleEditAttribute(item)}
-                          >
-                            <div className="d-flex align-items-start gap-3">
-                              <div
-                                className="d-flex flex-column gap-1 text-secondary"
-                                style={{ cursor: "move" }}
-                              >
-                                <div
-                                  style={{
-                                    width: 4,
-                                    height: 4,
-                                    backgroundColor: "#adb5bd",
-                                    borderRadius: "50%",
-                                  }}
-                                ></div>
-                                <div
-                                  style={{
-                                    width: 4,
-                                    height: 4,
-                                    backgroundColor: "#adb5bd",
-                                    borderRadius: "50%",
-                                  }}
-                                ></div>
-                                <div
-                                  style={{
-                                    width: 4,
-                                    height: 4,
-                                    backgroundColor: "#adb5bd",
-                                    borderRadius: "50%",
-                                  }}
-                                ></div>
-                              </div>
-
-                              <div className="flex-grow-1 min-w-0">
-                                <div className="d-flex align-items-center gap-2 mb-2">
-                                  <h3 className="h6 mb-0 fw-semibold">
-                                    {attr.label}
-                                  </h3>
-                                  {attr.isRequired && (
-                                    <span className="badge bg-danger-subtle text-danger border border-danger">
-                                      Bắt buộc
-                                    </span>
-                                  )}
-                                  {attr.isFilterable && (
-                                    <span className="badge bg-info-subtle text-info border border-info">
-                                      Bộ lọc
-                                    </span>
-                                  )}
-                                  {attr.unit && (
-                                    <span className="badge bg-light text-dark border">
-                                      Đơn vị: {attr.unit}
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div className="small text-secondary mb-2">
-                                  <span className="me-3">
-                                    <strong>Tên:</strong> {attr.name}
-                                  </span>
-                                  <span>
-                                    <strong>Loại:</strong>{" "}
-                                    {
-                                      attributeTypes.find(
-                                        (t) => t.value === attr.type
-                                      )?.label
-                                    }
-                                  </span>
-                                </div>
-
-                                {attr.values.length > 0 && (
-                                  <div className="d-flex flex-wrap gap-2 align-items-center">
-                                    <span className="small text-secondary">
-                                      Giá trị:
-                                    </span>
-                                    {attr.values.map((val) => (
-                                      <span key={val.id} className="value-tag">
-                                        {attr.type === "color" && val.color && (
-                                          <span
-                                            className="color-indicator"
-                                            style={{
-                                              backgroundColor: val.color,
-                                            }}
-                                          />
-                                        )}
-                                        {formatValueWithUnit(
-                                          val.value,
-                                          attr.unit
-                                        )}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="attribute-actions d-flex gap-1">
-                                <button
-                                  className="btn btn-sm btn-outline-primary btn-icon"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditAttribute(attr);
-                                  }}
-                                  title="Chỉnh sửa"
-                                >
-                                  <Edit2 size={14} />
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-outline-danger btn-icon"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteAttribute(item.id);
-                                  }}
-                                  title="Xóa"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))} */}
                       </div>
                     )}
                   </div>
