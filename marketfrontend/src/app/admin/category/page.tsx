@@ -21,6 +21,8 @@ import {
   Eye,
   EyeOff,
   Image,
+  MoreVertical, // Thêm icon ba chấm dọc
+  Info,
 } from "lucide-react";
 import { Skeleton } from "@mui/material";
 import { useCategoryPage } from "@/hooks/admin/category_page/useCategoryPage";
@@ -31,6 +33,8 @@ import {
   CToaster,
   CToastHeader,
 } from "@coreui/react";
+import Link from "next/link";
+
 const Page: React.FC = () => {
   const exampleToast = (message = "default") => (
     <CToast>
@@ -52,8 +56,10 @@ const Page: React.FC = () => {
       <CToastBody>{message}</CToastBody>
     </CToast>
   );
+
   const [toast, addToast] = useState<any>();
   const toaster = useRef(null);
+
   const {
     searchQuery,
     setSearchQuery,
@@ -72,9 +78,17 @@ const Page: React.FC = () => {
     formMode,
     setFormMode,
     data,
+    errors,
   } = useCategoryPage((message: string) => {
     addToast(exampleToast(message));
   });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Load Bootstrap JS chỉ một lần
+      const bootstrap = require("bootstrap/dist/js/bootstrap.bundle.min.js");
+      // Không cần làm gì thêm, chỉ cần import là đủ để kích hoạt dropdown
+    }
+  }, []);
 
   const renderCategory = (category: Category, level: number = 0) => {
     const hasChildren = category.children && category.children.length > 0;
@@ -159,7 +173,7 @@ const Page: React.FC = () => {
           </div>
 
           {/* Status Badge */}
-          <div className="d-flex align-items-center gap-2 category-actions">
+          <div className="d-flex align-items-center gap-3">
             {category.isVisible ? (
               <span className="badge bg-success-subtle text-success border border-success">
                 <Eye size={12} className="me-1" />
@@ -172,57 +186,90 @@ const Page: React.FC = () => {
               </span>
             )}
 
-            {/* Action Buttons */}
-            <div className="d-flex align-items-center gap-1">
+            {/* Dropdown Menu với icon ba chấm dọc */}
+            <div
+              className="dropdown category-actions"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
-                className="btn btn-sm btn-light border"
-                title="Chỉnh sửa"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelectCategory(category);
-                }}
+                className="btn btn-sm btn-link text-muted p-1"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
               >
-                <Edit2 size={14} />
+                <MoreVertical size={18} />
               </button>
-              {level === 0 && (
-                <>
+              <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                <li>
                   <button
-                    className="btn btn-sm btn-light border"
-                    title="Thêm danh mục con"
+                    className="dropdown-item d-flex align-items-center gap-2 py-2"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setFormMode("create");
-                      setFormData({
-                        id: null,
-                        parent_id: category.id,
-                        name: "",
-                        slug: "",
-                        level: category.level,
-                        isVisible: true,
-                      });
-                      setSelectedCategory(null);
+                      handleSelectCategory(category);
                     }}
                   >
-                    <FolderPlus size={14} />
+                    <Edit2 size={16} />
+                    Chỉnh sửa
                   </button>
-                  <button
-                    className="btn btn-sm btn-light border text-danger"
-                    title="Xóa"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(category.id);
-                    }}
+                </li>
+                <li>
+                  <Link
+                    href={`/admin/category-attribute?category=${category.id}`}
+                    className="dropdown-item d-flex align-items-center gap-2 py-2"
                   >
-                    <Trash2 size={14} />
-                  </button>
-                </>
-              )}
+                    <Info size={16} />
+                    Chi tiết
+                  </Link>
+                </li>
+
+                {level === 0 && (
+                  <>
+                    <li>
+                      <button
+                        className="dropdown-item d-flex align-items-center gap-2 py-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFormMode("create");
+                          setFormData({
+                            id: null,
+                            parent_id: category.id,
+                            name: "",
+                            slug: "",
+                            level: category.level,
+                            isVisible: true,
+                          });
+                          setSelectedCategory(null);
+                        }}
+                      >
+                        <FolderPlus size={16} />
+                        Thêm danh mục con
+                      </button>
+                    </li>
+                    <li>
+                      <hr className="dropdown-divider my-1" />
+                    </li>
+                    <li>
+                      <button
+                        className="dropdown-item d-flex align-items-center gap-2 py-2 text-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(category.id);
+                        }}
+                      >
+                        <Trash2 size={16} />
+                        Xóa danh mục
+                      </button>
+                    </li>
+                  </>
+                )}
+              </ul>
             </div>
           </div>
         </div>
 
+        {/* Render children */}
         {hasChildren && category.isExpanded && (
-          <div className="ms-4 border-start  ps-3 mb-2">
+          <div className="ms-4 border-start ps-3 mb-2">
             {category.children!.map((child) =>
               renderCategory(child, level + 1)
             )}
@@ -250,9 +297,9 @@ const Page: React.FC = () => {
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
         }
 
-        .category-item .category-actions {
+        .category-actions {
           opacity: 0;
-          transition: opacity 0.2s;
+          transition: opacity 0.2s ease;
         }
 
         .category-item:hover .category-actions {
@@ -278,6 +325,22 @@ const Page: React.FC = () => {
         .btn {
           border-radius: 8px;
           font-weight: 500;
+        }
+
+        .dropdown-menu {
+          min-width: 200px;
+          border-radius: 8px;
+          padding: 0.5rem 0;
+        }
+
+        .dropdown-item {
+          border-radius: 6px;
+          margin: 0 0.5rem;
+          font-size: 0.875rem;
+        }
+
+        .dropdown-item:hover {
+          background-color: #f8f9fa;
         }
       `}</style>
 
@@ -355,6 +418,8 @@ const Page: React.FC = () => {
                   >
                     {isPending ? (
                       <>
+                        <Skeleton height={90} />
+                        <Skeleton height={90} />
                         <Skeleton height={90} />
                         <Skeleton height={90} />
                         <Skeleton height={90} />
@@ -472,22 +537,27 @@ const Page: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Name */}
+                    {/* Name - Với validation */}
                     <div className="mb-4">
                       <label className="form-label fw-semibold">
                         Tên danh mục <span className="text-danger">*</span>
                       </label>
                       <input
                         type="text"
-                        className="form-control"
+                        className={`form-control ${
+                          errors.name ? "is-invalid" : ""
+                        }`}
                         value={formData.name}
                         onChange={(e) => handleNameChange(e.target.value)}
                         placeholder="VD: Điện thoại di động"
                         required
                       />
+                      {errors.name && (
+                        <div className="invalid-feedback">{errors.name}</div>
+                      )}
                     </div>
 
-                    {/* Slug */}
+                    {/* Slug - Với validation */}
                     <div className="mb-4">
                       <label className="form-label fw-semibold">
                         Đường dẫn (URL Slug)
@@ -498,7 +568,9 @@ const Page: React.FC = () => {
                         </span>
                         <input
                           type="text"
-                          className="form-control"
+                          className={`form-control ${
+                            errors.slug ? "is-invalid" : ""
+                          }`}
                           value={formData.slug}
                           onChange={(e) =>
                             setFormData({ ...formData, slug: e.target.value })
@@ -506,12 +578,17 @@ const Page: React.FC = () => {
                           placeholder="dien-thoai-di-dong"
                         />
                       </div>
+                      {errors.slug && (
+                        <div className="invalid-feedback d-block">
+                          {errors.slug}
+                        </div>
+                      )}
                       <small className="text-muted mt-1 d-block">
                         Tự động tạo từ tên danh mục
                       </small>
                     </div>
 
-                    {/* Icon Upload */}
+                    {/* Icon Upload - Giữ nguyên hoàn toàn */}
                     <div className="mb-4">
                       <label className="form-label fw-semibold d-flex align-items-center gap-2">
                         <Image size={16} />
@@ -539,7 +616,7 @@ const Page: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Status Toggle */}
+                    {/* Status Toggle - Giữ nguyên hoàn toàn */}
                     <div className="border rounded-3 p-3 mb-4 bg-light">
                       <div className="d-flex justify-content-between align-items-center">
                         <div>
@@ -618,6 +695,7 @@ const Page: React.FC = () => {
           </div>
         </main>
       </div>
+
       <CToaster
         className="p-3"
         placement="top-end"
