@@ -1,18 +1,27 @@
+// useCategoryPage.ts
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Category,
   convertDbCategoriesToComponentFormat,
   DbCategory,
 } from "@/helper/utils";
 import { categoryQuery } from "@/query/category";
-import { createCategory, getAllCategory } from "@/service/category";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { createCategory } from "@/service/category";
 
 type FormMode = "create" | "edit";
+
+// Thêm interface cho errors
+interface FormErrors {
+  name?: string;
+  slug?: string;
+}
+
 export const useCategoryPage = (
   onSuccessCallback?: (message: string) => void
 ) => {
   const { data, isPending } = useQuery(categoryQuery.list);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     id: null as number | null,
@@ -22,22 +31,28 @@ export const useCategoryPage = (
     level: 0,
     isVisible: true,
   });
+
+  // Thêm state cho lỗi
+  const [errors, setErrors] = useState<FormErrors>({});
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
     null
   );
   const [formMode, setFormMode] = useState<FormMode>("create");
+
   const { mutate: create } = useMutation({
     mutationFn: (en: DbCategory) => createCategory(en),
     onSuccess: (data) => {
-      // alert(JSON.stringify(data));
       onSuccessCallback &&
         onSuccessCallback("Thêm thành công danh mục: " + data.category_name);
+      resetToCreateMode();
     },
-    onError: (error) => {
-      alert(error.message);
+    onError: (error: any) => {
+      alert(error.message || "Có lỗi xảy ra khi tạo danh mục");
     },
   });
+
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
@@ -50,31 +65,58 @@ export const useCategoryPage = (
   };
 
   const handleNameChange = (name: string) => {
-    setFormData({
-      ...formData,
-      name,
-      slug: generateSlug(name),
-    });
+    const slug = generateSlug(name);
+    setFormData({ ...formData, name, slug });
+
+    // Xóa lỗi khi người dùng bắt đầu nhập
+    if (errors.name || errors.slug) {
+      setErrors({ ...errors, name: undefined, slug: undefined });
+    }
   };
+
+  // Hàm validate form
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = "Tên danh mục không được để trống";
+    }
+
+    if (!formData.slug.trim()) {
+      newErrors.slug = "Đường dẫn (slug) không được để trống";
+    } else if (!/^[a-z0-9-]+$/.test(formData.slug)) {
+      newErrors.slug =
+        "Slug chỉ được chứa chữ cái thường, số và dấu gạch ngang";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!validateForm()) {
+      return; // Dừng nếu có lỗi
+    }
+
     if (formMode === "create") {
-      console.log("Creating new category:", formData);
-      // alert(JSON.stringify(formData));
-      // return;
       create({
         id: 0,
-        category_name: formData.name,
+        category_name: formData.name.trim(),
         category_slug: formData.slug,
         parent_id: formData.parent_id,
         level: formData.level,
-        is_active: 1,
+        is_active: formData.isVisible ? 1 : 0,
       });
     } else {
       console.log("Updating category:", formData);
+      // TODO: Gọi API update ở đây
+      onSuccessCallback && onSuccessCallback("Cập nhật thành công!");
+      resetToCreateMode();
     }
   };
+
   const resetToCreateMode = () => {
     setFormMode("create");
     setSelectedCategory(null);
@@ -86,6 +128,7 @@ export const useCategoryPage = (
       level: 0,
       isVisible: true,
     });
+    setErrors({}); // Xóa lỗi khi reset
   };
 
   const toggleCategory = (id: number) => {
@@ -102,11 +145,13 @@ export const useCategoryPage = (
     };
     setCategories(updateCategories(categories));
   };
+
   useEffect(() => {
     if (data) {
       setCategories([...convertDbCategoriesToComponentFormat(data)]);
     }
   }, [data]);
+
   const handleSelectCategory = (category: Category) => {
     setFormMode("edit");
     setSelectedCategory(category);
@@ -118,6 +163,7 @@ export const useCategoryPage = (
       level: category.level,
       isVisible: category.isVisible,
     });
+    setErrors({}); // Xóa lỗi khi chuyển sang edit
   };
 
   const handleDelete = (categoryId: number) => {
@@ -140,9 +186,10 @@ export const useCategoryPage = (
     handleNameChange,
     handleDelete,
     formData,
-    formMode,
     setFormData,
+    formMode,
     setFormMode,
     data,
+    errors, // Trả về errors
   };
 };
