@@ -34,9 +34,9 @@ public class CategoryRepository implements IRepositories<Category>{
 	try(Connection con = dbConnection.getConn();
 			PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)	
 			){
-		ps.setLong(1, item.getParentId());
-		ps.setString(2, item.getCategoryName());
-		ps.setString(3, item.getCategorySlug());
+		ps.setLong(1, item.getParent_id());
+		ps.setString(2, item.getCategory_name());
+		ps.setString(3, item.getCategory_slug());
 		ps.setInt(4,item.getLevel());
 		int rows = ps.executeUpdate();
 		if(rows>0) {
@@ -96,11 +96,11 @@ public class CategoryRepository implements IRepositories<Category>{
 			  while (rs.next()) {
 		             Category ca = new Category();
 		             ca.setId(rs.getInt("id"));
-		             ca.setParentId(rs.getLong("parent_id"));
-		             ca.setCategoryName(rs.getString("category_name"));
-		             ca.setCategorySlug(rs.getString("category_slug"));
+		             ca.setParent_id(rs.getInt("parent_id"));
+		             ca.setCategory_name(rs.getString("category_name"));
+		             ca.setCategory_slug(rs.getString("category_slug"));
 		             ca.setLevel(rs.getInt("level"));
-		             ca.setActive(rs.getInt("is_active"));
+		           ca.setIs_active(rs.getInt("is_active"));
 		             list.add(ca);
 		      }
 			  return list;
