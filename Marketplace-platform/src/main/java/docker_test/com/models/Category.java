@@ -1,107 +1,58 @@
 package docker_test.com.models;
 
-import java.time.LocalDateTime;
-
-public final class Category {
-	private long id;
-	private Long parentId;
-	private String categoryName;
-	private String categorySlug;
-	private String categoryIcon;
-	private int level;
-	private int isActive;
-	private LocalDateTime createdAt;
-	private LocalDateTime updatedAt;
-
-	public Category() {
-		this.level = 0;
-		this.isActive = 1;
-		this.createdAt = LocalDateTime.now();
-		this.updatedAt = LocalDateTime.now();
-	}
-
-	public Category(long id, Long parentId, String categoryName, String categorySlug, String categoryIcon, int level,
-			int isActive, LocalDateTime createdAt, LocalDateTime updatedAt) {
+public class Category {
+    public Category(Integer id, int parent_id, String category_name, String category_slug, int level, int is_active) {
+		super();
 		this.id = id;
-		this.parentId = parentId;
-		this.categoryName = categoryName;
-		this.categorySlug = categorySlug;
-		this.categoryIcon = categoryIcon;
+		this.parent_id = parent_id;
+		this.category_name = category_name;
+		this.category_slug = category_slug;
 		this.level = level;
-		this.isActive = isActive;
-		this.createdAt = createdAt;
-		this.updatedAt = updatedAt;
+		this.is_active = is_active;
 	}
-
-	public long getId() {
+    public Category() {
+    	
+    }
+	public int getId() {
 		return id;
 	}
-
-	public void setId(long id) {
+	public void setId(int id) {
 		this.id = id;
 	}
-
-	public Long getParentId() {
-		return parentId;
+	public int getParent_id() {
+		return parent_id;
 	}
-
-	public void setParentId(Long parentId) {
-		this.parentId = parentId;
+	public void setParent_id(int parent_id) {
+		this.parent_id = parent_id;
 	}
-
-	public String getCategoryName() {
-		return categoryName;
+	public String getCategory_name() {
+		return category_name;
 	}
-
-	public void setCategoryName(String categoryName) {
-		this.categoryName = categoryName;
+	public void setCategory_name(String category_name) {
+		this.category_name = category_name;
 	}
-
-	public String getCategorySlug() {
-		return categorySlug;
+	public String getCategory_slug() {
+		return category_slug;
 	}
-
-	public void setCategorySlug(String categorySlug) {
-		this.categorySlug = categorySlug;
+	public void setCategory_slug(String category_slug) {
+		this.category_slug = category_slug;
 	}
-
-	public String getCategoryIcon() {
-		return categoryIcon;
-	}
-
-	public void setCategoryIcon(String categoryIcon) {
-		this.categoryIcon = categoryIcon;
-	}
-
 	public int getLevel() {
 		return level;
 	}
-
 	public void setLevel(int level) {
 		this.level = level;
 	}
-
-	public int isActive() {
-		return isActive;
+	public int getIs_active() {
+		return is_active;
 	}
-
-	public void setActive(int active) {
-		isActive = active;
+	public void setIs_active(int is_active) {
+		this.is_active = is_active;
 	}
-
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
-	}
-
-	public void setCreatedAt(LocalDateTime createdAt) {
-		this.createdAt = createdAt;
-	}
-
-	public LocalDateTime getUpdatedAt() {
-		return updatedAt;
-	}
-
-	public void setUpdatedAt(LocalDateTime updatedAt) {
-		this.updatedAt = updatedAt;
-	}
+	private Integer id ;
+    private int parent_id ;
+    private String category_name;
+    private String category_slug;
+    private int level;
+    private int is_active;
 }
