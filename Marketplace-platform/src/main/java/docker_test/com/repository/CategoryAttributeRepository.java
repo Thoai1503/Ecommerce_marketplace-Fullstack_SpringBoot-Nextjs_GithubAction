@@ -7,8 +7,8 @@ import java.sql.SQLException;
 import java.util.HashSet;
 
 import docker_test.com.configs.DBConnection;
-import docker_test.com.models.Attribute;
 import docker_test.com.models.CategoryAttribute;
+import docker_test.com.models.attribute.Attribute;
 
 public class CategoryAttributeRepository implements IRepositories<CategoryAttribute> {
 
@@ -69,12 +69,12 @@ public class CategoryAttributeRepository implements IRepositories<CategoryAttrib
 	    	 
 	    	 while (rs.next()) {
 	    		 	CategoryAttribute ca = new CategoryAttribute();
-	    		 	ca.setAttribute_id(rs.getInt("attribute_id"));
-	    		 	ca.setCategory_id(rs.getInt("category_id"));
+	    		 	ca.setAttributeId(category_id);
+	    		 	ca.setCategoryId(rs.getInt("category_id"));
 	    		 	Attribute a = new Attribute();
 	    		 	a.setName(rs.getString("name"));
 	    			a.setSlug(rs.getString("slug"));
-	    			a.setData_type(rs.getInt("data_type"));
+	    			a.setDataType(rs.getInt("data_type"));
 	    			ca.setAttribute(a);
 	    			list.add(ca);
 	    	 }
