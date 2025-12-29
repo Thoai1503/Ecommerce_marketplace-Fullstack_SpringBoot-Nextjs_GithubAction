@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashSet;
 
 import docker_test.com.configs.DBConnection;
@@ -30,8 +31,34 @@ public class UnitsRepository implements IRepositories<Units> {
 	
 	@Override
 	public Units Create(Units item) throws SQLException {
-		// TODO Auto-generated method stub
-		return null;
+		String sql ="insert into unit (label, symbol) values (?,?)";
+		try(Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)	
+				){
+			ps.setString(1, item.getLabel());
+			ps.setString(2, item.getSymbol());
+			int rows = ps.executeUpdate();
+			if(rows>0) {
+			
+				 if (rows > 0) {
+			            try (ResultSet rs = ps.getGeneratedKeys()) {
+			                if (rs.next()) {
+			                    int id = rs.getInt(1);
+			                    item.setId(id);
+			                    System.out.println("Unit có bản ghi mới: " + id);
+			                }
+			            }
+			            return item;
+			        }
+			}
+			
+			
+		}
+		catch(Exception ex) {
+			throw ex;
+		}
+		
+			 return null;
 	}
 
 	@Override
