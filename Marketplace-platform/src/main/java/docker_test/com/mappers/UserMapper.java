@@ -34,8 +34,8 @@ public final class UserMapper implements IMapper<User> {
             user.setUserType(rs.getString(StringValue.USER_TYPE_COL));
 
             // TINYINT(1) → boolean
-            user.setVerified(rs.getBoolean(StringValue.USER_VERIFIED_COL));
-            user.setActive(rs.getBoolean(StringValue.USER_ACTIVE_COL));
+            user.setVerified(rs.getInt(StringValue.USER_VERIFIED_COL));
+            user.setActive(rs.getInt(StringValue.USER_ACTIVE_COL));
 
             // TIMESTAMP → LocalDateTime
             Timestamp createdAt = rs.getTimestamp(StringValue.USER_CREATED_AT_COL);
