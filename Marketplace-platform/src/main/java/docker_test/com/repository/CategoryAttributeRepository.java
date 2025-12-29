@@ -69,12 +69,12 @@ public class CategoryAttributeRepository implements IRepositories<CategoryAttrib
 	    	 
 	    	 while (rs.next()) {
 	    		 	CategoryAttribute ca = new CategoryAttribute();
-	    		 	ca.setAttributeId(category_id);
-	    		 	ca.setCategoryId(rs.getInt("category_id"));
+	    		 	ca.setAttribute_id(category_id);
+	    		 	ca.setCategory_id(rs.getInt("category_id"));
 	    		 	Attribute a = new Attribute();
 	    		 	a.setName(rs.getString("name"));
 	    			a.setSlug(rs.getString("slug"));
-	    			a.setDataType(rs.getInt("data_type"));
+	    			a.setData_type(rs.getInt("data_type"));
 	    			ca.setAttribute(a);
 	    			list.add(ca);
 	    	 }
