@@ -44,6 +44,12 @@ const Sidebar = () => {
       label: "Quản lý thuộc tính",
       href: "/admin/attribute",
     },
+        {
+      id: "user-mangament",
+      icon: LayoutDashboard,
+      label: "Quản lý người dùng",
+      href: "/admin/user",
+    },
     {
       id: "orders",
       icon: ShoppingCart,
