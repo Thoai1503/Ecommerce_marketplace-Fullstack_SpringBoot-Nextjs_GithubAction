@@ -15,6 +15,7 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { Skeleton } from "@mui/material";
+import http from "@/lib/http";
 
 /* ================= TYPES ================= */
 interface User {
@@ -27,10 +28,20 @@ interface User {
 }
 
 /* ================= API ================= */
-const fetchUsers = async (): Promise<User[]> => {
-  const res = await fetch("http://localhost:8000/users");
-  if (!res.ok) throw new Error("Fetch users failed");
-  return res.json();
+// const fetchUsers = async (): Promise<User[]> => {
+//   const res = await fetch("http://localhost:8000/users");
+//   if (!res.ok) throw new Error("Fetch users failed");
+//   return res.json();
+// };
+
+const fetchUsers2 = async (): Promise<User[]> => {
+  const res = await http
+    .get("/users")
+    .then((res) => res.data)
+    .catch((error) => {
+      throw error;
+    });
+  return res;
 };
 
 /* ================= ROLE BADGE ================= */
@@ -39,7 +50,7 @@ const renderRole = (role: string) => {
     case "both":
       return (
         <span className="badge bg-danger-subtle text-danger border border-danger">
-        ADMIN
+          ADMIN
         </span>
       );
 
@@ -72,7 +83,7 @@ const Page: React.FC = () => {
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["users"],
-    queryFn: fetchUsers,
+    queryFn: fetchUsers2,
   });
 
   useEffect(() => {
@@ -149,12 +160,8 @@ const Page: React.FC = () => {
                       <tr key={u.userId}>
                         <td>{index + 1}</td>
                         <td className="fw-semibold">{u.fullName}</td>
-                        <td>
-                          {u.email}
-                        </td>
-                        <td>
-                          {u.phone}
-                        </td>
+                        <td>{u.email}</td>
+                        <td>{u.phone}</td>
                         <td>{renderRole(u.userType)}</td>
                         <td>
                           {isActive ? (
