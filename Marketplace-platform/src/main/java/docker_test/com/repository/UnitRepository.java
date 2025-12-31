@@ -8,53 +8,53 @@ import java.util.HashSet;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.models.Category;
-import docker_test.com.models.Units;
+import docker_test.com.models.Unit;
 
-public class UnitsRepository implements IRepositories<Units> {
+public class UnitRepository implements IRepositories<Unit> {
 
 	
-	private static UnitsRepository instance=null;
+	private static UnitRepository instance=null;
 	private DBConnection dbConnection;
 	
 	
-	public UnitsRepository () {
+	public UnitRepository () {
 		this.dbConnection= DBConnection.getInstance();
 	}
-	public static UnitsRepository Instance() {
+	public static UnitRepository Instance() {
 		if (instance==null) {
-			instance=new UnitsRepository();
+			instance=new UnitRepository();
 		}
 		return instance;
 	}
 	
 	
 	@Override
-	public Units Create(Units item) throws SQLException {
+	public Unit Create(Unit item) throws SQLException {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public Units Update(Units item) {
+	public Unit Update(Unit item) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public boolean Delete(Units item) {
+	public boolean Delete(Unit item) {
 		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
-	public Units GetById(Object item) {
+	public Unit GetById(Object item) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public HashSet<Units> GetAll() {
-		HashSet<Units> list = new HashSet<Units>();
+	public HashSet<Unit> GetAll() {
+		HashSet<Unit> list = new HashSet<Unit>();
 		String sql ="select * from unit";
 		
 		try(Connection con = dbConnection.getConn();
@@ -63,7 +63,7 @@ public class UnitsRepository implements IRepositories<Units> {
 			  ResultSet rs =	ps.executeQuery();
 			  
 			  while (rs.next()) {
-		             Units ca = new Units();
+		             Unit ca = new Unit();
 		             ca.setId(rs.getInt("id"));
 		             ca.setLabel(rs.getString("label"));
 		             ca.setSymbol(rs.getString("symbol"));
