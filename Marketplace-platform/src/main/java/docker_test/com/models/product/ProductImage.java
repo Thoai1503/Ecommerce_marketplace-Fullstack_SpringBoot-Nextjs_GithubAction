@@ -7,16 +7,16 @@ public final class ProductImage {
 	private long productId;
 	private String imageUrl;
 	private int displayOrder;
-	private boolean isThumbnail;
+	private int isThumbnail;
 	private LocalDateTime createdAt;
 
 	public ProductImage() {
 		this.displayOrder = 0;
-		this.isThumbnail = false;
+		this.isThumbnail = 0;
 		this.createdAt = LocalDateTime.now();
 	}
 
-	public ProductImage(long imageId, long productId, String imageUrl, int displayOrder, boolean isThumbnail,
+	public ProductImage(long imageId, long productId, String imageUrl, int displayOrder, int isThumbnail,
 			LocalDateTime createdAt) {
 		this.imageId = imageId;
 		this.productId = productId;
@@ -58,11 +58,11 @@ public final class ProductImage {
 		this.displayOrder = displayOrder;
 	}
 
-	public boolean isThumbnail() {
+	public int isThumbnail() {
 		return isThumbnail;
 	}
 
-	public void setThumbnail(boolean thumbnail) {
+	public void setThumbnail(int thumbnail) {
 		isThumbnail = thumbnail;
 	}
 
