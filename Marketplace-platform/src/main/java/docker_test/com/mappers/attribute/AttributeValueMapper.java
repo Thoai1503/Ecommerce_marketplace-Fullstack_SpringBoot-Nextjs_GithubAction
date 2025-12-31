@@ -20,9 +20,9 @@ public final class AttributeValueMapper implements IMapper<AttributeValue> {
             // Xử lý Integer null (unitId có thể null trong DB)
             int unitId = rs.getInt(StringValue.ATTR_VALUE_UNIT_ID_COL);
             if (!rs.wasNull()) {
-                attrValue.setUnitId(unitId);
+                attrValue.setUnit_id(unitId);
             } else {
-                attrValue.setUnitId(null);
+                attrValue.setUnit_id(null);
             }
             
             attrValue.setValue(rs.getString(StringValue.ATTR_VALUE_VALUE_COL));
