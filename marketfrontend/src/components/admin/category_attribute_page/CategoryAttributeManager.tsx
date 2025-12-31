@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Plus,
   Edit2,
@@ -16,7 +16,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { unitsQuery } from "@/query/unit";
 import { categoryAttributeQuery } from "@/query/categoryAttribute";
-
+import { filterDistinctAttributes } from "@/helper/utils";
 // Types
 interface AttributeValue {
   id: number;
@@ -59,8 +59,13 @@ const CategoryAttributeManager = () => {
   const { data } = useQuery(
     categoryAttributeQuery.by_category(Number(category))
   );
+  const results = useMemo(() => {
+    console.log("Data: " + JSON.stringify(data));
+    return filterDistinctAttributes(data);
+  }, [data]);
 
-  // Sample data
+  console.log("Data converted: " + JSON.stringify(results));
+
   const [selectedCategory] = useState<Category>({
     id: 24,
     name: "Điện thoại di động",
@@ -327,9 +332,9 @@ const CategoryAttributeManager = () => {
       label: attr.label,
       type: attr.type,
       unit: attr.unit || "",
-      isRequired: attr.isRequired,
-      isFilterable: attr.isFilterable,
-      isSearchable: attr.isSearchable,
+      isRequired: true,
+      isFilterable: true,
+      isSearchable: true,
       order: attr.order,
     });
     setTempValues([...attr.values]);
@@ -721,7 +726,7 @@ const CategoryAttributeManager = () => {
                               </div>
                             </div>
                           ))}
-                        {data?.map((item) => (
+                        {results?.map((item) => (
                           <div
                             key={item.id}
                             className={`attribute-item rounded p-3 ${
@@ -730,7 +735,7 @@ const CategoryAttributeManager = () => {
                                 : ""
                             }`}
                             style={{ cursor: "pointer" }}
-                            //   onClick={() => handleEditAttribute(item)}
+                            onClick={() => handleEditAttribute(item)}
                           >
                             <div className="d-flex align-items-start gap-3">
                               <div
@@ -766,7 +771,7 @@ const CategoryAttributeManager = () => {
                               <div className="flex-grow-1 min-w-0">
                                 <div className="d-flex align-items-center gap-2 mb-2">
                                   <h3 className="h6 mb-0 fw-semibold">
-                                    {item.attribute.name}
+                                    {item.name}
                                   </h3>
 
                                   <span className="badge bg-danger-subtle text-danger border border-danger">
@@ -784,7 +789,7 @@ const CategoryAttributeManager = () => {
 
                                 <div className="small text-secondary mb-2">
                                   <span className="me-3">
-                                    <strong>Tên:</strong> {item.attribute.name}
+                                    <strong>Tên:</strong> {item.name}
                                   </span>
                                   <span>
                                     {/* <strong>Loại:</strong>{" "}
@@ -802,8 +807,9 @@ const CategoryAttributeManager = () => {
                                     Giá trị:
                                   </span>
 
-                                  <span key={1} className="value-tag">
-                                    {/* {item.attribute.data_type === "color" &&
+                                  {item.values.map((v: any) => (
+                                    <span key={1} className="value-tag">
+                                      {/* {item.attribute.data_type === "color" &&
                                       val.color && (
                                         <span
                                           className="color-indicator"
@@ -812,8 +818,10 @@ const CategoryAttributeManager = () => {
                                           }}
                                         />
                                       )} */}
-                                    {/* {formatValueWithUnit(val.value, attr.unit)} */}
-                                  </span>
+                                      {/* {formatValueWithUnit(val.value, attr.unit)} */}
+                                      {v}
+                                    </span>
+                                  ))}
                                 </div>
                               </div>
 
