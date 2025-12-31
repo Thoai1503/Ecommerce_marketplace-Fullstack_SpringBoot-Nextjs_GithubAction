@@ -149,3 +149,40 @@ console.log(JSON.stringify(convertedCategories, null, 2));
   }
 ]
 */
+
+export function filterDistinctAttributes(data: any) {
+  const attributeMap = new Map();
+
+  data?.forEach((item: any) => {
+    const attrId = item.attribute_id;
+    const value = item.attribute.attribute_value.value;
+    const unit = item.attribute.unit_id;
+
+    // Nếu attribute_id chưa tồn tại trong Map
+    if (!attributeMap.has(attrId)) {
+      attributeMap.set(attrId, {
+        id: attrId,
+        attribute_id: attrId,
+        name: item.attribute.name,
+        slug: item.attribute.slug,
+        data_type: item.attribute.data_type,
+        values: [],
+      });
+    }
+
+    // Thêm value vào mảng nếu value != null và chưa tồn tại
+    if (value !== null && value !== undefined) {
+      const attr = attributeMap.get(attrId);
+      if (!attr.values.includes(value)) {
+        if (unit != 0 && unit != undefined && unit != null) {
+          attr.values.push(`${value} ${item.attribute.unit_id}`);
+        } else {
+          attr.values.push(`${value}`);
+        }
+      }
+    }
+  });
+
+  // Chuyển Map thành Array
+  return Array.from(attributeMap.values());
+}
