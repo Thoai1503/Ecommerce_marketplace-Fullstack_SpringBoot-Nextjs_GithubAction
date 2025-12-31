@@ -1,16 +1,16 @@
 package docker_test.com.models;
 
-public final class Units {
+public final class Unit {
     private int id;
     private String label;
     private String symbol;
     private int status;
 
-    public Units() {
+    public Unit() {
         this.status = 1;
     }
 
-    public Units(int id, String label, String symbol, int status) {
+    public Unit(int id, String label, String symbol, int status) {
         this.id = id;
         this.label = label;
         this.symbol = symbol;

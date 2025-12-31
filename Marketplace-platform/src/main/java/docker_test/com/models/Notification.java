@@ -9,16 +9,16 @@ public final class Notification {
 	private String title;
 	private String message;
 	private Long referenceId;
-	private boolean isRead;
+	private int isRead;
 	private LocalDateTime createdAt;
 
 	public Notification() {
-		this.isRead = false;
+		this.isRead = 0;
 		this.createdAt = LocalDateTime.now();
 	}
 
 	public Notification(long notificationId, long userId, String type, String title, String message, Long referenceId,
-			boolean isRead, LocalDateTime createdAt) {
+			int isRead, LocalDateTime createdAt) {
 		this.notificationId = notificationId;
 		this.userId = userId;
 		this.type = type;
@@ -77,11 +77,11 @@ public final class Notification {
 		this.referenceId = referenceId;
 	}
 
-	public boolean isRead() {
+	public int isRead() {
 		return isRead;
 	}
 
-	public void setRead(boolean read) {
+	public void setRead(int read) {
 		isRead = read;
 	}
 
@@ -93,3 +93,4 @@ public final class Notification {
 		this.createdAt = createdAt;
 	}
 }
+	

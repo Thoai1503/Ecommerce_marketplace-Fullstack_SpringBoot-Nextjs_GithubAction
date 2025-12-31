@@ -1,0 +1,49 @@
+package docker_test.com.mappers.product;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.HashSet;
+
+import docker_test.com.mappers.IMapper;
+import docker_test.com.models.product.ProductVariant;
+import docker_test.com.utils.StringValue;
+
+public final class ProductVariantMapper implements IMapper<ProductVariant> {
+
+    @Override
+    public ProductVariant RowMap(ResultSet rs) {
+        ProductVariant variant = new ProductVariant();
+        try {
+            variant.setVariantId(rs.getLong(StringValue.VARIANT_ID_COL));
+            variant.setProductId(rs.getLong(StringValue.VARIANT_PRODUCT_ID_COL));
+            variant.setVariantName(rs.getString(StringValue.VARIANT_NAME_COL));
+            variant.setSku(rs.getString(StringValue.VARIANT_SKU_COL));
+            variant.setPrice(rs.getDouble(StringValue.VARIANT_PRICE_COL));
+            variant.setStockQuantity(rs.getInt(StringValue.VARIANT_STOCK_QUANTITY_COL));
+            variant.setImageUrl(rs.getString(StringValue.VARIANT_IMAGE_URL_COL));
+            variant.setActive(rs.getInt(StringValue.VARIANT_ACTIVE_COL));
+
+            Timestamp createdAt = rs.getTimestamp(StringValue.VARIANT_CREATED_AT_COL);
+            if (createdAt != null) variant.setCreatedAt(createdAt.toLocalDateTime());
+
+            Timestamp updatedAt = rs.getTimestamp(StringValue.VARIANT_UPDATED_AT_COL);
+            if (updatedAt != null) variant.setUpdatedAt(updatedAt.toLocalDateTime());
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return variant;
+    }
+
+    @Override
+    public HashSet<ProductVariant> RowsMap(ResultSet rs) {
+        HashSet<ProductVariant> list = new HashSet<>();
+        try {
+            while (rs.next()) list.add(RowMap(rs));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+}
