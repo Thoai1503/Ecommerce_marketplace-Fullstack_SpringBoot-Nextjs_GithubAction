@@ -31,7 +31,7 @@ public class UserRepository implements IRepositories<User> {
 	@Override
 	public User Create(User item) throws SQLException {
 
-		String sql = "INSERT INTO users "
+		String sql = "INSERT INTO user "
 				+ "(email, phone, password_hash, full_name, avatar_url, date_of_birth, gender, user_type, is_verified, is_active, created_at, updated_at) "
 				+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -79,7 +79,7 @@ public class UserRepository implements IRepositories<User> {
 	@Override
 	public User Update(User item) {
 
-		String sql = "UPDATE users SET " + "email = ?, phone = ?, full_name = ?, avatar_url = ?, "
+		String sql = "UPDATE user SET " + "email = ?, phone = ?, full_name = ?, avatar_url = ?, "
 				+ "date_of_birth = ?, gender = ?, user_type = ?, " + "is_verified = ?, is_active = ?, updated_at = ? "
 				+ "WHERE user_id = ?";
 
@@ -116,7 +116,7 @@ public class UserRepository implements IRepositories<User> {
 	@Override
 	public boolean Delete(User item) {
 
-		String sql = "DELETE FROM users WHERE user_id = ?";
+		String sql = "DELETE FROM user WHERE user_id = ?";
 
 		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
 
@@ -155,7 +155,7 @@ public class UserRepository implements IRepositories<User> {
 	public HashSet<User> GetAll() {
 
 		HashSet<User> list = new HashSet<>();
-		String sql = "SELECT * FROM users";
+		String sql = "SELECT * FROM user";
 
 		try (Connection con = dbConnection.getConn();
 				PreparedStatement ps = con.prepareStatement(sql);
