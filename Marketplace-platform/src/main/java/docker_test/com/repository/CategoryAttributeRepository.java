@@ -59,7 +59,7 @@ public class CategoryAttributeRepository implements IRepositories<CategoryAttrib
 
 	public HashSet<CategoryAttribute> GetByCategoryId(int category_id) {
 	     String sql =  "\r\n"
-	     		+ "SELECT *  FROM attributes a  join category_attributes ca on ca.attribute_id = a.id left join attribute_value av on a.id = av.attribute_id left join unit u on u.id = av.unit_id where category_id = ?";
+	     		+ "SELECT *  FROM attribute a  join category_attribute ca on ca.attribute_id = a.id left join attribute_value av on a.id = av.attribute_id left join unit u on u.id = av.unit_id where category_id = ?";
 	     HashSet<CategoryAttribute> list = new HashSet<>();
 	     try(Connection con = dbConnection.getConn();
 	    		 PreparedStatement ps = con.prepareStatement(sql);
