@@ -8,6 +8,7 @@ import java.util.HashSet;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.models.CategoryAttribute;
+import docker_test.com.models.Unit;
 import docker_test.com.models.attribute.Attribute;
 import docker_test.com.models.attribute.AttributeValue;
 
@@ -58,7 +59,7 @@ public class CategoryAttributeRepository implements IRepositories<CategoryAttrib
 
 	public HashSet<CategoryAttribute> GetByCategoryId(int category_id) {
 	     String sql =  "\r\n"
-	     		+ "SELECT *  FROM attributes a  join category_attributes ca on ca.attribute_id = a.id left join attribute_value av on a.id = av.attribute_id where category_id = ?";
+	     		+ "SELECT *  FROM attributes a  join category_attributes ca on ca.attribute_id = a.id left join attribute_value av on a.id = av.attribute_id left join unit u on u.id = av.unit_id where category_id = ?";
 	     HashSet<CategoryAttribute> list = new HashSet<>();
 	     try(Connection con = dbConnection.getConn();
 	    		 PreparedStatement ps = con.prepareStatement(sql);
@@ -75,6 +76,12 @@ public class CategoryAttributeRepository implements IRepositories<CategoryAttrib
 	    		 	ca.setCategory_id(rs.getInt("category_id"));
 	    		 	Attribute a = new Attribute();
 	    		 	AttributeValue av= new AttributeValue();
+	    		 	Unit u = new Unit();
+	    		 	u.setLabel(rs.getString("label"));
+	    		 	
+	    		 	u.setSymbol(rs.getString("symbol"));
+	    		 	u.setId(rs.getInt("unit_id"));
+	    		 	av.setUnit(u);
 	    		 	av.setUnit_id(rs.getInt("unit_id"));
 	    		 	av.setAttributeId(rs.getInt("attribute_id"));
 	    		 	av.setValue(rs.getString("value"));
