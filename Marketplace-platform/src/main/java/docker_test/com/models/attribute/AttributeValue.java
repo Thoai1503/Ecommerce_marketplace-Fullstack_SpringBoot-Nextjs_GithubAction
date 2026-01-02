@@ -1,5 +1,7 @@
 package docker_test.com.models.attribute;
 
+import docker_test.com.models.Unit;
+
 public final class AttributeValue {
 	private int id;
 	private int attribute_id;
@@ -46,5 +48,18 @@ public final class AttributeValue {
 
 	public void setValue(String value) {
 		this.value = value;
+	}
+	public Unit unit;
+
+	public Unit getUnit() {
+		return unit;
+	}
+
+	public void setUnit(Unit unit) {
+		this.unit = unit;
+	}
+
+	public void setAttribute_id(int attribute_id) {
+		this.attribute_id = attribute_id;
 	}
 }
