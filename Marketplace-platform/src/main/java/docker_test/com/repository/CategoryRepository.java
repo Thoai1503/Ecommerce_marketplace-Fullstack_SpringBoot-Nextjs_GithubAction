@@ -30,7 +30,7 @@ public class CategoryRepository implements IRepositories<Category>{
 	
 	@Override
 	public Category Create(Category item) throws SQLException {
-	String sql ="insert into categories (parent_id, category_name,category_slug,level) values (?,?,?,?)";
+	String sql ="insert into category (parent_id, category_name,category_slug,level) values (?,?,?,?)";
 	try(Connection con = dbConnection.getConn();
 			PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)	
 			){
@@ -86,7 +86,7 @@ public class CategoryRepository implements IRepositories<Category>{
 	@Override
 	public HashSet<Category> GetAll() {
 		HashSet<Category> list = new HashSet<Category>();
-		String sql ="select * from categories";
+		String sql ="select * from category";
 		
 		try(Connection con = dbConnection.getConn();
 				PreparedStatement ps = con.prepareStatement(sql);
