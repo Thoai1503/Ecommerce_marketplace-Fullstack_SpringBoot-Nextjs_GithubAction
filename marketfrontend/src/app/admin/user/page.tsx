@@ -28,21 +28,21 @@ interface User {
 }
 
 /* ================= API ================= */
-// const fetchUsers = async (): Promise<User[]> => {
-//   const res = await fetch("http://localhost:8000/users");
-//   if (!res.ok) throw new Error("Fetch users failed");
-//   return res.json();
-// };
-
-const fetchUsers2 = async (): Promise<User[]> => {
-  const res = await http
-    .get("/users")
-    .then((res) => res.data)
-    .catch((error) => {
-      throw error;
-    });
-  return res;
+const fetchUsers = async (): Promise<User[]> => {
+  const res = await fetch("http://localhost:8000/users");
+  if (!res.ok) throw new Error("Fetch users failed");
+  return res.json();
 };
+
+// const fetchUsers2 = async (): Promise<User[]> => {
+//   const res = await http
+//     .get("/users")
+//     .then((res) => res.data)
+//     .catch((error) => {
+//       throw error;
+//     });
+//   return res;
+// };
 
 /* ================= ROLE BADGE ================= */
 const renderRole = (role: string) => {
@@ -64,7 +64,7 @@ const renderRole = (role: string) => {
     case "buyer":
       return (
         <span className="badge bg-info-subtle text-info border border-info">
-          buyer
+          BUYER
         </span>
       );
 
@@ -83,7 +83,7 @@ const Page: React.FC = () => {
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["users"],
-    queryFn: fetchUsers2,
+    queryFn: fetchUsers,
   });
 
   useEffect(() => {
@@ -92,11 +92,18 @@ const Page: React.FC = () => {
     }
   }, []);
 
-  const users = data.filter(
+const users = [...data]
+  .filter((u) =>
+    ["buyer", "seller"].includes(u.userType.toLowerCase())
+  )
+  .filter(
     (u) =>
       u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.phone.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+  .sort((a, b) => a.userId - b.userId);
+
 
   return (
     <div className="container-fluid px-4 py-4">
