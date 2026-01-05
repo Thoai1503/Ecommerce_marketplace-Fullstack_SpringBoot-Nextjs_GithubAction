@@ -1,4 +1,4 @@
-package docker_test.com.models;
+package docker_test.com.models.attribute;
 
 public class Attribute {
       private Integer id;
@@ -37,4 +37,11 @@ public class Attribute {
 	  private String name;
       private String slug;
       private Integer data_type;
+      public AttributeValue getAttribute_value() {
+		return attribute_value;
+	}
+	  public void setAttribute_value(AttributeValue attribute_value) {
+		  this.attribute_value = attribute_value;
+	  }
+	  private AttributeValue attribute_value;
 }
