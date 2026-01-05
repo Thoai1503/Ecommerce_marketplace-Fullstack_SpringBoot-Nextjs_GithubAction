@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Plus,
   Edit2,
@@ -16,7 +16,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { unitsQuery } from "@/query/unit";
 import { categoryAttributeQuery } from "@/query/categoryAttribute";
-
+import { filterDistinctAttributes } from "@/helper/utils";
 // Types
 interface AttributeValue {
   id: number;
@@ -59,8 +59,13 @@ const CategoryAttributeManager = () => {
   const { data } = useQuery(
     categoryAttributeQuery.by_category(Number(category))
   );
+  const results = useMemo(() => {
+    console.log("Data: " + JSON.stringify(data));
+    return filterDistinctAttributes(data);
+  }, [data]);
 
-  // Sample data
+  console.log("Data converted: " + JSON.stringify(results));
+
   const [selectedCategory] = useState<Category>({
     id: 24,
     name: "Điện thoại di động",
@@ -327,9 +332,9 @@ const CategoryAttributeManager = () => {
       label: attr.label,
       type: attr.type,
       unit: attr.unit || "",
-      isRequired: attr.isRequired,
-      isFilterable: attr.isFilterable,
-      isSearchable: attr.isSearchable,
+      isRequired: true,
+      isFilterable: true,
+      isSearchable: true,
       order: attr.order,
     });
     setTempValues([...attr.values]);
@@ -721,7 +726,7 @@ const CategoryAttributeManager = () => {
                               </div>
                             </div>
                           ))}
-                        {/* {data?.map((item) => (
+                        {results?.map((item) => (
                           <div
                             key={item.id}
                             className={`attribute-item rounded p-3 ${
@@ -766,62 +771,58 @@ const CategoryAttributeManager = () => {
                               <div className="flex-grow-1 min-w-0">
                                 <div className="d-flex align-items-center gap-2 mb-2">
                                   <h3 className="h6 mb-0 fw-semibold">
-                                    {attr.label}
+                                    {item.name}
                                   </h3>
-                                  {attr.isRequired && (
-                                    <span className="badge bg-danger-subtle text-danger border border-danger">
-                                      Bắt buộc
-                                    </span>
-                                  )}
-                                  {attr.isFilterable && (
-                                    <span className="badge bg-info-subtle text-info border border-info">
-                                      Bộ lọc
-                                    </span>
-                                  )}
-                                  {attr.unit && (
-                                    <span className="badge bg-light text-dark border">
-                                      Đơn vị: {attr.unit}
-                                    </span>
-                                  )}
+
+                                  <span className="badge bg-danger-subtle text-danger border border-danger">
+                                    Bắt buộc
+                                  </span>
+
+                                  <span className="badge bg-info-subtle text-info border border-info">
+                                    Bộ lọc
+                                  </span>
+
+                                  <span className="badge bg-light text-dark border">
+                                    Đơn vị: GB
+                                  </span>
                                 </div>
 
                                 <div className="small text-secondary mb-2">
                                   <span className="me-3">
-                                    <strong>Tên:</strong> {attr.name}
+                                    <strong>Tên:</strong> {item.name}
                                   </span>
                                   <span>
-                                    <strong>Loại:</strong>{" "}
+                                    {/* <strong>Loại:</strong>{" "}
                                     {
                                       attributeTypes.find(
                                         (t) => t.value === attr.type
                                       )?.label
-                                    }
+                                    } */}
+                                    Dropdown
                                   </span>
                                 </div>
 
-                                {attr.values.length > 0 && (
-                                  <div className="d-flex flex-wrap gap-2 align-items-center">
-                                    <span className="small text-secondary">
-                                      Giá trị:
+                                <div className="d-flex flex-wrap gap-2 align-items-center">
+                                  <span className="small text-secondary">
+                                    Giá trị:
+                                  </span>
+
+                                  {item.values.map((v: any) => (
+                                    <span key={1} className="value-tag">
+                                      {/* {item.attribute.data_type === "color" &&
+                                      val.color && (
+                                        <span
+                                          className="color-indicator"
+                                          style={{
+                                            backgroundColor: val.color,
+                                          }}
+                                        />
+                                      )} */}
+                                      {/* {formatValueWithUnit(val.value, attr.unit)} */}
+                                      {v}
                                     </span>
-                                    {attr.values.map((val) => (
-                                      <span key={val.id} className="value-tag">
-                                        {attr.type === "color" && val.color && (
-                                          <span
-                                            className="color-indicator"
-                                            style={{
-                                              backgroundColor: val.color,
-                                            }}
-                                          />
-                                        )}
-                                        {formatValueWithUnit(
-                                          val.value,
-                                          attr.unit
-                                        )}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
+                                  ))}
+                                </div>
                               </div>
 
                               <div className="attribute-actions d-flex gap-1">
@@ -829,7 +830,7 @@ const CategoryAttributeManager = () => {
                                   className="btn btn-sm btn-outline-primary btn-icon"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleEditAttribute(attr);
+                                    //      handleEditAttribute(attr);
                                   }}
                                   title="Chỉnh sửa"
                                 >
@@ -848,7 +849,7 @@ const CategoryAttributeManager = () => {
                               </div>
                             </div>
                           </div>
-                        ))} */}
+                        ))}
                       </div>
                     )}
                   </div>

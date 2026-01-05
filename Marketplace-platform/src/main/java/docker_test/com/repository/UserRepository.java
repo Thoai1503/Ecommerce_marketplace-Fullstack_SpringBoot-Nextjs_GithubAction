@@ -34,6 +34,7 @@ public class UserRepository implements IRepositories<User> {
     @Override
     public User Create(User item) throws SQLException {
 
+<<<<<<< HEAD
         String sql = """
             INSERT INTO user
             (email, phone, password_hash, full_name, avatar_url,
@@ -41,6 +42,11 @@ public class UserRepository implements IRepositories<User> {
              created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
+=======
+		String sql = "INSERT INTO user "
+				+ "(email, phone, password_hash, full_name, avatar_url, date_of_birth, gender, user_type, is_verified, is_active, created_at, updated_at) "
+				+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+>>>>>>> 41a27d80fdc7380950e749ff5f8f44880e59e103
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -83,6 +89,7 @@ public class UserRepository implements IRepositories<User> {
     @Override
     public User Update(User item) {
 
+<<<<<<< HEAD
         String sql = """
             UPDATE user SET
                 email = ?, phone = ?, full_name = ?, avatar_url = ?,
@@ -90,6 +97,11 @@ public class UserRepository implements IRepositories<User> {
                 is_verified = ?, is_active = ?, updated_at = ?
             WHERE user_id = ?
         """;
+=======
+		String sql = "UPDATE user SET " + "email = ?, phone = ?, full_name = ?, avatar_url = ?, "
+				+ "date_of_birth = ?, gender = ?, user_type = ?, " + "is_verified = ?, is_active = ?, updated_at = ? "
+				+ "WHERE user_id = ?";
+>>>>>>> 41a27d80fdc7380950e749ff5f8f44880e59e103
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -125,7 +137,11 @@ public class UserRepository implements IRepositories<User> {
     @Override
     public boolean Delete(User item) {
 
+<<<<<<< HEAD
         String sql = "DELETE FROM user WHERE user_id = ?";
+=======
+		String sql = "DELETE FROM user WHERE user_id = ?";
+>>>>>>> 41a27d80fdc7380950e749ff5f8f44880e59e103
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -167,7 +183,12 @@ public class UserRepository implements IRepositories<User> {
     @Override
     public HashSet<User> GetAll() {
 
+<<<<<<< HEAD
         String sql = "SELECT * FROM user";
+=======
+		HashSet<User> list = new HashSet<>();
+		String sql = "SELECT * FROM user";
+>>>>>>> 41a27d80fdc7380950e749ff5f8f44880e59e103
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql);
