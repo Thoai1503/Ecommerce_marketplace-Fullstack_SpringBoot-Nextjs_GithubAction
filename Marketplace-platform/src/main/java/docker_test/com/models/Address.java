@@ -12,18 +12,18 @@ public final class Address {
 	private String district;
 	private String city;
 	private String postalCode;
-	private boolean isDefault;
+	private int isDefault;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 
 	public Address() {
-		this.isDefault = false;
+		this.isDefault = 0;
 		this.createdAt = LocalDateTime.now();
 		this.updatedAt = LocalDateTime.now();
 	}
 
 	public Address(long addressId, long userId, String recipientName, String recipientPhone, String addressLine,
-			String ward, String district, String city, String postalCode, boolean isDefault, LocalDateTime createdAt,
+			String ward, String district, String city, String postalCode, int isDefault, LocalDateTime createdAt,
 			LocalDateTime updatedAt) {
 		this.addressId = addressId;
 		this.userId = userId;
@@ -112,11 +112,11 @@ public final class Address {
 		this.postalCode = postalCode;
 	}
 
-	public boolean isDefault() {
+	public int isDefault() {
 		return isDefault;
 	}
 
-	public void setDefault(boolean aDefault) {
+	public void setDefault(int aDefault) {
 		isDefault = aDefault;
 	}
 
