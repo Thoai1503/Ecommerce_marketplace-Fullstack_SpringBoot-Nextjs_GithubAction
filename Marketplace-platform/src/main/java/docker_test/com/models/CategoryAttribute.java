@@ -1,5 +1,7 @@
 package docker_test.com.models;
 
+import docker_test.com.models.attribute.Attribute;
+
 public class CategoryAttribute {
 	public Integer getId() {
 		return id;
