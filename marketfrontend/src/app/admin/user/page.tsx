@@ -50,7 +50,7 @@ const renderRole = (role: string) => {
     case "both":
       return (
         <span className="badge bg-danger-subtle text-danger border border-danger">
-        ADMIN
+          ADMIN
         </span>
       );
 
@@ -167,12 +167,8 @@ const users = [...data]
                       <tr key={u.userId}>
                         <td>{index + 1}</td>
                         <td className="fw-semibold">{u.fullName}</td>
-                        <td>
-                          {u.email}
-                        </td>
-                        <td>
-                          {u.phone}
-                        </td>
+                        <td>{u.email}</td>
+                        <td>{u.phone}</td>
                         <td>{renderRole(u.userType)}</td>
                         <td>
                           {isActive ? (
