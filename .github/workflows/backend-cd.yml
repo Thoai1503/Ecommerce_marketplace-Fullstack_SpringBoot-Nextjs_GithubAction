@@ -2,7 +2,7 @@ name: Backend CI
 
 on:
   push:
-    branches: [ develop, feature/* ]
+    branches: [ develop, feature/*,Diep ]
     paths:
       - "Marketplace-platform/**"
   pull_request:

@@ -30,11 +30,11 @@ public class CategoryRepository implements IRepositories<Category>{
 	
 	@Override
 	public Category Create(Category item) throws SQLException {
-	String sql ="insert into categories (parent_id, category_name,category_slug,level) values (?,?,?,?)";
+	String sql ="insert into category (parent_id, category_name,category_slug,level) values (?,?,?,?)";
 	try(Connection con = dbConnection.getConn();
 			PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)	
 			){
-		ps.setInt(1, item.getParent_id());
+		ps.setLong(1, item.getParent_id());
 		ps.setString(2, item.getCategory_name());
 		ps.setString(3, item.getCategory_slug());
 		ps.setInt(4,item.getLevel());
@@ -86,7 +86,7 @@ public class CategoryRepository implements IRepositories<Category>{
 	@Override
 	public HashSet<Category> GetAll() {
 		HashSet<Category> list = new HashSet<Category>();
-		String sql ="select * from categories";
+		String sql ="select * from category";
 		
 		try(Connection con = dbConnection.getConn();
 				PreparedStatement ps = con.prepareStatement(sql);
@@ -100,7 +100,7 @@ public class CategoryRepository implements IRepositories<Category>{
 		             ca.setCategory_name(rs.getString("category_name"));
 		             ca.setCategory_slug(rs.getString("category_slug"));
 		             ca.setLevel(rs.getInt("level"));
-		             ca.setIs_active(rs.getInt("is_active"));
+		           ca.setIs_active(rs.getInt("is_active"));
 		             list.add(ca);
 		      }
 			  return list;
