@@ -500,8 +500,7 @@ const Page: React.FC = () => {
                       <label className="form-label fw-semibold d-flex align-items-center gap-2">
                         <FolderTree size={16} />
                         Danh mục cha
-                      </label>
-                      <select
+             <select
                         className="form-select"
                         value={formData.parent_id ?? 0}
                         onChange={(e) => {
@@ -529,7 +528,8 @@ const Page: React.FC = () => {
                             {cat.level})
                           </option>
                         ))}
-                      </select>
+                      </select>          </label>
+                     
                       {formData.parent_id === 0 && (
                         <small className="text-muted mt-1 d-block">
                           Danh mục này sẽ hiển thị ở cấp cao nhất
