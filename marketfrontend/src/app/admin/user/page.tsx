@@ -44,7 +44,6 @@ const fetchUsers2 = async (): Promise<User[]> => {
   return res;
 };
 
-/* ================= ROLE BADGE ================= */
 const renderRole = (role: string) => {
   switch (role.toLowerCase()) {
     case "both":
@@ -77,7 +76,6 @@ const renderRole = (role: string) => {
   }
 };
 
-/* ================= PAGE ================= */
 const Page: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
