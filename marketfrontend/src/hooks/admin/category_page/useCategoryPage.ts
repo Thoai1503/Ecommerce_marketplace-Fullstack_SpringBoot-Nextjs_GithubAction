@@ -1,5 +1,5 @@
 // useCategoryPage.ts
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Category,
@@ -63,6 +63,12 @@ export const useCategoryPage = (
       .trim()
       .replace(/\s+/g, "-");
   };
+
+
+//   const sortedData = useMemo(() => {
+//   return sortCategoriesByTree(data);
+// }, [data]);
+
 
   const handleNameChange = (name: string) => {
     const slug = generateSlug(name);
