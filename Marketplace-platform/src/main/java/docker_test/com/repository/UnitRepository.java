@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashSet;
 
 import docker_test.com.configs.DBConnection;
@@ -30,37 +31,116 @@ public class UnitRepository implements IRepositories<Unit> {
 	
 	@Override
 	public Unit Create(Unit item) throws SQLException {
-		// TODO Auto-generated method stub
-		return null;
+		String sql ="insert into unit (label, symbol) values (?,?)";
+		try(Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)	
+				){
+			ps.setString(1, item.getLabel());
+			ps.setString(2, item.getSymbol());
+			int rows = ps.executeUpdate();
+			if(rows>0) {
+			
+				 if (rows > 0) {
+			            try (ResultSet rs = ps.getGeneratedKeys()) {
+			                if (rs.next()) {
+			                    int id = rs.getInt(1);
+			                    item.setId(id);
+			                    System.out.println("Unit có bản ghi mới: " + id);
+			                }
+			            }
+			            return item;
+			        }
+			}
+				
+			
+		}
+		catch(Exception ex) {
+			throw ex;
+		}
+		
+			 return null;
 	}
 
 	@Override
 	public Unit Update(Unit item) {
-		// TODO Auto-generated method stub
-		return null;
+	    String sql = "UPDATE unit SET label = ?, symbol = ?, status = ? WHERE id = ?";
+
+	    try (Connection con = dbConnection.getConn();
+	         PreparedStatement ps = con.prepareStatement(sql)) {
+
+	        ps.setString(1, item.getLabel());
+	        ps.setString(2, item.getSymbol());
+	        ps.setInt(3, item.getStatus());
+	        ps.setInt(4, item.getId());
+
+	        int rows = ps.executeUpdate();
+	        if (rows > 0) {
+	            System.out.println("Update Unit thành công: " + item.getId());
+	            return item;
+	        }
+	    } catch (Exception ex) {
+	        ex.printStackTrace();
+	    }
+	    return null;
 	}
+
 
 	@Override
 	public boolean Delete(Unit item) {
-		// TODO Auto-generated method stub
-		return false;
+	    String sql = "UPDATE unit SET status = 0 WHERE id = ?";
+
+	    try (Connection con = dbConnection.getConn();
+	         PreparedStatement ps = con.prepareStatement(sql)) {
+
+	        ps.setInt(1, item.getId());
+	        int rows = ps.executeUpdate();
+
+	        if (rows > 0) {
+	            System.out.println("Soft delete Unit: " + item.getId());
+	            return true;
+	        }
+	    } catch (Exception ex) {
+	        ex.printStackTrace();
+	    }
+	    return false;
 	}
+
 
 	@Override
 	public Unit GetById(Object item) {
-		// TODO Auto-generated method stub
-		return null;
+	    String sql = "SELECT * FROM unit WHERE id = ? AND status = 1";
+
+	    try (Connection con = dbConnection.getConn();
+	         PreparedStatement ps = con.prepareStatement(sql)) {
+
+	        ps.setInt(1, (int) item);
+	        ResultSet rs = ps.executeQuery();
+
+	        if (rs.next()) {
+	            return new Unit(
+	                rs.getInt("id"),
+	                rs.getString("label"),
+	                rs.getString("symbol"),
+	                rs.getInt("status")
+	            );
+	        }
+
+	    } catch (Exception ex) {
+	        ex.printStackTrace();
+	    }
+	    return null;
 	}
+
 
 	@Override
 	public HashSet<Unit> GetAll() {
 		HashSet<Unit> list = new HashSet<Unit>();
-		String sql ="select * from unit";
+		String sql ="SELECT * FROM unit WHERE status = 1";
 		
 		try(Connection con = dbConnection.getConn();
 				PreparedStatement ps = con.prepareStatement(sql);
 				){
-			  ResultSet rs =	ps.executeQuery();
+			  ResultSet rs = ps.executeQuery();
 			  
 			  while (rs.next()) {
 		             Unit ca = new Unit();
@@ -78,5 +158,5 @@ public class UnitRepository implements IRepositories<Unit> {
 		
 		return null;
 	}
-
+	
 }
