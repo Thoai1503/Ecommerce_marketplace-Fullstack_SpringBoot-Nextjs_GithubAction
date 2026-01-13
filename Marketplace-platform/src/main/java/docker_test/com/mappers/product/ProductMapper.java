@@ -40,7 +40,7 @@ public final class ProductMapper implements IMapper<Product> {
             product.setHeight(rs.getDouble(StringValue.PRODUCT_HEIGHT_COL));
             
             product.setBrand(rs.getString(StringValue.PRODUCT_BRAND_COL));
-            product.setActive(rs.getInt(StringValue.PRODUCT_ACTIVE_COL));
+            product.setIsActive(rs.getInt(StringValue.PRODUCT_ACTIVE_COL));
 
             // Timestamp -> LocalDateTime
             Timestamp createdAt = rs.getTimestamp(StringValue.PRODUCT_CREATED_AT_COL);
