@@ -5,6 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashSet;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.models.CategoryAttribute;
