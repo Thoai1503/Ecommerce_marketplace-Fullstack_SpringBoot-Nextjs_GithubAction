@@ -6,7 +6,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.mappers.UserMapper;
@@ -116,9 +118,8 @@ public class UserRepository implements IRepositories<User> {
 
             return ps.executeUpdate() > 0 ? item : null;
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+	@Override
+	public boolean Delete(int id) {
 
         return null;
     }
@@ -127,7 +128,8 @@ public class UserRepository implements IRepositories<User> {
     @Override
     public boolean Delete(User item) {
 
-        String sql = "DELETE FROM user WHERE user_id = ?";
+			ps.setLong(1, id);
+			return ps.executeUpdate() > 0;
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -158,18 +160,10 @@ public class UserRepository implements IRepositories<User> {
                 return userMapper.RowMap(rs);
             }
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+	@Override
+	public List<User> GetAll() {
 
-        return null;
-    }
-
-    /* ================= GET ALL ================= */
-    @Override
-    public HashSet<User> GetAll() {
-
-		HashSet<User> list = new HashSet<>();
+		List<User> list = new ArrayList<>();
 		String sql = "SELECT * FROM user";
 
         try (Connection con = dbConnection.getConn();
