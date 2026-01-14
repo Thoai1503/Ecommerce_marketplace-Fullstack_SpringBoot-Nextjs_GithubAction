@@ -7,7 +7,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.models.User;
@@ -114,13 +116,13 @@ public class UserRepository implements IRepositories<User> {
 	}
 
 	@Override
-	public boolean Delete(User item) {
+	public boolean Delete(int id) {
 
 		String sql = "DELETE FROM user WHERE user_id = ?";
 
 		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-			ps.setLong(1, item.getUserId());
+			ps.setLong(1, id);
 			return ps.executeUpdate() > 0;
 
 		} catch (Exception ex) {
@@ -152,9 +154,9 @@ public class UserRepository implements IRepositories<User> {
 	}
 
 	@Override
-	public HashSet<User> GetAll() {
+	public List<User> GetAll() {
 
-		HashSet<User> list = new HashSet<>();
+		List<User> list = new ArrayList<>();
 		String sql = "SELECT * FROM user";
 
 		try (Connection con = dbConnection.getConn();
