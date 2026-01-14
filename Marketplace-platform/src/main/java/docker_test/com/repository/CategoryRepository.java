@@ -5,7 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.models.Category;
@@ -72,7 +74,7 @@ public class CategoryRepository implements IRepositories<Category>{
 	}
 
 	@Override
-	public boolean Delete(Category item) {
+	public boolean Delete(int id) {
 		// TODO Auto-generated method stub
 		return false;
 	}
@@ -84,8 +86,8 @@ public class CategoryRepository implements IRepositories<Category>{
 	}
 
 	@Override
-	public HashSet<Category> GetAll() {
-		HashSet<Category> list = new HashSet<Category>();
+	public List<Category> GetAll() {
+		List<Category> list = new ArrayList<Category>();
 		String sql ="select * from category";
 		
 		try(Connection con = dbConnection.getConn();
