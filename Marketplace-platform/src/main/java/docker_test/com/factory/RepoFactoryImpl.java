@@ -12,6 +12,8 @@ import docker_test.com.repository.UnitRepository;
 public class RepoFactoryImpl implements IRepoFactory  {
 	private static RepoFactoryImpl instance = null;
     private  JdbcTemplate jdbcTemplate;
+    
+    //ae thêm các Repository do ae tạo ở đây
 	private final CategoryRepository categoryRepository;
 	private final UnitRepository unitRepository;
 	private final CategoryAttributeRepository categoryAttributeRepository;
@@ -26,6 +28,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	
 	
 	public RepoFactoryImpl() {
+		//Khởi tạo các Repository do ae tạo ở đây
 		this.categoryRepository =CategoryRepository.Instance();
 		this.unitRepository =UnitRepository.Instance();
 		this.categoryAttributeRepository = CategoryAttributeRepository.Instance();
@@ -38,6 +41,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		case "category" -> (IRepositories) categoryRepository;
 		case "unit" -> (IRepositories) unitRepository;
 		case "category_attribute" -> (IRepositories) categoryAttributeRepository;
+		//...ae thêm các định nghĩa Repository do ae tạo ở đây (Repository phải implement IRepositories)
 		   default -> throw new IllegalArgumentException("Unknown entity type: " + entityType);
 		};
 	}
