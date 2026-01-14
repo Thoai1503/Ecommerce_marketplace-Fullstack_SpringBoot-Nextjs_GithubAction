@@ -2,17 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import {
   Users,
   Search,
-  Eye,
   EyeOff,
-  Mail,
-  Phone,
   MoreVertical,
-  Shield,
-  ShoppingCart,
-  User as UserIcon,
+  Plus,
 } from "lucide-react";
 import { Skeleton } from "@mui/material";
 import http from "@/lib/http";
@@ -28,45 +24,25 @@ interface User {
 }
 
 /* ================= API ================= */
-// const fetchUsers = async (): Promise<User[]> => {
-//   const res = await fetch("http://localhost:8000/users");
-//   if (!res.ok) throw new Error("Fetch users failed");
-//   return res.json();
-// };
-
-const fetchUsers2 = async (): Promise<User[]> => {
-  const res = await http
-    .get("/users")
-    .then((res) => res.data)
-    .catch((error) => {
-      throw error;
-    });
-  return res;
+const fetchUsers = async (): Promise<User[]> => {
+  const res = await http.get("/users");
+  return res.data;
 };
 
 const renderRole = (role: string) => {
   switch (role.toLowerCase()) {
-    case "both":
-      return (
-        <span className="badge bg-danger-subtle text-danger border border-danger">
-          ADMIN
-        </span>
-      );
-
     case "seller":
       return (
         <span className="badge bg-warning-subtle text-warning border border-warning">
           SELLER
         </span>
       );
-
     case "buyer":
       return (
         <span className="badge bg-info-subtle text-info border border-info">
           BUYER
         </span>
       );
-
     default:
       return (
         <span className="badge bg-secondary-subtle text-secondary border">
@@ -77,11 +53,12 @@ const renderRole = (role: string) => {
 };
 
 const Page: React.FC = () => {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["users"],
-    queryFn: fetchUsers2,
+    queryFn: fetchUsers,
   });
 
   useEffect(() => {
@@ -90,24 +67,34 @@ const Page: React.FC = () => {
     }
   }, []);
 
-const users = [...data]
-  .filter((u) =>
-    ["buyer", "seller"].includes(u.userType.toLowerCase())
-  )
-  .filter(
-    (u) =>
-      u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.phone.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-  .sort((a, b) => a.userId - b.userId);
-
+  const users = [...data]
+    .filter((u) =>
+      ["buyer", "seller"].includes(u.userType.toLowerCase())
+    )
+    .filter(
+      (u) =>
+        u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.phone.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => a.userId - b.userId);
 
   return (
     <div className="container-fluid px-4 py-4">
-      {/* HEADER */}
+      {/* ================= HEADER ================= */}
       <div className="mb-4">
-        <h2 className="fw-bold mb-3">Người dùng</h2>
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h2 className="fw-bold mb-0">Người dùng</h2>
+
+          {/* CREATE USER BUTTON */}
+          <button
+            className="btn btn-primary d-flex align-items-center gap-2"
+            onClick={() => router.push("/admin/user/create")}
+          >
+            <Plus size={18} />
+            Tạo người dùng
+          </button>
+        </div>
 
         <div style={{ maxWidth: 420 }}>
           <div className="input-group">
@@ -116,7 +103,7 @@ const users = [...data]
             </span>
             <input
               className="form-control border-start-0"
-              placeholder="Tìm kiếm theo tên hoặc email..."
+              placeholder="Tìm kiếm theo tên, email hoặc SĐT..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -124,7 +111,7 @@ const users = [...data]
         </div>
       </div>
 
-      {/* TABLE */}
+      {/* ================= TABLE ================= */}
       <div className="card border-0 shadow-sm">
         <div className="card-header bg-white d-flex justify-content-between">
           <div className="fw-bold d-flex align-items-center gap-2">
@@ -170,7 +157,7 @@ const users = [...data]
                         <td>{renderRole(u.userType)}</td>
                         <td>
                           {isActive ? (
-                            <span className="badge bg-success-subtle text-success border border-success">
+                            <span className="badge bg-success-subtle text-success border">
                               Active
                             </span>
                           ) : (
