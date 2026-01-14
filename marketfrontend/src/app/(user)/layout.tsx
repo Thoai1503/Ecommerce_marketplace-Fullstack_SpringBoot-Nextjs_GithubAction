@@ -66,7 +66,7 @@ export default async function UserLayout({
                     </span>{" "}
                     Hỗ trợ
                   </a>
-                  <a href="#" className="fw-medium">
+                  <a href="/register" className="fw-medium">
                     Đăng ký
                   </a>
                   <span
