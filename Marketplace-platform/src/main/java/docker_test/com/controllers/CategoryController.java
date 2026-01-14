@@ -3,6 +3,7 @@ package docker_test.com.controllers;
 import java.sql.SQLException;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,10 +21,11 @@ import docker_test.com.repository.IRepositories;
 public class CategoryController {
 	
 	 private final IRepositories repositories;
-	
-
-   public CategoryController () {
 	 
+
+   public CategoryController ( JdbcTemplate jdbcTemplate) {
+	 
+
 	   repositories = RepoFactoryImpl.Instance().createRepo("category");
    }
    
