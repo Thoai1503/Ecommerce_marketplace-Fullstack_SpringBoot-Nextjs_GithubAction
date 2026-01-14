@@ -495,12 +495,12 @@ const Page: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Parent Category */}
+                    {/* Parent Category
                     <div className="mb-4">
                       <label className="form-label fw-semibold d-flex align-items-center gap-2">
                         <FolderTree size={16} />
                         Danh mục cha
-             <select
+                      <select
                         className="form-select"
                         value={formData.parent_id ?? 0}
                         onChange={(e) => {
@@ -535,7 +535,7 @@ const Page: React.FC = () => {
                           Danh mục này sẽ hiển thị ở cấp cao nhất
                         </small>
                       )}
-                    </div>
+                    </div> */}
 
                     {/* Name - Với validation */}
                     <div className="mb-4">
