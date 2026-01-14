@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import docker_test.com.configs.DBConnection;
+import docker_test.com.factory.RepoFactoryImpl;
 import docker_test.com.repository.CategoryRepository;
 import docker_test.com.repository.IRepositories;
 import docker_test.com.repository.UnitRepository;
@@ -27,7 +28,8 @@ public class TestController {
 	
 	private IRepositories repo;
     private final JdbcTemplate jdbcTemplate;
-    private final GenericCrudService<Object, Integer>  crudService;
+    //private final GenericCrudService<Object, Integer>  crudService;
+    private  IRepositories repositories;
 
 @Autowired
   private final docker_test.com.services.TestSingleton testSingleton;
@@ -39,7 +41,8 @@ private DBConnection dbConnect;
 	 this.dbConnect =DBConnection.getInstance();
 	// this.repo=UnitRepository.Instance();
 	 this.jdbcTemplate = jdbcTemplate;
-	 this.crudService = GenericCrudService.Instance();
+	// this.crudService = GenericCrudService.Instance();
+	 this.repositories = RepoFactoryImpl.Instance().createRepo("category");
 	 
  }
   @GetMapping("/singleton")
@@ -84,16 +87,20 @@ private DBConnection dbConnect;
 //    }
     
     
-  @GetMapping("/get_all_test/{entity_type}")
-  public ResponseEntity testFactory(@PathVariable String entity_type) {
+  @GetMapping("/get_all_test")
+  public ResponseEntity testFactory() {
   
-	  try {
-          List<Object> entities = crudService.findAll(entity_type);
-          return ResponseEntity.ok(entities);
-      } catch (IllegalArgumentException e) {
-          return ResponseEntity.badRequest().build();
-      }
 
+	  repositories = RepoFactoryImpl.Instance().createRepo("category");
+		  var list = repositories.GetAll();
+		  System.out.println("List: " + list);
+		  
+		  
+		  
+		  repositories = RepoFactoryImpl.Instance().createRepo("unit");
+		  var lists = repositories.GetAll();
+		  System.out.println("List: " + lists);
+		  return ResponseEntity.ok(lists);
           
      
   }
