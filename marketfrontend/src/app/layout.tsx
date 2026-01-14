@@ -35,6 +35,10 @@ export default function RootLayout({
           href="/assets/vendor/bootstrap-icons/bootstrap-icons.css"
           rel="stylesheet"
         />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+          rel="stylesheet"
+        />
         <link href="/assets/vendor/aos/aos.css" rel="stylesheet" />
         <link
           href="/assets/vendor/glightbox/css/glightbox.min.css"
