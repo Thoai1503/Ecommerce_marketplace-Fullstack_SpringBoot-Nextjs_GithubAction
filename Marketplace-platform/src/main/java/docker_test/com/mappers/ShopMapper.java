@@ -2,7 +2,9 @@ package docker_test.com.mappers;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 import docker_test.com.models.Shop;
 
@@ -24,15 +26,15 @@ public class ShopMapper {
         shop.setBusinessLicense(rs.getString("business_license"));
         shop.setTaxCode(rs.getString("tax_code"));
 
-        shop.setRating(rs.getBigDecimal("rating"));
+        shop.setRating(rs.getDouble("rating"));
         shop.setTotalProducts(rs.getInt("total_products"));
         shop.setTotalOrders(rs.getInt("total_orders"));
 
-        shop.setResponseRate(rs.getBigDecimal("response_rate"));
+        shop.setResponseRate(rs.getDouble("response_rate"));
         shop.setResponseTime(rs.getInt("response_time"));
 
-        shop.setIsVerified(rs.getInt("is_verified"));
-        shop.setIsActive(rs.getInt("is_active"));
+        shop.setVerified(rs.getInt("is_verified"));
+        shop.setActive(rs.getInt("is_active"));
 
         if (rs.getTimestamp("created_at") != null) {
             shop.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
@@ -46,9 +48,9 @@ public class ShopMapper {
     }
 
     /* ================= MAP MULTIPLE ROWS ================= */
-    public HashSet<Shop> RowsMap(ResultSet rs) throws SQLException {
+    public List<Shop> RowsMap(ResultSet rs) throws SQLException {
 
-        HashSet<Shop> list = new HashSet<>();
+     List<Shop> list = new ArrayList<>();
 
         while (rs.next()) {
             list.add(RowMap(rs));
