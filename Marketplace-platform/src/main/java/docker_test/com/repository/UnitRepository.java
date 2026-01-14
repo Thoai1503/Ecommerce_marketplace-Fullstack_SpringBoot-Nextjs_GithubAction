@@ -5,7 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.models.Category;
@@ -86,17 +88,17 @@ public class UnitRepository implements IRepositories<Unit> {
 
 
 	@Override
-	public boolean Delete(Unit item) {
+	public boolean Delete(int id) {
 	    String sql = "UPDATE unit SET status = 0 WHERE id = ?";
 
 	    try (Connection con = dbConnection.getConn();
 	         PreparedStatement ps = con.prepareStatement(sql)) {
 
-	        ps.setInt(1, item.getId());
+	        ps.setInt(1, id);
 	        int rows = ps.executeUpdate();
 
 	        if (rows > 0) {
-	            System.out.println("Soft delete Unit: " + item.getId());
+	            System.out.println("Soft delete Unit: " + id);
 	            return true;
 	        }
 	    } catch (Exception ex) {
@@ -133,8 +135,8 @@ public class UnitRepository implements IRepositories<Unit> {
 
 
 	@Override
-	public HashSet<Unit> GetAll() {
-		HashSet<Unit> list = new HashSet<Unit>();
+	public List<Unit> GetAll() {
+		List<Unit> list = new ArrayList<Unit>();
 		String sql ="SELECT * FROM unit WHERE status = 1";
 		
 		try(Connection con = dbConnection.getConn();
