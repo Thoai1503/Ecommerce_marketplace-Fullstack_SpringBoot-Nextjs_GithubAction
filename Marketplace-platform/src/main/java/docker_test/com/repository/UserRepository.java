@@ -5,160 +5,153 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
 import docker_test.com.configs.DBConnection;
-import docker_test.com.mappers.UserMapper;
 import docker_test.com.models.User;
 
 public class UserRepository implements IRepositories<User> {
 
-    private static UserRepository instance = null;
-    private final DBConnection dbConnection;
-    private final UserMapper userMapper;
+	private static UserRepository instance = null;
+	private DBConnection dbConnection;
 
-    private UserRepository() {
-        this.dbConnection = DBConnection.getInstance();
-        this.userMapper = new UserMapper();
-    }
+	public UserRepository() {
+		this.dbConnection = DBConnection.getInstance();
+	}
 
-    public static UserRepository Instance() {
-        if (instance == null) {
-            instance = new UserRepository();
-        }
-        return instance;
-    }
+	public static UserRepository Instance() {
+		if (instance == null) {
+			instance = new UserRepository();
+		}
+		return instance;
+	}
 
-    /* ================= CREATE ================= */
-    @Override
-    public User Create(User item) throws SQLException {
+	@Override
+	public User Create(User item) throws SQLException {
 
-        String sql = """
-            INSERT INTO user
-            (email, phone, password_hash, full_name, avatar_url,
-             date_of_birth, gender, user_type, is_verified, is_active,
-             created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """;
+		String sql = "INSERT INTO user "
+				+ "(email, phone, password_hash, full_name, avatar_url, date_of_birth, gender, user_type, is_verified, is_active, created_at, updated_at) "
+				+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
+		try (Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-        try (Connection con = dbConnection.getConn();
-             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+			ps.setString(1, item.getEmail());
+			ps.setString(2, item.getPhone());
+			ps.setString(3, item.getPasswordHash());
+			ps.setString(4, item.getFullName());
+			ps.setString(5, item.getAvatarUrl());
 
-            ps.setString(1, item.getEmail());
-            ps.setString(2, item.getPhone());
-            ps.setString(3, item.getPasswordHash());
-            ps.setString(4, item.getFullName());
-            ps.setString(5, item.getAvatarUrl());
+			if (item.getDateOfBirth() != null) {
+				ps.setDate(6, java.sql.Date.valueOf(item.getDateOfBirth()));
+			} else {
+				ps.setNull(6, java.sql.Types.DATE);
+			}
 
-            if (item.getDateOfBirth() != null) {
-                ps.setDate(6, java.sql.Date.valueOf(item.getDateOfBirth()));
-            } else {
-                ps.setNull(6, java.sql.Types.DATE);
-            }
+			ps.setString(7, item.getGender());
+			ps.setString(8, item.getUserType());
+			ps.setInt(9, item.getIsVerified());
+			ps.setInt(10, item.getIsActive());
+			ps.setTimestamp(11, java.sql.Timestamp.valueOf(item.getCreatedAt()));
+			ps.setTimestamp(12, java.sql.Timestamp.valueOf(item.getUpdatedAt()));
 
-            ps.setString(7, item.getGender());
-            ps.setString(8, item.getUserType());
-            ps.setInt(9, item.getIsVerified());
-            ps.setInt(10, item.getIsActive());
-            ps.setTimestamp(11, java.sql.Timestamp.valueOf(item.getCreatedAt()));
-            ps.setTimestamp(12, java.sql.Timestamp.valueOf(item.getUpdatedAt()));
+			int rows = ps.executeUpdate();
 
-            int rows = ps.executeUpdate();
+			if (rows > 0) {
+				try (ResultSet rs = ps.getGeneratedKeys()) {
+					if (rs.next()) {
+						long id = rs.getLong(1);
+						item.setUserId(id);
+						System.out.println("ID user mới: " + id);
+					}
+				}
+				return item;
+			}
+		} catch (Exception ex) {
+			throw ex;
+		}
 
-            if (rows > 0) {
-                try (ResultSet rs = ps.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        item.setUserId(rs.getLong(1));
-                    }
-                }
-                return item;
-            }
-        }
+		return null;
+	}
 
-        return null;
-    }
+	@Override
+	public User Update(User item) {
 
-    /* ================= UPDATE ================= */
-    @Override
-    public User Update(User item) {
+		String sql = "UPDATE user SET " + "email = ?, phone = ?, full_name = ?, avatar_url = ?, "
+				+ "date_of_birth = ?, gender = ?, user_type = ?, " + "is_verified = ?, is_active = ?, updated_at = ? "
+				+ "WHERE user_id = ?";
 
-        String sql = """
-            UPDATE user SET
-                email = ?, phone = ?, full_name = ?, avatar_url = ?,
-                date_of_birth = ?, gender = ?, user_type = ?,
-                is_verified = ?, is_active = ?, updated_at = ?
-            WHERE user_id = ?
-        """;
+		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
 
+			ps.setString(1, item.getEmail());
+			ps.setString(2, item.getPhone());
+			ps.setString(3, item.getFullName());
+			ps.setString(4, item.getAvatarUrl());
 
-        try (Connection con = dbConnection.getConn();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+			if (item.getDateOfBirth() != null) {
+				ps.setDate(5, java.sql.Date.valueOf(item.getDateOfBirth()));
+			} else {
+				ps.setNull(5, java.sql.Types.DATE);
+			}
 
-            ps.setString(1, item.getEmail());
-            ps.setString(2, item.getPhone());
-            ps.setString(3, item.getFullName());
-            ps.setString(4, item.getAvatarUrl());
+			ps.setString(6, item.getGender());
+			ps.setString(7, item.getUserType());
+			ps.setInt(8, item.getIsVerified());
+			ps.setInt(9, item.getIsActive());
+			ps.setTimestamp(10, java.sql.Timestamp.valueOf(LocalDateTime.now()));
+			ps.setLong(11, item.getUserId());
 
-            if (item.getDateOfBirth() != null) {
-                ps.setDate(5, java.sql.Date.valueOf(item.getDateOfBirth()));
-            } else {
-                ps.setNull(5, java.sql.Types.DATE);
-            }
+			int rows = ps.executeUpdate();
+			return rows > 0 ? item : null;
 
-            ps.setString(6, item.getGender());
-            ps.setString(7, item.getUserType());
-            ps.setInt(8, item.getIsVerified());
-            ps.setInt(9, item.getIsActive());
-            ps.setTimestamp(10, java.sql.Timestamp.valueOf(LocalDateTime.now()));
-            ps.setLong(11, item.getUserId());
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 
-            return ps.executeUpdate() > 0 ? item : null;
+		return null;
+	}
 
 	@Override
 	public boolean Delete(int id) {
 
-        return null;
-    }
+		String sql = "DELETE FROM user WHERE user_id = ?";
 
-    /* ================= DELETE ================= */
-    @Override
-    public boolean Delete(User item) {
+		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
 
 			ps.setLong(1, id);
 			return ps.executeUpdate() > 0;
 
-        try (Connection con = dbConnection.getConn();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 
-            ps.setLong(1, item.getUserId());
-            return ps.executeUpdate() > 0;
+		return false;
+	}
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+	@Override
+	public User GetById(Object id) {
 
-        return false;
-    }
+		String sql = "SELECT * FROM users WHERE user_id = ?";
 
-    /* ================= GET BY ID ================= */
-    @Override
-    public User GetById(Object id) {
+		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-        String sql = "SELECT * FROM user WHERE user_id = ?";
+			ps.setLong(1, Long.parseLong(id.toString()));
+			ResultSet rs = ps.executeQuery();
 
-        try (Connection con = dbConnection.getConn();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+			if (rs.next()) {
+				return mapUser(rs);
+			}
 
-            ps.setLong(1, Long.parseLong(id.toString()));
-            ResultSet rs = ps.executeQuery();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 
-            if (rs.next()) {
-                return userMapper.RowMap(rs);
-            }
+		return null;
+	}
 
 	@Override
 	public List<User> GetAll() {
@@ -166,16 +159,49 @@ public class UserRepository implements IRepositories<User> {
 		List<User> list = new ArrayList<>();
 		String sql = "SELECT * FROM user";
 
-        try (Connection con = dbConnection.getConn();
-             PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+		try (Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql);
+				ResultSet rs = ps.executeQuery()) {
 
-            return userMapper.RowsMap(rs);
+			while (rs.next()) {
+				list.add(mapUser(rs));
+			}
+			return list;
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 
-        return new HashSet<>();
-    }
+		return null;
+	}
+
+	private User mapUser(ResultSet rs) throws SQLException {
+
+		User u = new User();
+		u.setUserId(rs.getLong("user_id"));
+		u.setEmail(rs.getString("email"));
+		u.setPhone(rs.getString("phone"));
+		u.setPasswordHash(rs.getString("password_hash"));
+		u.setFullName(rs.getString("full_name"));
+		u.setAvatarUrl(rs.getString("avatar_url"));
+
+		java.sql.Date dob = rs.getDate("date_of_birth");
+		if (dob != null) {
+			u.setDateOfBirth(dob.toLocalDate());
+		}
+
+		u.setGender(rs.getString("gender"));
+		u.setUserType(rs.getString("user_type"));
+		u.setIsVerified(rs.getInt("is_verified"));
+		u.setIsActive(rs.getInt("is_active"));
+
+		u.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+		u.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
+
+		if (rs.getTimestamp("last_login") != null) {
+			u.setLastLogin(rs.getTimestamp("last_login").toLocalDateTime());
+		}
+
+		return u;
+	}
 }

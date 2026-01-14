@@ -6,7 +6,9 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.mappers.ShopMapper;
@@ -57,15 +59,15 @@ public class ShopRepository implements IRepositories<Shop> {
             ps.setString(6, item.getBusinessLicense());
             ps.setString(7, item.getTaxCode());
 
-            ps.setBigDecimal(8, item.getRating());
+            ps.setDouble(8, item.getRating());
             ps.setInt(9, item.getTotalProducts());
             ps.setInt(10, item.getTotalOrders());
 
-            ps.setBigDecimal(11, item.getResponseRate());
+            ps.setDouble(11, item.getResponseRate());
             ps.setInt(12, item.getResponseTime());
 
-            ps.setInt(13, item.getIsVerified());
-            ps.setInt(14, item.getIsActive());
+            ps.setInt(13, item.isVerified());
+            ps.setInt(14, item.isActive());
             ps.setTimestamp(15, java.sql.Timestamp.valueOf(item.getCreatedAt()));
             ps.setTimestamp(16, java.sql.Timestamp.valueOf(item.getUpdatedAt()));
 
@@ -111,8 +113,8 @@ public class ShopRepository implements IRepositories<Shop> {
             ps.setString(4, item.getShopBanner());
             ps.setString(5, item.getBusinessLicense());
             ps.setString(6, item.getTaxCode());
-            ps.setInt(7, item.getIsVerified());
-            ps.setInt(8, item.getIsActive());
+            ps.setInt(7, item.isVerified());
+            ps.setInt(8, item.isActive());
             ps.setTimestamp(9, java.sql.Timestamp.valueOf(LocalDateTime.now()));
             ps.setLong(10, item.getShopId());
 
@@ -126,7 +128,7 @@ public class ShopRepository implements IRepositories<Shop> {
     }
 
     /* ================= DELETE ================= */
-    @Override
+
     public boolean Delete(Shop item) {
 
         String sql = "DELETE FROM shop WHERE shop_id = ?";
@@ -169,7 +171,7 @@ public class ShopRepository implements IRepositories<Shop> {
 
     /* ================= GET ALL ================= */
     @Override
-    public HashSet<Shop> GetAll() {
+    public List<Shop> GetAll() {
 
         String sql = "SELECT * FROM shop";
 
@@ -183,6 +185,12 @@ public class ShopRepository implements IRepositories<Shop> {
             ex.printStackTrace();
         }
 
-        return new HashSet<>();
+        return new ArrayList<>();
     }
+
+	@Override
+	public boolean Delete(int id) {
+		// TODO Auto-generated method stub
+		return false;
+	}
 }
