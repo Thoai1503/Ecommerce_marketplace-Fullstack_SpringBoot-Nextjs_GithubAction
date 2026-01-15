@@ -25,7 +25,7 @@ public class CategoryController {
 	 private final IRepositories repositories;
 	 
 
-   public CategoryController ( JdbcTemplate jdbcTemplate) {
+   public CategoryController ( ) {
 	 
 
 	   repositories = RepoFactoryImpl.Instance().createRepo("category");

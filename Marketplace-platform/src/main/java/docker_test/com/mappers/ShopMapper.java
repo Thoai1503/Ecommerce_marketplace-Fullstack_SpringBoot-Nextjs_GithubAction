@@ -6,9 +6,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import org.springframework.jdbc.core.RowMapper;
+
 import docker_test.com.models.Shop;
 
-public class ShopMapper {
+public class ShopMapper implements RowMapper<Shop> {
 
     /* ================= MAP SINGLE ROW ================= */
     public Shop RowMap(ResultSet rs) throws SQLException {
@@ -58,4 +60,10 @@ public class ShopMapper {
 
         return list;
     }
+
+	@Override
+	public Shop mapRow(ResultSet rs, int rowNum) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
