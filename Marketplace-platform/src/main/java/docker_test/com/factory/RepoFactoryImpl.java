@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import docker_test.com.repository.CategoryAttributeRepository;
 import docker_test.com.repository.CategoryRepository;
 import docker_test.com.repository.IRepositories;
+import docker_test.com.repository.ProductRepository;
 import docker_test.com.repository.UnitRepository;
 
 @Component
@@ -17,7 +18,8 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	private final CategoryRepository categoryRepository;
 	private final UnitRepository unitRepository;
 	private final CategoryAttributeRepository categoryAttributeRepository;
-	
+	private final ProductRepository productRepository;
+
 	public static RepoFactoryImpl Instance() {
 	
 		if (instance==null) {
@@ -27,20 +29,23 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	}
 	
 	
+	
 	public RepoFactoryImpl() {
 		//Khởi tạo các Repository do ae tạo ở đây
 		this.categoryRepository =CategoryRepository.Instance();
 		this.unitRepository =UnitRepository.Instance();
 		this.categoryAttributeRepository = CategoryAttributeRepository.Instance();
+		this.productRepository =ProductRepository.Instance();
 	}
 
 	@Override
 	public IRepositories createRepo(String entityType) {
-		// TODO Auto-generated method stub
+		
 		return switch (entityType.toLowerCase()) {
 		case "category" -> (IRepositories) categoryRepository;
 		case "unit" -> (IRepositories) unitRepository;
 		case "category_attribute" -> (IRepositories) categoryAttributeRepository;
+		case "product" -> (IRepositories)  productRepository;
 		//...ae thêm các định nghĩa Repository do ae tạo ở đây (Repository phải implement IRepositories)
 		   default -> throw new IllegalArgumentException("Unknown entity type: " + entityType);
 		};
