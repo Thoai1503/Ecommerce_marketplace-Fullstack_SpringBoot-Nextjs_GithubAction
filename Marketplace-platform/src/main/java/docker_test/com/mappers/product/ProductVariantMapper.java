@@ -46,4 +46,10 @@ public final class ProductVariantMapper implements IMapper<ProductVariant> {
         }
         return list;
     }
+
+	@Override
+	public ProductVariant mapRow(ResultSet rs, int rowNum) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

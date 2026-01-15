@@ -57,4 +57,10 @@ public final class ProductAttributeMapper implements IMapper<ProductAttribute> {
         }
         return list;
     }
+
+	@Override
+	public ProductAttribute mapRow(ResultSet rs, int rowNum) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
