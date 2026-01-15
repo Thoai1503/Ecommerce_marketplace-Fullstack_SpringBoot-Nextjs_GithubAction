@@ -40,4 +40,10 @@ public final class ProductImageMapper implements IMapper<ProductImage> {
         }
         return list;
     }
+
+	@Override
+	public ProductImage mapRow(ResultSet rs, int rowNum) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
