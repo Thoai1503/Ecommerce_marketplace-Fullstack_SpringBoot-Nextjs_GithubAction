@@ -49,4 +49,10 @@ public final class ProductReviewMapper implements IMapper<ProductReview> {
         }
         return list;
     }
+
+	@Override
+	public ProductReview mapRow(ResultSet rs, int rowNum) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
