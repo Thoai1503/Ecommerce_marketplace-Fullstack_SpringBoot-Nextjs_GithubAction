@@ -71,4 +71,13 @@ public final class ProductMapper implements IMapper<Product> {
         }
         return products;
     }
+
+	@Override
+	public Product mapRow(ResultSet rs, int rowNum) throws SQLException {
+		System.out.println("Execute..");
+		Product product =new Product();
+		product.setProductId(rs.getInt("Id"));
+		product.setProductName(rs.getString("Name"));
+		return null;
+	}
 }
