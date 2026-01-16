@@ -178,7 +178,7 @@ public class UserRepository implements IRepositories<User> {
 	private User mapUser(ResultSet rs) throws SQLException {
 
 		User u = new User();
-		u.setUserId(rs.getLong("user_id"));
+		u.setUserId(rs.getLong("id"));
 		u.setEmail(rs.getString("email"));
 		u.setPhone(rs.getString("phone"));
 		u.setPasswordHash(rs.getString("password_hash"));
