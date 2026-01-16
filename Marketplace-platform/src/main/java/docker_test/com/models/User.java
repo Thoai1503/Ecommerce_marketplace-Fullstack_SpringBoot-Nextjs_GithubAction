@@ -3,9 +3,9 @@ package docker_test.com.models;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-public final class User {
+public class User {
 
-	private long userId;
+	private long id;
 	private String email;
 	private String phone;
 	private String passwordHash;
@@ -20,47 +20,21 @@ public final class User {
 	private LocalDateTime updatedAt;
 	private LocalDateTime lastLogin;
 
-	/**
-	 * Constructor mặc định – dùng cho CREATE
-	 */
 	public User() {
-		this.userType = "buyer"; // 🔒 default
+		this.userType = "buyer";
+		this.isVerified = 1;
 		this.isActive = 1;
-		this.isVerified = 1; // 🔒 theo yêu cầu của bạn
 		this.createdAt = LocalDateTime.now();
 		this.updatedAt = LocalDateTime.now();
 	}
 
-	/**
-	 * Constructor đầy đủ – dùng cho mapping DB
-	 */
-	public User(long userId, String email, String phone, String passwordHash, String fullName, String avatarUrl,
-			LocalDate dateOfBirth, String gender, String userType, int isVerified, int isActive,
-			LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime lastLogin) {
-		this.userId = userId;
-		this.email = email;
-		this.phone = phone;
-		this.passwordHash = passwordHash;
-		this.fullName = fullName;
-		this.avatarUrl = avatarUrl;
-		this.dateOfBirth = dateOfBirth;
-		this.gender = gender;
-		this.userType = userType;
-		this.isVerified = isVerified;
-		this.isActive = isActive;
-		this.createdAt = createdAt;
-		this.updatedAt = updatedAt;
-		this.lastLogin = lastLogin;
+	// getters / setters
+	public long getId() {
+		return id;
 	}
 
-	/* ===== GETTERS / SETTERS ===== */
-
-	public long getUserId() {
-		return userId;
-	}
-
-	public void setUserId(long userId) {
-		this.userId = userId;
+	public void setId(long id) {
+		this.id = id;
 	}
 
 	public String getEmail() {
