@@ -34,4 +34,10 @@ public final class AttributeMapper implements IMapper<Attribute> {
         }
         return list;
     }
+
+	@Override
+	public Attribute mapRow(ResultSet rs, int rowNum) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

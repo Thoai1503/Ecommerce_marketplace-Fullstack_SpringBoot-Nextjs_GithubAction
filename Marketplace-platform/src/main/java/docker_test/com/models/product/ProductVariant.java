@@ -3,115 +3,116 @@ package docker_test.com.models.product;
 import java.time.LocalDateTime;
 
 public final class ProductVariant {
-	private long variantId;
-	private long productId;
-	private String variantName;
-	private String sku;
-	private Double price;
-	private int stockQuantity;
-	private String imageUrl;
-	private int isActive;
-	private LocalDateTime createdAt;
-	private LocalDateTime updatedAt;
+    private long variant_id;
+    private long product_id;
+    private String variant_name;
+    private String sku;
+    private Double price;
+    private int stock_quantity;
+    private String image_url;
+    private int is_active;
+    private LocalDateTime created_at;
+    private LocalDateTime updated_at;
 
-	public ProductVariant() {
-		this.stockQuantity = 0;
-		this.isActive = 1;
-		this.createdAt = LocalDateTime.now();
-		this.updatedAt = LocalDateTime.now();
-	}
+    public ProductVariant() {
+        this.stock_quantity = 0;
+        this.is_active = 1;
+        this.created_at = LocalDateTime.now();
+        this.updated_at = LocalDateTime.now();
+    }
 
-	public ProductVariant(long variantId, long productId, String variantName, String sku, Double price,
-			int stockQuantity, String imageUrl, int isActive, LocalDateTime createdAt, LocalDateTime updatedAt) {
-		this.variantId = variantId;
-		this.productId = productId;
-		this.variantName = variantName;
-		this.sku = sku;
-		this.price = price;
-		this.stockQuantity = stockQuantity;
-		this.imageUrl = imageUrl;
-		this.isActive = isActive;
-		this.createdAt = createdAt;
-		this.updatedAt = updatedAt;
-	}
+    public ProductVariant(long variant_id, long product_id, String variant_name, String sku, 
+                         Double price, int stock_quantity, String image_url, int is_active,
+                         LocalDateTime created_at, LocalDateTime updated_at) {
+        this.variant_id = variant_id;
+        this.product_id = product_id;
+        this.variant_name = variant_name;
+        this.sku = sku;
+        this.price = price;
+        this.stock_quantity = stock_quantity;
+        this.image_url = image_url;
+        this.is_active = is_active;
+        this.created_at = created_at;
+        this.updated_at = updated_at;
+    }
 
-	public long getVariantId() {
-		return variantId;
-	}
+    public long getVariantId() {
+        return variant_id;
+    }
 
-	public void setVariantId(long variantId) {
-		this.variantId = variantId;
-	}
+    public void setVariantId(long variant_id) {
+        this.variant_id = variant_id;
+    }
 
-	public long getProductId() {
-		return productId;
-	}
+    public long getProductId() {
+        return product_id;
+    }
 
-	public void setProductId(long productId) {
-		this.productId = productId;
-	}
+    public void setProductId(long product_id) {
+        this.product_id = product_id;
+    }
 
-	public String getVariantName() {
-		return variantName;
-	}
+    public String getVariantName() {
+        return variant_name;
+    }
 
-	public void setVariantName(String variantName) {
-		this.variantName = variantName;
-	}
+    public void setVariantName(String variant_name) {
+        this.variant_name = variant_name;
+    }
 
-	public String getSku() {
-		return sku;
-	}
+    public String getSku() {
+        return sku;
+    }
 
-	public void setSku(String sku) {
-		this.sku = sku;
-	}
+    public void setSku(String sku) {
+        this.sku = sku;
+    }
 
-	public Double getPrice() {
-		return price;
-	}
+    public Double getPrice() {
+        return price;
+    }
 
-	public void setPrice(Double price) {
-		this.price = price;
-	}
+    public void setPrice(Double price) {
+        this.price = price;
+    }
 
-	public int getStockQuantity() {
-		return stockQuantity;
-	}
+    public int getStockQuantity() {
+        return stock_quantity;
+    }
 
-	public void setStockQuantity(int stockQuantity) {
-		this.stockQuantity = stockQuantity;
-	}
+    public void setStockQuantity(int stock_quantity) {
+        this.stock_quantity = stock_quantity;
+    }
 
-	public String getImageUrl() {
-		return imageUrl;
-	}
+    public String getImageUrl() {
+        return image_url;
+    }
 
-	public void setImageUrl(String imageUrl) {
-		this.imageUrl = imageUrl;
-	}
+    public void setImageUrl(String image_url) {
+        this.image_url = image_url;
+    }
 
-	public int isActive() {
-		return isActive;
-	}
+    public int isActive() {
+        return is_active;
+    }
 
-	public void setActive(int active) {
-		isActive = active;
-	}
+    public void setActive(int is_active) {
+        this.is_active = is_active;
+    }
 
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
-	}
+    public LocalDateTime getCreatedAt() {
+        return created_at;
+    }
 
-	public void setCreatedAt(LocalDateTime createdAt) {
-		this.createdAt = createdAt;
-	}
+    public void setCreatedAt(LocalDateTime created_at) {
+        this.created_at = created_at;
+    }
 
-	public LocalDateTime getUpdatedAt() {
-		return updatedAt;
-	}
+    public LocalDateTime getUpdatedAt() {
+        return updated_at;
+    }
 
-	public void setUpdatedAt(LocalDateTime updatedAt) {
-		this.updatedAt = updatedAt;
-	}
+    public void setUpdatedAt(LocalDateTime updated_at) {
+        this.updated_at = updated_at;
+    }
 }

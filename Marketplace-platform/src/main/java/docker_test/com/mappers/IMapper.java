@@ -3,8 +3,11 @@ package docker_test.com.mappers;
 import java.sql.ResultSet;
 import java.util.HashSet;
 
-public interface IMapper<T> {
+import org.springframework.jdbc.core.RowMapper;
+
+public interface IMapper<T> extends RowMapper<T> {
 		T RowMap(ResultSet rs);
 		HashSet<T> RowsMap(ResultSet rs);
+	
 }
 
