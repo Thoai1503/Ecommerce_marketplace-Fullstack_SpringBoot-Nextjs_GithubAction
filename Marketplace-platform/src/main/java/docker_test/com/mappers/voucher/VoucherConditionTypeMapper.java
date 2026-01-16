@@ -40,4 +40,10 @@ public final class VoucherConditionTypeMapper implements IMapper<VoucherConditio
 }
 		return list;
 	}
+
+	@Override
+	public VoucherConditionType mapRow(ResultSet rs, int rowNum) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

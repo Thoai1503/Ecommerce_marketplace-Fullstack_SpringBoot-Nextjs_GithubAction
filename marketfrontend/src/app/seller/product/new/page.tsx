@@ -1,7 +1,8 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
+import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Button, Modal } from "antd";
+import { Button, Modal, Upload, UploadFile, UploadProps, message } from "antd";
 //import "bootstrap-icons/font/bootstrap-icons.css"; // ← Uncommented
 
 interface ProductFormData {
@@ -148,6 +149,27 @@ const AddProductForm: React.FC = () => {
 
   const isLastTab = currentTab === tabSections.length - 1;
 
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+
+  const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
+    // Giới hạn tối đa 8 ảnh như yêu cầu
+    const updatedList = newFileList.slice(0, 8);
+    setFileList(updatedList);
+
+    // Optional: thông báo khi đạt giới hạn
+    if (newFileList.length > 8) {
+      message.warning("Chỉ được upload tối đa 8 ảnh!");
+    }
+  };
+
+  // Tùy chỉnh trước khi upload (ở đây ta không upload thật → return false)
+  const beforeUpload = () => {
+    return false; // Ngăn upload tự động lên server (chúng ta chỉ preview)
+  };
+
+  // Xác định ảnh đầu tiên là cover
+  const isCover = (index: number) => index === 0;
+
   return (
     <>
       {/* Add scroll margin to all sections to prevent header overlap */}
@@ -242,87 +264,58 @@ const AddProductForm: React.FC = () => {
                 id="basic-info"
                 className="scroll-section"
               >
-                <div className="mb-3">
-                  <h2 className="h4 fw-bold  mb-1">
-                    <i className="bi bi-1-circle-fill me-2"></i>
-                    Basic Information
-                  </h2>
-                  <p className="text-muted small mb-4">
-                    Provide essential product details and specifications
-                  </p>
-                </div>
-                {/* Product Media */}
+                {/* ... Product Details, Specifications giữ nguyên ... */}
+
+                {/* Product Media - Phần được thay thế */}
                 <div className="card shadow-sm mb-4">
                   <div className="card-header bg-white d-flex justify-content-between align-items-center">
                     <div>
                       <h3 className="h5 mb-0 fw-bold">Product Media</h3>
                       <small className="text-muted">
-                        Add up to 8 images. Used for cover and gallery.
+                        Add up to 8 images. First image will be used as cover.
                       </small>
                     </div>
                     <button className="btn btn-link text-danger p-0">
                       Media Guidelines
                     </button>
                   </div>
+
                   <div className="card-body">
-                    <div className="row g-3">
-                      <div className="col-6 col-md-4">
-                        <div
-                          className="border border-danger border-2 border-dashed rounded p-4 text-center bg-danger bg-opacity-10 h-100 d-flex flex-column justify-content-center"
-                          style={{ minHeight: "200px", cursor: "pointer" }}
-                        >
-                          <i className="bi bi-image fs-1 text-danger mb-2"></i>
-                          <span className="fw-bold text-danger">Add Media</span>
+                    <Upload.Dragger
+                      name="images"
+                      multiple
+                      maxCount={8}
+                      listType="picture-card" // kiểu hiển thị đẹp cho ảnh
+                      fileList={fileList}
+                      beforeUpload={beforeUpload}
+                      onChange={handleChange}
+                      accept="image/*"
+                      className="product-media-upload"
+                    >
+                      {fileList.length >= 8 ? null : (
+                        <div className="p-4 text-center">
+                          <InboxOutlined
+                            style={{ fontSize: 36, color: "#ff4d4f" }}
+                          />
+                          <p className="mt-2 fw-bold text-danger">
+                            Click or drag images here
+                          </p>
                           <small className="text-muted">
-                            Drag & drop or click
+                            Support JPG, PNG • Max 8 images
                           </small>
                         </div>
+                      )}
+                    </Upload.Dragger>
+
+                    {/* Hiển thị thông tin thêm nếu cần */}
+                    {fileList.length > 0 && (
+                      <div className="mt-3 text-muted small">
+                        {fileList.length} image{fileList.length > 1 ? "s" : ""}{" "}
+                        selected
                       </div>
-                      <div className="col-3 col-md-2">
-                        <div
-                          className="position-relative rounded overflow-hidden border"
-                          style={{ aspectRatio: "1/1" }}
-                        >
-                          <img
-                            src="https://via.placeholder.com/150"
-                            alt="Product"
-                            className="w-100 h-100 object-fit-cover"
-                          />
-                          <span className="position-absolute top-0 start-0 badge bg-dark m-2">
-                            Cover
-                          </span>
-                        </div>
-                      </div>
-                      <div className="col-3 col-md-2">
-                        <div
-                          className="position-relative rounded overflow-hidden border"
-                          style={{ aspectRatio: "1/1" }}
-                        >
-                          <img
-                            src="https://via.placeholder.com/150"
-                            alt="Product"
-                            className="w-100 h-100 object-fit-cover"
-                          />
-                        </div>
-                      </div>
-                      {[3, 4, 5].map((slot) => (
-                        <div className="col-3 col-md-2" key={slot}>
-                          <div
-                            className="border rounded bg-light d-flex align-items-center justify-content-center text-muted"
-                            style={{ aspectRatio: "1/1" }}
-                          >
-                            <small>Slot {slot}</small>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <button className="btn btn-link text-danger p-0 mt-3">
-                      <i className="bi bi-camera-video me-1"></i> Add Product
-                      Video
-                    </button>
+                    )}
                   </div>
                 </div>
-
                 {/* Product Details */}
                 <div className="card shadow-sm mb-4">
                   <div className="card-header bg-white d-flex justify-content-between align-items-center">
@@ -498,6 +491,10 @@ const AddProductForm: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* ... các section còn lại ... */}
+
+              {/* Optional: CSS bổ sung */}
 
               {/* SECTION 2: Sales & Pricing */}
               <div
@@ -1020,6 +1017,64 @@ const AddProductForm: React.FC = () => {
           </div>
         </div>
       </Modal>
+      <style jsx>{`
+        /* Khu vực drag & drop chính */
+        .ant-upload-drag {
+          border: 2px dashed #ff4d4f !important; /* Viền đỏ mặc định */
+          background-color: rgba(
+            255,
+            77,
+            79,
+            0.05
+          ) !important; /* Nền rất nhạt */
+          border-radius: 12px;
+          transition: all 0.3s ease;
+        }
+
+        /* Khi hover */
+        .ant-upload-drag:hover {
+          border-color: #ff7875 !important; /* Đỏ sáng hơn */
+          background-color: rgba(
+            255,
+            77,
+            79,
+            0.12
+          ) !important; /* Nền đỏ nhạt rõ hơn */
+          box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.15); /* Hiệu ứng glow nhẹ */
+        }
+
+        /* Khi đang kéo thả file vào (active/drag over) */
+        .ant-upload-drag.ant-upload-drag-enter,
+        .ant-upload-drag.p-is-dragging {
+          border-color: #cf1322 !important; /* Đỏ đậm khi kéo thả */
+          background-color: rgba(207, 19, 34, 0.15) !important;
+          box-shadow: 0 0 0 4px rgba(207, 19, 34, 0.25);
+        }
+
+        /* Icon và text bên trong khi hover */
+        .ant-upload-drag:hover .anticon-inbox,
+        .ant-upload-drag:hover p {
+          color: #ff7875 !important;
+        }
+
+        /* Danh sách ảnh đã upload */
+        .ant-upload-list-picture-card-container {
+          transition: transform 0.2s ease;
+        }
+
+        .ant-upload-list-picture-card-container:hover {
+          transform: scale(1.04);
+        }
+
+        /* Tùy chỉnh nút xóa */
+        .ant-upload-list-item-actions .anticon-delete {
+          color: #ff4d4f !important;
+        }
+
+        .ant-upload-list-item-actions .anticon-delete:hover {
+          color: #cf1322 !important;
+        }
+      `}</style>
     </>
   );
 };
