@@ -5,6 +5,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashSet;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.models.CategoryAttribute;
@@ -40,7 +43,7 @@ public class CategoryAttributeRepository implements IRepositories<CategoryAttrib
 	}
 
 	@Override
-	public boolean Delete(CategoryAttribute item) {
+	public boolean Delete(int id) {
 		// TODO Auto-generated method stub
 		return false;
 	}
@@ -52,7 +55,7 @@ public class CategoryAttributeRepository implements IRepositories<CategoryAttrib
 	}
 
 	@Override
-	public HashSet<CategoryAttribute> GetAll() {
+	public List<CategoryAttribute> GetAll() {
 		// TODO Auto-generated method stub
 		return null;
 	}
