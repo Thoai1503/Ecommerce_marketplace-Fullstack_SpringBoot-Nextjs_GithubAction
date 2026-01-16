@@ -3,7 +3,7 @@ package docker_test.com.utils;
 public final class StringValue {
 
     // User table
-    public static final String USER_ID_COL = "user_id";
+    public static final String USER_ID_COL = "id";
     public static final String USER_EMAIL_COL = "email";
     public static final String USER_PHONE_COL = "phone";
     public static final String USER_PASSWORD_COL = "password_hash";
@@ -19,7 +19,7 @@ public final class StringValue {
     public static final String USER_LAST_LOGIN_COL = "last_login";
 
     // Addresses table
-    public static final String ADDRESS_ID_COL = "address_id";
+    public static final String ADDRESS_ID_COL = "id";
     public static final String ADDRESS_USER_ID_COL = "user_id";
     public static final String ADDRESS_RECIPIENT_NAME_COL = "recipient_name";
     public static final String ADDRESS_RECIPIENT_PHONE_COL = "recipient_phone";
@@ -33,7 +33,7 @@ public final class StringValue {
     public static final String ADDRESS_UPDATED_AT_COL = "updated_at";
 
     // Shops table
-    public static final String SHOP_ID_COL = "shop_id";
+    public static final String SHOP_ID_COL = "id";
     public static final String SHOP_USER_ID_COL = "user_id";
     public static final String SHOP_NAME_COL = "shop_name";
     public static final String SHOP_DESCRIPTION_COL = "shop_description";
@@ -63,7 +63,7 @@ public final class StringValue {
     public static final String CATEGORY_UPDATED_AT_COL = "updated_at";
 
     // Products table
-    public static final String PRODUCT_ID_COL = "product_id";
+    public static final String PRODUCT_ID_COL = "id";
     public static final String PRODUCT_SHOP_ID_COL = "shop_id";
     public static final String PRODUCT_CATEGORY_ID_COL = "category_id";
     public static final String PRODUCT_NAME_COL = "product_name";
@@ -148,7 +148,7 @@ public final class StringValue {
     public static final String ATTR_UNIT_STATUS_COL = "status";
 
     // Cart table
-    public static final String CART_ID_COL = "cart_id";
+    public static final String CART_ID_COL = "id";
     public static final String CART_USER_ID_COL = "user_id";
     public static final String CART_PRODUCT_ID_COL = "product_id";
     public static final String CART_VARIANT_ID_COL = "variant_id";
@@ -157,13 +157,13 @@ public final class StringValue {
     public static final String CART_UPDATED_AT_COL = "updated_at";
 
     // Wishlists table
-    public static final String WISHLIST_ID_COL = "wishlist_id";
+    public static final String WISHLIST_ID_COL = "id";
     public static final String WISHLIST_USER_ID_COL = "user_id";
     public static final String WISHLIST_PRODUCT_ID_COL = "product_id";
     public static final String WISHLIST_ADDED_AT_COL = "added_at";
 
     // Orders table
-    public static final String ORDER_ID_COL = "order_id";
+    public static final String ORDER_ID_COL = "id";
     public static final String ORDER_NUMBER_COL = "order_number";
     public static final String ORDER_USER_ID_COL = "user_id";
     public static final String ORDER_SHOP_ID_COL = "shop_id";
@@ -185,7 +185,7 @@ public final class StringValue {
     public static final String ORDER_UPDATED_AT_COL = "updated_at";
 
     // Order Items table
-    public static final String ORDER_ITEM_ID_COL = "order_item_id";
+    public static final String ORDER_ITEM_ID_COL ="id";
     public static final String ORDER_ITEM_ORDER_ID_COL = "order_id";
     public static final String ORDER_ITEM_PRODUCT_ID_COL = "product_id";
     public static final String ORDER_ITEM_VARIANT_ID_COL = "variant_id";
@@ -197,7 +197,7 @@ public final class StringValue {
     public static final String ORDER_ITEM_CREATED_AT_COL = "created_at";
 
     // Vouchers table
-    public static final String VOUCHER_ID_COL = "voucher_id";
+    public static final String VOUCHER_ID_COL = "id";
     public static final String VOUCHER_SHOP_ID_COL = "shop_id";
     public static final String VOUCHER_CODE_COL = "voucher_code";
     public static final String VOUCHER_NAME_COL = "voucher_name";
@@ -214,7 +214,7 @@ public final class StringValue {
     public static final String VOUCHER_CREATED_AT_COL = "created_at";
 
     // Voucher Condition Type table
-    public static final String VOUCHER_COND_TYPE_ID_COL = "condition_type_id";
+    public static final String VOUCHER_COND_TYPE_ID_COL = "id";
     public static final String VOUCHER_COND_TYPE_CODE_COL = "type_code";
     public static final String VOUCHER_COND_TYPE_NAME_COL = "type_name";
     public static final String VOUCHER_COND_TYPE_DESC_COL = "description";
@@ -222,7 +222,7 @@ public final class StringValue {
     public static final String VOUCHER_COND_TYPE_CREATED_AT_COL = "created_at";
 
     // Voucher Condition table
-    public static final String VOUCHER_COND_ID_COL = "condition_id";
+    public static final String VOUCHER_COND_ID_COL = "id";
     public static final String VOUCHER_COND_VOUCHER_ID_COL = "voucher_id";
     public static final String VOUCHER_COND_TYPES_ID_COL = "condition_type_id";
     public static final String VOUCHER_COND_OPERATOR_COL = "operator";
@@ -237,7 +237,7 @@ public final class StringValue {
     public static final String VOUCHER_COND_UPDATED_AT_COL = "updated_at";
 
     // Voucher Usage History table
-    public static final String VOUCHER_USAGE_ID_COL = "usage_id";
+    public static final String VOUCHER_USAGE_ID_COL = "id";
     public static final String VOUCHER_USAGE_VOUCHER_ID_COL = "voucher_id";
     public static final String VOUCHER_USAGE_USER_ID_COL = "user_id";
     public static final String VOUCHER_USAGE_ORDER_ID_COL = "order_id";
@@ -258,13 +258,13 @@ public final class StringValue {
     public static final String REVIEW_UPDATED_AT_COL = "updated_at";
 
     // Review Images table
-    public static final String REVIEW_IMAGE_ID_COL = "review_image_id";
+    public static final String REVIEW_IMAGE_ID_COL = "id";
     public static final String REVIEW_IMAGE_REVIEW_ID_COL = "review_id";
     public static final String REVIEW_IMAGE_URL_COL = "image_url";
     public static final String REVIEW_IMAGE_CREATED_AT_COL = "created_at";
 
     // Flash Sales table
-    public static final String FLASH_SALE_ID_COL = "flash_sale_id";
+    public static final String FLASH_SALE_ID_COL = "id";
     public static final String FLASH_SALE_PRODUCT_ID_COL = "product_id";
     public static final String FLASH_SALE_PRICE_COL = "sale_price";
     public static final String FLASH_SALE_STOCK_QUANTITY_COL = "stock_quantity";
@@ -275,13 +275,13 @@ public final class StringValue {
     public static final String FLASH_SALE_CREATED_AT_COL = "created_at";
 
     // Shop Followers table
-    public static final String FOLLOW_ID_COL = "follow_id";
+    public static final String FOLLOW_ID_COL = "id";
     public static final String FOLLOW_USER_ID_COL = "user_id";
     public static final String FOLLOW_SHOP_ID_COL = "shop_id";
     public static final String FOLLOW_FOLLOWED_AT_COL = "followed_at";
 
     // Conversations table
-    public static final String CONVERSATION_ID_COL = "conversation_id";
+    public static final String CONVERSATION_ID_COL = "id";
     public static final String CONVERSATION_BUYER_ID_COL = "buyer_id";
     public static final String CONVERSATION_SHOP_ID_COL = "shop_id";
     public static final String CONVERSATION_LAST_MESSAGE_COL = "last_message";
@@ -289,7 +289,7 @@ public final class StringValue {
     public static final String CONVERSATION_CREATED_AT_COL = "created_at";
 
     // Messages table
-    public static final String MESSAGE_ID_COL = "message_id";
+    public static final String MESSAGE_ID_COL ="id";
     public static final String MESSAGE_CONVERSATION_ID_COL = "conversation_id";
     public static final String MESSAGE_SENDER_ID_COL = "sender_id";
     public static final String MESSAGE_TEXT_COL = "message_text";
@@ -298,7 +298,7 @@ public final class StringValue {
     public static final String MESSAGE_CREATED_AT_COL = "created_at";
 
     // Notifications table
-    public static final String NOTIFICATION_ID_COL = "notification_id";
+    public static final String NOTIFICATION_ID_COL = "id";
     public static final String NOTIFICATION_USER_ID_COL = "user_id";
     public static final String NOTIFICATION_TYPE_COL = "type";
     public static final String NOTIFICATION_TITLE_COL = "title";
@@ -308,7 +308,7 @@ public final class StringValue {
     public static final String NOTIFICATION_CREATED_AT_COL = "created_at";
 
     // Search History table
-    public static final String SEARCH_ID_COL = "search_id";
+    public static final String SEARCH_ID_COL = "id";
     public static final String SEARCH_USER_ID_COL = "user_id";
     public static final String SEARCH_QUERY_COL = "search_query";
     public static final String SEARCH_RESULT_COUNT_COL = "result_count";

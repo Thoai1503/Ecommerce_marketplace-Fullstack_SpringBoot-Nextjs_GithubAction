@@ -2,6 +2,7 @@ package docker_test.com.mappers.voucher;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.HashSet;
 
 import docker_test.com.mappers.IMapper;
@@ -17,6 +18,11 @@ public final class VoucherConditionTypeMapper implements IMapper<VoucherConditio
 			conditionType.setCode(rs.getString(StringValue.VOUCHER_COND_TYPE_CODE_COL));
 			conditionType.setTypeName(rs.getString(StringValue.VOUCHER_COND_TYPE_NAME_COL));
 			conditionType.setDescription(rs.getString(StringValue.VOUCHER_COND_TYPE_DESC_COL));
+			//conditionType.set(rs.getInt(StringValue.PRODUCT_ACTIVE_COL));
+
+            Timestamp createdAt = rs.getTimestamp(StringValue.VOUCHER_COND_CREATED_AT_COL);
+            if (createdAt != null) conditionType.setCreatedAt(createdAt.toLocalDateTime());
+
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
