@@ -1,6 +1,6 @@
 package docker_test.com.factory;
 
-import org.springframework.jdbc.core.JdbcTemplate;
+//import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import docker_test.com.repository.CategoryAttributeRepository;
@@ -12,7 +12,7 @@ import docker_test.com.repository.UnitRepository;
 @Component
 public class RepoFactoryImpl implements IRepoFactory  {
 	private static RepoFactoryImpl instance = null;
-    private  JdbcTemplate jdbcTemplate;
+    //private  JdbcTemplate jdbcTemplate;
     
     //ae thêm các Repository do ae tạo ở đây
 	private final CategoryRepository categoryRepository;
