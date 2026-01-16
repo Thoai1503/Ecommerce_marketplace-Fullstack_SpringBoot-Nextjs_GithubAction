@@ -3,9 +3,8 @@ package docker_test.com.mappers;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import docker_test.com.models.User;
 import docker_test.com.utils.StringValue;
@@ -16,14 +15,13 @@ public final class UserMapper implements IMapper<User> {
     public User RowMap(ResultSet rs) {
         User user = new User();
         try {
-            user.setUserId(rs.getLong(StringValue.USER_ID_COL));
+            user.setId(rs.getLong(StringValue.USER_ID_COL));
             user.setEmail(rs.getString(StringValue.USER_EMAIL_COL));
             user.setPhone(rs.getString(StringValue.USER_PHONE_COL));
             user.setPasswordHash(rs.getString(StringValue.USER_PASSWORD_COL));
             user.setFullName(rs.getString(StringValue.USER_FULLNAME_COL));
             user.setAvatarUrl(rs.getString(StringValue.USER_AVATAR_COL));
 
-            // DATE → LocalDate
             if (rs.getDate(StringValue.USER_DOB_COL) != null) {
                 user.setDateOfBirth(
                     rs.getDate(StringValue.USER_DOB_COL).toLocalDate()
@@ -32,12 +30,9 @@ public final class UserMapper implements IMapper<User> {
 
             user.setGender(rs.getString(StringValue.USER_GENDER_COL));
             user.setUserType(rs.getString(StringValue.USER_TYPE_COL));
-
-            // TINYINT(1) → boolean
             user.setIsVerified(rs.getInt(StringValue.USER_VERIFIED_COL));
             user.setIsActive(rs.getInt(StringValue.USER_ACTIVE_COL));
 
-            // TIMESTAMP → LocalDateTime
             Timestamp createdAt = rs.getTimestamp(StringValue.USER_CREATED_AT_COL);
             if (createdAt != null) {
                 user.setCreatedAt(createdAt.toLocalDateTime());
@@ -54,28 +49,27 @@ public final class UserMapper implements IMapper<User> {
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Error mapping User", e);
         }
         return user;
     }
 
     @Override
-    public HashSet<User> RowsMap(ResultSet rs) {
-        HashSet<User> users = new HashSet<>();
+    public List<User> RowsMap(ResultSet rs) {
+        List<User> users = new ArrayList<>();
         try {
             while (rs.next()) {
-                User user = RowMap(rs);
-                users.add(user);
+                users.add(RowMap(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Error mapping User list", e);
         }
         return users;
     }
 
-	@Override
-	public User mapRow(ResultSet rs, int rowNum) throws SQLException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    // ✔ BẮT BUỘC IMPLEMENT
+    @Override
+    public User mapRow(ResultSet rs, int rowNum) throws SQLException {
+        return RowMap(rs);
+    }
 }
