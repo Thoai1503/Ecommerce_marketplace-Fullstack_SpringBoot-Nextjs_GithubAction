@@ -1,207 +1,194 @@
 package docker_test.com.repository;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.time.LocalDate;
+import java.sql.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 import docker_test.com.configs.DBConnection;
+import docker_test.com.mappers.UserMapper;
 import docker_test.com.models.User;
 
 public class UserRepository implements IRepositories<User> {
 
-	private static UserRepository instance = null;
-	private DBConnection dbConnection;
+    private static UserRepository instance;
+    private final DBConnection dbConnection;
+    private final UserMapper mapper = new UserMapper();
 
-	public UserRepository() {
-		this.dbConnection = DBConnection.getInstance();
-	}
+    private UserRepository() {
+        this.dbConnection = DBConnection.getInstance();
+    }
 
-	public static UserRepository Instance() {
-		if (instance == null) {
-			instance = new UserRepository();
-		}
-		return instance;
-	}
+    public static UserRepository Instance() {
+        if (instance == null) {
+            instance = new UserRepository();
+        }
+        return instance;
+    }
 
-	@Override
-	public User Create(User item) throws SQLException {
+    /* ================= CREATE ================= */
 
-		String sql = "INSERT INTO user "
-				+ "(email, phone, password_hash, full_name, avatar_url, date_of_birth, gender, user_type, is_verified, is_active, created_at, updated_at) "
-				+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    @Override
+    public User Create(User item) throws SQLException {
 
-		try (Connection con = dbConnection.getConn();
-				PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        String sql = """
+            INSERT INTO user
+            (email, phone, password_hash, full_name, avatar_url,
+             date_of_birth, gender, user_type, is_verified, is_active,
+             created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """;
 
-			ps.setString(1, item.getEmail());
-			ps.setString(2, item.getPhone());
-			ps.setString(3, item.getPasswordHash());
-			ps.setString(4, item.getFullName());
-			ps.setString(5, item.getAvatarUrl());
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-			if (item.getDateOfBirth() != null) {
-				ps.setDate(6, java.sql.Date.valueOf(item.getDateOfBirth()));
-			} else {
-				ps.setNull(6, java.sql.Types.DATE);
-			}
+            ps.setString(1, item.getEmail());
+            ps.setString(2, item.getPhone());
+            ps.setString(3, item.getPasswordHash());
+            ps.setString(4, item.getFullName());
+            ps.setString(5, item.getAvatarUrl());
 
-			ps.setString(7, item.getGender());
-			ps.setString(8, item.getUserType());
-			ps.setInt(9, item.getIsVerified());
-			ps.setInt(10, item.getIsActive());
-			ps.setTimestamp(11, java.sql.Timestamp.valueOf(item.getCreatedAt()));
-			ps.setTimestamp(12, java.sql.Timestamp.valueOf(item.getUpdatedAt()));
+            if (item.getDateOfBirth() != null) {
+                ps.setDate(6, Date.valueOf(item.getDateOfBirth()));
+            } else {
+                ps.setNull(6, Types.DATE);
+            }
 
-			int rows = ps.executeUpdate();
+            ps.setString(7, item.getGender());
+            ps.setString(8, item.getUserType());
+            ps.setInt(9, item.getIsVerified());
+            ps.setInt(10, item.getIsActive());
+            ps.setTimestamp(11, Timestamp.valueOf(item.getCreatedAt()));
+            ps.setTimestamp(12, Timestamp.valueOf(item.getUpdatedAt()));
 
-			if (rows > 0) {
-				try (ResultSet rs = ps.getGeneratedKeys()) {
-					if (rs.next()) {
-						long id = rs.getLong(1);
-						item.setUserId(id);
-						System.out.println("ID user mới: " + id);
-					}
-				}
-				return item;
-			}
-		} catch (Exception ex) {
-			throw ex;
-		}
+            ps.executeUpdate();
 
-		return null;
-	}
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    item.setId(rs.getLong(1));
+                }
+            }
+            return item;
+        }
+    }
 
-	@Override
-	public User Update(User item) {
+    /* ================= GET BY ID ================= */
 
-		String sql = "UPDATE user SET " + "email = ?, phone = ?, full_name = ?, avatar_url = ?, "
-				+ "date_of_birth = ?, gender = ?, user_type = ?, " + "is_verified = ?, is_active = ?, updated_at = ? "
-				+ "WHERE user_id = ?";
+    @Override
+    public User GetById(Object id) {
 
-		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+        String sql = "SELECT * FROM user WHERE id = ?";
 
-			ps.setString(1, item.getEmail());
-			ps.setString(2, item.getPhone());
-			ps.setString(3, item.getFullName());
-			ps.setString(4, item.getAvatarUrl());
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
 
-			if (item.getDateOfBirth() != null) {
-				ps.setDate(5, java.sql.Date.valueOf(item.getDateOfBirth()));
-			} else {
-				ps.setNull(5, java.sql.Types.DATE);
-			}
+            ps.setLong(1, Long.parseLong(id.toString()));
+            ResultSet rs = ps.executeQuery();
 
-			ps.setString(6, item.getGender());
-			ps.setString(7, item.getUserType());
-			ps.setInt(8, item.getIsVerified());
-			ps.setInt(9, item.getIsActive());
-			ps.setTimestamp(10, java.sql.Timestamp.valueOf(LocalDateTime.now()));
-			ps.setLong(11, item.getUserId());
+            if (rs.next()) {
+                return mapper.RowMap(rs);
+            }
 
-			int rows = ps.executeUpdate();
-			return rows > 0 ? item : null;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
+    /* ================= GET ALL ================= */
 
-		return null;
-	}
+    @Override
+    public List<User> GetAll() {
 
-	@Override
-	public boolean Delete(int id) {
+        String sql = "SELECT * FROM user";
 
-		String sql = "DELETE FROM user WHERE user_id = ?";
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
 
-		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+            return mapper.RowsMap(rs);
 
-			ps.setLong(1, id);
-			return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return List.of();
+    }
 
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
+    /* ================= UPDATE ================= */
 
-		return false;
-	}
+    @Override
+    public User Update(User item) {
 
-	@Override
-	public User GetById(Object id) {
+        String sql = """
+            UPDATE user SET
+                email = ?, phone = ?, full_name = ?, avatar_url = ?,
+                date_of_birth = ?, gender = ?, user_type = ?,
+                is_verified = ?, is_active = ?, updated_at = ?
+            WHERE id = ?
+        """;
 
-		String sql = "SELECT * FROM users WHERE user_id = ?";
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
 
-		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, item.getEmail());
+            ps.setString(2, item.getPhone());
+            ps.setString(3, item.getFullName());
+            ps.setString(4, item.getAvatarUrl());
 
-			ps.setLong(1, Long.parseLong(id.toString()));
-			ResultSet rs = ps.executeQuery();
+            if (item.getDateOfBirth() != null) {
+                ps.setDate(5, Date.valueOf(item.getDateOfBirth()));
+            } else {
+                ps.setNull(5, Types.DATE);
+            }
 
-			if (rs.next()) {
-				return mapUser(rs);
-			}
+            ps.setString(6, item.getGender());
+            ps.setString(7, item.getUserType());
+            ps.setInt(8, item.getIsVerified());
+            ps.setInt(9, item.getIsActive());
+            ps.setTimestamp(10, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setLong(11, item.getId());
 
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
+            return ps.executeUpdate() > 0 ? item : null;
 
-		return null;
-	}
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
-	@Override
-	public List<User> GetAll() {
+    /* ================= DELETE ================= */
 
-		List<User> list = new ArrayList<>();
-		String sql = "SELECT * FROM user";
+    @Override
+    public boolean Delete(int id) {
 
-		try (Connection con = dbConnection.getConn();
-				PreparedStatement ps = con.prepareStatement(sql);
-				ResultSet rs = ps.executeQuery()) {
+        String sql = "DELETE FROM user WHERE id = ?";
 
-			while (rs.next()) {
-				list.add(mapUser(rs));
-			}
-			return list;
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
 
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
 
-		return null;
-	}
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 
-	private User mapUser(ResultSet rs) throws SQLException {
+    /* ================= EXTRA ================= */
 
-		User u = new User();
-		u.setUserId(rs.getLong("user_id"));
-		u.setEmail(rs.getString("email"));
-		u.setPhone(rs.getString("phone"));
-		u.setPasswordHash(rs.getString("password_hash"));
-		u.setFullName(rs.getString("full_name"));
-		u.setAvatarUrl(rs.getString("avatar_url"));
+    public boolean existsByEmail(String email) {
 
-		java.sql.Date dob = rs.getDate("date_of_birth");
-		if (dob != null) {
-			u.setDateOfBirth(dob.toLocalDate());
-		}
+        String sql = "SELECT 1 FROM user WHERE email = ? LIMIT 1";
 
-		u.setGender(rs.getString("gender"));
-		u.setUserType(rs.getString("user_type"));
-		u.setIsVerified(rs.getInt("is_verified"));
-		u.setIsActive(rs.getInt("is_active"));
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
 
-		u.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
-		u.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
+            ps.setString(1, email);
+            return ps.executeQuery().next();
 
-		if (rs.getTimestamp("last_login") != null) {
-			u.setLastLogin(rs.getTimestamp("last_login").toLocalDateTime());
-		}
-
-		return u;
-	}
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }
