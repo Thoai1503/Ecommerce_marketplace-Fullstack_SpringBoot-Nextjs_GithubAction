@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect, useRef } from "react";
 import { Modal, Input } from "antd";
 import { DbCategory } from "@/helper/utils";
@@ -242,14 +243,14 @@ const CategorySelectorModal = ({
   // Lọc categories theo parent_id
   const getCategoriesByParent = (parentId: any) => {
     return categories?.filter(
-      (cat) => cat.parent_id === parentId && cat.is_active === 1
+      (cat) => cat.parent_id === parentId && cat.is_active === 1,
     );
   };
 
   // Kiểm tra category có con không
   const hasChildren = (categoryId: any) => {
     return categories?.some(
-      (cat) => cat.parent_id === categoryId && cat.is_active === 1
+      (cat) => cat.parent_id === categoryId && cat.is_active === 1,
     );
   };
 
@@ -386,7 +387,7 @@ const CategorySelectorModal = ({
     ? categories?.filter(
         (cat) =>
           cat.category_name.toLowerCase().includes(searchText.toLowerCase()) ||
-          cat.category_slug.toLowerCase().includes(searchText.toLowerCase())
+          cat.category_slug.toLowerCase().includes(searchText.toLowerCase()),
       )
     : null;
 
