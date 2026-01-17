@@ -4,24 +4,24 @@ import java.time.LocalDateTime;
 
 public final class Product {
     
-    private long product_id;
-    private long shop_id;
-    private long category_id;
+	private Integer id ;  // instead of int
+	private Long shop_id ;  // instead of long
+	private Long category_id ;
     private String product_name;
     private String product_slug;
     private String description;
-    private Double price;
+    private Double price ;
     private Double original_price;
-    private int stock_quantity;
-    private int sold_count;
+    private Integer stock_quantity = null;
+    private Integer sold_count = null;
     private Double rating;
-    private int review_count;
+    private Integer review_count=null;
     private Double weight;
     private Double length;
     private Double width;
     private Double height;
     private String brand;
-    private int is_active;
+    private Integer is_active=null;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
 
@@ -35,36 +35,36 @@ public final class Product {
         this.updated_at = LocalDateTime.now();
     }
 
-    public Product(long productId, long shopId, long categoryId, String productName,
-                   String productSlug, String description, Double price, Double originalPrice,
-                   int stockQuantity, int soldCount, Double rating, int reviewCount,
+    public Product(Integer id, Long shop_id, Long category_id, String product_name,
+                   String product_slug, String description, Double price, Double original_price,
+                   Integer stock_quantity, Integer sold_count, Double rating, Integer review_count,
                    Double weight, Double length, Double width, Double height,
-                   String brand, int isActive, LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this.product_id = productId;
-        this.shop_id = shopId;
-        this.category_id = categoryId;
-        this.product_name = productName;
-        this.product_slug = productSlug;
+                   String brand, Integer is_active, LocalDateTime created_at, LocalDateTime updated_at) {
+        this.id = id;
+        this.shop_id = shop_id;
+        this.category_id = category_id;
+        this.product_name = product_name;
+        this.product_slug = product_slug;
         this.description = description;
         this.price = price;
-        this.original_price = originalPrice;
-        this.stock_quantity = stockQuantity;
-        this.sold_count = soldCount;
+        this.original_price = original_price;
+        this.stock_quantity = stock_quantity;
+        this.sold_count = sold_count;
         this.rating = rating;
-        this.review_count = reviewCount;
+        this.review_count = review_count;
         this.weight = weight;
         this.length = length;
         this.width = width;
         this.height = height;
         this.brand = brand;
-        this.is_active = isActive;
-        this.created_at = createdAt;
-        this.updated_at = updatedAt;
+        this.is_active = is_active;
+        this.created_at = created_at;
+        this.updated_at = updated_at;
     }
 
     // Getters & Setters (giữ tên camelCase theo JavaBean convention)
-    public long getProductId() { return product_id; }
-    public void setProductId(long productId) { this.product_id = productId; }
+    public long getId() { return id; }
+    public void setId(Integer productId) { this.id = productId; }
     
     public long getShopId() { return shop_id; }
     public void setShopId(long shopId) { this.shop_id = shopId; }
@@ -122,4 +122,30 @@ public final class Product {
     
     public LocalDateTime getUpdatedAt() { return updated_at; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updated_at = updatedAt; }
+    
+    @Override
+    public String toString() {
+        return "Product{" +
+                "id=" + id +
+                ", shop_id=" + shop_id +
+                ", category_id=" + category_id +
+                ", product_name='" + product_name + '\'' +
+                ", product_slug='" + product_slug + '\'' +
+                ", description='" + description + '\'' +
+                ", price=" + price +
+                ", original_price=" + original_price +
+                ", stock_quantity=" + stock_quantity +
+                ", sold_count=" + sold_count +
+                ", rating=" + rating +
+                ", review_count=" + review_count +
+                ", weight=" + weight +
+                ", length=" + length +
+                ", width=" + width +
+                ", height=" + height +
+                ", brand='" + brand + '\'' +
+                ", is_active=" + is_active +
+                ", created_at=" + created_at +
+                ", updated_at=" + updated_at +
+                '}';
+    }
 }
