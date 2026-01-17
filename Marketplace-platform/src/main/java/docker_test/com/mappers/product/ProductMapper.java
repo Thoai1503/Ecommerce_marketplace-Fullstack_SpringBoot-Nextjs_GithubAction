@@ -16,7 +16,7 @@ public final class ProductMapper implements IMapper<Product> {
     public Product RowMap(ResultSet rs) {
         Product product = new Product();
         try {
-            product.setProductId(rs.getLong(StringValue.PRODUCT_ID_COL));
+            product.setId(rs.getInt(StringValue.PRODUCT_ID_COL));
             product.setShopId(rs.getLong(StringValue.PRODUCT_SHOP_ID_COL));
             product.setCategoryId(rs.getLong(StringValue.PRODUCT_CATEGORY_ID_COL));
             product.setProductName(rs.getString(StringValue.PRODUCT_NAME_COL));
@@ -76,7 +76,7 @@ public final class ProductMapper implements IMapper<Product> {
 	public Product mapRow(ResultSet rs, int rowNum) throws SQLException {
 		System.out.println("Execute..");
 		Product product =new Product();
-		product.setProductId(rs.getInt("Id"));
+		product.setId(rs.getInt("Id"));
 		product.setProductName(rs.getString("Name"));
 		return null;
 	}
