@@ -2,7 +2,9 @@ import { DbCategory } from "@/helper/utils";
 import http from "@/lib/http";
 import { Product } from "@/validators/product";
 
-export const addProduct = async (product: Product): Promise<Product> => {
+export const addProduct = async (
+  product: Partial<Product>,
+): Promise<Product> => {
   return await http
     .post("/seller/product", product)
     .then((res) => res.data)

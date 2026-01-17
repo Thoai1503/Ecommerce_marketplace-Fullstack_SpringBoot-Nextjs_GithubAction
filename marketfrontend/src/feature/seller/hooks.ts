@@ -1,9 +1,11 @@
 // hooks/useAddProductSeller.ts
 import { Product } from "@/validators/product";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { categoryQuery } from "./query";
 import { slugify, generateUniqueSlug, isValidSlug } from "@/helper/utils";
+import { addProduct } from "./service";
+import { message, UploadFile, UploadProps } from "antd";
 
 export const useAddProductSeller = () => {
   const { data: categories } = useQuery(categoryQuery.list);
@@ -11,9 +13,22 @@ export const useAddProductSeller = () => {
   const [product, setProduct] = useState<Partial<Product>>({
     product_name: "",
     product_slug: "",
+    shop_id: 1,
     category_id: 2,
     original_price: 0,
     price: 0,
+  });
+
+  const { mutate: add } = useMutation({
+    mutationFn: (product: Partial<Product>) => addProduct(product),
+    onSuccess: (data) => {
+      message.success(`Lưu thành công sản phẩm thành công`);
+      console.log(JSON.stringify(data));
+    },
+    onError: (error) => {
+      //  alert(error.message);
+      message.error(error.message);
+    },
   });
 
   const [isManualSlug, setIsManualSlug] = useState(false);
@@ -27,7 +42,7 @@ export const useAddProductSeller = () => {
   }, [product.product_name, isManualSlug]);
 
   const handleChangeProduct = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
 
@@ -64,7 +79,7 @@ export const useAddProductSeller = () => {
       errors.push("Slug không được để trống");
     } else if (!isValidSlug(product.product_slug)) {
       errors.push(
-        "Slug không hợp lệ. Slug chỉ chứa chữ cái thường, số và dấu gạch ngang"
+        "Slug không hợp lệ. Slug chỉ chứa chữ cái thường, số và dấu gạch ngang",
       );
     }
 
@@ -91,6 +106,8 @@ export const useAddProductSeller = () => {
     }
 
     alert(JSON.stringify(product, null, 2));
+    // return;
+    add(product);
     // TODO: Gọi API để tạo sản phẩm
   }, [product, validateProduct]);
 
@@ -101,7 +118,7 @@ export const useAddProductSeller = () => {
       setProduct((prev) => ({ ...prev, product_slug: uniqueSlug }));
       return uniqueSlug;
     },
-    []
+    [],
   );
 
   return {
@@ -111,46 +128,23 @@ export const useAddProductSeller = () => {
     categories,
     isManualSlug,
     resetSlugMode,
+    setProduct,
     validateProduct,
     generateUniqueProductSlug,
   };
 };
 
 export const useAddImageSeller = () => {
-  const [images, setImages] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
+    // Giới hạn tối đa 8 ảnh như yêu cầu
+    const updatedList = newFileList.slice(0, 8);
+    setFileList(updatedList);
 
-  const handleAddImages = useCallback((files: File[]) => {
-    setImages((prev) => [...prev, ...files]);
-
-    // Tạo preview URLs
-    const newPreviewUrls = files.map((file) => URL.createObjectURL(file));
-    setPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
-  }, []);
-
-  const handleRemoveImage = useCallback(
-    (index: number) => {
-      setImages((prev) => prev.filter((_, i) => i !== index));
-
-      // Revoke object URL để tránh memory leak
-      URL.revokeObjectURL(previewUrls[index]);
-      setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
-    },
-    [previewUrls]
-  );
-
-  const clearImages = useCallback(() => {
-    // Revoke tất cả object URLs
-    previewUrls.forEach((url) => URL.revokeObjectURL(url));
-    setImages([]);
-    setPreviewUrls([]);
-  }, [previewUrls]);
-
-  return {
-    images,
-    previewUrls,
-    handleAddImages,
-    handleRemoveImage,
-    clearImages,
+    // Optional: thông báo khi đạt giới hạn
+    if (newFileList.length > 8) {
+      message.warning("Chỉ được upload tối đa 8 ảnh!");
+    }
   };
+  return {};
 };

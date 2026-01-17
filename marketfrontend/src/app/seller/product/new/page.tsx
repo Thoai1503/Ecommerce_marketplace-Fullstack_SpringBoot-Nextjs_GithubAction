@@ -35,25 +35,18 @@ interface TabSection {
 const AddProductForm: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const { product, handleChangeProduct, handleSubmitProduct, categories } =
-    useAddProductSeller();
+  const {
+    product,
+    handleChangeProduct,
+    handleSubmitProduct,
+    categories,
+    setProduct,
+  } = useAddProductSeller();
   const {} = useAddImageSeller();
   const showModal = () => {
     setIsModalOpen(true);
   };
-  const [selectedPath, setSelectedPath] = useState([
-    "Thời Trang Nam",
-    "Đồng Hồ",
-    "Đồng Hồ Điện Tử",
-  ]);
 
-  const handleOk = () => {
-    setIsModalOpen(false);
-  };
-
-  const handleCancel = () => {
-    setIsModalOpen(false);
-  };
   const [currentTab, setCurrentTab] = useState<number>(0);
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
@@ -114,7 +107,7 @@ const AddProductForm: React.FC = () => {
           {
             rootMargin: "-140px 0px -50% 0px", // Adjust for sticky header + threshold
             threshold: 0,
-          }
+          },
         );
 
         observer.observe(section.ref.current);
@@ -130,7 +123,7 @@ const AddProductForm: React.FC = () => {
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -141,7 +134,7 @@ const AddProductForm: React.FC = () => {
     if (name.startsWith("channel-")) {
       const channel = name.replace(
         "channel-",
-        ""
+        "",
       ) as keyof typeof formData.salesChannels;
       setFormData((prev) => ({
         ...prev,
@@ -150,11 +143,6 @@ const AddProductForm: React.FC = () => {
     } else if (name === "hasVariations") {
       setFormData((prev) => ({ ...prev, hasVariations: checked }));
     }
-  };
-
-  const handleNextStep = () => {
-    const nextIndex = Math.min(currentTab + 1, tabSections.length - 1);
-    scrollToSection(nextIndex);
   };
 
   const isLastTab = currentTab === tabSections.length - 1;
@@ -643,8 +631,15 @@ const AddProductForm: React.FC = () => {
                             type="text"
                             className="form-control"
                             name="price"
-                            value={formData.price}
-                            onChange={handleInputChange}
+                            value={product.price}
+                            onChange={(event) => {
+                              const { value, name } = event.target;
+                              setProduct((pre) => ({
+                                ...pre,
+                                [name]: value,
+                                original_price: product.price,
+                              }));
+                            }}
                           />
                         </div>
                       </div>
