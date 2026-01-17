@@ -3,7 +3,9 @@ import React, { useState, useRef, useEffect } from "react";
 import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Modal, Upload, UploadFile, UploadProps, message } from "antd";
-//import "bootstrap-icons/font/bootstrap-icons.css"; // ← Uncommented
+
+import { useAddImageSeller, useAddProductSeller } from "@/feature/seller/hooks";
+import CategorySelectorModal from "@/feature/seller/components/CategorySelectorModal";
 
 interface ProductFormData {
   name: string;
@@ -33,9 +35,17 @@ interface TabSection {
 const AddProductForm: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const { product, handleChangeProduct, handleSubmitProduct, categories } =
+    useAddProductSeller();
+  const {} = useAddImageSeller();
   const showModal = () => {
     setIsModalOpen(true);
   };
+  const [selectedPath, setSelectedPath] = useState([
+    "Thời Trang Nam",
+    "Đồng Hồ",
+    "Đồng Hồ Điện Tử",
+  ]);
 
   const handleOk = () => {
     setIsModalOpen(false);
@@ -46,7 +56,7 @@ const AddProductForm: React.FC = () => {
   };
   const [currentTab, setCurrentTab] = useState<number>(0);
   const [formData, setFormData] = useState<ProductFormData>({
-    name: "Minimalist Watch Series 5",
+    name: "",
     category: "Watches & Accessories > Men's Watches",
     brand: "Nordic Time",
     description: "",
@@ -167,8 +177,21 @@ const AddProductForm: React.FC = () => {
     return false; // Ngăn upload tự động lên server (chúng ta chỉ preview)
   };
 
-  // Xác định ảnh đầu tiên là cover
-  const isCover = (index: number) => index === 0;
+  // Handle Save
+  const handleSave = () => {
+    console.log("Saving product:", formData);
+    console.log("Images:", fileList);
+    message.success("Sản phẩm đã được lưu thành công!");
+  };
+
+  // Handle Cancel/Discard
+  const handleDiscard = () => {
+    if (confirm("Bạn có chắc muốn hủy bỏ? Các thay đổi sẽ không được lưu.")) {
+      // Reset form hoặc navigate back
+      console.log("Discarding changes...");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   return (
     <>
@@ -176,6 +199,113 @@ const AddProductForm: React.FC = () => {
       <style jsx>{`
         .scroll-section {
           scroll-margin-top: 140px;
+        }
+
+        /* Sticky Action Bar - Desktop */
+        .sticky-action-bar {
+          position: sticky;
+          top: 160px;
+          z-index: 10;
+          background: white;
+          border-top: 1px solid #e5e7eb;
+          border-bottom: 1px solid #e5e7eb;
+          backdrop-filter: blur(10px);
+          transition: all 0.3s ease;
+        }
+
+        .sticky-action-bar:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Mobile Bottom Bar - Updated */
+        .mobile-bottom-bar {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 1000;
+          background: white;
+          border-top: 1px solid #e5e7eb;
+          padding: 12px 16px;
+          backdrop-filter: blur(20px);
+          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (min-width: 768px) {
+          .mobile-bottom-bar,
+          .desktop-sticky-bar {
+            display: flex;
+          }
+        }
+
+        @media (max-width: 767.98px) {
+          .desktop-sticky-bar {
+            display: none;
+          }
+        }
+
+        /* Action buttons styling */
+        .action-save {
+          background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%);
+          border: none;
+          color: white;
+          font-weight: 600;
+          padding: 12px 24px;
+          border-radius: 10px;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 8px rgba(255, 77, 79, 0.3);
+        }
+
+        .action-save:hover:not(:disabled) {
+          background: linear-gradient(135deg, #ff7875 0%, #ff4d4f 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 16px rgba(255, 77, 79, 0.4);
+          color: white;
+        }
+
+        .action-cancel {
+          background: #f8f9fa;
+          border: 2px solid #e5e7eb;
+          color: #6b7280;
+          font-weight: 500;
+          padding: 12px 24px;
+          border-radius: 10px;
+          transition: all 0.3s ease;
+        }
+
+        .action-cancel:hover {
+          background: #f1f5f9;
+          border-color: #d1d5db;
+          color: #374151;
+          transform: translateY(-1px);
+        }
+
+        /* Progress indicator in sticky bar */
+        .sticky-progress {
+          height: 4px;
+          background: #f3f4f6;
+          border-radius: 2px;
+          overflow: hidden;
+          margin-bottom: 16px;
+        }
+
+        .sticky-progress-bar {
+          height: 100%;
+          background: linear-gradient(90deg, #ff4d4f, #ff7875);
+          transition: width 0.4s ease;
+          border-radius: 2px;
+        }
+
+        /* Status badge */
+        .status-badge {
+          min-width: 120px;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
         }
       `}</style>
 
@@ -211,18 +341,10 @@ const AddProductForm: React.FC = () => {
                     {tabSections[currentTab].label}
                   </span>
                   <button className="btn btn-link text-secondary d-none d-md-inline">
-                    Discard
+                    Preview
                   </button>
                   <button className="btn btn-outline-secondary d-none d-md-inline">
                     Save Draft
-                  </button>
-                  <button
-                    className="btn btn-danger d-flex align-items-center gap-2"
-                    onClick={handleNextStep}
-                    disabled={isLastTab}
-                  >
-                    {isLastTab ? "Finish" : "Next Step"}{" "}
-                    <i className="bi bi-arrow-right"></i>
                   </button>
                 </div>
               </div>
@@ -264,9 +386,7 @@ const AddProductForm: React.FC = () => {
                 id="basic-info"
                 className="scroll-section"
               >
-                {/* ... Product Details, Specifications giữ nguyên ... */}
-
-                {/* Product Media - Phần được thay thế */}
+                {/* Product Media - Phần upload ảnh */}
                 <div className="card shadow-sm mb-4">
                   <div className="card-header bg-white d-flex justify-content-between align-items-center">
                     <div>
@@ -285,12 +405,12 @@ const AddProductForm: React.FC = () => {
                       name="images"
                       multiple
                       maxCount={8}
-                      listType="picture-card" // kiểu hiển thị đẹp cho ảnh
+                      listType="picture-card"
                       fileList={fileList}
                       beforeUpload={beforeUpload}
                       onChange={handleChange}
                       accept="image/*"
-                      className="product-media-upload"
+                      className="product-media-upload w-100"
                     >
                       {fileList.length >= 8 ? null : (
                         <div className="p-4 text-center">
@@ -307,15 +427,16 @@ const AddProductForm: React.FC = () => {
                       )}
                     </Upload.Dragger>
 
-                    {/* Hiển thị thông tin thêm nếu cần */}
                     {fileList.length > 0 && (
-                      <div className="mt-3 text-muted small">
+                      <div className="mt-3 text-muted small d-flex align-items-center gap-2">
+                        <i className="bi bi-check-circle-fill text-success"></i>
                         {fileList.length} image{fileList.length > 1 ? "s" : ""}{" "}
-                        selected
+                        selected • First image is cover photo
                       </div>
                     )}
                   </div>
                 </div>
+
                 {/* Product Details */}
                 <div className="card shadow-sm mb-4">
                   <div className="card-header bg-white d-flex justify-content-between align-items-center">
@@ -334,9 +455,9 @@ const AddProductForm: React.FC = () => {
                         <input
                           type="text"
                           className="form-control"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleInputChange}
+                          name="product_name"
+                          value={product.product_name}
+                          onChange={handleChangeProduct}
                           placeholder="e.g. Minimalist Watch Series 5"
                         />
                       </div>
@@ -349,7 +470,7 @@ const AddProductForm: React.FC = () => {
                           <input
                             type="text"
                             className="form-control"
-                            name="category"
+                            name="category_id"
                             value={formData.category}
                             onChange={handleInputChange}
                             readOnly
@@ -492,10 +613,6 @@ const AddProductForm: React.FC = () => {
                 </div>
               </div>
 
-              {/* ... các section còn lại ... */}
-
-              {/* Optional: CSS bổ sung */}
-
               {/* SECTION 2: Sales & Pricing */}
               <div
                 ref={salesPricingRef}
@@ -578,8 +695,8 @@ const AddProductForm: React.FC = () => {
                 className="scroll-section mb-5"
               >
                 <div className="mb-3">
-                  <h2 className="h4 fw-bold  mb-1">
-                    <i className="bi bi-3-circle-fill me-2"></i>
+                  <h2 className="h4 fw-bold mb-1">
+                    <i className="bi bi-3-circle-fill me-2 text-primary"></i>
                     Shipping & Delivery
                   </h2>
                   <p className="text-muted small mb-4">
@@ -636,8 +753,8 @@ const AddProductForm: React.FC = () => {
                 className="scroll-section mb-5"
               >
                 <div className="mb-3">
-                  <h2 className="h4 fw-bold  mb-1">
-                    <i className="bi bi-4-circle-fill me-2"></i>
+                  <h2 className="h4 fw-bold mb-1">
+                    <i className="bi bi-4-circle-fill me-2 text-success"></i>
                     Attributes & SEO
                   </h2>
                   <p className="text-muted small mb-4">
@@ -695,7 +812,7 @@ const AddProductForm: React.FC = () => {
 
             {/* Right Column - Sticky Sidebar */}
             <div className="col-lg-4">
-              <div className="" style={{ top: "160px" }}>
+              <div className="" style={{ top: "180px" }}>
                 {/* Publishing Status */}
                 <div className="card shadow-sm mb-4">
                   <div className="card-body">
@@ -771,7 +888,7 @@ const AddProductForm: React.FC = () => {
                         <label className="form-label small text-muted fw-semibold">
                           Price
                         </label>
-                        <div className="input-group">
+                        <div className="input-group input-group-sm">
                           <span className="input-group-text">$</span>
                           <input
                             type="text"
@@ -788,7 +905,7 @@ const AddProductForm: React.FC = () => {
                         </label>
                         <input
                           type="text"
-                          className="form-control"
+                          className="form-control input-group-sm"
                           name="inventory"
                           value={formData.inventory}
                           onChange={handleInputChange}
@@ -812,7 +929,7 @@ const AddProductForm: React.FC = () => {
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <h3 className="h6 fw-bold mb-0">Variations</h3>
-                      <div className="form-check form-switch">
+                      <div className="form-check form-switch form-switch-sm">
                         <input
                           className="form-check-input"
                           type="checkbox"
@@ -841,7 +958,7 @@ const AddProductForm: React.FC = () => {
                 </div>
 
                 {/* Progress Indicator */}
-                <div className="card shadow-sm mb-4 border-primary">
+                <div className="card shadow-sm mb-4 border-danger">
                   <div className="card-body">
                     <h3 className="h6 fw-bold mb-3">Form Progress</h3>
                     <div className="progress mb-2" style={{ height: "8px" }}>
@@ -886,193 +1003,355 @@ const AddProductForm: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* DESKTOP: Sticky Action Bar */}
+          <div className="desktop-sticky-bar sticky-action-bar d-none d-lg-block container-fluid px-4 py-3 sticky-bottom">
+            <div className="sticky-progress">
+              <div
+                className="sticky-progress-bar"
+                style={{
+                  width: `${((currentTab + 1) / tabSections.length) * 100}%`,
+                }}
+              ></div>
+            </div>
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div className="d-flex align-items-center gap-3 flex-grow-1">
+                <span className="status-badge bg-light text-danger border border-danger">
+                  <i className="bi bi-info-circle"></i>
+                  {isLastTab
+                    ? "Ready to publish"
+                    : `Step ${currentTab + 1}/${tabSections.length}`}
+                </span>
+                <small className="text-muted d-none d-xl-inline">
+                  Auto-save enabled • Last saved 30s ago
+                </small>
+              </div>
+              <div className="d-flex gap-2">
+                <button className="action-cancel" onClick={handleDiscard}>
+                  <i className="bi bi-x-lg me-1"></i>
+                  Cancel
+                </button>
+                <button className="action-save" onClick={handleSubmitProduct}>
+                  <i className="bi bi-check-lg me-1"></i>
+                  {isLastTab ? "Publish Product" : "Save & Continue"}
+                </button>
+              </div>
+            </div>
+          </div>
         </main>
 
-        {/* Mobile Bottom Bar */}
-        <div className="fixed-bottom bg-white border-top p-3 d-md-none">
-          <div className="d-flex gap-2">
-            <button className="btn btn-outline-secondary flex-fill">
-              Draft
-            </button>
-            <button
-              className="btn btn-danger flex-fill"
-              onClick={handleNextStep}
-              disabled={isLastTab}
-            >
-              {isLastTab ? "Finish" : "Next Step"}
-            </button>
+        {/* MOBILE: Enhanced Bottom Action Bar */}
+        <div className="mobile-bottom-bar d-lg-none">
+          <div className="container-fluid px-3">
+            <div className="row align-items-center g-2">
+              <div className="col-8">
+                <div className="d-flex align-items-center gap-2 text-muted small">
+                  <div
+                    className="progress flex-grow-1"
+                    style={{ height: "3px" }}
+                  >
+                    <div
+                      className="progress-bar bg-danger"
+                      style={{
+                        width: `${((currentTab + 1) / tabSections.length) * 100}%`,
+                      }}
+                    ></div>
+                  </div>
+                  <span className="badge bg-danger-subtle text-danger px-2 py-1">
+                    {currentTab + 1}/{tabSections.length}
+                  </span>
+                </div>
+              </div>
+              <div className="col-4 text-end">
+                <div className="btn-group w-100" role="group">
+                  <button
+                    className="btn btn-outline-secondary btn-sm flex-fill action-cancel"
+                    onClick={handleDiscard}
+                  >
+                    <i className="bi bi-x"></i>
+                  </button>
+                  <button
+                    className="btn btn-danger btn-sm flex-fill action-save"
+                    onClick={handleSave}
+                  >
+                    <i
+                      className={`bi ${isLastTab ? "bi-check2" : "bi-arrow-right"}`}
+                    ></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="text-center mt-2 text-muted small">
+              {isLastTab ? "Tap Publish to go live" : "Save to continue"}
+            </div>
           </div>
         </div>
       </div>
 
-      <Modal
-        title="Basic Modal"
+      {/* Category Modal */}
+      {/* <Modal
+        title="Chọn Danh Mục Sản Phẩm"
         width={1000}
-        closable={{ "aria-label": "Custom Close Button" }}
+        closable
         open={isModalOpen}
         onOk={handleOk}
         onCancel={handleCancel}
+        okText="Xác nhận"
+        cancelText="Hủy"
+        className="category-modal"
       >
-        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg border border-input-border-light dark:border-input-border-dark p-4">
+        <div className="bg-gray-50 rounded-lg border p-4">
           <div className="flex flex-col gap-3">
+        
             <div className="relative">
               <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-xl">
                 search
               </span>
               <input
-                className="w-full pl-10 pr-4 py-2 text-sm rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-1 focus:ring-primary"
-                placeholder="Search for category..."
+                className="w-full pl-10 pr-4 py-2 text-sm rounded-md border border-gray-300 bg-white focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Tìm kiếm danh mục..."
                 type="text"
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 h-64 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-md overflow-hidden">
-              <div className="border-r border-gray-200 dark:border-gray-700 overflow-y-auto custom-scrollbar">
-                <div className="p-2 space-y-0.5">
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex justify-between items-center group">
-                    <span>Women's Fashion</span>
-                    <span className="material-symbols-outlined text-gray-400 text-base group-hover:text-gray-600">
-                      chevron_right
-                    </span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm bg-primary/10 text-primary font-medium rounded flex justify-between items-center">
-                    <span>Men's Fashion</span>
-                    <span className="material-symbols-outlined text-primary text-base">
-                      chevron_right
-                    </span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex justify-between items-center group">
-                    <span>Electronics</span>
-                    <span className="material-symbols-outlined text-gray-400 text-base group-hover:text-gray-600">
-                      chevron_right
-                    </span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex justify-between items-center group">
-                    <span>Home &amp; Living</span>
-                    <span className="material-symbols-outlined text-gray-400 text-base group-hover:text-gray-600">
-                      chevron_right
-                    </span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex justify-between items-center group">
-                    <span>Beauty &amp; Personal Care</span>
-                    <span className="material-symbols-outlined text-gray-400 text-base group-hover:text-gray-600">
-                      chevron_right
-                    </span>
-                  </button>
+
+            <div className="relative">
+
+              <button className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white border rounded-l-md p-2 shadow-lg">
+                <span className="material-symbols-outlined text-gray-500 text-lg hover:text-red-500 transition-colors">
+                  chevron_left
+                </span>
+              </button>
+              <button className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white border rounded-r-md p-2 shadow-lg">
+                <span className="material-symbols-outlined text-gray-500 text-lg hover:text-red-500 transition-colors">
+                  chevron_right
+                </span>
+              </button>
+
+
+              <div className="flex overflow-x-auto overflow-y-hidden h-80 border border-gray-200 bg-white rounded-md scrollbar-thin scrollbar-thumb-red-300 scrollbar-track-gray-100 scrollbar-thumb-rounded snap-x snap-mandatory pb-2 pt-2">
+     
+                <div className="flex-none w-[280px] border-r border-gray-200 overflow-y-auto scroll-mt-0">
+                  <div className="p-3 space-y-1 sticky top-0 bg-white/95 backdrop-blur-sm z-5"></div>
+                  <div className="p-3 space-y-1">
+                    <button className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-100 rounded-lg flex justify-between items-center group transition-all">
+                      <span>Thời Trang Nữ</span>
+                      <span className="material-symbols-outlined text-gray-400 text-sm group-hover:text-gray-600 transition-colors">
+                        chevron_right
+                      </span>
+                    </button>
+                    <button className="w-full text-left px-3 py-2.5 text-sm bg-red-50 text-red-700 font-medium rounded-lg flex justify-between items-center shadow-sm">
+                      <span>Thời Trang Nam</span>
+                      <span className="material-symbols-outlined text-red-500 text-sm">
+                        chevron_right
+                      </span>
+                    </button>
+                    <button className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-100 rounded-lg flex justify-between items-center group transition-all">
+                      <span>Điện Tử</span>
+                      <span className="material-symbols-outlined text-gray-400 text-sm group-hover:text-gray-600 transition-colors">
+                        chevron_right
+                      </span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="border-r border-gray-200 dark:border-gray-700 overflow-y-auto custom-scrollbar">
-                <div className="p-2 space-y-0.5">
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex justify-between items-center group">
-                    <span>Tops</span>
-                    <span className="material-symbols-outlined text-gray-400 text-base group-hover:text-gray-600">
-                      chevron_right
-                    </span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm bg-primary/10 text-primary font-medium rounded flex justify-between items-center">
-                    <span>Watches</span>
-                    <span className="material-symbols-outlined text-primary text-base">
-                      chevron_right
-                    </span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex justify-between items-center group">
-                    <span>Shoes</span>
-                    <span className="material-symbols-outlined text-gray-400 text-base group-hover:text-gray-600">
-                      chevron_right
-                    </span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex justify-between items-center group">
-                    <span>Accessories</span>
-                    <span className="material-symbols-outlined text-gray-400 text-base group-hover:text-gray-600">
-                      chevron_right
-                    </span>
-                  </button>
+
+                <div className="flex-none w-[280px] border-r border-gray-200 overflow-y-auto scroll-mt-0">
+                  <div className="p-3 space-y-1 sticky top-0 bg-white/95 backdrop-blur-sm z-5"></div>
+                  <div className="p-3 space-y-1">
+                    <button className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-100 rounded-lg flex justify-between items-center group transition-all">
+                      <span>Áo Thun</span>
+                      <span className="material-symbols-outlined text-gray-400 text-sm group-hover:text-gray-600">
+                        chevron_right
+                      </span>
+                    </button>
+                    <button className="w-full text-left px-3 py-2.5 text-sm bg-red-50 text-red-700 font-medium rounded-lg flex justify-between items-center shadow-sm">
+                      <span>Đồng Hồ</span>
+                      <span className="material-symbols-outlined text-red-500 text-sm">
+                        chevron_right
+                      </span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="overflow-y-auto custom-scrollbar">
-                <div className="p-2 space-y-0.5">
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex justify-between items-center text-gray-700 dark:text-gray-300">
-                    <span>Analog</span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex justify-between items-center text-primary font-medium">
-                    <span>Digital</span>
-                    <span className="material-symbols-outlined text-primary text-base">
-                      check
-                    </span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex justify-between items-center text-gray-700 dark:text-gray-300">
-                    <span>Smart Watch</span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex justify-between items-center text-gray-700 dark:text-gray-300">
-                    <span>Chronograph</span>
-                  </button>
+                <div className="flex-none w-[280px] border-r border-gray-200 overflow-y-auto scroll-mt-0">
+                  <div className="p-3 space-y-1 sticky top-0 bg-white/95 backdrop-blur-sm z-5"></div>
+                  <div className="p-3 space-y-1">
+                    <button className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-100 rounded-lg flex justify-between items-center group transition-all">
+                      <span>Áo Thun</span>
+                      <span className="material-symbols-outlined text-gray-400 text-sm group-hover:text-gray-600">
+                        chevron_right
+                      </span>
+                    </button>
+                    <button className="w-full text-left px-3 py-2.5 text-sm bg-red-50 text-red-700 font-medium rounded-lg flex justify-between items-center shadow-sm">
+                      <span>Đồng Hồ</span>
+                      <span className="material-symbols-outlined text-red-500 text-sm">
+                        chevron_right
+                      </span>
+                    </button>
+                  </div>
                 </div>
+
+                <div className="flex-none w-[280px] border-r border-gray-200 overflow-y-auto scroll-mt-0">
+                  <div className="p-3 space-y-1 sticky top-0 bg-white/95 backdrop-blur-sm z-5"></div>
+                  <div className="p-3 space-y-1">
+                    <button className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-100 rounded-lg flex justify-between items-center text-gray-700">
+                      <span>Đồng Hồ Cơ</span>
+                    </button>
+                    <button className="w-full text-left px-3 py-2.5 text-sm bg-red-100 border-2 border-red-400 text-red-800 font-semibold rounded-lg flex justify-between items-center shadow-md">
+                      <span>Đồng Hồ Điện Tử</span>
+                      <span className="material-symbols-outlined text-red-500 text-sm">
+                        check
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+    
+
+                <div className="flex-none w-4" />
               </div>
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 flex items-center gap-2">
-              <span className="font-semibold">Selected:</span>
-              <span className="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-xs">
-                Men's Fashion &gt; Watches &gt; Digital
+
+
+            <div className="text-sm text-gray-600 flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <span className="font-semibold text-red-700">Đã chọn:</span>
+              <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium border border-red-200 min-w-0 truncate">
+                {selectedPath.join(" → ")}
+              </span>
+              <span className="text-xs text-gray-400 ml-auto">
+                ({selectedPath.length} cấp)
               </span>
             </div>
           </div>
         </div>
-      </Modal>
-      <style jsx>{`
-        /* Khu vực drag & drop chính */
-        .ant-upload-drag {
-          border: 2px dashed #ff4d4f !important; /* Viền đỏ mặc định */
-          background-color: rgba(
-            255,
-            77,
-            79,
-            0.05
-          ) !important; /* Nền rất nhạt */
-          border-radius: 12px;
-          transition: all 0.3s ease;
+
+     
+      </Modal> */}
+
+      <CategorySelectorModal
+        categories={categories}
+        isModalOpen={isModalOpen}
+        setIsModalOpen={setIsModalOpen}
+      />
+
+      {/* Antd Upload Styles - Red Theme */}
+      <style jsx global>{`
+        /* Upload Dragger - Red Theme Enhanced */
+        .ant-upload.ant-upload-drag {
+          border: 2px dashed #ff4d4f !important;
+          background: linear-gradient(
+            135deg,
+            rgba(255, 77, 79, 0.05) 0%,
+            rgba(255, 77, 79, 0.02) 100%
+          ) !important;
+          border-radius: 12px !important;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* Khi hover */
-        .ant-upload-drag:hover {
-          border-color: #ff7875 !important; /* Đỏ sáng hơn */
-          background-color: rgba(
-            255,
-            77,
-            79,
-            0.12
-          ) !important; /* Nền đỏ nhạt rõ hơn */
-          box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.15); /* Hiệu ứng glow nhẹ */
+        .ant-upload.ant-upload-drag:hover {
+          border-color: #ff7875 !important;
+          background: linear-gradient(
+            135deg,
+            rgba(255, 120, 117, 0.12) 0%,
+            rgba(255, 77, 79, 0.08) 100%
+          ) !important;
+          box-shadow:
+            0 8px 25px rgba(255, 77, 79, 0.15),
+            0 0 0 4px rgba(255, 77, 79, 0.1) !important;
+          transform: translateY(-2px);
         }
 
-        /* Khi đang kéo thả file vào (active/drag over) */
-        .ant-upload-drag.ant-upload-drag-enter,
-        .ant-upload-drag.p-is-dragging {
-          border-color: #cf1322 !important; /* Đỏ đậm khi kéo thả */
-          background-color: rgba(207, 19, 34, 0.15) !important;
-          box-shadow: 0 0 0 4px rgba(207, 19, 34, 0.25);
+        .ant-upload.ant-upload-drag.ant-upload-drag-hover,
+        .ant-upload.ant-upload-drag.ant-upload-drag-enter-active {
+          border-color: #ff4d4f !important;
+          background: linear-gradient(
+            135deg,
+            rgba(255, 77, 79, 0.15) 0%,
+            rgba(255, 77, 79, 0.1) 100%
+          ) !important;
+          box-shadow:
+            0 12px 40px rgba(255, 77, 79, 0.25),
+            0 0 0 6px rgba(255, 77, 79, 0.2) !important;
+          transform: scale(1.02);
         }
 
-        /* Icon và text bên trong khi hover */
-        .ant-upload-drag:hover .anticon-inbox,
-        .ant-upload-drag:hover p {
+        .ant-upload-drag-container:hover .anticon-inbox,
+        .ant-upload-drag-container:hover p {
           color: #ff7875 !important;
         }
 
-        /* Danh sách ảnh đã upload */
+        /* Thumbnail hover effects */
         .ant-upload-list-picture-card-container {
-          transition: transform 0.2s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          border-radius: 10px !important;
         }
 
         .ant-upload-list-picture-card-container:hover {
-          transform: scale(1.04);
+          transform: translateY(-4px) scale(1.05) !important;
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+          z-index: 10;
         }
 
-        /* Tùy chỉnh nút xóa */
+        /* Delete button */
         .ant-upload-list-item-actions .anticon-delete {
           color: #ff4d4f !important;
+          font-size: 16px !important;
         }
 
         .ant-upload-list-item-actions .anticon-delete:hover {
           color: #cf1322 !important;
+          background: rgba(255, 77, 79, 0.1) !important;
+          border-radius: 50% !important;
+        }
+
+        /* Picture card cover */
+        .ant-upload-list-item-picture-card:first-child
+          .ant-upload-list-item-thumbnail
+          img {
+          border: 3px solid #ff4d4f !important;
+          border-radius: 10px !important;
+        }
+
+        /* Custom scrollbar for category modal */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #cbd5e1;
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+          height: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 3px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: #fca5a5;
+          border-radius: 3px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: #f87171;
+        }
+
+        /* Snap scroll effect */
+        .snap-x > * {
+          scroll-snap-align: start;
+        }
+
+        /* Hover effect cho columns */
+        .flex-none:hover {
+          transform: scale(1.02);
+          z-index: 10;
         }
       `}</style>
     </>
