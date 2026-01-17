@@ -1,5 +1,7 @@
 package docker_test.com.controllers.seller;
 
+import java.sql.SQLException;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,10 +35,14 @@ public class ProductController {
 	 } 
 	
 	 @PostMapping("")
-	 public ResponseEntity create(@RequestBody Product product) {
+	 public ResponseEntity create(@RequestBody Product product) throws SQLException {
+		
+		 System.out.print("Send..");
+		 
+		 var en = repositories.Create(product);
 		 
 		 
-		 return null;
+		 return ResponseEntity.ok(en);
 	 }
 	
 }
