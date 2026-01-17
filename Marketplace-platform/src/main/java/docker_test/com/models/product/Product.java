@@ -21,7 +21,7 @@ public final class Product {
     private Double width;
     private Double height;
     private String brand;
-    private Integer is_active=null;
+    private Integer is_active=1;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
 
@@ -87,16 +87,16 @@ public final class Product {
     public Double getOriginalPrice() { return original_price; }
     public void setOriginalPrice(Double originalPrice) { this.original_price = originalPrice; }
     
-    public int getStockQuantity() { return stock_quantity; }
+    public Integer getStockQuantity() { return stock_quantity; }
     public void setStockQuantity(int stockQuantity) { this.stock_quantity = stockQuantity; }
     
-    public int getSoldCount() { return sold_count; }
+    public Integer getSoldCount() { return sold_count; }
     public void setSoldCount(int soldCount) { this.sold_count = soldCount; }
     
     public Double getRating() { return rating; }
     public void setRating(Double rating) { this.rating = rating; }
     
-    public int getReviewCount() { return review_count; }
+    public Integer getReviewCount() { return review_count; }
     public void setReviewCount(int reviewCount) { this.review_count = reviewCount; }
     
     public Double getWeight() { return weight; }
@@ -114,8 +114,8 @@ public final class Product {
     public String getBrand() { return brand; }
     public void setBrand(String brand) { this.brand = brand; }
     
-    public int getIsActive() { return is_active; }  // hoặc giữ isActive() tùy convention
-    public void setIsActive(int isActive) { this.is_active = isActive; }
+    public Integer getIs_active() { return is_active; }  // hoặc giữ isActive() tùy convention
+    public void setIs_active(Integer is_active) { this.is_active = is_active; }
     
     public LocalDateTime getCreatedAt() { return created_at; }
     public void setCreatedAt(LocalDateTime createdAt) { this.created_at = createdAt; }
