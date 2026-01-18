@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -18,20 +19,31 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import docker_test.com.factory.IRepoFactory;
+import docker_test.com.factory.RepoFactoryImpl;
+import docker_test.com.models.product.ProductImage;
+import docker_test.com.repository.IRepositories;
+
 
 
 @RestController()
-@RequestMapping("product-image")
+@RequestMapping("/seller/product-image")
 public class ProductImageController {
 	 private static final String UPLOAD_DIR = System.getProperty("user.dir") + "/src/main/webapp/upload/";; // Define your upload directory
-
+     private final IRepositories repositories;
+     private final IRepoFactory iRepoFactory;
+     
+     public ProductImageController(RepoFactoryImpl factoryImpl) {
+    	 this.iRepoFactory =factoryImpl;
+    	 this. repositories = iRepoFactory.createRepo("product_image");
+     }
 	
 	
 	@PostMapping(value = "/product/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<?> update2(
-	        @PathVariable Long id,
+	        @PathVariable Integer id,
 	       
-	        @RequestPart(value = "images", required = false) List<MultipartFile> images) throws IOException {
+	        @RequestPart(value = "images", required = false) List<MultipartFile> images) throws IOException,SQLException {
 	    
 	    Path uploadPath = Paths.get(UPLOAD_DIR);
 	    
@@ -44,6 +56,7 @@ public class ProductImageController {
 	    
 	    if (images != null && !images.isEmpty()) {
 	        for (MultipartFile image : images) {
+	        	ProductImage productImage = new ProductImage();
 	            if (!image.isEmpty()) {
 	                // Validate file type
 	                String contentType = image.getContentType();
@@ -62,7 +75,10 @@ public class ProductImageController {
 	                // Lưu file
 	                Files.copy(image.getInputStream(), filePath, 
 	                          StandardCopyOption.REPLACE_EXISTING);
-	                
+	              
+	                productImage.setProductId(id);
+	                productImage.setImageUrl(uniqueName);
+	                repositories.Create(productImage);
 	                savedFileNames.add(uniqueName);
 	            }
 	        }
@@ -73,10 +89,12 @@ public class ProductImageController {
 	        
 	        // Option 2: Có bảng riêng FoodItemImage
 	        // saveImagesToDatabase(id, savedFileNames);
+
+		    return ResponseEntity.ok(true);
 	    }
 	    
-	   // var result = foodItemRepository.update(item);
-	    return ResponseEntity.ok(true);
+
+	    return ResponseEntity.ok(false);
 	}
 	
 	private boolean isValidImageType(String contentType) {
