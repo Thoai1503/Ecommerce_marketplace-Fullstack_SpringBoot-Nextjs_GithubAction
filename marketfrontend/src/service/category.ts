@@ -16,6 +16,7 @@ export const createCategory = async (item: DbCategory): Promise<DbCategory> => {
     .post("/category", item)
     .then((res) => res.data)
     .catch((error) => {
+      console.log(error);
       throw error;
     });
 };
