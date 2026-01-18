@@ -2,7 +2,7 @@
 import { Product } from "@/validators/product";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
-import { categoryQuery } from "./query";
+import { categoryQuery, productImageQuery } from "./query";
 import { slugify, generateUniqueSlug, isValidSlug } from "@/helper/utils";
 import { addProduct, uploadToProduct } from "./service";
 import { message, UploadFile, UploadProps } from "antd";
@@ -153,9 +153,30 @@ export const useAddProductSeller = () => {
     handleChange,
   };
 };
-
+// hooks/useAddProductSeller.ts - useAddImageSeller section
 export const useAddImageSeller = () => {
+  console.log("🔧 useAddImageSeller hook called");
+
+  const { data, isLoading, isError, error } = useQuery(
+    productImageQuery.by_product_id(4),
+  );
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+
+  console.log("Query status:", { isLoading, isError, hasData: !!data });
+  if (isError) {
+    console.error("❌ Query error details:", error);
+    // Expand the error to see what's inside
+    if (Array.isArray(error)) {
+      error.forEach((err, index) => {
+        console.error(`Error ${index}:`, err);
+        console.error(
+          `Error ${index} stringified:`,
+          JSON.stringify(err, null, 2),
+        );
+      });
+    }
+  }
+
   const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
     // Giới hạn tối đa 8 ảnh như yêu cầu
     const updatedList = newFileList.slice(0, 8);
@@ -174,16 +195,13 @@ export const useAddImageSeller = () => {
   });
 
   const handleSave = () => {
-    //  console.log("Saving product:", formData);
     console.log("Images:", fileList);
     const formData = new FormData();
     fileList.forEach((file) => {
       if (file.originFileObj) {
-        formData.append("images", file.originFileObj as Blob); // tên field tùy backend
+        formData.append("images", file.originFileObj as Blob);
       }
     });
-
-    // Debug: xem nội dung FormData (không hiển thị file trực tiếp được)
 
     console.log(
       "Images count:",
@@ -193,5 +211,35 @@ export const useAddImageSeller = () => {
     upload(formData);
     message.success("Sản phẩm đã được lưu thành công!");
   };
+
+  useEffect(() => {
+    if (isError) {
+      console.warn(
+        "⚠️ Cannot load images due to error, keeping empty fileList",
+      );
+      setFileList([]); // Reset to empty on error
+      return;
+    }
+
+    if (data && data.length > 0) {
+      console.log("✅ Data exists, mapping images...");
+      const images = data.map((item) => {
+        console.log("Processing item:", item);
+        return {
+          uid: String(item.id),
+          name: item.image_url.split("/").pop() || `image-${item.id}`,
+          status: "done" as const,
+          url: item.image_url,
+          thumbUrl: item.image_url,
+        };
+      });
+      console.log("📸 Mapped images:", images);
+      setFileList(images);
+    } else {
+      console.log("ℹ️ No images found for this product");
+      setFileList([]);
+    }
+  }, [data, isLoading, isError]);
+
   return { fileList, handleChange, handleSave };
 };
