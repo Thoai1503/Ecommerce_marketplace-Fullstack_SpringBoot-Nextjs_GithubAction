@@ -1,6 +1,10 @@
 package docker_test.com.repository;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 
 import docker_test.com.configs.DBConnection;
@@ -23,7 +27,30 @@ public class ProductImageRepository implements IRepositories<ProductImage> {
 	   
 	@Override
 	public ProductImage Create(ProductImage item) throws SQLException {
-		// TODO Auto-generated method stub
+		 String sql = "insert into product_image (product_id,image_url) values (?,?)";
+		 try (Connection con = dbConnection.getConn();
+			PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)	){
+			 ps.setInt(1, item.getProductId());
+			 ps.setString(2, item.getImageUrl());
+			 int rows = ps.executeUpdate();
+			 if(rows>0) {
+				 if (rows > 0) {
+			            try (ResultSet rs = ps.getGeneratedKeys()) {
+			                if (rs.next()) {
+			                    int id = rs.getInt(1);
+			                    item.setId(id);
+			                    System.out.println("ID của bản ghi mới: " + id);
+			                }
+			            }
+			            return item;
+			        }
+			 }
+			 
+		 }
+		 catch (Exception ex) {
+			 throw ex;
+			 
+		 }
 		return null;
 	}
 
