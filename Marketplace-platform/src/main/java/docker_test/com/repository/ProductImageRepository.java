@@ -5,9 +5,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 
 import docker_test.com.configs.DBConnection;
+import docker_test.com.models.Category;
 import docker_test.com.models.product.ProductImage;
 
 public class ProductImageRepository implements IRepositories<ProductImage> {
@@ -30,8 +32,8 @@ public class ProductImageRepository implements IRepositories<ProductImage> {
 		 String sql = "insert into product_image (product_id,image_url) values (?,?)";
 		 try (Connection con = dbConnection.getConn();
 			PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)	){
-			 ps.setInt(1, item.getProductId());
-			 ps.setString(2, item.getImageUrl());
+			 ps.setInt(1, item.getProduct_id());
+			 ps.setString(2, item.getImage_url());
 			 int rows = ps.executeUpdate();
 			 if(rows>0) {
 				 if (rows > 0) {
@@ -75,6 +77,34 @@ public class ProductImageRepository implements IRepositories<ProductImage> {
 	@Override
 	public List<ProductImage> GetAll() {
 		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	public List<ProductImage> GetByProductId(int id) {
+		List<ProductImage> list = new ArrayList<ProductImage>();
+		
+		String sql ="select * from product_image where product_id = ?";
+		
+		try (Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)){
+			ps.setInt(1, id);
+			  ResultSet rs =	ps.executeQuery();
+			  while (rs.next()) {
+		          ProductImage image = new ProductImage();
+		          image.setId(rs.getInt("id"));
+		          image.setProductId(rs.getInt("product_id"));
+		          image.setImageUrl(rs.getString("image_url"));
+		          image.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+		             list.add(image);
+		      }
+			  return list;
+			
+
+		}
+		catch (Exception ex) {
+			ex.printStackTrace();;
+		}
+		
 		return null;
 	}
 

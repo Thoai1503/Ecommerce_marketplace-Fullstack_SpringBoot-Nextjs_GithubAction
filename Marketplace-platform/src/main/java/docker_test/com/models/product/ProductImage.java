@@ -36,7 +36,7 @@ public final class ProductImage {
     }
 
 
-    public Integer getProductId() {
+    public Integer getProduct_id() {
         return product_id;
     }
 
@@ -44,7 +44,7 @@ public final class ProductImage {
         this.product_id = product_id;
     }
 
-    public String getImageUrl() {
+    public String getImage_url() {
         return image_url;
     }
 
@@ -52,7 +52,7 @@ public final class ProductImage {
         this.image_url = image_url;
     }
 
-    public int getDisplayOrder() {
+    public int getDisplay_order() {
         return display_order;
     }
 
@@ -60,7 +60,7 @@ public final class ProductImage {
         this.display_order = display_order;
     }
 
-    public int isThumbnail() {
+    public int getIs_thumbnail() {
         return is_thumbnail;
     }
 
@@ -68,7 +68,7 @@ public final class ProductImage {
         this.is_thumbnail = is_thumbnail;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public LocalDateTime getCreated_at() {
         return created_at;
     }
 
