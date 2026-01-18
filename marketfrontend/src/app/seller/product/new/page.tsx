@@ -385,7 +385,6 @@ const AddProductForm: React.FC = () => {
                       fileList={fileList}
                       beforeUpload={beforeUpload}
                       onChange={handleChange}
-                      accept="image/*"
                       className="product-media-upload w-100"
                     >
                       {fileList.length >= 8 ? null : (
