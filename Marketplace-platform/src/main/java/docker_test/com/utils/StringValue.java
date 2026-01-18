@@ -97,7 +97,7 @@ public final class StringValue {
     public static final String VARIANT_UPDATED_AT_COL = "updated_at";
 
     // Product Images table
-    public static final String PRODUCT_IMAGE_ID_COL = "image_id";
+
     public static final String PRODUCT_IMAGE_PRODUCT_ID_COL = "product_id";
     public static final String PRODUCT_IMAGE_URL_COL = "image_url";
     public static final String PRODUCT_IMAGE_DISPLAY_ORDER_COL = "display_order";
