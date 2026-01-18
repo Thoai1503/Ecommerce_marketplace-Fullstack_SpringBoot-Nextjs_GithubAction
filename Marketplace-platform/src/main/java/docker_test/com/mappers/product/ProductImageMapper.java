@@ -15,8 +15,8 @@ public final class ProductImageMapper implements IMapper<ProductImage> {
     public ProductImage RowMap(ResultSet rs) {
         ProductImage image = new ProductImage();
         try {
-            image.setImageId(rs.getLong(StringValue.PRODUCT_IMAGE_ID_COL));
-            image.setProductId(rs.getLong(StringValue.PRODUCT_IMAGE_PRODUCT_ID_COL));
+          
+            image.setProductId(rs.getInt(StringValue.PRODUCT_IMAGE_PRODUCT_ID_COL));
             image.setImageUrl(rs.getString(StringValue.PRODUCT_IMAGE_URL_COL));
             image.setDisplayOrder(rs.getInt(StringValue.PRODUCT_IMAGE_DISPLAY_ORDER_COL));     
             image.setThumbnail(rs.getInt(StringValue.PRODUCT_IMAGE_THUMBNAIL_COL));

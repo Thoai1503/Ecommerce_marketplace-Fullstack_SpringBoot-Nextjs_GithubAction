@@ -21,3 +21,12 @@ export const getAllCategory = async (): Promise<DbCategory[]> => {
       throw error;
     });
 };
+
+export const uploadToProduct = async (formData: FormData): Promise<any> => {
+  return await http
+    .post("/seller/product-image/product/1", formData)
+    .then((res) => res.data)
+    .catch((error) => {
+      throw error;
+    });
+};
