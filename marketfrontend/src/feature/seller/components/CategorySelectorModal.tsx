@@ -1,11 +1,17 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { Modal, Input } from "antd";
-import { DbCategory } from "@/helper/utils";
 
-// Mock data - trong thực tế sẽ lấy từ props
+interface DbCategory {
+  id: number;
+  parent_id: number;
+  category_name: string;
+  category_slug: string;
+  level: number;
+  is_active: number;
+}
 
-const mockCategories = [
+const mockCategories: DbCategory[] = [
   {
     id: 2,
     parent_id: 0,
@@ -87,59 +93,11 @@ const mockCategories = [
     is_active: 1,
   },
   {
-    id: 13,
-    parent_id: 10,
-    category_name: "Máy tính bảng",
-    category_slug: "may-tinh-bang",
-    level: 1,
-    is_active: 1,
-  },
-  {
-    id: 14,
-    parent_id: 10,
-    category_name: "Phụ kiện",
-    category_slug: "phu-kien",
-    level: 1,
-    is_active: 1,
-  },
-  {
-    id: 15,
-    parent_id: 3,
-    category_name: "Áo",
-    category_slug: "ao",
-    level: 1,
-    is_active: 1,
-  },
-  {
     id: 16,
     parent_id: 0,
     category_name: "Thời trang nam",
     category_slug: "thoi-trang-nam",
     level: 0,
-    is_active: 1,
-  },
-  {
-    id: 17,
-    parent_id: 0,
-    category_name: "Nhà cửa & đời sống",
-    category_slug: "nha-cua-doi-song",
-    level: 0,
-    is_active: 1,
-  },
-  {
-    id: 21,
-    parent_id: 16,
-    category_name: "Quần đùi",
-    category_slug: "quan-dui",
-    level: 1,
-    is_active: 1,
-  },
-  {
-    id: 22,
-    parent_id: 16,
-    category_name: "Áo khoác",
-    category_slug: "ao-khoac",
-    level: 1,
     is_active: 1,
   },
   {
@@ -151,67 +109,11 @@ const mockCategories = [
     is_active: 1,
   },
   {
-    id: 24,
-    parent_id: 16,
-    category_name: "Quần Jean",
-    category_slug: "quan-jean",
-    level: 0,
-    is_active: 1,
-  },
-  {
-    id: 25,
-    parent_id: 16,
-    category_name: "Quần dài",
-    category_slug: "quan-dai",
-    level: 0,
-    is_active: 1,
-  },
-  {
-    id: 27,
-    parent_id: 0,
-    category_name: "Thiết bị âm thanh",
-    category_slug: "thiet-bi-am-thanh",
-    level: 0,
-    is_active: 1,
-  },
-  {
-    id: 28,
-    parent_id: 0,
-    category_name: "Mẹ & bé",
-    category_slug: "me-be",
-    level: 0,
-    is_active: 1,
-  },
-  {
-    id: 29,
-    parent_id: 27,
-    category_name: "Micro thu âm",
-    category_slug: "micro-thu-am",
-    level: 0,
-    is_active: 1,
-  },
-  {
-    id: 30,
-    parent_id: 0,
-    category_name: "Mô tô, xe máy",
-    category_slug: "mo-to-xe-may",
-    level: 0,
-    is_active: 1,
-  },
-  {
     id: 33,
     parent_id: 23,
     category_name: "Áo hoodies",
     category_slug: "ao-hoodies",
     level: 2,
-    is_active: 1,
-  },
-  {
-    id: 34,
-    parent_id: 0,
-    category_name: "Test",
-    category_slug: "test",
-    level: 0,
     is_active: 1,
   },
 ];
@@ -223,52 +125,50 @@ interface Props {
 }
 
 const CategorySelectorModal = ({
-  categories,
+  categories = mockCategories,
   isModalOpen,
   setIsModalOpen,
 }: Props) => {
-  //   const [isModalOpen, setIsModalOpen] = useState(false);
-  // const [categories] = useState(categories);
   const [searchText, setSearchText] = useState("");
-  const [selectedPath, setSelectedPath] = useState<typeof mockCategories>([]);
+  const [selectedPath, setSelectedPath] = useState<DbCategory[]>([]);
   const [activePath, setActivePath] = useState<(number | null)[]>([
     null,
     null,
     null,
     null,
     null,
-  ] as (number | null)[]);
+  ]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Lọc categories theo parent_id
-  const getCategoriesByParent = (parentId: any) => {
-    return categories?.filter(
+  const getCategoriesByParent = (parentId: number) => {
+    return categories.filter(
       (cat) => cat.parent_id === parentId && cat.is_active === 1,
     );
   };
 
   // Kiểm tra category có con không
-  const hasChildren = (categoryId: any) => {
-    return categories?.some(
+  const hasChildren = (categoryId: number) => {
+    return categories.some(
       (cat) => cat.parent_id === categoryId && cat.is_active === 1,
     );
   };
 
   // Tìm category theo ID
-  const getCategoryById = (id: any) => {
-    return categories?.find((cat) => cat.id === id);
+  const getCategoryById = (id: number) => {
+    return categories.find((cat) => cat.id === id);
   };
 
   // Build full path từ category ID
-  const buildPathFromCategory = (categoryId: any) => {
-    const path = [];
-    let currentId = categoryId;
+  const buildPathFromCategory = (categoryId: number) => {
+    const path: DbCategory[] = [];
+    let currentId: number | null = categoryId;
 
     while (currentId) {
       const category = getCategoryById(currentId);
       if (category) {
         path.unshift(category);
-        currentId = category.parent_id;
+        currentId = category.parent_id || null;
       } else {
         break;
       }
@@ -278,7 +178,12 @@ const CategorySelectorModal = ({
   };
 
   // Handle click category
-  const handleCategoryClick = (category: any, levelIndex: any) => {
+  const handleCategoryClick = (
+    category: DbCategory,
+    levelIndex: number,
+    isOtherOption: boolean = false,
+  ) => {
+    //  alert(JSON.stringify(category));
     const newActivePath = [...activePath];
 
     // Reset các level sau level hiện tại
@@ -290,29 +195,37 @@ const CategorySelectorModal = ({
     newActivePath[levelIndex] = category.id;
     setActivePath(newActivePath);
 
-    // Nếu không có con, cập nhật selected path
-    if (!hasChildren(category.id)) {
+    // Nếu là option "Khác" hoặc không có con, cập nhật selected path
+    if (isOtherOption || !hasChildren(category.id)) {
       const fullPath = buildPathFromCategory(category.id);
       setSelectedPath(fullPath);
     }
 
-    // Auto scroll sang cột tiếp theo
+    // Auto scroll sang cột tiếp theo nếu có children
     setTimeout(() => {
-      if (scrollContainerRef.current && hasChildren(category.id)) {
+      if (
+        scrollContainerRef.current &&
+        hasChildren(category.id) &&
+        !isOtherOption
+      ) {
         const columnWidth = 280;
         scrollContainerRef.current.scrollTo({
           left: (levelIndex + 1) * columnWidth,
           behavior: "smooth",
         });
       }
-    }, 100);
+    }, 1000);
   };
 
   // Render một cột categories
-  const renderCategoryColumn = (parentId: any, levelIndex: any) => {
+  const renderCategoryColumn = (parentId: number, levelIndex: number) => {
     const categoryList = getCategoriesByParent(parentId);
 
-    if (categoryList?.length === 0) return null;
+    if (categoryList.length === 0) return null;
+
+    // Lấy parent category để hiển thị option "Khác"
+    const parentCategory = parentId !== 0 ? getCategoryById(parentId) : null;
+    const shouldShowOther = parentCategory && parentCategory.level >= 0;
 
     return (
       <div
@@ -320,7 +233,7 @@ const CategorySelectorModal = ({
         className="flex-none w-[280px] border-r border-gray-200 overflow-y-auto"
       >
         <div className="p-3 space-y-1">
-          {categoryList?.map((category) => {
+          {categoryList.map((category) => {
             const isActive = activePath[levelIndex] === category.id;
             const isSelected =
               selectedPath[selectedPath.length - 1]?.id === category.id;
@@ -329,7 +242,7 @@ const CategorySelectorModal = ({
             return (
               <button
                 key={category.id}
-                onClick={() => handleCategoryClick(category, levelIndex)}
+                onClick={() => handleCategoryClick(category, levelIndex, false)}
                 className={`
                   w-full text-left px-3 py-2.5 text-sm rounded-lg 
                   flex justify-between items-center group transition-all
@@ -344,9 +257,7 @@ const CategorySelectorModal = ({
               >
                 <span className="truncate">{category.category_name}</span>
                 {isSelected ? (
-                  <span className="material-symbols-outlined text-red-500 text-sm flex-shrink-0">
-                    check
-                  </span>
+                  <span className="text-red-500 text-sm flex-shrink-0">✓</span>
                 ) : hasChild ? (
                   <span
                     className={`material-symbols-outlined text-sm flex-shrink-0 ${isActive ? "text-red-500" : "text-gray-400 group-hover:text-gray-600"}`}
@@ -357,6 +268,33 @@ const CategorySelectorModal = ({
               </button>
             );
           })}
+
+          {/* Thêm option "Khác" cho level >= 2 */}
+          {shouldShowOther && parentCategory && (
+            <button
+              onClick={() =>
+                handleCategoryClick(parentCategory, levelIndex, true)
+              }
+              className={`
+                w-full text-left px-3 py-2.5 text-sm rounded-lg 
+                flex justify-between items-center group transition-all
+                border-t mt-2 pt-2
+                ${
+                  selectedPath[selectedPath.length - 1]?.id ===
+                    parentCategory.id && selectedPath.length === levelIndex
+                    ? "bg-red-100 border-2 border-red-400 text-red-800 font-semibold shadow-md"
+                    : "hover:bg-gray-100 text-gray-600 italic"
+                }
+              `}
+            >
+              <span className="truncate">Khác</span>
+              {selectedPath[selectedPath.length - 1]?.id ===
+                parentCategory.id &&
+                selectedPath.length === levelIndex && (
+                  <span className="text-red-500 text-sm flex-shrink-0">✓</span>
+                )}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -372,7 +310,7 @@ const CategorySelectorModal = ({
     // Các cột tiếp theo dựa trên active path
     for (let i = 0; i < activePath.length; i++) {
       if (activePath[i] !== null) {
-        const nextColumn = renderCategoryColumn(activePath[i], i + 1);
+        const nextColumn = renderCategoryColumn(activePath[i]!, i + 1);
         if (nextColumn) {
           columns.push(nextColumn);
         }
@@ -384,7 +322,7 @@ const CategorySelectorModal = ({
 
   // Search categories
   const filteredCategories = searchText
-    ? categories?.filter(
+    ? categories.filter(
         (cat) =>
           cat.category_name.toLowerCase().includes(searchText.toLowerCase()) ||
           cat.category_slug.toLowerCase().includes(searchText.toLowerCase()),
@@ -392,7 +330,7 @@ const CategorySelectorModal = ({
     : null;
 
   // Handle scroll buttons
-  const handleScroll = (direction: any) => {
+  const handleScroll = (direction: string) => {
     if (scrollContainerRef.current) {
       const scrollAmount = 280;
       const currentScroll = scrollContainerRef.current.scrollLeft;
@@ -409,6 +347,7 @@ const CategorySelectorModal = ({
   const handleOk = () => {
     if (selectedPath.length > 0) {
       console.log("Selected category:", selectedPath[selectedPath.length - 1]);
+      console.log("Full path:", selectedPath);
       setIsModalOpen(false);
     }
   };
@@ -546,7 +485,8 @@ const CategorySelectorModal = ({
                     {selectedPath.map((cat) => cat.category_name).join(" → ")}
                   </span>
                   <span className="text-xs text-gray-400 ml-auto flex-shrink-0">
-                    ({selectedPath.length} cấp)
+                    (ID: {selectedPath[selectedPath.length - 1].id} -{" "}
+                    {selectedPath.length} cấp)
                   </span>
                 </>
               ) : (
