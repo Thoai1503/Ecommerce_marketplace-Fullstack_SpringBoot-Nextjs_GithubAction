@@ -4,10 +4,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { categoryQuery } from "./query";
 import { slugify, generateUniqueSlug, isValidSlug } from "@/helper/utils";
-import { addProduct } from "./service";
+import { addProduct, uploadToProduct } from "./service";
 import { message, UploadFile, UploadProps } from "antd";
 
 export const useAddProductSeller = () => {
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
   const { data: categories } = useQuery(categoryQuery.list);
 
   const [product, setProduct] = useState<Partial<Product>>({
@@ -18,6 +19,23 @@ export const useAddProductSeller = () => {
     original_price: 0,
     price: 0,
   });
+
+  const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
+    // Giới hạn tối đa 8 ảnh như yêu cầu
+    const updatedList = newFileList.slice(0, 8);
+    setFileList(updatedList);
+
+    // Optional: thông báo khi đạt giới hạn
+    if (newFileList.length > 8) {
+      message.warning("Chỉ được upload tối đa 8 ảnh!");
+    }
+  };
+
+  const handleSave = () => {
+    //  console.log("Saving product:", formData);
+    console.log("Images:", fileList);
+    message.success("Sản phẩm đã được lưu thành công!");
+  };
 
   const { mutate: add } = useMutation({
     mutationFn: (product: Partial<Product>) => addProduct(product),
@@ -131,6 +149,8 @@ export const useAddProductSeller = () => {
     setProduct,
     validateProduct,
     generateUniqueProductSlug,
+    fileList,
+    handleChange,
   };
 };
 
@@ -146,5 +166,32 @@ export const useAddImageSeller = () => {
       message.warning("Chỉ được upload tối đa 8 ảnh!");
     }
   };
-  return {};
+
+  const { mutate: upload } = useMutation({
+    mutationFn: (formData: FormData) => uploadToProduct(formData),
+    onSuccess: (data) => alert(data),
+    onError: (error) => alert(error),
+  });
+
+  const handleSave = () => {
+    //  console.log("Saving product:", formData);
+    console.log("Images:", fileList);
+    const formData = new FormData();
+    fileList.forEach((file) => {
+      if (file.originFileObj) {
+        formData.append("images", file.originFileObj as Blob); // tên field tùy backend
+      }
+    });
+
+    // Debug: xem nội dung FormData (không hiển thị file trực tiếp được)
+
+    console.log(
+      "Images count:",
+      fileList.filter((f) => f.originFileObj).length,
+    );
+    console.log("Form data:", formData);
+    upload(formData);
+    message.success("Sản phẩm đã được lưu thành công!");
+  };
+  return { fileList, handleChange, handleSave };
 };

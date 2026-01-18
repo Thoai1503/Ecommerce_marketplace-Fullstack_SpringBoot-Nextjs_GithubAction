@@ -35,6 +35,12 @@ interface TabSection {
 const AddProductForm: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // const handleSave = () => {
+  //   //  console.log("Saving product:", formData);
+  //   console.log("Images:", fileList);
+  //   message.success("Sản phẩm đã được lưu thành công!");
+  // };
+
   const {
     product,
     handleChangeProduct,
@@ -42,7 +48,7 @@ const AddProductForm: React.FC = () => {
     categories,
     setProduct,
   } = useAddProductSeller();
-  const {} = useAddImageSeller();
+  const { fileList, handleChange, handleSave } = useAddImageSeller();
   const showModal = () => {
     setIsModalOpen(true);
   };
@@ -147,30 +153,12 @@ const AddProductForm: React.FC = () => {
 
   const isLastTab = currentTab === tabSections.length - 1;
 
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
-
-  const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
-    // Giới hạn tối đa 8 ảnh như yêu cầu
-    const updatedList = newFileList.slice(0, 8);
-    setFileList(updatedList);
-
-    // Optional: thông báo khi đạt giới hạn
-    if (newFileList.length > 8) {
-      message.warning("Chỉ được upload tối đa 8 ảnh!");
-    }
-  };
-
   // Tùy chỉnh trước khi upload (ở đây ta không upload thật → return false)
   const beforeUpload = () => {
     return false; // Ngăn upload tự động lên server (chúng ta chỉ preview)
   };
 
   // Handle Save
-  const handleSave = () => {
-    console.log("Saving product:", formData);
-    console.log("Images:", fileList);
-    message.success("Sản phẩm đã được lưu thành công!");
-  };
 
   // Handle Cancel/Discard
   const handleDiscard = () => {
