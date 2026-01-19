@@ -2,7 +2,8 @@ package docker_test.com.mappers.attribute;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import docker_test.com.mappers.IMapper;
 import docker_test.com.models.attribute.Attribute;
@@ -25,8 +26,8 @@ public final class AttributeMapper implements IMapper<Attribute> {
     }
 
     @Override
-    public HashSet<Attribute> RowsMap(ResultSet rs) {
-        HashSet<Attribute> list = new HashSet<>();
+    public List<Attribute> RowsMap(ResultSet rs) {
+        List<Attribute> list = new ArrayList<>();
         try {
             while (rs.next()) list.add(RowMap(rs));
         } catch (SQLException e) {

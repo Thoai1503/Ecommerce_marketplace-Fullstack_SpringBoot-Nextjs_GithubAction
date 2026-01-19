@@ -4,7 +4,8 @@ package docker_test.com.mappers.product;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import docker_test.com.mappers.IMapper;
 import docker_test.com.models.product.Product;
@@ -60,8 +61,8 @@ public final class ProductMapper implements IMapper<Product> {
     }
 
     @Override
-    public HashSet<Product> RowsMap(ResultSet rs) {
-        HashSet<Product> products = new HashSet<>();
+    public List<Product> RowsMap(ResultSet rs) {
+    	List<Product> products = new ArrayList<>();
         try {
             while (rs.next()) {
                 products.add(RowMap(rs));

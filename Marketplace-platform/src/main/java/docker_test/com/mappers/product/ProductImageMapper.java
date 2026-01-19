@@ -33,8 +33,8 @@ public final class ProductImageMapper implements IMapper<ProductImage> {
     }
 
     @Override
-    public HashSet<ProductImage> RowsMap(ResultSet rs) {
-        HashSet<ProductImage> list = new HashSet<>();
+    public List<ProductImage> RowsMap(ResultSet rs) {
+        List<ProductImage> list = new ArrayList<>();
         try {
             while (rs.next()) list.add(RowMap(rs));
         } catch (SQLException e) {
