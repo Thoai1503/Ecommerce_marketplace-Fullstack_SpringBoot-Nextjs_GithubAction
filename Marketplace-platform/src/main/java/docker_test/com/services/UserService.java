@@ -21,7 +21,6 @@ public class UserService {
         User user = new User();
         user.setFullName(req.getFullName());
         user.setEmail(req.getEmail());
-        user.setPhone(req.getPhone());
 
         // ✅ HASH PASSWORD (BCrypt thuần)
         String hashed = BCrypt.hashpw(req.getPassword(), BCrypt.gensalt(10));
