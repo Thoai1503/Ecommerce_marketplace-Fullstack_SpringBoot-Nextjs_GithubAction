@@ -3,7 +3,7 @@ package docker_test.com.utils;
 public final class StringValue {
 
     // User table
-    public static final String USER_ID_COL = "user_id";
+    public static final String USER_ID_COL = "id";
     public static final String USER_EMAIL_COL = "email";
     public static final String USER_PHONE_COL = "phone";
     public static final String USER_PASSWORD_COL = "password_hash";
