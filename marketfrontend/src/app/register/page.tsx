@@ -2,53 +2,119 @@
 
 import React, { useState } from "react";
 
+const API_URL = "http://localhost:8000";
+
+type Errors = {
+  fullName?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  general?: string;
+};
+
 const Page: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: "",
-    emailOrPhone: "",
+    email: "",
     password: "",
     confirmPassword: "",
   });
 
+  const [errors, setErrors] = useState<Errors>({});
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: undefined, general: undefined }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  /* ================= SUBMIT ================= */
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
 
+    // FE validate
     if (formData.password !== formData.confirmPassword) {
-      alert("Mật khẩu xác nhận không khớp");
+      setErrors({
+        confirmPassword: "The authentication password doesn't match.",
+      });
       return;
     }
 
-    console.log("REGISTER DATA:", formData);
-    alert("Đăng ký thành công (demo)");
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_URL}/users/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName: formData.fullName,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      if (!res.ok) {
+        const message = await res.text();
+
+        // mapping lỗi backend
+        if (message.toLowerCase().includes("email")) {
+          setErrors({ email: message });
+        } else if (message.toLowerCase().includes("password")) {
+          setErrors({ password: message });
+        } else {
+          setErrors({ general: message || "Registration failed" });
+        }
+        return;
+      }
+
+      // SUCCESS
+      setFormData({
+        fullName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
+
+    } catch {
+      setErrors({
+        general: "Unable to connect to the server.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const inputClass =
-    "w-full h-12 rounded-lg border border-gray-300 px-4 text-sm " +
-    "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 " +
-    "placeholder:text-gray-400";
+  const inputClass = (error?: string) =>
+    "w-full h-12 rounded-lg border px-4 text-sm " +
+    "focus:outline-none focus:ring-2 " +
+    (error
+      ? "border-red-500 focus:ring-red-500"
+      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500") +
+    " placeholder:text-gray-400";
 
   return (
     <div className="min-h-screen bg-[#f5f7fb] flex items-center justify-center px-4">
       <div className="w-full max-w-6xl bg-white rounded-3xl shadow-lg overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+
         {/* LEFT */}
         <div className="hidden lg:flex flex-col justify-between p-12 bg-[#f4f8ff]">
           <div>
             <h2 className="text-4xl font-extrabold text-blue-600 leading-tight">
-              Mua sắm thả ga,
+              Shop till you drop,
               <br />
-              nhận quà cực đã
+              receive a great gift
             </h2>
             <p className="mt-4 text-gray-600 max-w-md">
-              Tham gia cộng đồng mua sắm trực tuyến hàng đầu để nhận hàng ngàn
-              voucher và ưu đãi độc quyền mỗi ngày.
+              Join the leading online shopping community to receive thousands of
+              Vouchers and exclusive deals every day.
             </p>
           </div>
 
@@ -58,9 +124,9 @@ const Page: React.FC = () => {
                 local_shipping
               </span>
               <div>
-                <p className="font-semibold text-black">Miễn phí vận chuyển</p>
+                <p className="font-semibold text-black">Free shipping</p>
                 <p className="text-sm text-gray-500">
-                  Cho đơn hàng đầu tiên từ 0đ
+                  First order from 0 VND
                 </p>
               </div>
             </li>
@@ -70,9 +136,9 @@ const Page: React.FC = () => {
                 sell
               </span>
               <div>
-                <p className="font-semibold text-black">Giá tốt mỗi ngày</p>
+                <p className="font-semibold text-black">Good prices every day</p>
                 <p className="text-sm text-gray-500">
-                  Cam kết giá rẻ nhất thị trường
+                  Guaranteed lowest prices on the market.
                 </p>
               </div>
             </li>
@@ -82,9 +148,9 @@ const Page: React.FC = () => {
                 verified_user
               </span>
               <div>
-                <p className="font-semibold text-black">Bảo mật thông tin</p>
+                <p className="font-semibold text-black">Information security</p>
                 <p className="text-sm text-gray-500">
-                  An toàn tuyệt đối cho mọi giao dịch
+                  Absolute security for all transactions.
                 </p>
               </div>
             </li>
@@ -95,106 +161,88 @@ const Page: React.FC = () => {
         <div className="p-8 lg:p-12 flex items-center">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-md mx-auto space-y-4"
+            className="w-full max-w-md mx-auto space-y-4 text-black"
           >
-            <div className="mb-4">
-             <h1 className="text-3xl font-bold text-black">
-                Đăng ký tài khoản
-             </h1>
-              <p className="text-gray-500 mt-1">
-                Trải nghiệm mua sắm tuyệt vời cùng chúng tôi
-              </p>
-            </div>
+            <h1 className="text-3xl font-bold">Register an account</h1>
 
-            {/* Full name */}
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-black">Họ và tên</label>
+            {errors.general && (
+              <div className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">
+                {errors.general}
+              </div>
+            )}
+
+            <div>
               <input
                 name="fullName"
+                placeholder="Full name"
                 value={formData.fullName}
                 onChange={handleChange}
-                className={inputClass}
-                placeholder="Nhập họ và tên của bạn"
+                className={inputClass(errors.fullName)}
                 required
               />
+              {errors.fullName && (
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.fullName}
+                </p>
+              )}
             </div>
 
-            {/* Email / phone */}
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-black">
-                Email
-              </label>
+            <div>
               <input
-                name="emailOrPhone"
-                value={formData.emailOrPhone}
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={formData.email}
                 onChange={handleChange}
-                 className={`${inputClass} pr-12 text-gray-900`}
-                placeholder="Nhập email hoặc số điện thoại"
+                className={inputClass(errors.email)}
                 required
               />
+              {errors.email && (
+                <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+              )}
             </div>
 
-            {/* Password */}
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-black">Mật khẩu</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`${inputClass} pr-12 text-gray-900`}
-                  placeholder="Nhập mật khẩu"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                >
-                  <span className="material-symbols-outlined">
-                    {showPassword ? "visibility_off" : "visibility"}
-                  </span>
-                </button>
-              </div>
+            <div>
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Password"
+                value={formData.password}
+                onChange={handleChange}
+                className={inputClass(errors.password)}
+                required
+              />
+              {errors.password && (
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.password}
+                </p>
+              )}
             </div>
 
-            {/* Confirm password */}
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-black">
-                Xác nhận mật khẩu
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className={`${inputClass} pr-12 text-gray-900`}
-                  placeholder="Nhập lại mật khẩu"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowConfirmPassword(!showConfirmPassword)
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                >
-                  <span className="material-symbols-outlined">
-                    {showConfirmPassword
-                      ? "visibility_off"
-                      : "visibility"}
-                  </span>
-                </button>
-              </div>
+            <div>
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                placeholder="Confirm password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className={inputClass(errors.confirmPassword)}
+                required
+              />
+              {errors.confirmPassword && (
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.confirmPassword}
+                </p>
+              )}
             </div>
 
             <button
               type="submit"
-              className="w-full h-12 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-md shadow-blue-500/30"
+              disabled={loading}
+              className="w-full h-12 rounded-lg bg-blue-600 text-white font-semibold
+                         hover:bg-blue-700 transition disabled:opacity-60"
             >
-              Đăng ký ngay
+              {loading ? "Đang xử lý..." : "Đăng ký ngay"}
             </button>
           </form>
         </div>

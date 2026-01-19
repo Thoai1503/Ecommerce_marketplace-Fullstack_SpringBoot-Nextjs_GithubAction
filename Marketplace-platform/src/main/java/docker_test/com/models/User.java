@@ -3,141 +3,142 @@ package docker_test.com.models;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-public class User {
+public final class User {
 
-	private long id;
-	private String email;
-	private String phone;
-	private String passwordHash;
-	private String fullName;
-	private String avatarUrl;
-	private LocalDate dateOfBirth;
-	private String gender; // male | female | other
-	private String userType; // buyer | seller | both
-	private int isVerified;
-	private int isActive;
-	private LocalDateTime createdAt;
-	private LocalDateTime updatedAt;
-	private LocalDateTime lastLogin;
+    private Long id;
+    private String email;
+    private String phone;
+    private String passwordHash;
+    private String fullName;
+    private String avatarUrl;
+    private LocalDate dateOfBirth;
+    private String gender;
+    private String userType;
+    private Integer isVerified;
+    private Integer isActive;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime lastLogin;
 
-	public User() {
-		this.userType = "buyer";
-		this.isVerified = 1;
-		this.isActive = 1;
-		this.createdAt = LocalDateTime.now();
-		this.updatedAt = LocalDateTime.now();
-	}
+    public User() {
+        this.userType = "buyer";
+        this.isActive = 1;
+        this.isVerified = 1;
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
 
-	// getters / setters
-	public long getId() {
-		return id;
-	}
+    /* ===== GETTERS / SETTERS ===== */
 
-	public void setId(long id) {
-		this.id = id;
-	}
+    public Long getId() {
+        return id;
+    }
 
-	public String getEmail() {
-		return email;
-	}
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-	public void setEmail(String email) {
-		this.email = email;
-	}
+    public String getEmail() {
+        return email;
+    }
 
-	public String getPhone() {
-		return phone;
-	}
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-	public void setPhone(String phone) {
-		this.phone = phone;
-	}
+    public String getPhone() {
+        return phone;
+    }
 
-	public String getPasswordHash() {
-		return passwordHash;
-	}
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
 
-	public void setPasswordHash(String passwordHash) {
-		this.passwordHash = passwordHash;
-	}
+    public String getPasswordHash() {
+        return passwordHash;
+    }
 
-	public String getFullName() {
-		return fullName;
-	}
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
 
-	public void setFullName(String fullName) {
-		this.fullName = fullName;
-	}
+    public String getFullName() {
+        return fullName;
+    }
 
-	public String getAvatarUrl() {
-		return avatarUrl;
-	}
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
 
-	public void setAvatarUrl(String avatarUrl) {
-		this.avatarUrl = avatarUrl;
-	}
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
 
-	public LocalDate getDateOfBirth() {
-		return dateOfBirth;
-	}
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
 
-	public void setDateOfBirth(LocalDate dateOfBirth) {
-		this.dateOfBirth = dateOfBirth;
-	}
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
 
-	public String getGender() {
-		return gender;
-	}
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
 
-	public void setGender(String gender) {
-		this.gender = gender;
-	}
+    public String getGender() {
+        return gender;
+    }
 
-	public String getUserType() {
-		return userType;
-	}
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
 
-	public void setUserType(String userType) {
-		this.userType = userType;
-	}
+    public String getUserType() {
+        return userType;
+    }
 
-	public int getIsVerified() {
-		return isVerified;
-	}
+    public void setUserType(String userType) {
+        this.userType = userType;
+    }
 
-	public void setIsVerified(int isVerified) {
-		this.isVerified = isVerified;
-	}
+    public Integer getIsVerified() {
+        return isVerified;
+    }
 
-	public int getIsActive() {
-		return isActive;
-	}
+    public void setIsVerified(Integer isVerified) {
+        this.isVerified = isVerified;
+    }
 
-	public void setIsActive(int isActive) {
-		this.isActive = isActive;
-	}
+    public Integer getIsActive() {
+        return isActive;
+    }
 
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
-	}
+    public void setIsActive(Integer isActive) {
+        this.isActive = isActive;
+    }
 
-	public void setCreatedAt(LocalDateTime createdAt) {
-		this.createdAt = createdAt;
-	}
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 
-	public LocalDateTime getUpdatedAt() {
-		return updatedAt;
-	}
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 
-	public void setUpdatedAt(LocalDateTime updatedAt) {
-		this.updatedAt = updatedAt;
-	}
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 
-	public LocalDateTime getLastLogin() {
-		return lastLogin;
-	}
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 
-	public void setLastLogin(LocalDateTime lastLogin) {
-		this.lastLogin = lastLogin;
-	}
+    public LocalDateTime getLastLogin() {
+        return lastLogin;
+    }
+
+    public void setLastLogin(LocalDateTime lastLogin) {
+        this.lastLogin = lastLogin;
+    }
 }

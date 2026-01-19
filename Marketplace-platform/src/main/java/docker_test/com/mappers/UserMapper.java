@@ -22,6 +22,7 @@ public final class UserMapper implements IMapper<User> {
             user.setFullName(rs.getString(StringValue.USER_FULLNAME_COL));
             user.setAvatarUrl(rs.getString(StringValue.USER_AVATAR_COL));
 
+            // DATE → LocalDate
             if (rs.getDate(StringValue.USER_DOB_COL) != null) {
                 user.setDateOfBirth(
                     rs.getDate(StringValue.USER_DOB_COL).toLocalDate()
@@ -30,9 +31,12 @@ public final class UserMapper implements IMapper<User> {
 
             user.setGender(rs.getString(StringValue.USER_GENDER_COL));
             user.setUserType(rs.getString(StringValue.USER_TYPE_COL));
+
+            // TINYINT(1) → boolean
             user.setIsVerified(rs.getInt(StringValue.USER_VERIFIED_COL));
             user.setIsActive(rs.getInt(StringValue.USER_ACTIVE_COL));
 
+            // TIMESTAMP → LocalDateTime
             Timestamp createdAt = rs.getTimestamp(StringValue.USER_CREATED_AT_COL);
             if (createdAt != null) {
                 user.setCreatedAt(createdAt.toLocalDateTime());
@@ -49,7 +53,7 @@ public final class UserMapper implements IMapper<User> {
             }
 
         } catch (SQLException e) {
-            throw new RuntimeException("Error mapping User", e);
+            e.printStackTrace();
         }
         return user;
     }
@@ -59,17 +63,18 @@ public final class UserMapper implements IMapper<User> {
         List<User> users = new ArrayList<>();
         try {
             while (rs.next()) {
-                users.add(RowMap(rs));
+                User user = RowMap(rs);
+                users.add(user);
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Error mapping User list", e);
+            e.printStackTrace();
         }
         return users;
     }
 
-    // ✔ BẮT BUỘC IMPLEMENT
-    @Override
-    public User mapRow(ResultSet rs, int rowNum) throws SQLException {
-        return RowMap(rs);
-    }
+	@Override
+	public User mapRow(ResultSet rs, int rowNum) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
