@@ -3,7 +3,8 @@ package docker_test.com.mappers.voucher;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import docker_test.com.mappers.IMapper;
 import docker_test.com.models.voucher.VoucherCondition;
@@ -49,8 +50,8 @@ public final class VoucherConditionMapper implements IMapper<VoucherCondition> {
     }
 
     @Override
-    public HashSet<VoucherCondition> RowsMap(ResultSet rs) {
-        HashSet<VoucherCondition> list = new HashSet<>();
+    public List<VoucherCondition> RowsMap(ResultSet rs) {
+        List<VoucherCondition> list = new ArrayList<>();
         try {
             while (rs.next()) list.add(RowMap(rs));
         } catch (SQLException e) {

@@ -3,9 +3,8 @@ package docker_test.com.mappers;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import docker_test.com.models.User;
 import docker_test.com.utils.StringValue;
@@ -16,7 +15,7 @@ public final class UserMapper implements IMapper<User> {
     public User RowMap(ResultSet rs) {
         User user = new User();
         try {
-            user.setUserId(rs.getLong(StringValue.USER_ID_COL));
+            user.setId(rs.getLong(StringValue.USER_ID_COL));
             user.setEmail(rs.getString(StringValue.USER_EMAIL_COL));
             user.setPhone(rs.getString(StringValue.USER_PHONE_COL));
             user.setPasswordHash(rs.getString(StringValue.USER_PASSWORD_COL));
@@ -60,8 +59,8 @@ public final class UserMapper implements IMapper<User> {
     }
 
     @Override
-    public HashSet<User> RowsMap(ResultSet rs) {
-        HashSet<User> users = new HashSet<>();
+    public List<User> RowsMap(ResultSet rs) {
+        List<User> users = new ArrayList<>();
         try {
             while (rs.next()) {
                 User user = RowMap(rs);

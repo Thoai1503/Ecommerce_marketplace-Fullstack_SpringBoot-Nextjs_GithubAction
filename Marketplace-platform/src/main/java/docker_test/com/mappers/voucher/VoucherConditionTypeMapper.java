@@ -2,6 +2,8 @@ package docker_test.com.mappers.voucher;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.sql.Timestamp;
 import java.util.HashSet;
 
@@ -30,8 +32,8 @@ public final class VoucherConditionTypeMapper implements IMapper<VoucherConditio
 	}
 
 	@Override
-	public HashSet<VoucherConditionType> RowsMap(ResultSet rs) {
-		HashSet<VoucherConditionType> list = new HashSet<>();
+	public List<VoucherConditionType> RowsMap(ResultSet rs) {
+		List<VoucherConditionType> list = new ArrayList<>();
 		try {
 			while (rs.next()) list.add(RowMap(rs));
 		} catch (SQLException e) {
