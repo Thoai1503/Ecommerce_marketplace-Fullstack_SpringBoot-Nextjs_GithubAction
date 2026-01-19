@@ -3,7 +3,8 @@ package docker_test.com.mappers.product;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import docker_test.com.mappers.IMapper;
 import docker_test.com.models.product.ProductVariant;
@@ -37,8 +38,8 @@ public final class ProductVariantMapper implements IMapper<ProductVariant> {
     }
 
     @Override
-    public HashSet<ProductVariant> RowsMap(ResultSet rs) {
-        HashSet<ProductVariant> list = new HashSet<>();
+    public List<ProductVariant> RowsMap(ResultSet rs) {
+    	List<ProductVariant> list = new ArrayList<>();
         try {
             while (rs.next()) list.add(RowMap(rs));
         } catch (SQLException e) {
