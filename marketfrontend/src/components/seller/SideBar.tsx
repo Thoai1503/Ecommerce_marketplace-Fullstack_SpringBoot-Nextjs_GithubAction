@@ -24,7 +24,7 @@ export default function Sidebar() {
     setOpenMenus((prev) =>
       prev.includes(menuId)
         ? prev.filter((id) => id !== menuId)
-        : [...prev, menuId]
+        : [...prev, menuId],
     );
   };
 
@@ -158,7 +158,7 @@ export default function Sidebar() {
         width: "250px",
         overflowY: "auto",
         height: "100vh",
-        display: "none",
+        // display: "none",
       }}
     >
       {/* Logo/Brand */}
