@@ -167,6 +167,13 @@ public class UserRepository implements IRepositories<User> {
 
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
+		User u = new User();
+		u.setUserId(rs.getLong("id"));
+		u.setEmail(rs.getString("email"));
+		u.setPhone(rs.getString("phone"));
+		u.setPasswordHash(rs.getString("password_hash"));
+		u.setFullName(rs.getString("full_name"));
+		u.setAvatarUrl(rs.getString("avatar_url"));
 
         } catch (Exception e) {
             e.printStackTrace();
