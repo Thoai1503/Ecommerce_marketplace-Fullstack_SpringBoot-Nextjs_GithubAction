@@ -55,7 +55,7 @@ export default async function UserLayout({
                     >
                       notifications
                     </span>{" "}
-                    Thông báo
+                    Notification
                   </a>
                   <a href="#">
                     <span
@@ -64,10 +64,10 @@ export default async function UserLayout({
                     >
                       help
                     </span>{" "}
-                    Hỗ trợ
+                    Help
                   </a>
                   <a href="/register" className="fw-medium">
-                    Đăng ký
+                    Register
                   </a>
                   <span
                     style={{
@@ -76,8 +76,8 @@ export default async function UserLayout({
                       background: "rgba(255,255,255,0.5)",
                     }}
                   ></span>
-                  <a href="#" className="fw-medium">
-                    Đăng nhập
+                  <a href="/login" className="fw-medium">
+                    Login
                   </a>
                 </div>
               </div>
