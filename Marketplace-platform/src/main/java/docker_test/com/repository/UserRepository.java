@@ -94,7 +94,7 @@ public class UserRepository implements IRepositories<User> {
         return null;
     }
 
-    /* ================= GET ALL ================= */
+    /* ================= GET ALL ================== */
 
     @Override
     public List<User> GetAll() {
