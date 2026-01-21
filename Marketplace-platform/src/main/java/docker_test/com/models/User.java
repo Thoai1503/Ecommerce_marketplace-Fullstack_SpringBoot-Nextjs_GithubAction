@@ -1,165 +1,169 @@
-	package docker_test.com.models;
+package docker_test.com.models;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public final class User {
-    private long userId;
-    private String email;
-    private String phone;
-    private String passwordHash;
-    private String fullName;
-    private String avatarUrl;
-    private LocalDate dateOfBirth;
-    private String gender;     // ENUM → String hoặc enum Java
-    private String userType;   // ENUM → String hoặc enum Java
-    private boolean isVerified;
-    private boolean isActive;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-    private LocalDateTime lastLogin;
 
-    // Constructor mặc định
-    public User() {
-        this.isActive = true;
-        this.isVerified = false;
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
+	private long userId;
+	private String email;
+	private String phone;
+	private String passwordHash;
+	private String fullName;
+	private String avatarUrl;
+	private LocalDate dateOfBirth;
+	private String gender; // male | female | other
+	private String userType; // buyer | seller | both
+	private int isVerified;
+	private int isActive;
+	private LocalDateTime createdAt;
+	private LocalDateTime updatedAt;
+	private LocalDateTime lastLogin;
 
-    // Constructor đầy đủ
-    public User(long userId, String email, String phone, String passwordHash,
-                String fullName, String avatarUrl, LocalDate dateOfBirth,
-                String gender, String userType, boolean isVerified, boolean isActive,
-                LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime lastLogin) {
+	/**
+	 * Constructor mặc định – dùng cho CREATE
+	 */
+	public User() {
+		this.userType = "buyer"; // 🔒 default
+		this.isActive = 1;
+		this.isVerified = 1; // 🔒 theo yêu cầu của bạn
+		this.createdAt = LocalDateTime.now();
+		this.updatedAt = LocalDateTime.now();
+	}
 
-        this.userId = userId;
-        this.email = email;
-        this.phone = phone;
-        this.passwordHash = passwordHash;
-        this.fullName = fullName;
-        this.avatarUrl = avatarUrl;
-        this.dateOfBirth = dateOfBirth;
-        this.gender = gender;
-        this.userType = userType;
-        this.isVerified = isVerified;
-        this.isActive = isActive;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.lastLogin = lastLogin;
-    }
+	/**
+	 * Constructor đầy đủ – dùng cho mapping DB
+	 */
+	public User(long userId, String email, String phone, String passwordHash, String fullName, String avatarUrl,
+			LocalDate dateOfBirth, String gender, String userType, int isVerified, int isActive,
+			LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime lastLogin) {
+		this.userId = userId;
+		this.email = email;
+		this.phone = phone;
+		this.passwordHash = passwordHash;
+		this.fullName = fullName;
+		this.avatarUrl = avatarUrl;
+		this.dateOfBirth = dateOfBirth;
+		this.gender = gender;
+		this.userType = userType;
+		this.isVerified = isVerified;
+		this.isActive = isActive;
+		this.createdAt = createdAt;
+		this.updatedAt = updatedAt;
+		this.lastLogin = lastLogin;
+	}
 
-    // Getters & Setters
-    public long getUserId() {
-        return userId;
-    }
+	/* ===== GETTERS / SETTERS ===== */
 
-    public void setUserId(long userId) {
-        this.userId = userId;
-    }
+	public long getUserId() {
+		return userId;
+	}
 
-    public String getEmail() {
-        return email;
-    }
+	public void setUserId(long userId) {
+		this.userId = userId;
+	}
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+	public String getEmail() {
+		return email;
+	}
 
-    public String getPhone() {
-        return phone;
-    }
+	public void setEmail(String email) {
+		this.email = email;
+	}
 
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
+	public String getPhone() {
+		return phone;
+	}
 
-    public String getPasswordHash() {
-        return passwordHash;
-    }
+	public void setPhone(String phone) {
+		this.phone = phone;
+	}
 
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
+	public String getPasswordHash() {
+		return passwordHash;
+	}
 
-    public String getFullName() {
-        return fullName;
-    }
+	public void setPasswordHash(String passwordHash) {
+		this.passwordHash = passwordHash;
+	}
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
+	public String getFullName() {
+		return fullName;
+	}
 
-    public String getAvatarUrl() {
-        return avatarUrl;
-    }
+	public void setFullName(String fullName) {
+		this.fullName = fullName;
+	}
 
-    public void setAvatarUrl(String avatarUrl) {
-        this.avatarUrl = avatarUrl;
-    }
+	public String getAvatarUrl() {
+		return avatarUrl;
+	}
 
-    public LocalDate getDateOfBirth() {
-        return dateOfBirth;
-    }
+	public void setAvatarUrl(String avatarUrl) {
+		this.avatarUrl = avatarUrl;
+	}
 
-    public void setDateOfBirth(LocalDate dateOfBirth) {
-        this.dateOfBirth = dateOfBirth;
-    }
+	public LocalDate getDateOfBirth() {
+		return dateOfBirth;
+	}
 
-    public String getGender() {
-        return gender;
-    }
+	public void setDateOfBirth(LocalDate dateOfBirth) {
+		this.dateOfBirth = dateOfBirth;
+	}
 
-    public void setGender(String gender) {
-        this.gender = gender;
-    }
+	public String getGender() {
+		return gender;
+	}
 
-    public String getUserType() {
-        return userType;
-    }
+	public void setGender(String gender) {
+		this.gender = gender;
+	}
 
-    public void setUserType(String userType) {
-        this.userType = userType;
-    }
+	public String getUserType() {
+		return userType;
+	}
 
-    public boolean isVerified() {
-        return isVerified;
-    }
+	public void setUserType(String userType) {
+		this.userType = userType;
+	}
 
-    public void setVerified(boolean verified) {
-        isVerified = verified;
-    }
+	public int getIsVerified() {
+		return isVerified;
+	}
 
-    public boolean isActive() {
-        return isActive;
-    }
+	public void setIsVerified(int isVerified) {
+		this.isVerified = isVerified;
+	}
 
-    public void setActive(boolean active) {
-        isActive = active;
-    }
+	public int getIsActive() {
+		return isActive;
+	}
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+	public void setIsActive(int isActive) {
+		this.isActive = isActive;
+	}
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
+	public LocalDateTime getCreatedAt() {
+		return createdAt;
+	}
 
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
+	public void setCreatedAt(LocalDateTime createdAt) {
+		this.createdAt = createdAt;
+	}
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+	public LocalDateTime getUpdatedAt() {
+		return updatedAt;
+	}
 
-    public LocalDateTime getLastLogin() {
-        return lastLogin;
-    }
+	public void setUpdatedAt(LocalDateTime updatedAt) {
+		this.updatedAt = updatedAt;
+	}
 
-    public void setLastLogin(LocalDateTime lastLogin) {
-        this.lastLogin = lastLogin;
-    }
+	public LocalDateTime getLastLogin() {
+		return lastLogin;
+	}
+
+	public void setLastLogin(LocalDateTime lastLogin) {
+		this.lastLogin = lastLogin;
+	}
 }
-
