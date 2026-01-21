@@ -2,7 +2,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
-//import "./styles.css"; // Import custom CSS
+import HeaderAuth from "@/components/HeaderAuth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,13 +19,14 @@ export const metadata: Metadata = {
   description: "Sàn thương mại điện tử hàng đầu Việt Nam",
 };
 
-export default async function UserLayout({
+export default function UserLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <>
+      {/* ================= HEADER ================= */}
       <header className="sticky-top bg-white shadow-sm">
         {/* Utility Bar */}
         <div className="utility-bar d-none d-md-block">
@@ -46,40 +47,10 @@ export default async function UserLayout({
                   </span>
                 </div>
               </div>
+
+              {/* 🔥 AUTH HEADER */}
               <div className="col-6">
-                <div className="d-flex gap-3 justify-content-end align-items-center">
-                  <a href="#">
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ fontSize: "16px" }}
-                    >
-                      notifications
-                    </span>{" "}
-                    Notification
-                  </a>
-                  <a href="#">
-                    <span
-                      className="material-symbols-outlined"
-                      style={{ fontSize: "16px" }}
-                    >
-                      help
-                    </span>{" "}
-                    Help
-                  </a>
-                  <a href="/register" className="fw-medium">
-                    Register
-                  </a>
-                  <span
-                    style={{
-                      width: "1px",
-                      height: "12px",
-                      background: "rgba(255,255,255,0.5)",
-                    }}
-                  ></span>
-                  <a href="/login" className="fw-medium">
-                    Login
-                  </a>
-                </div>
+                <HeaderAuth />
               </div>
             </div>
           </div>
@@ -91,9 +62,8 @@ export default async function UserLayout({
             {/* Logo */}
             <div className="col-auto">
               <a
-                href="#"
+                href="/"
                 className="d-flex align-items-center gap-2 text-decoration-none"
-                style={{ color: "var(--primary)" }}
               >
                 <div
                   className="d-flex align-items-center justify-content-center"
@@ -104,10 +74,7 @@ export default async function UserLayout({
                     borderRadius: "0.5rem",
                   }}
                 >
-                  <span
-                    className="material-symbols-outlined text-white"
-                    style={{ fontSize: "28px" }}
-                  >
+                  <span className="material-symbols-outlined text-white">
                     shopping_bag
                   </span>
                 </div>
@@ -126,280 +93,28 @@ export default async function UserLayout({
                   placeholder="Tìm sản phẩm, thương hiệu và shop yêu thích..."
                 />
                 <button className="btn btn-search m-1 px-3">
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: "20px" }}
-                  >
-                    search
-                  </span>
+                  <span className="material-symbols-outlined">search</span>
                 </button>
-              </div>
-              <div
-                className="d-none d-lg-flex gap-3 mt-1"
-                style={{ fontSize: "0.75rem", color: "#6b7280" }}
-              >
-                <a href="#" className="text-decoration-none text-secondary">
-                  Dép nam
-                </a>
-                <a href="#" className="text-decoration-none text-secondary">
-                  Áo khoác gió
-                </a>
-                <a href="#" className="text-decoration-none text-secondary">
-                  Iphone 15
-                </a>
-                <a href="#" className="text-decoration-none text-secondary">
-                  Túi xách nữ
-                </a>
-                <a href="#" className="text-decoration-none text-secondary">
-                  Váy dự tiệc
-                </a>
               </div>
             </div>
 
             {/* Cart */}
             <div className="col-auto">
-              <div className="position-relative" style={{ cursor: "pointer" }}>
-                <span
-                  className="material-symbols-outlined"
-                  style={{ color: "var(--primary)", fontSize: "28px" }}
-                >
-                  shopping_cart
-                </span>
-                <span className="cart-badge">3</span>
-              </div>
+              <span className="material-symbols-outlined">
+                shopping_cart
+              </span>
             </div>
           </div>
         </div>
       </header>
 
+      {/* ================= MAIN ================= */}
       <main className="main">{children}</main>
 
-      {/* Footer */}
+      {/* ================= FOOTER ================= */}
       <footer className="bg-white border-top pt-5 pb-3">
-        <div className="container-fluid px-lg-5">
-          <div className="row g-4 mb-4">
-            <div className="col-6 col-md-3 col-lg-2">
-              <h6
-                className="fw-bold text-uppercase mb-3"
-                style={{ fontSize: "0.75rem" }}
-              >
-                Chăm sóc khách hàng
-              </h6>
-              <div
-                className="d-flex flex-column gap-2"
-                style={{ fontSize: "0.875rem" }}
-              >
-                <a href="#" className="text-secondary text-decoration-none">
-                  Trung tâm trợ giúp
-                </a>
-                <a href="#" className="text-secondary text-decoration-none">
-                  Hướng dẫn mua hàng
-                </a>
-                <a href="#" className="text-secondary text-decoration-none">
-                  Thanh toán
-                </a>
-                <a href="#" className="text-secondary text-decoration-none">
-                  Vận chuyển
-                </a>
-                <a href="#" className="text-secondary text-decoration-none">
-                  Trả hàng & Hoàn tiền
-                </a>
-              </div>
-            </div>
-
-            <div className="col-6 col-md-3 col-lg-2">
-              <h6
-                className="fw-bold text-uppercase mb-3"
-                style={{ fontSize: "0.75rem" }}
-              >
-                Về chúng tôi
-              </h6>
-              <div
-                className="d-flex flex-column gap-2"
-                style={{ fontSize: "0.875rem" }}
-              >
-                <a href="#" className="text-secondary text-decoration-none">
-                  Giới thiệu về Sàn TMĐT
-                </a>
-                <a href="#" className="text-secondary text-decoration-none">
-                  Tuyển dụng
-                </a>
-                <a href="#" className="text-secondary text-decoration-none">
-                  Điều khoản
-                </a>
-                <a href="#" className="text-secondary text-decoration-none">
-                  Chính sách bảo mật
-                </a>
-              </div>
-            </div>
-
-            <div className="col-6 col-md-3 col-lg-2">
-              <h6
-                className="fw-bold text-uppercase mb-3"
-                style={{ fontSize: "0.75rem" }}
-              >
-                Thanh toán
-              </h6>
-              <div className="d-flex flex-wrap gap-2 mb-3">
-                <div
-                  className="bg-light rounded d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "40px",
-                    height: "24px",
-                    fontSize: "0.625rem",
-                  }}
-                >
-                  VISA
-                </div>
-                <div
-                  className="bg-light rounded d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "40px",
-                    height: "24px",
-                    fontSize: "0.625rem",
-                  }}
-                >
-                  MC
-                </div>
-                <div
-                  className="bg-light rounded d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "40px",
-                    height: "24px",
-                    fontSize: "0.625rem",
-                  }}
-                >
-                  JCB
-                </div>
-              </div>
-              <h6
-                className="fw-bold text-uppercase mb-3"
-                style={{ fontSize: "0.75rem" }}
-              >
-                Đơn vị vận chuyển
-              </h6>
-              <div className="d-flex flex-wrap gap-2">
-                <div
-                  className="bg-light rounded d-flex align-items-center justify-content-center"
-                  style={{ width: "40px", height: "24px", fontSize: "0.5rem" }}
-                >
-                  Express
-                </div>
-                <div
-                  className="bg-light rounded d-flex align-items-center justify-content-center"
-                  style={{ width: "40px", height: "24px", fontSize: "0.5rem" }}
-                >
-                  Fast
-                </div>
-              </div>
-            </div>
-
-            <div className="col-6 col-md-3 col-lg-2">
-              <h6
-                className="fw-bold text-uppercase mb-3"
-                style={{ fontSize: "0.75rem" }}
-              >
-                Theo dõi chúng tôi
-              </h6>
-              <div
-                className="d-flex flex-column gap-2"
-                style={{ fontSize: "0.875rem" }}
-              >
-                <a
-                  href="#"
-                  className="text-secondary text-decoration-none d-flex align-items-center gap-2"
-                >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: "1rem" }}
-                  >
-                    social_leaderboard
-                  </span>
-                  Facebook
-                </a>
-                <a
-                  href="#"
-                  className="text-secondary text-decoration-none d-flex align-items-center gap-2"
-                >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: "1rem" }}
-                  >
-                    photo_camera
-                  </span>
-                  Instagram
-                </a>
-                <a
-                  href="#"
-                  className="text-secondary text-decoration-none d-flex align-items-center gap-2"
-                >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: "1rem" }}
-                  >
-                    play_circle
-                  </span>
-                  TikTok
-                </a>
-              </div>
-            </div>
-
-            <div className="col-12 col-md-6 col-lg-3">
-              <h6
-                className="fw-bold text-uppercase mb-3"
-                style={{ fontSize: "0.75rem" }}
-              >
-                Tải ứng dụng
-              </h6>
-              <div className="d-flex gap-2">
-                <div
-                  className="bg-light d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "80px",
-                    height: "80px",
-                    fontSize: "0.625rem",
-                  }}
-                >
-                  QR Code
-                </div>
-                <div className="d-flex flex-column gap-2 justify-content-center">
-                  <div
-                    className="bg-dark text-white rounded d-flex align-items-center justify-content-center"
-                    style={{
-                      width: "96px",
-                      height: "32px",
-                      fontSize: "0.625rem",
-                    }}
-                  >
-                    App Store
-                  </div>
-                  <div
-                    className="bg-dark text-white rounded d-flex align-items-center justify-content-center"
-                    style={{
-                      width: "96px",
-                      height: "32px",
-                      fontSize: "0.625rem",
-                    }}
-                  >
-                    Google Play
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="border-top pt-4 text-center text-secondary"
-            style={{ fontSize: "0.75rem" }}
-          >
-            <p className="mb-2">
-              © 2024 Sàn TMĐT. Tất cả các quyền được bảo lưu.
-            </p>
-            <p className="mb-0">
-              Quốc gia & Khu vực: Singapore | Indonesia | Thái Lan | Malaysia |
-              Việt Nam
-            </p>
-          </div>
+        <div className="text-center text-secondary">
+          © 2024 Sàn TMĐT. All rights reserved.
         </div>
       </footer>
 
