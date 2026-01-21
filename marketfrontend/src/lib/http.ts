@@ -8,17 +8,21 @@ const http = axios.create({
 
 http.interceptors.request.use(
   (config) => {
-    if (typeof window !== undefined) {
+    if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
+    if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+    } else {
+      config.headers["Content-Type"] = "application/json";
+    }
+
     return config;
   },
-  (error) => {
-    Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 export default http;
