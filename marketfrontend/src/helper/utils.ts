@@ -13,6 +13,7 @@ export interface Category {
   id: number;
   name: string;
   slug: string;
+  level: number;
   parent_id?: number;
   productCount: number;
   isVisible: boolean;
@@ -35,6 +36,7 @@ export function convertDbCategoriesToComponentFormat(
       slug: dbCat.category_slug,
       productCount: 0, // You'll need to add this from your database
       isVisible: dbCat.is_active === 1,
+      level: dbCat.level,
       isExpanded: false,
       children: [],
     });
@@ -147,3 +149,41 @@ console.log(JSON.stringify(convertedCategories, null, 2));
   }
 ]
 */
+
+export function filterDistinctAttributes(data: any) {
+  const attributeMap = new Map();
+
+  data?.forEach((item: any) => {
+    const attrId = item.attribute_id;
+    const value = item.attribute.attribute_value.value;
+    const unit = item.attribute.unit_id;
+    const unit_symbol = item.attribute.attribute_value.unit.symbol;
+
+    // Nếu attribute_id chưa tồn tại trong Map
+    if (!attributeMap.has(attrId)) {
+      attributeMap.set(attrId, {
+        id: attrId,
+        //  attribute_id: attrId,
+        name: item.attribute.name,
+        slug: item.attribute.slug,
+        data_type: item.attribute.data_type,
+        values: [],
+      });
+    }
+
+    // Thêm value vào mảng nếu value != null và chưa tồn tại
+    if (value !== null && value !== undefined) {
+      const attr = attributeMap.get(attrId);
+      if (!attr.values.includes(value)) {
+        if (unit != 0 && unit_symbol) {
+          attr.values.push(`${value} ${unit_symbol}`);
+        } else {
+          attr.values.push(`${value}`);
+        }
+      }
+    }
+  });
+
+  // Chuyển Map thành Array
+  return Array.from(attributeMap.values());
+}

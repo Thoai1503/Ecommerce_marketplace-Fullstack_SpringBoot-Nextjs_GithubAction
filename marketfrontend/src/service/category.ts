@@ -3,7 +3,16 @@ import http from "@/lib/http";
 
 export const getAllCategory = async (): Promise<DbCategory[]> => {
   return await http
-    .get("/categories")
+    .get("/category")
+    .then((res) => res.data)
+    .catch((error) => {
+      throw error;
+    });
+};
+
+export const createCategory = async (item: DbCategory): Promise<DbCategory> => {
+  return await http
+    .post("/category", item)
     .then((res) => res.data)
     .catch((error) => {
       throw error;

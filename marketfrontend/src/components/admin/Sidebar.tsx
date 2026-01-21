@@ -21,7 +21,9 @@ import Link from "next/link";
 const Sidebar = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeItem, setActiveItem] = useState("dashboard");
-  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
+  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>(
+    {}
+  );
 
   const menuItems = [
     {
@@ -35,6 +37,18 @@ const Sidebar = () => {
       icon: LayoutDashboard,
       label: "Quản lý danh mục",
       href: "/admin/category",
+    },
+    {
+      id: "attribute-mangament",
+      icon: LayoutDashboard,
+      label: "Quản lý thuộc tính",
+      href: "/admin/attribute",
+    },
+        {
+      id: "user-mangament",
+      icon: LayoutDashboard,
+      label: "Quản lý người dùng",
+      href: "/admin/user",
     },
     {
       id: "orders",
@@ -84,7 +98,7 @@ const Sidebar = () => {
     },
   ];
 
-  const toggleDropdown = (itemId:string) => {
+  const toggleDropdown = (itemId: string) => {
     setOpenDropdowns((prev) => ({
       ...prev,
       [itemId]: !prev[itemId],
