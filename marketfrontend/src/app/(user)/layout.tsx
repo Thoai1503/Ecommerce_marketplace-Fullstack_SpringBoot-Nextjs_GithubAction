@@ -48,7 +48,7 @@ export default function UserLayout({
                 </div>
               </div>
 
-              {/* 🔥 AUTH HEADER */}
+              {/* AUTH */}
               <div className="col-6">
                 <HeaderAuth />
               </div>
@@ -100,7 +100,10 @@ export default function UserLayout({
 
             {/* Cart */}
             <div className="col-auto">
-              <span className="material-symbols-outlined">
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: "28px" }}
+              >
                 shopping_cart
               </span>
             </div>
@@ -112,9 +115,102 @@ export default function UserLayout({
       <main className="main">{children}</main>
 
       {/* ================= FOOTER ================= */}
-      <footer className="bg-white border-top pt-5 pb-3">
-        <div className="text-center text-secondary">
-          © 2024 Sàn TMĐT. All rights reserved.
+      <footer className="bg-white border-top pt-5 pb-3 mt-5">
+        <div className="container-fluid px-lg-5">
+
+          <div className="row g-4 mb-4">
+
+            {/* CSKH */}
+            <div className="col-6 col-md-3 col-lg-2">
+              <h6 className="fw-bold text-uppercase mb-3 small">
+                Chăm sóc khách hàng
+              </h6>
+              <ul className="list-unstyled small text-secondary">
+                <li><a href="#" className="text-decoration-none text-secondary">Trung tâm trợ giúp</a></li>
+                <li><a href="#" className="text-decoration-none text-secondary">Hướng dẫn mua hàng</a></li>
+                <li><a href="#" className="text-decoration-none text-secondary">Thanh toán</a></li>
+                <li><a href="#" className="text-decoration-none text-secondary">Vận chuyển</a></li>
+                <li><a href="#" className="text-decoration-none text-secondary">Trả hàng & hoàn tiền</a></li>
+              </ul>
+            </div>
+
+            {/* VỀ CHÚNG TÔI */}
+            <div className="col-6 col-md-3 col-lg-2">
+              <h6 className="fw-bold text-uppercase mb-3 small">
+                Về chúng tôi
+              </h6>
+              <ul className="list-unstyled small text-secondary">
+                <li><a href="#" className="text-decoration-none text-secondary">Giới thiệu</a></li>
+                <li><a href="#" className="text-decoration-none text-secondary">Tuyển dụng</a></li>
+                <li><a href="#" className="text-decoration-none text-secondary">Điều khoản</a></li>
+                <li><a href="#" className="text-decoration-none text-secondary">Chính sách bảo mật</a></li>
+              </ul>
+            </div>
+
+            {/* THANH TOÁN */}
+            <div className="col-6 col-md-3 col-lg-2">
+              <h6 className="fw-bold text-uppercase mb-3 small">
+                Thanh toán
+              </h6>
+              <div className="d-flex flex-wrap gap-2">
+                {["VISA", "MC", "JCB"].map((x) => (
+                  <div key={x} className="border rounded px-2 py-1 small bg-light">
+                    {x}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* THEO DÕI */}
+            <div className="col-6 col-md-3 col-lg-2">
+              <h6 className="fw-bold text-uppercase mb-3 small">
+                Theo dõi chúng tôi
+              </h6>
+              <ul className="list-unstyled small text-secondary">
+                <li className="d-flex align-items-center gap-2">
+                  <span className="material-symbols-outlined">social_leaderboard</span>
+                  Facebook
+                </li>
+                <li className="d-flex align-items-center gap-2">
+                  <span className="material-symbols-outlined">photo_camera</span>
+                  Instagram
+                </li>
+                <li className="d-flex align-items-center gap-2">
+                  <span className="material-symbols-outlined">play_circle</span>
+                  TikTok
+                </li>
+              </ul>
+            </div>
+
+            {/* APP */}
+            <div className="col-12 col-md-6 col-lg-3">
+              <h6 className="fw-bold text-uppercase mb-3 small">
+                Tải ứng dụng
+              </h6>
+              <div className="d-flex gap-3">
+                <div className="border bg-light d-flex align-items-center justify-content-center"
+                     style={{ width: 80, height: 80 }}>
+                  QR
+                </div>
+                <div className="d-flex flex-column gap-2">
+                  <div className="bg-dark text-white px-3 py-2 rounded small text-center">
+                    App Store
+                  </div>
+                  <div className="bg-dark text-white px-3 py-2 rounded small text-center">
+                    Google Play
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Bottom */}
+          <div className="border-top pt-4 text-center text-secondary small">
+            © 2024 Sàn TMĐT. All rights reserved. <br />
+            Quốc gia & Khu vực: Việt Nam | Singapore | Thailand | Malaysia
+          </div>
+
         </div>
       </footer>
 
