@@ -157,4 +157,39 @@ public class UserController {
 
         return ResponseEntity.ok("Deleted successfully");
     }
+    
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateProfile(
+            @PathVariable long id,
+            @RequestBody User req
+    ) {
+        User existing = userRepository.GetById(id);
+
+        if (existing == null) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("User not found");
+        }
+
+        // ✅ CHỈ UPDATE CÁC FIELD CHO PHÉP
+        existing.setFullName(req.getFullName());
+        existing.setPhone(req.getPhone());
+
+        // 🔒 dateOfBirth & gender chỉ set 1 lần
+        if (existing.getDateOfBirth() == null) {
+            existing.setDateOfBirth(req.getDateOfBirth());
+        }
+
+        if (existing.getGender() == null) {
+            existing.setGender(req.getGender());
+        }
+
+        User updated = userRepository.Update(existing);
+
+        // ❌ KHÔNG TRẢ PASSWORD
+        updated.setPasswordHash(null);
+
+        return ResponseEntity.ok(updated);
+    }
+
 }
