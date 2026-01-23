@@ -2,8 +2,86 @@
 
 import React, { useState } from "react";
 
+import { API_URL } from "@/helper/api";
+
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
+  const [errors, setErrors] = useState<{
+    email?: string;
+    password?: string;
+    general?: string;
+  }>({});
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    // clear error khi user nhập lại
+    setErrors((prev) => ({
+      ...prev,
+      [name]: undefined,
+      general: undefined,
+    }));
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    if (loading) return;
+
+    const newErrors: typeof errors = {};
+
+    if (!formData.email) {
+      newErrors.email = "Email không được để trống";
+    }
+
+    if (!formData.password) {
+      newErrors.password = "Mật khẩu không được để trống";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_URL}/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const text = await res.text();
+
+      if (!res.ok) {
+        setErrors({ general: text });
+        return;
+      }
+
+      const user = JSON.parse(text);
+
+      localStorage.setItem("user", JSON.stringify(user));
+
+      window.location.href = "/";
+    } catch (err) {
+      setErrors({ general: "Không kết nối được server" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -14,13 +92,13 @@ const LoginForm = () => {
         backgroundPosition: "center",
       }}
     >
-      {/* Overlay */}
       <div className="absolute inset-0 bg-blue-900/50 backdrop-blur-sm" />
 
-      {/* Card */}
-      <div className="relative z-10 w-full max-w-[420px] bg-white rounded-xl shadow-xl px-8 py-10">
-        
-        {/* Title */}
+      {/* FORM */}
+      <form
+        onSubmit={handleSubmit}
+        className="relative z-10 w-full max-w-[420px] bg-white rounded-xl shadow-xl px-8 py-10"
+      >
         <h1 className="text-2xl font-bold text-center text-gray-900">
           Login
         </h1>
@@ -28,20 +106,32 @@ const LoginForm = () => {
           Welcome back!
         </p>
 
-        {/* Email */}
+        {/* EMAIL */}
         <div className="mb-5 text-black">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Email
           </label>
           <input
+            name="email"
             type="text"
             placeholder="Enter your email"
-            className="w-full h-12 rounded-lg border border-gray-300 px-4
-                       focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={formData.email}
+            onChange={handleChange}
+            autoFocus
+            className={`w-full h-12 rounded-lg border px-4
+              focus:outline-none focus:ring-2
+              ${
+                errors.email
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-gray-300 focus:ring-blue-500"
+              }`}
           />
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+          )}
         </div>
 
-        {/* Password */}
+        {/* PASSWORD */}
         <div className="mb-3 text-black">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Password
@@ -49,19 +139,32 @@ const LoginForm = () => {
 
           <div className="relative">
             <input
+              name="password"
               type={showPassword ? "text" : "password"}
               placeholder="Enter password"
-              className="w-full h-12 rounded-lg border border-gray-300 px-4 pr-12
-                         focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={formData.password}
+              onChange={handleChange}
+              className={`w-full h-12 rounded-lg border px-4 pr-12
+                focus:outline-none focus:ring-2
+                ${
+                  errors.password
+                    ? "border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:ring-blue-500"
+                }`}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              tabIndex={-1}
             >
               👁
             </button>
           </div>
+
+          {errors.password && (
+            <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+          )}
 
           <div className="flex justify-end mt-2">
             <a href="#" className="text-sm text-blue-600 hover:underline">
@@ -70,15 +173,23 @@ const LoginForm = () => {
           </div>
         </div>
 
-        {/* Login Button */}
+        {/* GENERAL ERROR */}
+        {errors.general && (
+          <div className="mt-3 text-sm text-red-600 text-center">
+            {errors.general}
+          </div>
+        )}
+
+        {/* SUBMIT BUTTON */}
         <button
+          type="submit"
+          disabled={loading}
           className="w-full h-12 mt-4 rounded-lg bg-blue-600 text-white font-semibold
-                     hover:bg-blue-700 transition"
+                     hover:bg-blue-700 transition disabled:opacity-60"
         >
-          Log in
+          {loading ? "Logging in..." : "Log in"}
         </button>
 
-        {/* Register */}
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
             Don’t have an account?
@@ -90,7 +201,7 @@ const LoginForm = () => {
             </a>
           </p>
         </div>
-      </div>
+      </form>
     </div>
   );
 };

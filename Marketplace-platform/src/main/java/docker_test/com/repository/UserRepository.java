@@ -192,4 +192,24 @@ public class UserRepository implements IRepositories<User> {
         }
         return false;
     }
+    
+    public User findByEmail(String email) {
+
+        String sql = "SELECT * FROM user WHERE email = ? LIMIT 1";
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, email);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return mapper.RowMap(rs);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }
