@@ -20,10 +20,12 @@ import docker_test.com.repository.IRepositories;
 @RequestMapping("/category")
 public class CategoryController {
 	
+	
+	// Ae bắt buộc phải sử dụng IRepositories để dễ dàng thay đổi Repository tuỳ theo entityType
 	 private final IRepositories repositories;
 	 
 
-   public CategoryController ( JdbcTemplate jdbcTemplate) {
+   public CategoryController ( ) {
 	 
 
 	   repositories = RepoFactoryImpl.Instance().createRepo("category");
