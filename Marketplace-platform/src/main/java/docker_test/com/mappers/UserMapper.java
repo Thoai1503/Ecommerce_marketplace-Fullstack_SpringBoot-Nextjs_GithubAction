@@ -60,7 +60,7 @@ public final class UserMapper implements IMapper<User> {
     }
 
     @Override
-    public HashSet<User> RowsMap(ResultSet rs) {
+    public List<User> RowsMap(ResultSet rs) {
         HashSet<User> users = new HashSet<>();
         try {
             while (rs.next()) {
