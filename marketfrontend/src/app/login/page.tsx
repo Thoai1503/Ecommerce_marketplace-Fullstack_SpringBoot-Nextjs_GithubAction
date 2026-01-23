@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 
-const API_URL = "http://localhost:8000";
+import { API_URL } from "@/helper/api";
 
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
