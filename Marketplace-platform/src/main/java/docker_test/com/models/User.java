@@ -5,165 +5,140 @@ import java.time.LocalDateTime;
 
 public final class User {
 
-	private long userId;
-	private String email;
-	private String phone;
-	private String passwordHash;
-	private String fullName;
-	private String avatarUrl;
-	private LocalDate dateOfBirth;
-	private String gender; // male | female | other
-	private String userType; // buyer | seller | both
-	private int isVerified;
-	private int isActive;
-	private LocalDateTime createdAt;
-	private LocalDateTime updatedAt;
-	private LocalDateTime lastLogin;
+    private Long id;
+    private String email;
+    private String phone;
+    private String passwordHash;
+    private String fullName;
+    private String avatarUrl;
+    private LocalDate dateOfBirth;
+    private String gender;
+    private String userType;
+    private Integer isVerified;
+    private Integer isActive;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private LocalDateTime lastLogin;
 
-	/**
-	 * Constructor mặc định – dùng cho CREATE
-	 */
-	public User() {
-		this.userType = "buyer"; // 🔒 default
-		this.isActive = 1;
-		this.isVerified = 1; // 🔒 theo yêu cầu của bạn
-		this.createdAt = LocalDateTime.now();
-		this.updatedAt = LocalDateTime.now();
-	}
+    public User() {
+        this.userType = "buyer";
+        this.isActive = 1;
+        this.isVerified = 1;
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
 
-	/**
-	 * Constructor đầy đủ – dùng cho mapping DB
-	 */
-	public User(long userId, String email, String phone, String passwordHash, String fullName, String avatarUrl,
-			LocalDate dateOfBirth, String gender, String userType, int isVerified, int isActive,
-			LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime lastLogin) {
-		this.userId = userId;
-		this.email = email;
-		this.phone = phone;
-		this.passwordHash = passwordHash;
-		this.fullName = fullName;
-		this.avatarUrl = avatarUrl;
-		this.dateOfBirth = dateOfBirth;
-		this.gender = gender;
-		this.userType = userType;
-		this.isVerified = isVerified;
-		this.isActive = isActive;
-		this.createdAt = createdAt;
-		this.updatedAt = updatedAt;
-		this.lastLogin = lastLogin;
-	}
+    /* ===== GETTERS / SETTERS ===== */
 
-	/* ===== GETTERS / SETTERS ===== */
+    public Long getId() {
+        return id;
+    }
 
-	public long getUserId() {
-		return userId;
-	}
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-	public void setUserId(long userId) {
-		this.userId = userId;
-	}
+    public String getEmail() {
+        return email;
+    }
 
-	public String getEmail() {
-		return email;
-	}
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-	public void setEmail(String email) {
-		this.email = email;
-	}
+    public String getPhone() {
+        return phone;
+    }
 
-	public String getPhone() {
-		return phone;
-	}
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
 
-	public void setPhone(String phone) {
-		this.phone = phone;
-	}
+    public String getPasswordHash() {
+        return passwordHash;
+    }
 
-	public String getPasswordHash() {
-		return passwordHash;
-	}
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
 
-	public void setPasswordHash(String passwordHash) {
-		this.passwordHash = passwordHash;
-	}
+    public String getFullName() {
+        return fullName;
+    }
 
-	public String getFullName() {
-		return fullName;
-	}
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
 
-	public void setFullName(String fullName) {
-		this.fullName = fullName;
-	}
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
 
-	public String getAvatarUrl() {
-		return avatarUrl;
-	}
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
 
-	public void setAvatarUrl(String avatarUrl) {
-		this.avatarUrl = avatarUrl;
-	}
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
 
-	public LocalDate getDateOfBirth() {
-		return dateOfBirth;
-	}
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
 
-	public void setDateOfBirth(LocalDate dateOfBirth) {
-		this.dateOfBirth = dateOfBirth;
-	}
+    public String getGender() {
+        return gender;
+    }
 
-	public String getGender() {
-		return gender;
-	}
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
 
-	public void setGender(String gender) {
-		this.gender = gender;
-	}
+    public String getUserType() {
+        return userType;
+    }
 
-	public String getUserType() {
-		return userType;
-	}
+    public void setUserType(String userType) {
+        this.userType = userType;
+    }
 
-	public void setUserType(String userType) {
-		this.userType = userType;
-	}
+    public Integer getIsVerified() {
+        return isVerified;
+    }
 
-	public int getIsVerified() {
-		return isVerified;
-	}
+    public void setIsVerified(Integer isVerified) {
+        this.isVerified = isVerified;
+    }
 
-	public void setIsVerified(int isVerified) {
-		this.isVerified = isVerified;
-	}
+    public Integer getIsActive() {
+        return isActive;
+    }
 
-	public int getIsActive() {
-		return isActive;
-	}
+    public void setIsActive(Integer isActive) {
+        this.isActive = isActive;
+    }
 
-	public void setIsActive(int isActive) {
-		this.isActive = isActive;
-	}
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
-	}
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 
-	public void setCreatedAt(LocalDateTime createdAt) {
-		this.createdAt = createdAt;
-	}
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
 
-	public LocalDateTime getUpdatedAt() {
-		return updatedAt;
-	}
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 
-	public void setUpdatedAt(LocalDateTime updatedAt) {
-		this.updatedAt = updatedAt;
-	}
+    public LocalDateTime getLastLogin() {
+        return lastLogin;
+    }
 
-	public LocalDateTime getLastLogin() {
-		return lastLogin;
-	}
-
-	public void setLastLogin(LocalDateTime lastLogin) {
-		this.lastLogin = lastLogin;
-	}
+    public void setLastLogin(LocalDateTime lastLogin) {
+        this.lastLogin = lastLogin;
+    }
 }

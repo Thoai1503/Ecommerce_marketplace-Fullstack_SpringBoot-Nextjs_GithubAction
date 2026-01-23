@@ -3,7 +3,6 @@ package docker_test.com.mappers;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 import docker_test.com.models.Unit;
@@ -36,5 +35,11 @@ public final class UnitMapper implements IMapper<Unit> {
 			e.printStackTrace();
 		}
 		return units;
+	}
+
+	@Override
+	public Unit mapRow(ResultSet rs, int rowNum) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

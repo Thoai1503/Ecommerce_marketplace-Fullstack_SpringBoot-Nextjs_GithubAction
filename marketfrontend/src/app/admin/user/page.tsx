@@ -178,12 +178,12 @@ const Page: React.FC = () => {
                             <ul className="dropdown-menu dropdown-menu-end">
                               <li>
                                 <button className="dropdown-item">
-                                  Xem chi tiết
+                                  detail
                                 </button>
                               </li>
                               <li>
                                 <button className="dropdown-item">
-                                  Chỉnh sửa
+                                  edit
                                 </button>
                               </li>
                             </ul>

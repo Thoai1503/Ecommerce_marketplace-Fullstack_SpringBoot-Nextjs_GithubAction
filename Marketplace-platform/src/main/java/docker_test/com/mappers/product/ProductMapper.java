@@ -4,7 +4,8 @@ package docker_test.com.mappers.product;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import docker_test.com.mappers.IMapper;
 import docker_test.com.models.product.Product;
@@ -16,7 +17,7 @@ public final class ProductMapper implements IMapper<Product> {
     public Product RowMap(ResultSet rs) {
         Product product = new Product();
         try {
-            product.setProductId(rs.getLong(StringValue.PRODUCT_ID_COL));
+            product.setId(rs.getInt(StringValue.PRODUCT_ID_COL));
             product.setShopId(rs.getLong(StringValue.PRODUCT_SHOP_ID_COL));
             product.setCategoryId(rs.getLong(StringValue.PRODUCT_CATEGORY_ID_COL));
             product.setProductName(rs.getString(StringValue.PRODUCT_NAME_COL));
@@ -40,7 +41,7 @@ public final class ProductMapper implements IMapper<Product> {
             product.setHeight(rs.getDouble(StringValue.PRODUCT_HEIGHT_COL));
             
             product.setBrand(rs.getString(StringValue.PRODUCT_BRAND_COL));
-            product.setIsActive(rs.getInt(StringValue.PRODUCT_ACTIVE_COL));
+            product.setIs_active(rs.getInt(StringValue.PRODUCT_ACTIVE_COL));
 
             // Timestamp -> LocalDateTime
             Timestamp createdAt = rs.getTimestamp(StringValue.PRODUCT_CREATED_AT_COL);
@@ -60,8 +61,8 @@ public final class ProductMapper implements IMapper<Product> {
     }
 
     @Override
-    public HashSet<Product> RowsMap(ResultSet rs) {
-        HashSet<Product> products = new HashSet<>();
+    public List<Product> RowsMap(ResultSet rs) {
+    	List<Product> products = new ArrayList<>();
         try {
             while (rs.next()) {
                 products.add(RowMap(rs));
@@ -71,4 +72,13 @@ public final class ProductMapper implements IMapper<Product> {
         }
         return products;
     }
+
+	@Override
+	public Product mapRow(ResultSet rs, int rowNum) throws SQLException {
+		System.out.println("Execute..");
+		Product product =new Product();
+		product.setId(rs.getInt("Id"));
+		product.setProductName(rs.getString("Name"));
+		return null;
+	}
 }

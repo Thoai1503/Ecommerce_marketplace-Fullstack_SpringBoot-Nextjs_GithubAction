@@ -4,7 +4,8 @@ import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 
 import docker_test.com.mappers.IMapper;
 import docker_test.com.models.product.ProductAttribute;
@@ -48,8 +49,8 @@ public final class ProductAttributeMapper implements IMapper<ProductAttribute> {
     }
 
     @Override
-    public HashSet<ProductAttribute> RowsMap(ResultSet rs) {
-        HashSet<ProductAttribute> list = new HashSet<>();
+    public List<ProductAttribute> RowsMap(ResultSet rs) {
+        List<ProductAttribute> list = new ArrayList<>();
         try {
             while (rs.next()) list.add(RowMap(rs));
         } catch (SQLException e) {
@@ -57,4 +58,10 @@ public final class ProductAttributeMapper implements IMapper<ProductAttribute> {
         }
         return list;
     }
+
+	@Override
+	public ProductAttribute mapRow(ResultSet rs, int rowNum) throws SQLException {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
