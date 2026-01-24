@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,6 +17,7 @@ import docker_test.com.factory.RepoFactoryImpl;
 import docker_test.com.mappers.product.ProductMapper;
 import docker_test.com.models.Category;
 import docker_test.com.models.product.Product;
+import docker_test.com.models.product.ProductImage;
 
 
 
@@ -42,15 +44,17 @@ public class ProductRepository implements IRepositories<Product> {
 	@Override
 	public Product Create(Product item) throws SQLException {
 		 System.out.print("Body: "+item.toString());
-		 String sql = "insert into product (shop_id,category_id,product_name,product_slug,price,original_price) values (?,?,?,?,?,?)";
+		 String sql = "insert into product (shop_id,category_id,description,product_name,product_slug,price,original_price) values (?,?,?,?,?,?,?)";
 		 try (Connection con = dbConnection.getConn();
 					PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
 			 ps.setLong(1, item.getShopId());
 			 ps.setLong(2, item.getCategoryId());
-			 ps.setString(3, item.getProductName());
-			 ps.setString(4, item.getProductSlug());
-			 ps.setDouble(5, item.getPrice());
-			 ps.setDouble(6, item.getOriginalPrice());
+			 ps.setString(3, item.getDescription());
+		
+			 ps.setString(4, item.getProductName());
+			 ps.setString(5, item.getProductSlug());
+			 ps.setDouble(6, item.getPrice());
+			 ps.setDouble(7, item.getOriginalPrice());
 			 
 			 int rows =ps.executeUpdate();
 			 
@@ -90,12 +94,40 @@ public class ProductRepository implements IRepositories<Product> {
 
 	@Override
 	public List<Product> GetAll() {
-		String sql = "SELECT * FROM Product";
+		List<Product> list = new ArrayList<Product>();
+		String sql = "SELECT \r\n"
+				+ "    p.*,\r\n"
+				+ "    pi.image_url\r\n"
+				+ "FROM product p\r\n"
+				+ "LEFT JOIN product_image pi ON p.id = pi.product_id \r\n"
+				+ "    AND pi.id = (\r\n"
+				+ "        SELECT MIN(id) \r\n"
+				+ "        FROM product_image \r\n"
+				+ "        WHERE product_id = p.id\r\n"
+				+ "    )";
 		System.out.print("GetAll..");
-//		var product = jdbc.query(sql, new ProductMapper());
-//		for (Product pro : product) {
-//		    System.out.println("Product  ID: " + pro.getProductId() + ", Title: " + pro.getProductId());
-//		}
+		try (Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)){
+	
+			  ResultSet rs =	ps.executeQuery();
+			  while (rs.next()) {
+		          Product image = new Product();
+		          image.setId(rs.getInt("id"));
+		          image.setProductName(rs.getString("product_name"));
+		          image.setCategoryId(1);
+		          image.setShopId(0);
+		          image.setProductName(rs.getString("product_name"));
+		          image.setImage_url(rs.getString("image_url"));
+		          image.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+		             list.add(image);
+		      }
+			  return list;
+			
+
+		}
+		catch (Exception ex) {
+			ex.printStackTrace();;
+		}
 		return null;
 	}
 	
