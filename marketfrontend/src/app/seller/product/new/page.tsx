@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Modal, Upload, UploadFile, UploadProps, message } from "antd";
-
+import { Editor } from "@tinymce/tinymce-react";
 import { useAddImageSeller, useAddProductSeller } from "@/feature/seller/hooks";
 import CategorySelectorModal from "@/feature/seller/components/CategorySelectorModal";
 
@@ -33,6 +33,7 @@ interface TabSection {
 }
 
 const AddProductForm: React.FC = () => {
+  const editorRef = useRef(null) as any;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // const handleSave = () => {
@@ -41,14 +42,17 @@ const AddProductForm: React.FC = () => {
   //   message.success("Sản phẩm đã được lưu thành công!");
   // };
 
+  const { fileList, handleChange, handleSave, handleSaveImageAfterProduct } =
+    useAddImageSeller();
   const {
     product,
     handleChangeProduct,
     handleSubmitProduct,
     categories,
     setProduct,
-  } = useAddProductSeller();
-  const { fileList, handleChange, handleSave } = useAddImageSeller();
+  } = useAddProductSeller((id: number) => {
+    handleSaveImageAfterProduct(id);
+  });
   const showModal = () => {
     setIsModalOpen(true);
   };
@@ -473,7 +477,7 @@ const AddProductForm: React.FC = () => {
                         <label className="form-label fw-semibold">
                           Description
                         </label>
-                        <div className="border rounded">
+                        {/* <div className="border rounded">
                           <div
                             className="btn-toolbar bg-light border-bottom p-2"
                             role="toolbar"
@@ -514,7 +518,70 @@ const AddProductForm: React.FC = () => {
                           <div className="bg-light px-3 py-1 text-end small text-muted border-top">
                             {formData.description.length}/3000
                           </div>
-                        </div>
+                        </div> */}
+                        <Editor
+                          apiKey="opbl478qvvrtoorhvqc4f7zei61txljv0gkj67k1ogzky57n" // có thể để trống khi test local
+                          initialValue="<p>Soạn thảo với upload ảnh...</p>"
+                          init={{
+                            height: 300,
+                            menubar: true,
+                            plugins: "image media link code",
+                            toolbar:
+                              "undo redo | bold italic | alignleft aligncenter alignright | image media link code",
+
+                            // URL API backend để nhận file upload
+                            images_upload_url: "http://localhost:5000/upload",
+
+                            // Custom handler nếu muốn tự điều khiển upload
+                            images_upload_handler: async (
+                              blobInfo: any,
+                              success: any,
+                              failure: any,
+                            ) => {
+                              try {
+                                const formData = new FormData();
+                                formData.append(
+                                  "file",
+                                  blobInfo.blob(),
+                                  blobInfo.filename(),
+                                );
+
+                                console.log(
+                                  "form data: " + JSON.stringify(formData),
+                                );
+                                const response = await fetch(
+                                  "http://localhost:5000/upload",
+                                  {
+                                    method: "POST",
+                                    body: formData,
+                                  },
+                                );
+
+                                const json = await response.json();
+                                // giả sử backend trả về { url: "http://localhost:5000/uploads/abc.png" }
+                                const imageUrl = json.url;
+
+                                // TinyMCE yêu cầu success(URL string)
+                                success(imageUrl);
+
+                                // Nếu muốn tự động chèn vào content luôn:
+                                editorRef.current?.insertContent(
+                                  `<img src="${imageUrl}" alt="${blobInfo.filename()}" />`,
+                                );
+                              } catch (err: any) {
+                                failure("Upload thất bại: " + err.message);
+                              }
+                            },
+                          }}
+                          onEditorChange={(newContent) => {
+                            // setContent(newContent)
+                            setProduct((pre) => ({
+                              ...pre,
+                              description: newContent,
+                            }));
+                            console.log(newContent);
+                          }}
+                        />
                       </div>
                     </div>
                   </div>
