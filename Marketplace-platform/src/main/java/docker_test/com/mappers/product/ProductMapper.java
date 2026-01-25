@@ -18,21 +18,21 @@ public final class ProductMapper implements IMapper<Product> {
         Product product = new Product();
         try {
             product.setId(rs.getInt(StringValue.PRODUCT_ID_COL));
-            product.setShopId(rs.getLong(StringValue.PRODUCT_SHOP_ID_COL));
-            product.setCategoryId(rs.getLong(StringValue.PRODUCT_CATEGORY_ID_COL));
-            product.setProductName(rs.getString(StringValue.PRODUCT_NAME_COL));
-            product.setProductSlug(rs.getString(StringValue.PRODUCT_SLUG_COL));
+            product.setShop_id(rs.getInt(StringValue.PRODUCT_SHOP_ID_COL));
+            product.setCategory_id(rs.getInt(StringValue.PRODUCT_CATEGORY_ID_COL));
+            product.setProduct_name(rs.getString(StringValue.PRODUCT_NAME_COL));
+            product.setProduct_slug(rs.getString(StringValue.PRODUCT_SLUG_COL));
             product.setDescription(rs.getString(StringValue.PRODUCT_DESCRIPTION_COL));
             
             // Các trường số thực (Double)
             product.setPrice(rs.getDouble(StringValue.PRODUCT_PRICE_COL));
-            product.setOriginalPrice(rs.getDouble(StringValue.PRODUCT_ORIGINAL_PRICE_COL));
+            product.setOriginal_price(rs.getDouble(StringValue.PRODUCT_ORIGINAL_PRICE_COL));
             
-            product.setStockQuantity(rs.getInt(StringValue.PRODUCT_STOCK_QUANTITY_COL));
-            product.setSoldCount(rs.getInt(StringValue.PRODUCT_SOLD_COUNT_COL));
+            product.setStock_quantity(rs.getInt(StringValue.PRODUCT_STOCK_QUANTITY_COL));
+            product.setSold_count(rs.getInt(StringValue.PRODUCT_SOLD_COUNT_COL));
             
             product.setRating(rs.getDouble(StringValue.PRODUCT_RATING_COL));
-            product.setReviewCount(rs.getInt(StringValue.PRODUCT_REVIEW_COUNT_COL));
+            product.setReview_count(rs.getInt(StringValue.PRODUCT_REVIEW_COUNT_COL));
             
             // Kích thước / Cân nặng
             product.setWeight(rs.getDouble(StringValue.PRODUCT_WEIGHT_COL));
@@ -46,12 +46,12 @@ public final class ProductMapper implements IMapper<Product> {
             // Timestamp -> LocalDateTime
             Timestamp createdAt = rs.getTimestamp(StringValue.PRODUCT_CREATED_AT_COL);
             if (createdAt != null) {
-                product.setCreatedAt(createdAt.toLocalDateTime());
+                product.setCreated_at(createdAt.toLocalDateTime());
             }
 
             Timestamp updatedAt = rs.getTimestamp(StringValue.PRODUCT_UPDATED_AT_COL);
             if (updatedAt != null) {
-                product.setUpdatedAt(updatedAt.toLocalDateTime());
+                product.setUpdated_at(updatedAt.toLocalDateTime());
             }
 
         } catch (SQLException e) {
@@ -78,7 +78,7 @@ public final class ProductMapper implements IMapper<Product> {
 		System.out.println("Execute..");
 		Product product =new Product();
 		product.setId(rs.getInt("Id"));
-		product.setProductName(rs.getString("Name"));
+		product.setProduct_name(rs.getString("Name"));
 		return null;
 	}
 }
