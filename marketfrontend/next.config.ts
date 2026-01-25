@@ -18,6 +18,17 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "content.abt.com", pathname: "/**" },
       { protocol: "https", hostname: "m.media-amazon.com", pathname: "/**" },
       { protocol: "https", hostname: "c8.alamy.com", pathname: "/**" },
+      { protocol: "https", hostname: "via.placeholder.com", pathname: "/**" },
+      {
+        protocol: "http",
+        hostname: "res.cloudinary.com",
+        pathname: "/dizx3mbgw/**",
+      },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/dizx3mbgw/**",
+      },
       {
         protocol: "https",
         hostname: "www.shutterstock.com",
