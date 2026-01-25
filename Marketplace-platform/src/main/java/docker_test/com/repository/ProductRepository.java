@@ -47,14 +47,14 @@ public class ProductRepository implements IRepositories<Product> {
 		 String sql = "insert into product (shop_id,category_id,description,product_name,product_slug,price,original_price) values (?,?,?,?,?,?,?)";
 		 try (Connection con = dbConnection.getConn();
 					PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
-			 ps.setLong(1, item.getShopId());
-			 ps.setLong(2, item.getCategoryId());
+			 ps.setLong(1, item.getShop_id());
+			 ps.setLong(2, item.getCategory_id());
 			 ps.setString(3, item.getDescription());
 		
-			 ps.setString(4, item.getProductName());
-			 ps.setString(5, item.getProductSlug());
+			 ps.setString(4, item.getProduct_name());
+			 ps.setString(5, item.getProduct_slug());
 			 ps.setDouble(6, item.getPrice());
-			 ps.setDouble(7, item.getOriginalPrice());
+			 ps.setDouble(7, item.getOriginal_price());
 			 
 			 int rows =ps.executeUpdate();
 			 
@@ -113,12 +113,14 @@ public class ProductRepository implements IRepositories<Product> {
 			  while (rs.next()) {
 		          Product image = new Product();
 		          image.setId(rs.getInt("id"));
-		          image.setProductName(rs.getString("product_name"));
-		          image.setCategoryId(1);
-		          image.setShopId(0);
-		          image.setProductName(rs.getString("product_name"));
+		          image.setProduct_name(rs.getString("product_name"));
+		          image.setCategory_id(1);
+		          image.setShop_id(0);
+		          image.setPrice(rs.getDouble("price"));
+		          image.setOriginal_price(rs.getDouble("original_price"));
+		          image.setProduct_name(rs.getString("product_name"));
 		          image.setImage_url(rs.getString("image_url"));
-		          image.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+		          image.setCreated_at(rs.getTimestamp("created_at").toLocalDateTime());
 		             list.add(image);
 		      }
 			  return list;
