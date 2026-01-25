@@ -5,11 +5,27 @@ import java.time.LocalDateTime;
 public final class Product {
     
 	private Integer id ;  // instead of int
-	private Long shop_id ;  // instead of long
-	private Long category_id ;
+	private Integer shop_id ;  // instead of long
+	private Integer category_id ;
     private String product_name;
     private String product_slug;
-    private String description;
+    public Integer getId() {
+		return id;
+	}
+
+	public void setId(Integer id) {
+		this.id = id;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	private String description;
     private Double price ;
     public String getImage_url() {
 		return image_url;
@@ -19,9 +35,153 @@ public final class Product {
 		this.image_url = image_url;
 	}
 
+	public Integer getShop_id() {
+		return shop_id;
+	}
+
+	public void setShop_id(Integer shop_id) {
+		this.shop_id = shop_id;
+	}
+
+	public Integer getCategory_id() {
+		return category_id;
+	}
+
+	public void setCategory_id(Integer category_id) {
+		this.category_id = category_id;
+	}
+
+	public String getProduct_name() {
+		return product_name;
+	}
+
+	public void setProduct_name(String product_name) {
+		this.product_name = product_name;
+	}
+
+	public String getProduct_slug() {
+		return product_slug;
+	}
+
+	public void setProduct_slug(String product_slug) {
+		this.product_slug = product_slug;
+	}
+
+	public Double getOriginal_price() {
+		return original_price;
+	}
+
+	public void setOriginal_price(Double original_price) {
+		this.original_price = original_price;
+	}
+
+	public Integer getStock_quantity() {
+		return stock_quantity;
+	}
+
+	public void setStock_quantity(Integer stock_quantity) {
+		this.stock_quantity = stock_quantity;
+	}
+
+	public Integer getSold_count() {
+		return sold_count;
+	}
+
+	public void setSold_count(Integer sold_count) {
+		this.sold_count = sold_count;
+	}
+
+	public Integer getReview_count() {
+		return review_count;
+	}
+
+	public void setReview_count(Integer review_count) {
+		this.review_count = review_count;
+	}
+
+	public LocalDateTime getCreated_at() {
+		return created_at;
+	}
+
+	public void setCreated_at(LocalDateTime created_at) {
+		this.created_at = created_at;
+	}
+
+	public LocalDateTime getUpdated_at() {
+		return updated_at;
+	}
+
+	public void setUpdated_at(LocalDateTime updated_at) {
+		this.updated_at = updated_at;
+	}
+
 	private String image_url;
     private Double original_price;
-    private Integer stock_quantity = null;
+    public Double getPrice() {
+		return price;
+	}
+
+	public void setPrice(Double price) {
+		this.price = price;
+	}
+
+	public Double getRating() {
+		return rating;
+	}
+
+	public void setRating(Double rating) {
+		this.rating = rating;
+	}
+
+	public Double getWeight() {
+		return weight;
+	}
+
+	public void setWeight(Double weight) {
+		this.weight = weight;
+	}
+
+	public Double getLength() {
+		return length;
+	}
+
+	public void setLength(Double length) {
+		this.length = length;
+	}
+
+	public Double getWidth() {
+		return width;
+	}
+
+	public void setWidth(Double width) {
+		this.width = width;
+	}
+
+	public Double getHeight() {
+		return height;
+	}
+
+	public void setHeight(Double height) {
+		this.height = height;
+	}
+
+	public String getBrand() {
+		return brand;
+	}
+
+	public void setBrand(String brand) {
+		this.brand = brand;
+	}
+
+	public Integer getIs_active() {
+		return is_active;
+	}
+
+	public void setIs_active(Integer is_active) {
+		this.is_active = is_active;
+	}
+
+	private Integer stock_quantity = null;
     private Integer sold_count = null;
     private Double rating;
     private Integer review_count=null;
@@ -44,7 +204,7 @@ public final class Product {
         this.updated_at = LocalDateTime.now();
     }
 
-    public Product(Integer id, Long shop_id, Long category_id, String product_name,
+    public Product(Integer id, Integer shop_id, Integer category_id, String product_name,
                    String product_slug, String description, Double price, Double original_price,
                    Integer stock_quantity, Integer sold_count, Double rating, Integer review_count,
                    Double weight, Double length, Double width, Double height,
@@ -71,67 +231,7 @@ public final class Product {
         this.updated_at = updated_at;
     }
 
-    // Getters & Setters (giữ tên camelCase theo JavaBean convention)
-    public long getId() { return id; }
-    public void setId(Integer productId) { this.id = productId; }
-    
-    public long getShopId() { return shop_id; }
-    public void setShopId(long shopId) { this.shop_id = shopId; }
-    
-    public long getCategoryId() { return category_id; }
-    public void setCategoryId(long categoryId) { this.category_id = categoryId; }
-    
-    public String getProductName() { return product_name; }
-    public void setProductName(String productName) { this.product_name = productName; }
-    
-    public String getProductSlug() { return product_slug; }
-    public void setProductSlug(String productSlug) { this.product_slug = productSlug; }
-    
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    
-    public Double getPrice() { return price; }
-    public void setPrice(Double price) { this.price = price; }
-    
-    public Double getOriginalPrice() { return original_price; }
-    public void setOriginalPrice(Double originalPrice) { this.original_price = originalPrice; }
-    
-    public Integer getStockQuantity() { return stock_quantity; }
-    public void setStockQuantity(int stockQuantity) { this.stock_quantity = stockQuantity; }
-    
-    public Integer getSoldCount() { return sold_count; }
-    public void setSoldCount(int soldCount) { this.sold_count = soldCount; }
-    
-    public Double getRating() { return rating; }
-    public void setRating(Double rating) { this.rating = rating; }
-    
-    public Integer getReviewCount() { return review_count; }
-    public void setReviewCount(int reviewCount) { this.review_count = reviewCount; }
-    
-    public Double getWeight() { return weight; }
-    public void setWeight(Double weight) { this.weight = weight; }
-    
-    public Double getLength() { return length; }
-    public void setLength(Double length) { this.length = length; }
-    
-    public Double getWidth() { return width; }
-    public void setWidth(Double width) { this.width = width; }
-    
-    public Double getHeight() { return height; }
-    public void setHeight(Double height) { this.height = height; }
-    
-    public String getBrand() { return brand; }
-    public void setBrand(String brand) { this.brand = brand; }
-    
-    public Integer getIs_active() { return is_active; }  // hoặc giữ isActive() tùy convention
-    public void setIs_active(Integer is_active) { this.is_active = is_active; }
-    
-    public LocalDateTime getCreatedAt() { return created_at; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.created_at = createdAt; }
-    
-    public LocalDateTime getUpdatedAt() { return updated_at; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updated_at = updatedAt; }
-    
+
     @Override
     public String toString() {
         return "Product{" +

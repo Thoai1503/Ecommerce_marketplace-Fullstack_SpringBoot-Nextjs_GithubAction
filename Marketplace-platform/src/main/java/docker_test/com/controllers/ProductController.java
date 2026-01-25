@@ -1,4 +1,4 @@
-package docker_test.com.controllers.seller;
+package docker_test.com.controllers;
 
 import java.sql.SQLException;
 
@@ -14,8 +14,8 @@ import docker_test.com.factory.RepoFactoryImpl;
 import docker_test.com.models.product.Product;
 import docker_test.com.repository.IRepositories;
 
-@RestController("sellerProductController")
-@RequestMapping("/seller/product")
+@RestController("clientProductController")
+@RequestMapping("/product")
 public class ProductController {
 	 private final IRepositories repositories;
 	 private final IRepoFactory iRepoFactory;
@@ -34,15 +34,14 @@ public class ProductController {
 		 return ResponseEntity.ok(list);
 	 } 
 	
-	 @PostMapping("")
-	 public ResponseEntity create(@RequestBody Product product) throws SQLException {
-		
-		 System.out.print("Send..");
-		 
-		 var en = repositories.Create(product);
-		 
-		 
-		 return ResponseEntity.ok(en);
-	 }
+	
 	
 }
+  
+
+ //
+
+
+
+
+

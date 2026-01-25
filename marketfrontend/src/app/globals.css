@@ -24,3 +24,14 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.product-name-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Giới hạn tối đa 2 dòng */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4; /* Điều chỉnh khoảng cách dòng cho đẹp */
+  min-height: 2.8em; /* Optional: giữ không gian cố định nếu muốn layout đều */
+  max-height: 2.8em; /* Optional: khớp với 2 dòng */
+}
