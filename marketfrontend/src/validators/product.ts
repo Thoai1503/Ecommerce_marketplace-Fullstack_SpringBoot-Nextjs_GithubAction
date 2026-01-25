@@ -4,6 +4,7 @@ export interface Product {
   category_id: number;
   product_name: string;
   product_slug: string;
+  image_url: string;
   description: string;
   price: number;
   original_price: number;
