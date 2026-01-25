@@ -7,7 +7,7 @@ import { Product } from "@/validators/product";
 // import { useHomePage } from "@/feature/client/hook";
 
 export default async function Home() {
-  const res = await axios.get(`${INTERNAL_API}/product`);
+  const res = await axios.get(`${INTERNAL_API}/seller/product`);
   const products = res.data as Partial<Product>[];
   console.log("Product: " + JSON.stringify(products));
   // const { products } = useHomePage();
@@ -390,3 +390,4 @@ export default async function Home() {
     </div>
   );
 }
+export const dynamic = "force-dynamic";
