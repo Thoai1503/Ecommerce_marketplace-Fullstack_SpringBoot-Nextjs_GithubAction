@@ -61,7 +61,7 @@ export default async function Home() {
           { name: "Thời trang nam", color: "#ffd8a8" },
           { name: "Sắc đẹp", color: "#ffc9c9" },
           { name: "Mẹ & Bé", color: "#ffec99" },
-          { name: "Đồng hồ", color: "#d9d9d9" },
+          { name: "Đồng hồ 1111", color: "#d9d9d9" },
           { name: "Máy tính & Laptop", color: "#b2f2bb" },
           { name: "Sức khỏe", color: "#d3f9d8" },
           { name: "Xem thêm", color: "#e9ecef" },
