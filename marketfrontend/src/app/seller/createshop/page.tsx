@@ -1,67 +1,125 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
+type User = {
+  id: number;
+  fullName: string;
+  email: string;
+};
 
 type ShopFormData = {
   shopName: string;
-  email: string;
   phone: string;
 };
 
 export default function ShopInfoPage() {
   const router = useRouter();
 
+  const MAX_SHOP_NAME = 30;
+
+  const [user, setUser] = useState<User | null>(null);
+
   const [form, setForm] = useState<ShopFormData>({
     shopName: "",
-    email: "",
     phone: "",
   });
 
   const [errors, setErrors] = useState<Partial<ShopFormData>>({});
 
-  const MAX_SHOP_NAME = 30;
+  /* ======================
+      CHECK LOGIN + LOAD USER
+  ======================= */
+  useEffect(() => {
+    const rawUser = localStorage.getItem("user");
+    if (!rawUser) {
+      router.push("/login");
+      return;
+    }
 
+    const parsedUser = JSON.parse(rawUser) as User;
+    setUser(parsedUser);
+
+    // load draft nếu có
+    const saved = localStorage.getItem("seller_step_1");
+    if (saved) {
+      const data = JSON.parse(saved);
+      setForm({
+        shopName: data.shopName || "",
+        phone: data.phone || "",
+      });
+    }
+  }, [router]);
+
+  if (!user) return null;
+
+  /* ======================
+      HANDLE CHANGE
+  ======================= */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
+  /* ======================
+      VALIDATE
+  ======================= */
   const validate = () => {
     const newErrors: Partial<ShopFormData> = {};
 
     if (!form.shopName.trim()) {
       newErrors.shopName = "Tên shop là bắt buộc";
-    }
-
-    if (!form.email.trim()) {
-      newErrors.email = "Email là bắt buộc";
-    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
-      newErrors.email = "Email không hợp lệ";
+    } else if (form.shopName.trim().length < 3) {
+      newErrors.shopName = "Tên shop tối thiểu 3 ký tự";
     }
 
     if (!form.phone.trim()) {
       newErrors.phone = "Số điện thoại là bắt buộc";
+    } else if (!/^(\+84|0)[0-9]{9}$/.test(form.phone)) {
+      newErrors.phone = "Số điện thoại không hợp lệ";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  /* ======================
+      SAVE DRAFT
+  ======================= */
+  const handleSaveDraft = () => {
+    localStorage.setItem(
+      "seller_step_1",
+      JSON.stringify({
+        shopName: form.shopName,
+        phone: form.phone,
+      })
+    );
+    alert("Đã lưu nháp");
+  };
+
+  /* ======================
+      SUBMIT
+  ======================= */
   const handleSubmit = () => {
     if (!validate()) return;
 
-    // Lưu dữ liệu step 1
-    localStorage.setItem("seller_step_1", JSON.stringify(form));
+    // ⚠️ backend KHÔNG tin email từ đây
+    localStorage.setItem(
+      "seller_step_1",
+      JSON.stringify({
+        shopName: form.shopName,
+        phone: form.phone,
+      })
+    );
 
-    // Chuyển sang step tiếp theo
     router.push("/seller/create");
   };
 
   return (
     <div className="page">
-      {/* STEP */}
+      {/* STEPS */}
       <div className="steps">
         {[
           "Thông tin Shop",
@@ -80,7 +138,7 @@ export default function ShopInfoPage() {
 
       {/* FORM */}
       <div className="form">
-        {/* Tên shop */}
+        {/* SHOP NAME */}
         <div className="row">
           <label>
             Tên Shop <span>*</span>
@@ -102,38 +160,18 @@ export default function ShopInfoPage() {
           </div>
         </div>
 
-        {/* Địa chỉ */}
+        {/* EMAIL */}
         <div className="row">
-          <label>
-            Địa chỉ lấy hàng <span>*</span>
-          </label>
-          <div className="field address">
-            <p>Đặng Văn Thành Điệp | 0966273721</p>
-            <p>Ủy ban xã Đức Lân</p>
-            <p>Xã Đức Lân, Huyện Mộ Đức, Quảng Ngãi</p>
-            <button type="button" className="link">
-              Chỉnh sửa
-            </button>
-          </div>
-        </div>
-
-        {/* Email */}
-        <div className="row">
-          <label>
-            Email <span>*</span>
-          </label>
+          <label>Email</label>
           <div className="field">
-            <input
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="example@gmail.com"
-            />
-            <span className="error">{errors.email}</span>
+            <input value={user.email} disabled />
+            <small className="note">
+              Email được lấy từ tài khoản đăng nhập
+            </small>
           </div>
         </div>
 
-        {/* Phone */}
+        {/* PHONE */}
         <div className="row">
           <label>
             Số điện thoại <span>*</span>
@@ -143,7 +181,7 @@ export default function ShopInfoPage() {
               name="phone"
               value={form.phone}
               onChange={handleChange}
-              placeholder="+84..."
+              placeholder="+84 / 0xxx"
             />
             <span className="error">{errors.phone}</span>
           </div>
@@ -152,7 +190,9 @@ export default function ShopInfoPage() {
 
       {/* ACTIONS */}
       <div className="actions">
-        <button className="btn-outline">Lưu</button>
+        <button className="btn-outline" onClick={handleSaveDraft}>
+          Lưu
+        </button>
         <button className="btn-primary" onClick={handleSubmit}>
           Tiếp theo
         </button>
@@ -207,6 +247,11 @@ export default function ShopInfoPage() {
           border-radius: 4px;
         }
 
+        input:disabled {
+          background: #f5f5f5;
+          color: #666;
+        }
+
         .meta {
           display: flex;
           justify-content: space-between;
@@ -222,16 +267,9 @@ export default function ShopInfoPage() {
           color: red;
         }
 
-        .address p {
-          margin: 2px 0;
-        }
-
-        .link {
-          background: none;
-          border: none;
-          color: #1677ff;
-          padding: 0;
-          cursor: pointer;
+        .note {
+          font-size: 12px;
+          color: #999;
         }
 
         .actions {
