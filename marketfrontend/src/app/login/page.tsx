@@ -60,6 +60,7 @@ const LoginForm = () => {
     try {
       const res = await fetch(`${API_URL}/users/login`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
@@ -99,12 +100,8 @@ const LoginForm = () => {
         onSubmit={handleSubmit}
         className="relative z-10 w-full max-w-[420px] bg-white rounded-xl shadow-xl px-8 py-10"
       >
-        <h1 className="text-2xl font-bold text-center text-gray-900">
-          Login
-        </h1>
-        <p className="text-center text-gray-500 mt-1 mb-8">
-          Welcome back!
-        </p>
+        <h1 className="text-2xl font-bold text-center text-gray-900">Login</h1>
+        <p className="text-center text-gray-500 mt-1 mb-8">Welcome back!</p>
 
         {/* EMAIL */}
         <div className="mb-5 text-black">

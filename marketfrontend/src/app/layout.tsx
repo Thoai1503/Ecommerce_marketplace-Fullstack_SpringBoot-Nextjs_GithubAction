@@ -26,28 +26,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="mdl-js">
       <head>
-        <link rel="stylesheet" href="/assets/css/main.css" />
-        <link
-          href="/assets/vendor/bootstrap/css/bootstrap.min.css"
-          rel="stylesheet"
-        />
-        <link
-          href="/assets/vendor/bootstrap-icons/bootstrap-icons.css"
-          rel="stylesheet"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
-          rel="stylesheet"
-        />
-        <link href="/assets/vendor/aos/aos.css" rel="stylesheet" />
-        <link
-          href="/assets/vendor/glightbox/css/glightbox.min.css"
-          rel="stylesheet"
-        />
-        <link
-          href="/assets/vendor/swiper/swiper-bundle.min.css"
-          rel="stylesheet"
-        />
         <style>
           {`     :root {
             --primary: #2b8cee;
@@ -300,7 +278,7 @@ export default function RootLayout({
       <body className={`index-page`}>
         <main className="main">{children}</main>
 
-        <Script src="/assets/js/main.js" strategy="afterInteractive" />
+        {/* <Script src="/assets/js/main.js" strategy="afterInteractive" /> */}
       </body>
     </html>
   );

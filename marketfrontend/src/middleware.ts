@@ -64,6 +64,9 @@ function getMethodColor(method: string): string {
 
 // Middleware function
 export function middleware(request: NextRequest) {
+  const role = request.cookies.get("role")?.value;
+  console.log("Auth: " + role);
+
   const startTime = Date.now();
 
   // Lấy thông tin request
@@ -141,8 +144,9 @@ export function middleware(request: NextRequest) {
   importantHeaders.forEach((headerName) => {
     if (headers[headerName]) {
       const value =
-        headerName === "authorization" || headerName === "cookie"
-          ? "***hidden***"
+        headerName === "authorization"
+          ? //|| headerName === "cookie"
+            "***hidden***"
           : headers[headerName];
       console.log(
         "   " + colors.dim + `${headerName}:` + colors.reset,
