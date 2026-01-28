@@ -19,6 +19,7 @@ public final class UserMapper implements IMapper<User> {
             user.setEmail(rs.getString(StringValue.USER_EMAIL_COL));
             user.setPhone(rs.getString(StringValue.USER_PHONE_COL));
             user.setPasswordHash(rs.getString(StringValue.USER_PASSWORD_COL));
+            user.setUserType(StringValue.USER_TYPE_COL);
             user.setFullName(rs.getString(StringValue.USER_FULLNAME_COL));
             user.setAvatarUrl(rs.getString(StringValue.USER_AVATAR_COL));
 
