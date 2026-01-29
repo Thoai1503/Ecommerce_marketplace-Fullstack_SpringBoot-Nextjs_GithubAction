@@ -34,7 +34,7 @@ export default function UserLayout({
             <div className="row">
               <div className="col-6">
                 <div className="d-flex gap-3">
-                  <a href="#">Kênh Người Bán</a>
+                  <a href="/seller/createshop">Kênh Người Bán</a>
                   <a href="#">Tải ứng dụng</a>
                   <span>
                     Kết nối{" "}
