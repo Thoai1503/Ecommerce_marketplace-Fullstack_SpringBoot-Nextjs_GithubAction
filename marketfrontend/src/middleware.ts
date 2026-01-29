@@ -6,8 +6,6 @@ const colors = {
   reset: "\x1b[0m",
   bright: "\x1b[1m",
   dim: "\x1b[2m",
-
-  // Màu chữ
   black: "\x1b[30m",
   red: "\x1b[31m",
   green: "\x1b[32m",
@@ -16,8 +14,6 @@ const colors = {
   magenta: "\x1b[35m",
   cyan: "\x1b[36m",
   white: "\x1b[37m",
-
-  // Màu nền
   bgBlack: "\x1b[40m",
   bgRed: "\x1b[41m",
   bgGreen: "\x1b[42m",
@@ -31,11 +27,9 @@ const colors = {
 // Hàm format thời gian
 function getFormattedDateTime(): string {
   const now = new Date();
-
   const day = String(now.getDate()).padStart(2, "0");
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const year = now.getFullYear();
-
   const hours = String(now.getHours()).padStart(2, "0");
   const minutes = String(now.getMinutes()).padStart(2, "0");
   const seconds = String(now.getSeconds()).padStart(2, "0");
@@ -62,8 +56,17 @@ function getMethodColor(method: string): string {
   }
 }
 
+// Hàm lấy màu theo status code
+function getStatusColor(status: number): string {
+  if (status >= 200 && status < 300) return colors.green;
+  if (status >= 300 && status < 400) return colors.cyan;
+  if (status >= 400 && status < 500) return colors.yellow;
+  if (status >= 500) return colors.red;
+  return colors.white;
+}
+
 // Middleware function
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const role = request.cookies.get("role")?.value;
   console.log("Auth: " + role);
 
@@ -81,6 +84,18 @@ export function middleware(request: NextRequest) {
     "unknown";
   const userAgent = headers["user-agent"] || "unknown";
   const referer = headers["referer"] || "direct";
+
+  // Log request body nếu là POST/PUT/PATCH
+  let requestBody = null;
+  if (["POST", "PUT", "PATCH"].includes(method)) {
+    try {
+      // Clone request để có thể đọc body mà không ảnh hưởng đến request gốc
+      const clonedRequest = request.clone();
+      requestBody = await clonedRequest.text();
+    } catch (error) {
+      requestBody = "Could not parse body";
+    }
+  }
 
   // Log thông tin request với màu sắc
   console.log("\n" + colors.cyan + "═".repeat(100) + colors.reset);
@@ -144,9 +159,8 @@ export function middleware(request: NextRequest) {
   importantHeaders.forEach((headerName) => {
     if (headers[headerName]) {
       const value =
-        headerName === "authorization"
-          ? //|| headerName === "cookie"
-            "***hidden***"
+        headerName === "authorization" || headerName === "cookie"
+          ? "***hidden***"
           : headers[headerName];
       console.log(
         "   " + colors.dim + `${headerName}:` + colors.reset,
@@ -166,6 +180,17 @@ export function middleware(request: NextRequest) {
     });
   }
 
+  // Request Body
+  if (requestBody) {
+    console.log(colors.blue + "📦 Request Body:" + colors.reset);
+    try {
+      const parsed = JSON.parse(requestBody);
+      console.log(colors.dim + JSON.stringify(parsed, null, 2) + colors.reset);
+    } catch {
+      console.log(colors.dim + requestBody.substring(0, 500) + colors.reset);
+    }
+  }
+
   // Xử lý response
   const response = NextResponse.next();
 
@@ -176,15 +201,16 @@ export function middleware(request: NextRequest) {
   // Log response
   console.log(colors.cyan + "─".repeat(100) + colors.reset);
   console.log(
-    colors.green + "✅ Response:" + colors.reset,
+    getStatusColor(response.status) + "📤 Response:" + colors.reset,
     colors.bright + `${response.status}` + colors.reset,
     colors.dim + `| Thời gian xử lý: ${duration}ms` + colors.reset,
   );
   console.log(colors.cyan + "═".repeat(100) + colors.reset + "\n");
 
-  // Thêm custom headers vào response (optional)
+  // Thêm custom headers vào response
   response.headers.set("X-Request-Time", getFormattedDateTime());
   response.headers.set("X-Processing-Time", `${duration}ms`);
+  response.headers.set("X-Request-IP", ip);
 
   return response;
 }
