@@ -24,7 +24,7 @@ const colors = {
   bgWhite: "\x1b[47m",
 };
 
-// Hàm format thời gian
+// Hàm format thời gian log
 function getFormattedDateTime(): string {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, "0");
