@@ -6,10 +6,15 @@ import { API_URL, INTERNAL_API } from "@/helper/api";
 import { Product } from "@/validators/product";
 // import { useHomePage } from "@/feature/client/hook";
 
+export const revalidate = 3600; // 1 giờ
 export default async function Home() {
-  const res = await axios.get(`${INTERNAL_API}/seller/product`);
-  const products = res.data as Partial<Product>[];
-  console.log("Product: " + JSON.stringify(products));
+  // const res = await axios.get(`${INTERNAL_API}/seller/product`);
+  // const products = res.data as Partial<Product>[];
+  // console.log("Product: " + JSON.stringify(products));
+  const res = await fetch(`${INTERNAL_API}/seller/product`, {
+    next: { revalidate: 60 },
+  });
+  const products = (await res.json()) as Partial<Product>[];
   // const { products } = useHomePage();
   return (
     <div className="container-fluid px-3 px-md-4">
