@@ -4,10 +4,14 @@ import Image from "next/image";
 import axios from "axios";
 import { API_URL, INTERNAL_API } from "@/helper/api";
 import { Product } from "@/validators/product";
+import { cookies } from "next/headers";
 // import { useHomePage } from "@/feature/client/hook";
 
 export const revalidate = 3600; // 1 giờ
 export default async function Home() {
+  const cookieStore = await cookies();
+  const role = cookieStore.get("role")?.value;
+  console.log("Role: " + role);
   // const res = await axios.get(`${INTERNAL_API}/seller/product`);
   // const products = res.data as Partial<Product>[];
   // console.log("Product: " + JSON.stringify(products));

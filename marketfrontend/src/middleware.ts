@@ -159,9 +159,10 @@ export async function middleware(request: NextRequest) {
   importantHeaders.forEach((headerName) => {
     if (headers[headerName]) {
       const value =
-        headerName === "authorization" || headerName === "cookie"
-          ? "***hidden***"
-          : headers[headerName];
+        // headerName === "authorization" || headerName === "cookie"
+        //   ? "***hidden***"
+        //   :
+        headers[headerName];
       console.log(
         "   " + colors.dim + `${headerName}:` + colors.reset,
         colors.bright + value + colors.reset,
@@ -189,6 +190,13 @@ export async function middleware(request: NextRequest) {
     } catch {
       console.log(colors.dim + requestBody.substring(0, 500) + colors.reset);
     }
+  }
+  // if (!role && pathname.startsWith("/admin")) {
+  //   return NextResponse.redirect(new URL("/admin", request.url));
+  // }
+
+  if (!role?.startsWith("admin") && pathname.startsWith("/admin")) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Xử lý response
