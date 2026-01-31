@@ -168,6 +168,21 @@ public class ShopRepository implements IRepositories<Shop> {
 
         return null;
     }
+    
+    public Shop GetByUserId(int user_id) {
+    	String sql = "select * from shop where user_id = ?";
+    	try (Connection con = dbConnection.getConn();
+                PreparedStatement ps = con.prepareStatement(sql)){
+    	    ps.setLong(1, user_id);
+    	    
+    		
+    	}
+    	catch (Exception ex) {
+    		
+    	}
+    	
+    	return null;
+    }
 
     /* ================= GET ALL ================= */
     @Override
