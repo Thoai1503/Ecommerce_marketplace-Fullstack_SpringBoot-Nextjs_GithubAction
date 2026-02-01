@@ -24,7 +24,7 @@ export default function HeaderAuth() {
 
     // BẮT BUỘC để layout đọc lại cookie
     router.refresh();
-    router.push("/");
+    router.push("/login");
   };
 
   useEffect(() => {
