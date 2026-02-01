@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { API_URL } from "@/helper/api";
+import { useUserAuth } from "@/context/UserAuthContext";
 
 type User = {
   id: number;
@@ -22,6 +23,7 @@ type User = {
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
+  const { setRoles } = useUserAuth();
   const [loading, setLoading] = useState(false);
 
   /* ================= LOAD USER ================= */
@@ -46,7 +48,7 @@ export default function ProfilePage() {
   const isDobLocked = user.dateOfBirth !== null;
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setUser((prev) => (prev ? { ...prev, [name]: value } : prev));
@@ -148,9 +150,7 @@ export default function ProfilePage() {
                   <label className="form-label">
                     Ngày sinh
                     {isDobLocked && (
-                      <span className="text-muted small ms-2">
-                        (đã khóa)
-                      </span>
+                      <span className="text-muted small ms-2">(đã khóa)</span>
                     )}
                   </label>
                   <input
@@ -167,9 +167,7 @@ export default function ProfilePage() {
                   <label className="form-label">
                     Giới tính
                     {isGenderLocked && (
-                      <span className="text-muted small ms-2">
-                        (đã khóa)
-                      </span>
+                      <span className="text-muted small ms-2">(đã khóa)</span>
                     )}
                   </label>
                   <select
@@ -191,9 +189,7 @@ export default function ProfilePage() {
                   <input
                     className="form-control"
                     value={
-                      user.isVerified === 1
-                        ? "Đã xác thực"
-                        : "Chưa xác thực"
+                      user.isVerified === 1 ? "Đã xác thực" : "Chưa xác thực"
                     }
                     disabled
                   />
@@ -203,9 +199,7 @@ export default function ProfilePage() {
                   <label className="form-label">Trạng thái</label>
                   <input
                     className="form-control"
-                    value={
-                      user.isActive === 1 ? "Hoạt động" : "Bị khóa"
-                    }
+                    value={user.isActive === 1 ? "Hoạt động" : "Bị khóa"}
                     disabled
                   />
                 </div>
@@ -213,6 +207,7 @@ export default function ProfilePage() {
                 <div className="col-12 d-flex gap-2 mt-4">
                   <button
                     type="submit"
+                    // onClick={() => setRoles(null)}
                     className="btn btn-primary"
                     disabled={loading}
                   >
