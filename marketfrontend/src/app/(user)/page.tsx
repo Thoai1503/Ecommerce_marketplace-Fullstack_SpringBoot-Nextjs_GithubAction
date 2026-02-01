@@ -7,7 +7,7 @@ import { Product } from "@/validators/product";
 import { cookies } from "next/headers";
 // import { useHomePage } from "@/feature/client/hook";
 
-export const revalidate = 3600; // 1 giờ
+export const revalidate = 3; // 1 giờ
 export default async function Home() {
   const cookieStore = await cookies();
   const role = cookieStore.get("role")?.value;
