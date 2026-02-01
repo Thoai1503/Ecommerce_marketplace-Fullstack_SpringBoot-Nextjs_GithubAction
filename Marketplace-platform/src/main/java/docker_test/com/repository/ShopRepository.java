@@ -170,12 +170,18 @@ public class ShopRepository implements IRepositories<Shop> {
     }
     
     public Shop GetByUserId(int user_id) {
+    	System.out.print("Get by user id");
     	String sql = "select * from shop where user_id = ?";
     	try (Connection con = dbConnection.getConn();
                 PreparedStatement ps = con.prepareStatement(sql)){
     	    ps.setLong(1, user_id);
     	    
-    		
+    	    ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return shopMapper.RowMap(rs);
+            }
+
     	}
     	catch (Exception ex) {
     		

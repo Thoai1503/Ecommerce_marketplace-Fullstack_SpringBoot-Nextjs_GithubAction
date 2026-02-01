@@ -6,22 +6,29 @@ import { categoryQuery, productImageQuery } from "./query";
 import { slugify, generateUniqueSlug, isValidSlug } from "@/helper/utils";
 import { addProduct, uploadToProduct } from "./service";
 import { message, UploadFile, UploadProps } from "antd";
+import { useSellerAuth } from "@/context/SellerAuthContext";
 
 export const useAddProductSeller = (
   onSuccessCallback: (id: number) => void,
 ) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const { roles, userId, shop } = useSellerAuth();
   const { data: categories } = useQuery(categoryQuery.list);
+
+  //  alert(roles);
 
   const [product, setProduct] = useState<Partial<Product>>({
     product_name: "",
     product_slug: "",
-    shop_id: 1,
+    shop_id: 0,
     description: "",
     category_id: 2,
     original_price: 0,
     price: 0,
   });
+  useEffect(() => {
+    if (shop) setProduct((pre) => ({ ...pre, shop_id: shop.id }));
+  }, [shop]);
 
   const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
     // Giới hạn tối đa 8 ảnh như yêu cầu
@@ -155,6 +162,7 @@ export const useAddProductSeller = (
     generateUniqueProductSlug,
     fileList,
     handleChange,
+    shop,
   };
 };
 // hooks/useAddProductSeller.ts - useAddImageSeller section
