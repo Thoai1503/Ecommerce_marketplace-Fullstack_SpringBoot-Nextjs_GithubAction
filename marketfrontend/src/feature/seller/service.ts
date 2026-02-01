@@ -2,6 +2,7 @@ import { DbCategory } from "@/helper/utils";
 import http from "@/lib/http";
 import { Product } from "@/validators/product";
 import { ProductImage } from "./types";
+import { Shop } from "@/validators/shop";
 
 export const addProduct = async (
   product: Partial<Product>,
@@ -40,6 +41,15 @@ export const getProductImageByProductId = async (
 ): Promise<ProductImage[]> => {
   return await http
     .get(`/seller/product-image/product/${product_id}`)
+    .then((res) => res.data)
+    .catch((error) => {
+      throw error;
+    });
+};
+
+export const getShopByUserId = async (user_id: number): Promise<Shop> => {
+  return await http
+    .get(`/seller/shop/user/${user_id}`)
     .then((res) => res.data)
     .catch((error) => {
       throw error;
