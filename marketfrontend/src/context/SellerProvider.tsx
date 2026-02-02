@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { SellerAuthProvider } from "./SellerAuthContext";
+import { SellerSideBarProvider } from "./SellerSideBarContext";
 
 const SellerProvider = ({
   role,
@@ -15,9 +16,11 @@ const SellerProvider = ({
   const queryClient = new QueryClient();
   return (
     <QueryClientProvider client={queryClient}>
-      <SellerAuthProvider role={role} user_id={user_id}>
-        {children}
-      </SellerAuthProvider>
+      <SellerSideBarProvider>
+        <SellerAuthProvider role={role} user_id={user_id}>
+          {children}
+        </SellerAuthProvider>
+      </SellerSideBarProvider>
     </QueryClientProvider>
   );
 };
