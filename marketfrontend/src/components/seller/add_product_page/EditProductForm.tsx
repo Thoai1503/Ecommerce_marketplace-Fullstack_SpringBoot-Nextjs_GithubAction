@@ -1,14 +1,10 @@
 "use client";
-import React, { useState, useRef, useEffect, use } from "react";
-import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
-import "bootstrap/dist/css/bootstrap.min.css";
-import { Button, Modal, Upload, UploadFile, UploadProps, message } from "antd";
-import { Editor } from "@tinymce/tinymce-react";
-import { useAddImageSeller, useAddProductSeller } from "@/feature/seller/hooks";
 import CategorySelectorModal from "@/feature/seller/components/CategorySelectorModal";
-import { useSellerSideBarContext } from "@/context/SellerSideBarContext";
-import EditProductForm from "@/components/seller/add_product_page/EditProductForm";
-
+import { useAddImageSeller, useAddProductSeller } from "@/feature/seller/hooks";
+import { InboxOutlined } from "@ant-design/icons";
+import { Editor } from "@tinymce/tinymce-react";
+import { Upload } from "antd";
+import React, { useEffect, useRef, useState } from "react";
 interface ProductFormData {
   name: string;
   category: string;
@@ -34,39 +30,11 @@ interface TabSection {
   ref: React.RefObject<HTMLDivElement | null>;
 }
 
-const AddProductForm: React.FC = () => {
-  //get url param shop id
-
-  const editorRef = useRef(null) as any;
-  const { setOpen } = useSellerSideBarContext();
-  const [isEdit, setIsEdit] = useState(false);
+const EditProductForm = ({ id }: { id: number | null }) => {
+  const editorRef = useRef<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
-  console.log("Shop ID from URL:", id);
-
-  useEffect(() => {
-    setOpen(false);
-    console.log("Editor ref:", editorRef.current);
-    if (id) setIsEdit(true);
-  }, [editorRef, id]);
-
   const { fileList, handleChange, handleSave, handleSaveImageAfterProduct } =
-    useAddImageSeller();
-  const {
-    product,
-    handleChangeProduct,
-    handleSubmitProduct,
-    categories,
-    setProduct,
-    shop,
-  } = useAddProductSeller((id: number) => {
-    handleSaveImageAfterProduct(id);
-  });
-  const showModal = () => {
-    setIsModalOpen(true);
-  };
+    useAddImageSeller(id || undefined);
 
   const [currentTab, setCurrentTab] = useState<number>(0);
   const [formData, setFormData] = useState<ProductFormData>({
@@ -140,6 +108,9 @@ const AddProductForm: React.FC = () => {
       observers.forEach((obs) => obs.disconnect());
     };
   }, []);
+  const showModal = () => {
+    setIsModalOpen(true);
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -183,16 +154,20 @@ const AddProductForm: React.FC = () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-  if (isEdit) {
-    return (
-      <>
-        <EditProductForm id={Number(id)} />
-      </>
-    );
-  }
+
+  const {
+    product,
+    handleChangeProduct,
+    handleSubmitProduct,
+    categories,
+    setProduct,
+    shop,
+  } = useAddProductSeller((id: number) => {
+    handleSaveImageAfterProduct(id);
+  });
+
   return (
     <>
-      {/* Add scroll margin to all sections to prevent header overlap */}
       <style jsx>{`
         .scroll-section {
           scroll-margin-top: 140px;
@@ -305,7 +280,6 @@ const AddProductForm: React.FC = () => {
           gap: 6px;
         }
       `}</style>
-
       <div className="min-vh-100 bg-light">
         {/* Header */}
         <header
@@ -320,7 +294,7 @@ const AddProductForm: React.FC = () => {
                     <i className="bi bi-arrow-left fs-4"></i>
                   </button>
                   <div>
-                    <h2 className="h4 mb-0 fw-bold">Add New Product</h2>
+                    <h2 className="h4 mb-0 fw-bold">Edit Product ID: {id}</h2>
                     <small className="text-muted d-none d-md-block">
                       Draft auto-saved 2 mins ago
                     </small>
@@ -426,8 +400,9 @@ const AddProductForm: React.FC = () => {
                     {fileList.length > 0 && (
                       <div className="mt-3 text-muted small d-flex align-items-center gap-2">
                         <i className="bi bi-check-circle-fill text-success"></i>
-                        {fileList.length} image{fileList.length > 1 ? "s" : ""}{" "}
-                        selected • First image is cover photo
+                        {fileList.length} image
+                        {fileList.length > 1 ? "s" : ""} selected • First image
+                        is cover photo
                       </div>
                     )}
                   </div>
@@ -495,47 +470,47 @@ const AddProductForm: React.FC = () => {
                           Description
                         </label>
                         {/* <div className="border rounded">
-                          <div
-                            className="btn-toolbar bg-light border-bottom p-2"
-                            role="toolbar"
-                          >
-                            <div className="btn-group btn-group-sm me-2">
-                              <button className="btn btn-outline-secondary">
-                                <i className="bi bi-type-bold"></i>
-                              </button>
-                              <button className="btn btn-outline-secondary">
-                                <i className="bi bi-type-italic"></i>
-                              </button>
-                            </div>
-                            <div className="btn-group btn-group-sm me-2">
-                              <button className="btn btn-outline-secondary">
-                                <i className="bi bi-list-ul"></i>
-                              </button>
-                              <button className="btn btn-outline-secondary">
-                                <i className="bi bi-list-ol"></i>
-                              </button>
-                            </div>
-                            <div className="btn-group btn-group-sm">
-                              <button className="btn btn-outline-secondary">
-                                <i className="bi bi-link-45deg"></i>
-                              </button>
-                              <button className="btn btn-outline-secondary">
-                                <i className="bi bi-image"></i>
-                              </button>
-                            </div>
-                          </div>
-                          <textarea
-                            className="form-control border-0"
-                            rows={4}
-                            name="description"
-                            value={formData.description}
-                            onChange={handleInputChange}
-                            placeholder="Describe your product specs, features, and benefits..."
-                          ></textarea>
-                          <div className="bg-light px-3 py-1 text-end small text-muted border-top">
-                            {formData.description.length}/3000
-                          </div>
-                        </div> */}
+                                <div
+                                  className="btn-toolbar bg-light border-bottom p-2"
+                                  role="toolbar"
+                                >
+                                  <div className="btn-group btn-group-sm me-2">
+                                    <button className="btn btn-outline-secondary">
+                                      <i className="bi bi-type-bold"></i>
+                                    </button>
+                                    <button className="btn btn-outline-secondary">
+                                      <i className="bi bi-type-italic"></i>
+                                    </button>
+                                  </div>
+                                  <div className="btn-group btn-group-sm me-2">
+                                    <button className="btn btn-outline-secondary">
+                                      <i className="bi bi-list-ul"></i>
+                                    </button>
+                                    <button className="btn btn-outline-secondary">
+                                      <i className="bi bi-list-ol"></i>
+                                    </button>
+                                  </div>
+                                  <div className="btn-group btn-group-sm">
+                                    <button className="btn btn-outline-secondary">
+                                      <i className="bi bi-link-45deg"></i>
+                                    </button>
+                                    <button className="btn btn-outline-secondary">
+                                      <i className="bi bi-image"></i>
+                                    </button>
+                                  </div>
+                                </div>
+                                <textarea
+                                  className="form-control border-0"
+                                  rows={4}
+                                  name="description"
+                                  value={formData.description}
+                                  onChange={handleInputChange}
+                                  placeholder="Describe your product specs, features, and benefits..."
+                                ></textarea>
+                                <div className="bg-light px-3 py-1 text-end small text-muted border-top">
+                                  {formData.description.length}/3000
+                                </div>
+                              </div> */}
                         <Editor
                           apiKey="opbl478qvvrtoorhvqc4f7zei61txljv0gkj67k1ogzky57n" // có thể để trống khi test local
                           initialValue="<p>Soạn thảo với upload ảnh...</p>"
@@ -1153,16 +1128,6 @@ const AddProductForm: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Category Modal */}
-
-      <CategorySelectorModal
-        categories={categories}
-        isModalOpen={isModalOpen}
-        setIsModalOpen={setIsModalOpen}
-      />
-
-      {/* Antd Upload Styles - Red Theme */}
       <style jsx global>{`
         /* Upload Dragger - Red Theme Enhanced */
         .ant-upload.ant-upload-drag {
@@ -1284,8 +1249,13 @@ const AddProductForm: React.FC = () => {
           z-index: 10;
         }
       `}</style>
+      <CategorySelectorModal
+        categories={categories}
+        isModalOpen={isModalOpen}
+        setIsModalOpen={setIsModalOpen}
+      />
     </>
   );
 };
 
-export default AddProductForm;
+export default EditProductForm;

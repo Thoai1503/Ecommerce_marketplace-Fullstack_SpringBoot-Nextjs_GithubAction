@@ -10,6 +10,7 @@ import { useSellerAuth } from "@/context/SellerAuthContext";
 
 export const useAddProductSeller = (
   onSuccessCallback: (id: number) => void,
+  id?: number,
 ) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const { roles, userId, shop } = useSellerAuth();
@@ -166,11 +167,11 @@ export const useAddProductSeller = (
   };
 };
 // hooks/useAddProductSeller.ts - useAddImageSeller section
-export const useAddImageSeller = () => {
-  console.log("🔧 useAddImageSeller hook called");
+export const useAddImageSeller = (id?: number) => {
+  console.log("🔧 useAddImageSeller hook called with id:", id);
 
   const { data, isLoading, isError, error } = useQuery(
-    productImageQuery.by_product_id(4),
+    productImageQuery.by_product_id(id || 0),
   );
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { JSX, useState } from "react";
+import { JSX, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSellerSideBarContext } from "@/context/SellerSideBarContext";
 
 interface MenuItem {
   id: string;
@@ -18,6 +19,8 @@ interface MenuItem {
 }
 
 export default function Sidebar() {
+  const { isOpen } = useSellerSideBarContext();
+
   const [openMenus, setOpenMenus] = useState<string[]>(["products"]);
 
   const toggleMenu = (menuId: string) => {
@@ -158,7 +161,7 @@ export default function Sidebar() {
         width: "250px",
         overflowY: "auto",
         height: "100vh",
-        // display: "none",
+        display: isOpen ? "block" : "none",
       }}
     >
       {/* Logo/Brand */}
