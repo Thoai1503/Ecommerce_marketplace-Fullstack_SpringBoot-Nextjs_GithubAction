@@ -48,11 +48,6 @@ public class CategoryAttributeRepository implements IRepositories<CategoryAttrib
 		return false;
 	}
 
-	@Override
-	public CategoryAttribute GetById(Object item) {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 	@Override
 	public List<CategoryAttribute> GetAll() {
@@ -105,6 +100,11 @@ public class CategoryAttributeRepository implements IRepositories<CategoryAttrib
 	     }
 	     
 	     
+		return null;
+	}
+	@Override
+	public CategoryAttribute GetById(int id) {
+		// TODO Auto-generated method stub
 		return null;
 	}
 
