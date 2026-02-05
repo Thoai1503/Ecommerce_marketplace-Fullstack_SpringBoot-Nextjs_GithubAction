@@ -148,14 +148,14 @@ public class ShopRepository implements IRepositories<Shop> {
 
     /* ================= GET BY ID ================= */
     @Override
-    public Shop GetById(Object id) {
+    public Shop GetById(int id) {
 
         String sql = "SELECT * FROM shop WHERE shop_id = ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            ps.setLong(1, Long.parseLong(id.toString()));
+            ps.setLong(1,id);
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {

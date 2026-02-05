@@ -42,7 +42,12 @@ const AddProductForm: React.FC = () => {
   const [isEdit, setIsEdit] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const params = new URLSearchParams(window.location.search);
+  // Check if window is defined
+  const isBrowser = typeof window !== "undefined";
+
+  const params = isBrowser
+    ? new URLSearchParams(window.location.search)
+    : new URLSearchParams();
   const id = params.get("id");
   console.log("Shop ID from URL:", id);
 
@@ -180,7 +185,9 @@ const AddProductForm: React.FC = () => {
     if (confirm("Bạn có chắc muốn hủy bỏ? Các thay đổi sẽ không được lưu.")) {
       // Reset form hoặc navigate back
       console.log("Discarding changes...");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (isBrowser) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
   };
   if (isEdit) {
