@@ -1,10 +1,13 @@
 "use client";
 import CategorySelectorModal from "@/feature/seller/components/CategorySelectorModal";
 import { useAddImageSeller, useAddProductSeller } from "@/feature/seller/hooks";
+import { fetchProduct } from "@/feature/seller/reducer/productEditReducer";
+import { AppDispatch, RootState } from "@/lib/store";
 import { InboxOutlined } from "@ant-design/icons";
 import { Editor } from "@tinymce/tinymce-react";
 import { Upload } from "antd";
-import React, { useEffect, useRef, useState } from "react";
+import React, { use, useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 interface ProductFormData {
   name: string;
   category: string;
@@ -31,6 +34,9 @@ interface TabSection {
 }
 
 const EditProductForm = ({ id }: { id: number | null }) => {
+  const product = useSelector((state: RootState) => state.productForm.product);
+
+  const dispatch = useDispatch<AppDispatch>();
   const editorRef = useRef<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { fileList, handleChange, handleSave, handleSaveImageAfterProduct } =
@@ -108,6 +114,11 @@ const EditProductForm = ({ id }: { id: number | null }) => {
       observers.forEach((obs) => obs.disconnect());
     };
   }, []);
+  useEffect(() => {
+    if (id !== null && id !== undefined) {
+      dispatch(fetchProduct(id));
+    }
+  }, []);
   const showModal = () => {
     setIsModalOpen(true);
   };
@@ -156,7 +167,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
   };
 
   const {
-    product,
+    //  product,
     handleChangeProduct,
     handleSubmitProduct,
     categories,
@@ -427,7 +438,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                           type="text"
                           className="form-control"
                           name="product_name"
-                          value={product.product_name}
+                          value={product?.product_name}
                           onChange={handleChangeProduct}
                           placeholder="e.g. Minimalist Watch Series 5"
                         />
@@ -677,13 +688,13 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                             type="text"
                             className="form-control"
                             name="price"
-                            value={product.price}
+                            value={product?.price}
                             onChange={(event) => {
                               const { value, name } = event.target;
                               setProduct((pre) => ({
                                 ...pre,
                                 [name]: value,
-                                original_price: product.price,
+                                original_price: product?.price,
                               }));
                             }}
                           />

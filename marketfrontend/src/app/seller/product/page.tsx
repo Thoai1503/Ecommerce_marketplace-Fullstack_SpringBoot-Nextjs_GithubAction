@@ -1,4 +1,6 @@
 "use client";
+import { useSellerAuth } from "@/context/SellerAuthContext";
+import { useProductPage } from "@/feature/admin/hooks/useProductPage";
 import React, { useState } from "react";
 
 interface Product {
@@ -16,8 +18,10 @@ interface Product {
 }
 
 const page = () => {
+  const { shop, products } = useProductPage();
   const [activeTab, setActiveTab] = useState("all");
-  const [products] = useState<Product[]>([
+  //  alert("Shop in Product Page: " + JSON.stringify(shop));
+  const [product] = useState<Product[]>([
     {
       id: "1",
       name: "Đầu kẹp mũi khoan B10 0.6-6mm cho motor 775. Kẹp cho mũi khoa...",
@@ -265,34 +269,36 @@ const page = () => {
                 <td>
                   <div className="d-flex align-items-start">
                     <img
-                      src={product.image}
-                      alt={product.name}
+                      src={product.image_url}
+                      alt={product.product_name}
                       className="rounded me-3"
                       width="80"
                     />
                     <div className="flex-grow-1">
-                      <div className="fw-normal mb-1">{product.name}</div>
+                      <div className="fw-normal mb-1">
+                        {product.product_name}
+                      </div>
                       <small className="text-muted d-block">
-                        SKU sản phẩm: {product.sku}
+                        SKU sản phẩm: {product.id}
                       </small>
                       <small className="text-muted d-block">
-                        ID Sản phẩm: {product.productId}
+                        ID Sản phẩm: {product.id}
                       </small>
                       <small className="text-muted d-block">
-                        Model ID: {product.modelId}
+                        Model ID: {product.id}
                       </small>
                     </div>
                   </div>
                 </td>
                 <td>
-                  <div>đ{product.price.toLocaleString()}</div>
+                  <div>đ{product.price?.toLocaleString()}</div>
                   <small className="badge bg-warning text-dark">
                     Price Bidding Eligible
                   </small>
                 </td>
-                <td>{product.stock}</td>
+                <td>{product.stock_quantity}</td>
                 <td>
-                  <div className="small">Doanh số {product.revenue}</div>
+                  <div className="small">Doanh số 120</div>
                   <div className="small text-muted">
                     Doanh Số Trong 30 Ngày Gần Nhất 0
                   </div>
@@ -301,23 +307,20 @@ const page = () => {
                   </div>
                 </td>
                 <td>
-                  {product.issues && (
-                    <div className="d-flex align-items-center">
-                      <span className="badge bg-warning text-dark me-2">⚠</span>
-                      <span className="small">{product.issues}</span>
-                    </div>
-                  )}
-                  {product.status === "qualified" && (
-                    <div className="d-flex align-items-center text-success">
-                      <span className="me-2">✓</span>
-                      <span className="small">Content Qualified</span>
-                    </div>
-                  )}
+                  <div className="d-flex align-items-center">
+                    <span className="badge bg-warning text-dark me-2">⚠</span>
+                    <span className="small">qualified</span>
+                  </div>
+
+                  <div className="d-flex align-items-center text-success">
+                    <span className="me-2">✓</span>
+                    <span className="small">Content Qualified</span>
+                  </div>
                 </td>
                 <td>
                   <div className="d-flex flex-column gap-1">
                     <a
-                      href="#"
+                      href={`/seller/product/new?id=${product.id}`}
                       className="text-primary text-decoration-none small"
                     >
                       Cập nhật

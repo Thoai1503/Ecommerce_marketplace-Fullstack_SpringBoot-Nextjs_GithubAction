@@ -87,8 +87,46 @@ public class ProductRepository implements IRepositories<Product> {
 	}
 
 	@Override
-	public Product GetById(Object item) {
-		// TODO Auto-generated method stub
+	public Product GetById(int id) {
+		String sql = "SELECT \r\n"
+				+ "    p.*,\r\n"
+				+ "    pi.image_url\r\n"
+				+ "FROM product p\r\n"
+				+ "LEFT JOIN product_image pi ON p.id = pi.product_id \r\n"
+				+ "    AND pi.id = (\r\n"
+				+ "        SELECT MIN(id) \r\n"
+				+ "        FROM product_image \r\n"
+				+ "        WHERE product_id = p.id\r\n"
+				
+				+ "    )"
+				
+				+ " WHERE p.id = ?"
+				;
+		System.out.print("GetAll..");
+		try (Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)){
+	
+			  ps.setInt(1, id);
+			  ResultSet rs =	ps.executeQuery();
+			  while (rs.next()) {
+		          Product image = new Product();
+		          image.setId(rs.getInt("id"));
+		          image.setProduct_name(rs.getString("product_name"));
+		          image.setCategory_id(1);
+		          image.setShop_id(0);
+		          image.setPrice(rs.getDouble("price"));
+		          image.setOriginal_price(rs.getDouble("original_price"));
+		          image.setProduct_name(rs.getString("product_name"));
+		          image.setImage_url(rs.getString("image_url"));
+		          image.setCreated_at(rs.getTimestamp("created_at").toLocalDateTime());
+		      	   return image;
+		      }
+		
+
+		}
+		catch (Exception ex) {
+			ex.printStackTrace();;
+		}
 		return null;
 	}
 
@@ -132,6 +170,41 @@ public class ProductRepository implements IRepositories<Product> {
 		}
 		return null;
 	}
+     
 	
+	public List<Product> GetByShopId(int shop_id) {
+		List<Product> list = new ArrayList<Product>();
+		String sql = "select *,p.id as product_id from product p join shop s on p.shop_id =s.id join user u on u.id = s.user_id left join product_image pi on  p.id = pi.product_id and pi.id = (select MIN(id) from product_image where product_id =p.id) where s.id = ?";
+
+		System.out.print("GetAll..");
+		try (Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)){
+			  ps.setInt(1, shop_id);
+	
+			  ResultSet rs =	ps.executeQuery();
+			  while (rs.next()) {
+		          Product image = new Product();
+		          image.setId(rs.getInt("product_id"));
+		          image.setProduct_name(rs.getString("product_name"));
+		          image.setCategory_id(rs.getInt("category_id"));
+		          image.setShop_id(rs.getInt("shop_id"));
+		          image.setPrice(rs.getDouble("price"));
+		          image.setOriginal_price(rs.getDouble("original_price"));
+		          image.setProduct_name(rs.getString("product_name"));
+		          image.setImage_url(rs.getString("image_url"));
+		          image.setCreated_at(rs.getTimestamp("created_at").toLocalDateTime());
+		             list.add(image);
+		      }
+			  return list;
+			
+
+		}
+		catch (Exception ex) {
+			ex.printStackTrace();;
+		}
+		return null;
+	}
+	
+
 
 }
