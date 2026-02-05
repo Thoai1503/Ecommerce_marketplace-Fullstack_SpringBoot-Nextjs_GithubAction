@@ -40,7 +40,7 @@ public class UserController {
     /* ================= GET USER BY ID ================= */
     // GET http://localhost:8000/users/{id}
     @GetMapping("/{id}")
-    public ResponseEntity<?> getById(@PathVariable long id) {
+    public ResponseEntity<?> getById(@PathVariable int id) {
 
         User user = userRepository.GetById(id);
 
@@ -183,7 +183,7 @@ public class UserController {
     
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProfile(
-            @PathVariable long id,
+            @PathVariable int id,
             @RequestBody User req
     ) {
         User existing = userRepository.GetById(id);

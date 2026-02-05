@@ -16,20 +16,20 @@ public final class ProductVariantMapper implements IMapper<ProductVariant> {
     public ProductVariant RowMap(ResultSet rs) {
         ProductVariant variant = new ProductVariant();
         try {
-            variant.setVariantId(rs.getLong(StringValue.VARIANT_ID_COL));
-            variant.setProductId(rs.getLong(StringValue.VARIANT_PRODUCT_ID_COL));
-            variant.setVariantName(rs.getString(StringValue.VARIANT_NAME_COL));
+            variant.setVariant_id(rs.getLong(StringValue.VARIANT_ID_COL));
+            variant.setProduct_id(rs.getLong(StringValue.VARIANT_PRODUCT_ID_COL));
+            variant.setVariant_name(rs.getString(StringValue.VARIANT_NAME_COL));
             variant.setSku(rs.getString(StringValue.VARIANT_SKU_COL));
             variant.setPrice(rs.getDouble(StringValue.VARIANT_PRICE_COL));
-            variant.setStockQuantity(rs.getInt(StringValue.VARIANT_STOCK_QUANTITY_COL));
-            variant.setImageUrl(rs.getString(StringValue.VARIANT_IMAGE_URL_COL));
+            variant.setStock_quantity(rs.getInt(StringValue.VARIANT_STOCK_QUANTITY_COL));
+            variant.setImage_url(rs.getString(StringValue.VARIANT_IMAGE_URL_COL));
             variant.setActive(rs.getInt(StringValue.VARIANT_ACTIVE_COL));
 
             Timestamp createdAt = rs.getTimestamp(StringValue.VARIANT_CREATED_AT_COL);
-            if (createdAt != null) variant.setCreatedAt(createdAt.toLocalDateTime());
+            if (createdAt != null) variant.setCreated_at(null);
 
             Timestamp updatedAt = rs.getTimestamp(StringValue.VARIANT_UPDATED_AT_COL);
-            if (updatedAt != null) variant.setUpdatedAt(updatedAt.toLocalDateTime());
+            if (updatedAt != null) variant.setUpdated_at(updatedAt.toLocalDateTime());
 
         } catch (SQLException e) {
             e.printStackTrace();

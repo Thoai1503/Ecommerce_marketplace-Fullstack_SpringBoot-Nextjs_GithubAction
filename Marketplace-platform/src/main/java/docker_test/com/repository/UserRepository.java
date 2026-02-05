@@ -74,14 +74,14 @@ public class UserRepository implements IRepositories<User> {
     /* ================= GET BY ID ================= */
 
     @Override
-    public User GetById(Object id) {
+    public User GetById(int id) {
 
         String sql = "SELECT * FROM user WHERE id = ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            ps.setLong(1, Long.parseLong(id.toString()));
+            ps.setLong(1, id);
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {

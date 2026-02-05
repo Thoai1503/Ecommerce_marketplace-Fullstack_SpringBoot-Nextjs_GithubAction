@@ -68,11 +68,6 @@ public class ProductImageRepository implements IRepositories<ProductImage> {
 		return false;
 	}
 
-	@Override
-	public ProductImage GetById(Object item) {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 	@Override
 	public List<ProductImage> GetAll() {
@@ -105,6 +100,11 @@ public class ProductImageRepository implements IRepositories<ProductImage> {
 			ex.printStackTrace();;
 		}
 		
+		return null;
+	}
+	@Override
+	public ProductImage GetById(int id) {
+		// TODO Auto-generated method stub
 		return null;
 	}
 

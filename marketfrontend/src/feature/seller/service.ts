@@ -14,6 +14,14 @@ export const addProduct = async (
       throw error;
     });
 };
+export const getProductById = async (id: number): Promise<Product> => {
+  return await http
+    .get(`/seller/product/${id}`)
+    .then((res) => res.data)
+    .catch((error) => {
+      throw error;
+    });
+};
 
 export const getAllCategory = async (): Promise<DbCategory[]> => {
   return await http

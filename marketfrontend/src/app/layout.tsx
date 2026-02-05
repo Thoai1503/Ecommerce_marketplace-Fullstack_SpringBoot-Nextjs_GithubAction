@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
+import StoreProvider from "./StoreProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,262 +25,264 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="mdl-js">
-      <head>
-        <style>
-          {`     :root {
-            --primary: #2b8cee;
-            --primary-dark: #1a6cb8;
-        }
-        
-        body {
-            font-family: "Plus Jakarta Sans", sans-serif;
-            background-color: #f6f7f8;
-        }
-        
-        .utility-bar {
-            background-color: var(--primary);
-            color: white;
-            font-size: 0.75rem;
-            padding: 0.25rem 0;
-        }
-        
-        .utility-bar a {
-            color: white;
-            text-decoration: none;
-        }
-        
-        .utility-bar a:hover {
-            opacity: 0.8;
-        }
-        
-        .search-box {
-            background-color: #f0f2f4;
-            border: 2px solid transparent;
-            border-radius: 0.5rem;
-            transition: all 0.3s;
-        }
-        
-        .search-box:focus-within {
-            border-color: rgba(43, 140, 238, 0.2);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        .search-box input {
-            background: transparent;
-            border: none;
-            outline: none;
-        }
-        
-        .search-box input:focus {
-            box-shadow: none;
-        }
-        
-        .btn-search {
-            background-color: var(--primary);
-            color: white;
-            border-radius: 0.375rem;
-        }
-        
-        .btn-search:hover {
-            background-color: var(--primary-dark);
-        }
-        
-        .cart-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background-color: #dc3545;
-            color: white;
-            font-size: 0.625rem;
-            font-weight: bold;
-            padding: 0.125rem 0.375rem;
-            border-radius: 50px;
-            border: 2px solid white;
-        }
-        
-        .banner-main {
-            height: 280px;
-            background-size: cover;
-            background-position: center;
-            border-radius: 0.5rem;
-            position: relative;
-        }
-        
-        .banner-side {
-            height: 136px;
-            background-size: cover;
-            background-position: center;
-            border-radius: 0.5rem;
-            position: relative;
-        }
-        
-        .banner-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 0.5rem;
-            background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
-            color: white;
-        }
-        
-        .quick-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.3s;
-        }
-        
-        .quick-icon:hover {
-            transform: translateY(-4px);
-        }
-        
-         .category-item {
-            text-align: center;
-            padding: 15px;
-            border-radius: 8px;
-            background: #f5f5f5;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .category-item:hover {
-            background: var(--primary-color);
-            color: white;
-        }
-        
-        .category-item img {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-        
-        .category-item:hover img {
-            transform: scale(1.1);
-        }
-        
-        .flash-sale-item {
-            min-width: 170px;
-            width: 170px;
-        }
-        
-        .flash-sale-item img {
-            transition: transform 0.3s;
-        }
-        
-        .flash-sale-item:hover img {
-            transform: scale(1.05);
-        }
-        
-        .progress-sale {
-            height: 1rem;
-            background-color: #e5e7eb;
-            border-radius: 50px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .progress-sale .progress-bar {
-            background-color: #dc3545;
-        }
-        
-        .progress-sale span {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.625rem;
-            color: white;
-            font-weight: bold;
-            z-index: 10;
-        }
-        
-        .product-card {
-            background: white;
-            border-radius: 0.5rem;
-            overflow: hidden;
-            transition: all 0.3s;
-        }
-        
-        .product-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transform: translateY(-2px);
-        }
-        
-        .product-card img {
-            width: 100%;
-            aspect-ratio: 1;
-            object-fit: cover;
-        }
-        
-        .product-badge {
-            position: absolute;
-            top: 0;
-            left: 0;
-            font-size: 0.625rem;
-            padding: 0.125rem 0.375rem;
-            border-radius: 0 0 0.375rem 0;
-            font-weight: bold;
-        }
-        
-        .badge-mall {
-            background-color: #dc3545;
-            color: white;
-        }
-        
-        .badge-favorite {
-            background-color: #fd7e14;
-            color: white;
-        }
-        
-        .countdown-box {
-            background-color: #000;
-            color: white;
-            padding: 0.125rem 0.375rem;
-            border-radius: 0.25rem;
-            font-weight: bold;
-            font-size: 0.875rem;
-        }
-        
-        .star-rating {
-            color: #fbbf24;
-            font-size: 0.625rem;
-        }
-        
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        
-        @media (max-width: 768px) {
+    <StoreProvider>
+      <html lang="en" className="mdl-js">
+        <head>
+          <style>
+            {`     :root {
+                --primary: #2b8cee;
+                --primary-dark: #1a6cb8;
+            }
+            
+            body {
+                font-family: "Plus Jakarta Sans", sans-serif;
+                background-color: #f6f7f8;
+            }
+            
+            .utility-bar {
+                background-color: var(--primary);
+                color: white;
+                font-size: 0.75rem;
+                padding: 0.25rem 0;
+            }
+            
+            .utility-bar a {
+                color: white;
+                text-decoration: none;
+            }
+            
+            .utility-bar a:hover {
+                opacity: 0.8;
+            }
+            
+            .search-box {
+                background-color: #f0f2f4;
+                border: 2px solid transparent;
+                border-radius: 0.5rem;
+                transition: all 0.3s;
+            }
+            
+            .search-box:focus-within {
+                border-color: rgba(43, 140, 238, 0.2);
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+            
+            .search-box input {
+                background: transparent;
+                border: none;
+                outline: none;
+            }
+            
+            .search-box input:focus {
+                box-shadow: none;
+            }
+            
+            .btn-search {
+                background-color: var(--primary);
+                color: white;
+                border-radius: 0.375rem;
+            }
+            
+            .btn-search:hover {
+                background-color: var(--primary-dark);
+            }
+            
+            .cart-badge {
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                background-color: #dc3545;
+                color: white;
+                font-size: 0.625rem;
+                font-weight: bold;
+                padding: 0.125rem 0.375rem;
+                border-radius: 50px;
+                border: 2px solid white;
+            }
+            
             .banner-main {
-                height: 200px;
+                height: 280px;
+                background-size: cover;
+                background-position: center;
+                border-radius: 0.5rem;
+                position: relative;
             }
+            
             .banner-side {
-                height: 96px;
+                height: 136px;
+                background-size: cover;
+                background-position: center;
+                border-radius: 0.5rem;
+                position: relative;
             }
-        }`}
-        </style>
-      </head>
-      <body className={`index-page`}>
-        <main className="main">{children}</main>
+            
+            .banner-overlay {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                padding: 0.5rem;
+                background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+                color: white;
+            }
+            
+            .quick-icon {
+                width: 48px;
+                height: 48px;
+                border-radius: 0.75rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: transform 0.3s;
+            }
+            
+            .quick-icon:hover {
+                transform: translateY(-4px);
+            }
+            
+             .category-item {
+                text-align: center;
+                padding: 15px;
+                border-radius: 8px;
+                background: #f5f5f5;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+            
+            .category-item:hover {
+                background: var(--primary-color);
+                color: white;
+            }
+            
+            .category-item img {
+                width: 60px;
+                height: 60px;
+                object-fit: cover;
+                border-radius: 8px;
+                margin-bottom: 10px;
+            }
+            
+            .category-item:hover img {
+                transform: scale(1.1);
+            }
+            
+            .flash-sale-item {
+                min-width: 170px;
+                width: 170px;
+            }
+            
+            .flash-sale-item img {
+                transition: transform 0.3s;
+            }
+            
+            .flash-sale-item:hover img {
+                transform: scale(1.05);
+            }
+            
+            .progress-sale {
+                height: 1rem;
+                background-color: #e5e7eb;
+                border-radius: 50px;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .progress-sale .progress-bar {
+                background-color: #dc3545;
+            }
+            
+            .progress-sale span {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.625rem;
+                color: white;
+                font-weight: bold;
+                z-index: 10;
+            }
+            
+            .product-card {
+                background: white;
+                border-radius: 0.5rem;
+                overflow: hidden;
+                transition: all 0.3s;
+            }
+            
+            .product-card:hover {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                transform: translateY(-2px);
+            }
+            
+            .product-card img {
+                width: 100%;
+                aspect-ratio: 1;
+                object-fit: cover;
+            }
+            
+            .product-badge {
+                position: absolute;
+                top: 0;
+                left: 0;
+                font-size: 0.625rem;
+                padding: 0.125rem 0.375rem;
+                border-radius: 0 0 0.375rem 0;
+                font-weight: bold;
+            }
+            
+            .badge-mall {
+                background-color: #dc3545;
+                color: white;
+            }
+            
+            .badge-favorite {
+                background-color: #fd7e14;
+                color: white;
+            }
+            
+            .countdown-box {
+                background-color: #000;
+                color: white;
+                padding: 0.125rem 0.375rem;
+                border-radius: 0.25rem;
+                font-weight: bold;
+                font-size: 0.875rem;
+            }
+            
+            .star-rating {
+                color: #fbbf24;
+                font-size: 0.625rem;
+            }
+            
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            
+            .no-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            
+            @media (max-width: 768px) {
+                .banner-main {
+                    height: 200px;
+                }
+                .banner-side {
+                    height: 96px;
+                }
+            }`}
+          </style>
+        </head>
+        <body className={`index-page`}>
+          <main className="main">{children}</main>
 
-        {/* <Script src="/assets/js/main.js" strategy="afterInteractive" /> */}
-      </body>
-    </html>
+          {/* <Script src="/assets/js/main.js" strategy="afterInteractive" /> */}
+        </body>
+      </html>
+    </StoreProvider>
   );
 }
