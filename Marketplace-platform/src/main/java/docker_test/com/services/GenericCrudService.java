@@ -31,7 +31,7 @@ public class GenericCrudService<T,Integer> {
              return repository.GetAll();
          }
          
-         public T findById(String entityType, Integer id) {
+         public T findById(String entityType, int id) {
         	 IRepositories<T> repository = repoFactory.createRepo(entityType);
              return repository.GetById(id);
          }

@@ -109,13 +109,13 @@ public class UnitRepository implements IRepositories<Unit> {
 
 
 	@Override
-	public Unit GetById(Object item) {
+	public Unit GetById(int id) {
 	    String sql = "SELECT * FROM unit WHERE id = ? AND status = 1";
 
 	    try (Connection con = dbConnection.getConn();
 	         PreparedStatement ps = con.prepareStatement(sql)) {
 
-	        ps.setInt(1, (int) item);
+	        ps.setInt(1, (int) id);
 	        ResultSet rs = ps.executeQuery();
 
 	        if (rs.next()) {
