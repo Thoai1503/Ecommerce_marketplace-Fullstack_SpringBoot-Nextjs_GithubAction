@@ -16,8 +16,8 @@ public final class ProductVariantMapper implements IMapper<ProductVariant> {
     public ProductVariant RowMap(ResultSet rs) {
         ProductVariant variant = new ProductVariant();
         try {
-            variant.setVariant_id(rs.getLong(StringValue.VARIANT_ID_COL));
-            variant.setProduct_id(rs.getLong(StringValue.VARIANT_PRODUCT_ID_COL));
+            variant.setVariant_id(rs.getInt(StringValue.VARIANT_ID_COL));
+            variant.setProduct_id(rs.getInt(StringValue.VARIANT_PRODUCT_ID_COL));
             variant.setVariant_name(rs.getString(StringValue.VARIANT_NAME_COL));
             variant.setSku(rs.getString(StringValue.VARIANT_SKU_COL));
             variant.setPrice(rs.getDouble(StringValue.VARIANT_PRICE_COL));
