@@ -66,7 +66,10 @@ public class ProductVariantRepository implements IRepositories {
 							  ProductVariant productVariant = new ProductVariant();
 							  productVariant.setImage_url(rs.getString("image_url"));
 							  productVariant.setPrice(rs.getDouble("price"));
+							  productVariant.setProduct_id(rs.getInt("product_id"));
+							  productVariant.setStock_quantity(rs.getInt("stock_quantity"));
 							  productVariant.setVariant_name(rs.getString("variant_name"));
+							 
 							  list.add(productVariant);
 							  
 						  }

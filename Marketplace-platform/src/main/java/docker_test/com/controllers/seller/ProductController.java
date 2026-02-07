@@ -31,7 +31,7 @@ public class ProductController {
 	 
 	 @GetMapping("")
 	 public ResponseEntity getAll() {
-		 var list = repositories.GetAll();
+		 var list =((ProductRepository) repositories).GetProductsWithVariants();
 		 
 		 return ResponseEntity.ok(list);
 	 } 
