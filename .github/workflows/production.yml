@@ -66,3 +66,4 @@ jobs:
             docker image prune -f
 
   # Note: Make sure to set the VPS_APP_DIR secret to the correct directory on your VPS
+  # where the docker-compose.yml file is located.
