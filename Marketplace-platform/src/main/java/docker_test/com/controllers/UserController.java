@@ -146,7 +146,9 @@ public class UserController {
         
         ResponseCookie roleCookie = ResponseCookie.from("role", user.getUserType())
     		    .httpOnly(true)
-    		    .secure(false)          // requires HTTPS
+
+                .secure(false)        
+                     // requires HTTPS
     		    .path("/")
     		    .maxAge(7 * 24 * 60 * 60)
     		    .sameSite("Lax")
