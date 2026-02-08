@@ -2,7 +2,7 @@ name: CI/CD Push to production
 
 on:
   push:
-    branches: [ "production" ]
+    branches: ["production"]
 
 jobs:
   build-and-deploy:
@@ -64,3 +64,5 @@ jobs:
             docker compose pull
             docker compose up -d
             docker image prune -f
+
+  # Note: Make sure to set the VPS_APP_DIR secret to the correct directory on your VPS
