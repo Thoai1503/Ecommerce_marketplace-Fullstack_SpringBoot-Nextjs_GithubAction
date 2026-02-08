@@ -18,6 +18,8 @@ import docker_test.com.mappers.product.ProductMapper;
 import docker_test.com.models.Category;
 import docker_test.com.models.product.Product;
 import docker_test.com.models.product.ProductImage;
+import docker_test.com.models.product.ProductVariant;
+import tools.jackson.databind.ObjectMapper;
 
 
 
@@ -173,38 +175,142 @@ public class ProductRepository implements IRepositories<Product> {
      
 	
 	public List<Product> GetByShopId(int shop_id) {
-		List<Product> list = new ArrayList<Product>();
-		String sql = "select *,p.id as product_id from product p join shop s on p.shop_id =s.id join user u on u.id = s.user_id left join product_image pi on  p.id = pi.product_id and pi.id = (select MIN(id) from product_image where product_id =p.id) where s.id = ?";
-
-		System.out.print("GetAll..");
-		try (Connection con = dbConnection.getConn();
-				PreparedStatement ps = con.prepareStatement(sql)){
-			  ps.setInt(1, shop_id);
-	
-			  ResultSet rs =	ps.executeQuery();
-			  while (rs.next()) {
-		          Product image = new Product();
-		          image.setId(rs.getInt("product_id"));
-		          image.setProduct_name(rs.getString("product_name"));
-		          image.setCategory_id(rs.getInt("category_id"));
-		          image.setShop_id(rs.getInt("shop_id"));
-		          image.setPrice(rs.getDouble("price"));
-		          image.setOriginal_price(rs.getDouble("original_price"));
-		          image.setProduct_name(rs.getString("product_name"));
-		          image.setImage_url(rs.getString("image_url"));
-		          image.setCreated_at(rs.getTimestamp("created_at").toLocalDateTime());
-		             list.add(image);
-		      }
-			  return list;
-			
-
-		}
-		catch (Exception ex) {
-			ex.printStackTrace();;
-		}
-		return null;
+        List<Product> products = new ArrayList<>();
+        String sql = """
+            SELECT 
+                p.id,
+                p.product_name,
+                p.price,
+                pi.image_url,
+                CASE 
+                    WHEN COUNT(pv.id) >= 2 THEN 
+                        JSON_ARRAYAGG(
+                            JSON_OBJECT(
+                                'id', pv.id,
+                                'product_id',pv.product_id,
+                                'sku', pv.sku,
+                                'name', pv.variant_name,
+                                'price', pv.price,
+                                'stock_quantity', pv.stock_quantity,
+                                'image_url', pv.image_url
+                            )
+                        )
+                    ELSE JSON_ARRAY()
+                END AS variants
+            FROM product p
+            left join product_image pi on  p.id = pi.product_id and pi.id = (select MIN(id) from product_image where product_id =p.id)
+            LEFT JOIN product_variant pv ON p.id = pv.product_id
+            WHERE p.shop_id = ?
+            GROUP BY p.id, p.product_name, p.price ,pi.image_url
+            ORDER BY p.id
+            """;
+        
+        try (Connection conn = dbConnection.getConn();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+        	
+        				) {
+       	 stmt.setInt(1, shop_id);
+         ResultSet rs = stmt.executeQuery();
+        	
+        	
+            
+            ObjectMapper mapper = new ObjectMapper();
+            
+            while (rs.next()) {
+                Product product = new Product();
+                product.setId(rs.getInt("id"));
+                product.setProduct_name(rs.getString("product_name"));	
+                product.setImage_url(rs.getString("image_url"));
+                product.setPrice(rs.getDouble("price"));
+                
+                // Lấy JSON dưới dạng String
+                String variantsJson = rs.getString("variants");
+                
+                // Parse JSON String thành List<VariantDTO>
+                if (variantsJson != null && !variantsJson.equals("[]")) {
+                    List<ProductVariant> variants = mapper.readValue(
+                        variantsJson, 
+                        mapper.getTypeFactory().constructCollectionType(
+                            List.class, ProductVariant.class
+                        )
+                    );
+                    product.setVariants(variants);
+                } else {
+                    product.setVariants(new ArrayList<>());
+                }
+                
+                products.add(product);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        return products;
 	}
 	
 
+	 public List<Product> GetProductsWithVariants() {
+	        List<Product> products = new ArrayList<>();
+	        String sql = """
+	            SELECT 
+	                p.id,
+	                p.product_name,
+	                p.price,
+	                CASE 
+	                    WHEN COUNT(pv.id) >= 2 THEN 
+	                        JSON_ARRAYAGG(
+	                            JSON_OBJECT(
+	                                'id', pv.id,
+	                                'product_id',pv.product_id,
+	                                'sku', pv.sku,
+	                                'price', pv.price,
+	                                'stock_quantity', pv.stock_quantity,
+	                                'image_url', pv.image_url
+	                            )
+	                        )
+	                    ELSE JSON_ARRAY()
+	                END AS variants
+	            FROM product p
+	            LEFT JOIN product_variant pv ON p.id = pv.product_id
+	            GROUP BY p.id, p.product_name, p.price
+	            ORDER BY p.id
+	            """;
+	        
+	        try (Connection conn = dbConnection.getConn();
+	             PreparedStatement stmt = conn.prepareStatement(sql);
+	             ResultSet rs = stmt.executeQuery()) {
+	            
+	            ObjectMapper mapper = new ObjectMapper();
+	            
+	            while (rs.next()) {
+	                Product product = new Product();
+	                product.setId(rs.getInt("id"));
+	                product.setProduct_name(rs.getString("product_name"));	
+	                product.setPrice(rs.getDouble("price"));
+	                
+	                // Lấy JSON dưới dạng String
+	                String variantsJson = rs.getString("variants");
+	                
+	                // Parse JSON String thành List<VariantDTO>
+	                if (variantsJson != null && !variantsJson.equals("[]")) {
+	                    List<ProductVariant> variants = mapper.readValue(
+	                        variantsJson, 
+	                        mapper.getTypeFactory().constructCollectionType(
+	                            List.class, ProductVariant.class
+	                        )
+	                    );
+	                    product.setVariants(variants);
+	                } else {
+	                    product.setVariants(new ArrayList<>());
+	                }
+	                
+	                products.add(product);
+	            }
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+	        
+	        return products;
+	    }
 
 }
