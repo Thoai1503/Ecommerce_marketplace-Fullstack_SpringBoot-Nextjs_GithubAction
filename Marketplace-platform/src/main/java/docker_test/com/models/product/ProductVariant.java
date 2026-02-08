@@ -3,14 +3,15 @@ package docker_test.com.models.product;
 import java.time.LocalDateTime;
 
 public final class ProductVariant {
-    private long variant_id;
-    private long product_id;
+    private Integer id;
+    private Integer product_id;
     private String variant_name;
     private String sku;
     private Double price;
     private int stock_quantity;
     private String image_url;
-    private int is_active;
+    private Integer is_active;
+    
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
 
@@ -21,10 +22,10 @@ public final class ProductVariant {
         this.updated_at = LocalDateTime.now();
     }
 
-    public ProductVariant(long variant_id, long product_id, String variant_name, String sku, 
-                         Double price, int stock_quantity, String image_url, int is_active,
+    public ProductVariant(Integer id, Integer product_id, String variant_name, String sku, 
+                         Double price, int stock_quantity, String image_url, Integer is_active,
                          LocalDateTime created_at, LocalDateTime updated_at) {
-        this.variant_id = variant_id;
+        this.id = id;
         this.product_id = product_id;
         this.variant_name = variant_name;
         this.sku = sku;
@@ -36,19 +37,19 @@ public final class ProductVariant {
         this.updated_at = updated_at;
     }
 
-    public long getVariant_id() {
-        return variant_id;
+    public Integer getId() {
+        return id;
     }
 
-    public void setVariant_id(long variant_id) {
-        this.variant_id = variant_id;
+    public void setVariant_id(Integer variant_id) {
+        this.id = variant_id;
     }
 
     public long getProduct_id() {
         return product_id;
     }
 
-    public void setProduct_id(long product_id) {
+    public void setProduct_id(Integer product_id) {
         this.product_id = product_id;
     }
 

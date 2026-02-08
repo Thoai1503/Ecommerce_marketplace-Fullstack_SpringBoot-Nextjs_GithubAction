@@ -17,5 +17,17 @@ export interface Product {
   width: number;
   height: number;
   brand: number | null;
+  variants?: Variant[];
   is_active: number;
+}
+
+interface Variant {
+  id: string;
+  name: string; // ví dụ: "Đen", "Xanh", "Size M",...
+  image_url?: string;
+  price: number;
+  stock_quantity: number;
+  sku: string;
+  //model_id: string;
+  // thêm các field khác nếu cần
 }
