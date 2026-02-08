@@ -11,7 +11,7 @@ public class CorsConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**") // áp dụng cho toàn bộ API
                 .allowedOrigins(
-                    "https://ezonex.duckdns.org",
+                    "https://thoaiprodev.duckdns.org",
                         "http://localhost:3000",
                         "http://localhost:5173",
                         "http://103.90.225.130:4000",
