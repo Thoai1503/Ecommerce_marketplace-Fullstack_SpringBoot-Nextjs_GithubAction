@@ -1,6 +1,8 @@
 package docker_test.com.controllers;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -12,6 +14,8 @@ import docker_test.com.dto.RegisterRequest;
 import docker_test.com.models.User;
 import docker_test.com.repository.UserRepository;
 import docker_test.com.utils.PasswordUtil;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
@@ -215,6 +219,24 @@ public class UserController {
         updated.setPasswordHash(null);
 
         return ResponseEntity.ok(updated);
+    }
+   
+    
+    @GetMapping("/me")
+    public ResponseEntity<?> me(HttpServletRequest request) {
+
+        Cookie[] cookies = request.getCookies();
+
+        if (cookies == null) {
+            return ResponseEntity.status(401).body("No cookies");
+        }
+
+        Map<String, String> data = new HashMap<>();
+        for (Cookie c : cookies) {
+            data.put(c.getName(), c.getValue());
+        }
+
+        return ResponseEntity.ok(data);
     }
 
 }
