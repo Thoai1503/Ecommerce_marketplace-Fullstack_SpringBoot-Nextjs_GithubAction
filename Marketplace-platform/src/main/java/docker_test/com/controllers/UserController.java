@@ -147,19 +147,21 @@ public class UserController {
         ResponseCookie roleCookie = ResponseCookie.from("role", user.getUserType())
     		    .httpOnly(true)
 
-                .secure(false)        
+                .secure(true)        
                      // requires HTTPS
     		    .path("/")
+                .domain("thoaiprodev.duckdns.org")
     		    .maxAge(7 * 24 * 60 * 60)
-    		    .sameSite("Lax")
+    		    .sameSite("None")
     		    .build();
     		response.addHeader("Set-Cookie", roleCookie.toString());
             ResponseCookie userCookie = ResponseCookie.from("user", String.valueOf(user.getId()))
         		    .httpOnly(true)
-        		    .secure(false)          // requires HTTPS
-        		    .path("/")
+        		    .secure(true)          // requires HTTPS
+        		    .path("/").
+                    domain("thoaiprodev.duckdns.org")
         		    .maxAge(7 * 24 * 60 * 60)
-        		    .sameSite("Lax")
+        		    .sameSite("None")
         		    .build();
         		response.addHeader("Set-Cookie", userCookie.toString());
         
