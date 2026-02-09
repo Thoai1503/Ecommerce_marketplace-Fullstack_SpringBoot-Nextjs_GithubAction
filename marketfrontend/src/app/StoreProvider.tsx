@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 import { Provider } from "react-redux";
 import { makeStore, AppStore } from "../lib/store";
+import axios from "axios";
 
 export default function StoreProvider({
   children,
@@ -14,6 +15,13 @@ export default function StoreProvider({
     storeRef.current = makeStore();
   }
 
-  useEffect(() => {}, []);
+  useEffect(() => {
+    axios
+      .get(
+        "https://ezonex.duckdns.org/users/me",
+        { withCredentials: true }, // 🔥 BẮT BUỘC
+      )
+      .then((res) => console.log("Cookie respone: " + res.data));
+  }, []);
   return <Provider store={storeRef.current}>{children}</Provider>;
 }
