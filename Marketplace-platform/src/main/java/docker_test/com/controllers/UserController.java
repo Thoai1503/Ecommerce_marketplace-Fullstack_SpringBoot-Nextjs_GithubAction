@@ -144,22 +144,20 @@ public class UserController {
         // ❌ không trả password
         user.setPasswordHash(null);
         
-        ResponseCookie roleCookie = ResponseCookie.from("role", user.getUserType())
-    		    .httpOnly(true)
-
-                .secure(true)        
-                     // requires HTTPS
-    		    .path("/")
-                .domain("thoaiprodev.duckdns.org")
-    		    .maxAge(7 * 24 * 60 * 60)
-    		    .sameSite("None")
-    		    .build();
+      ResponseCookie roleCookie = ResponseCookie.from("role", user.getUserType())
+                    .httpOnly(true)
+                    .secure(true)
+                    .sameSite("None")
+                    .path("/")
+                    .domain(".duckdns.org")
+                    .maxAge(7 * 24 * 60 * 60)
+                    .build();
     		response.addHeader("Set-Cookie", roleCookie.toString());
             ResponseCookie userCookie = ResponseCookie.from("user", String.valueOf(user.getId()))
         		    .httpOnly(true)
         		    .secure(true)          // requires HTTPS
         		    .path("/").
-                    domain("thoaiprodev.duckdns.org")
+                    domain(".duckdns.org")
         		    .maxAge(7 * 24 * 60 * 60)
         		    .sameSite("None")
         		    .build();
