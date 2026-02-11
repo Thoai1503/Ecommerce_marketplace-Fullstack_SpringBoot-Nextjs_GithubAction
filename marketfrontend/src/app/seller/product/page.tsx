@@ -432,7 +432,8 @@ const page = () => {
                       </td>
                       <td>đ{variant.price.toLocaleString()}</td>
                       <td>{variant.stock_quantity}</td>
-                      <td colSpan={3}></td> {/* để trống các cột còn lại */}
+                      <td>Doanh số 0</td>
+                      <td colSpan={2}></td> {/* để trống các cột còn lại */}
                     </tr>
                   ));
 
