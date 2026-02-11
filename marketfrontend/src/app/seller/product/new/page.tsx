@@ -1,4 +1,5 @@
 "use client";
+import styles from "./new.module.css";
 import React, { useState, useRef, useEffect, use } from "react";
 import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -380,7 +381,7 @@ const AddProductForm: React.FC = () => {
         </header>
 
         {/* Main Content */}
-        <main className="container-fluid px-4 py-4">
+        <main className="container px-4 py-4">
           <div className="row g-4">
             {/* Left Column */}
             <div className="col-lg-8">
@@ -406,6 +407,7 @@ const AddProductForm: React.FC = () => {
 
                   <div className="card-body">
                     <Upload.Dragger
+                      classNames={styles.productMediaUpload}
                       name="images"
                       multiple
                       maxCount={8}
@@ -413,7 +415,8 @@ const AddProductForm: React.FC = () => {
                       fileList={fileList}
                       beforeUpload={beforeUpload}
                       onChange={handleChange}
-                      className="product-media-upload w-100"
+                      className="product-media-upload w-100 "
+                      style={{ border: "1px dashed #4d85ff" }}
                     >
                       {fileList.length >= 8 ? null : (
                         <div className="p-4 text-center">
@@ -948,7 +951,7 @@ const AddProductForm: React.FC = () => {
                 </div>
 
                 {/* Pricing Snapshot */}
-                <div className="card shadow-sm mb-4">
+                {/* <div className="card shadow-sm mb-4">
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <h3 className="h6 fw-bold mb-0">Pricing Snapshot</h3>
@@ -995,10 +998,10 @@ const AddProductForm: React.FC = () => {
                       </small>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Variations */}
-                <div className="card shadow-sm mb-4">
+                {/* <div className="card shadow-sm mb-4">
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <h3 className="h6 fw-bold mb-0">Variations</h3>
@@ -1028,7 +1031,7 @@ const AddProductForm: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Progress Indicator */}
                 <div className="card shadow-sm mb-4 border-danger">
@@ -1167,6 +1170,7 @@ const AddProductForm: React.FC = () => {
         categories={categories}
         isModalOpen={isModalOpen}
         setIsModalOpen={setIsModalOpen}
+        setProduct={setProduct}
       />
 
       {/* Antd Upload Styles - Red Theme */}
