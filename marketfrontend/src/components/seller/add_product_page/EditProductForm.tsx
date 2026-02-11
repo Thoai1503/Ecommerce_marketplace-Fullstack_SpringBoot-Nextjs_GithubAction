@@ -1264,6 +1264,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
         categories={categories}
         isModalOpen={isModalOpen}
         setIsModalOpen={setIsModalOpen}
+        setProduct={setProduct}
       />
     </>
   );

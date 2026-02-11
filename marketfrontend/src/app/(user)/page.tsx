@@ -5,6 +5,7 @@ import axios from "axios";
 import { API_URL, INTERNAL_API } from "@/helper/api";
 import { Product } from "@/validators/product";
 import { cookies } from "next/headers";
+import Link from "next/link";
 // import { useHomePage } from "@/feature/client/hook";
 
 export const revalidate = 3; // 1 giờ
@@ -12,10 +13,8 @@ export default async function Home() {
   const cookieStore = await cookies();
   const role = cookieStore.get("role")?.value;
   console.log("Role: " + role);
-  // const res = await axios.get(`${INTERNAL_API}/seller/product`);
-  // const products = res.data as Partial<Product>[];
-  // console.log("Product: " + JSON.stringify(products));
-  const res = await fetch(`${INTERNAL_API}/seller/product`, {
+
+  const res = await fetch(`${INTERNAL_API}/product`, {
     next: { revalidate: 60 },
   });
   const products = (await res.json()) as Partial<Product>[];
@@ -358,41 +357,47 @@ export default async function Home() {
             <></>
           ))}
           {products.map((item, idx) => (
-            <div key={idx} className="col-6 col-md-4 col-lg-3 col-xl-2">
-              <div className="card product-card border-0 shadow-sm h-100 position-relative overflow-hidden hover-shadow">
-                {/* {item.discount > 0 && (
-                  <span className="position-absolute top-0 start-0 badge bg-danger m-2 fs-6 px-2 py-1">
-                    -{product.discount}%
-                  </span>
-                )} */}
+            <Link
+              href={`/${item.product_slug}?id=${item.id}`}
+              className="col-6 col-md-4 col-lg-3 col-xl-2"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <div key={idx}>
+                <div className="card product-card border-0 shadow-sm h-100 position-relative overflow-hidden hover-shadow">
+                  {/* {item.discount > 0 && (
+                    <span className="position-absolute top-0 start-0 badge bg-danger m-2 fs-6 px-2 py-1">
+                      -{product.discount}%
+                    </span>
+                  )} */}
 
-                <div className="ratio ratio-1x1 bg-light">
-                  <Image
-                    src={
-                      item.image_url ||
-                      "https://via.placeholder.com/400?text=No+Image"
-                    }
-                    alt={item.product_name || "No image"}
-                    fill
-                    className="object-fit-cover"
-                    sizes="(max-width: 768px) 50vw, (max-width: 992px) 33vw, 20vw"
-                  />
-                </div>
+                  <div className="ratio ratio-1x1 bg-light">
+                    <Image
+                      src={
+                        item.image_url ||
+                        "https://via.placeholder.com/400?text=No+Image"
+                      }
+                      alt={item.product_name || "No image"}
+                      fill
+                      className="object-fit-cover"
+                      sizes="(max-width: 768px) 50vw, (max-width: 992px) 33vw, 20vw"
+                    />
+                  </div>
 
-                <div className="card-body p-3 d-flex flex-column">
-                  <small className="text-muted mb-1 product-name-clamp">
-                    {item.product_name}
-                  </small>
-                  <div className="text-danger fw-bold fs-5 mb-1">
-                    ₫{item.price}
+                  <div className="card-body p-3 d-flex flex-column">
+                    <small className="text-muted mb-1 product-name-clamp">
+                      {item.product_name}
+                    </small>
+                    <div className="text-danger fw-bold fs-5 mb-1">
+                      ₫{item.price}
+                    </div>
+                    <div className="text-muted text-decoration-line-through small">
+                      ₫{item.original_price}
+                    </div>
+                    {/* Không có nút Mua ngay hoặc Đã bán */}
                   </div>
-                  <div className="text-muted text-decoration-line-through small">
-                    ₫{item.original_price}
-                  </div>
-                  {/* Không có nút Mua ngay hoặc Đã bán */}
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
