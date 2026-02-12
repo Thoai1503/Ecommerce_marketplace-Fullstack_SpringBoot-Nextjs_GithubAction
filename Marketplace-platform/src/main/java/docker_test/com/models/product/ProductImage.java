@@ -15,8 +15,8 @@ public final class ProductImage {
 
 	private Integer product_id;
     private String image_url;
-    private int display_order;
-    private int is_thumbnail;
+    private Integer display_order;
+    private Integer is_thumbnail;
     private LocalDateTime created_at;
 
     public ProductImage() {
@@ -26,7 +26,7 @@ public final class ProductImage {
     }
 
     public ProductImage( Integer product_id, String image_url, 
-                       int display_order, int is_thumbnail, LocalDateTime created_at) {
+                       Integer display_order, Integer is_thumbnail, LocalDateTime created_at) {
 
         this.product_id = product_id;
         this.image_url = image_url;
@@ -52,19 +52,19 @@ public final class ProductImage {
         this.image_url = image_url;
     }
 
-    public int getDisplay_order() {
+    public Integer getDisplay_order() {
         return display_order;
     }
 
-    public void setDisplayOrder(int display_order) {
+    public void setDisplayOrder(Integer display_order) {
         this.display_order = display_order;
     }
 
-    public int getIs_thumbnail() {
+    public Integer getIs_thumbnail() {
         return is_thumbnail;
     }
 
-    public void setThumbnail(int is_thumbnail) {
+    public void setThumbnail(Integer is_thumbnail) {
         this.is_thumbnail = is_thumbnail;
     }
 
