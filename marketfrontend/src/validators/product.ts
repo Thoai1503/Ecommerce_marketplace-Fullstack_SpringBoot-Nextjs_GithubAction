@@ -1,3 +1,5 @@
+import { ProductImage } from "./productImage";
+
 export interface Product {
   id: number; // instead of int
   shop_id: number; // instead of long
@@ -5,6 +7,7 @@ export interface Product {
   product_name: string;
   product_slug: string;
   image_url: string;
+  images: ProductImage[] | [];
   description: string;
   price: number;
   original_price: number;

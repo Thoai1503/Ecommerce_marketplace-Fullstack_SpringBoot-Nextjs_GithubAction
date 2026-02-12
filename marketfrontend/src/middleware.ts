@@ -195,9 +195,9 @@ export async function middleware(request: NextRequest) {
   //   return NextResponse.redirect(new URL("/admin", request.url));
   // }
 
-  if (!role?.startsWith("admin") && pathname.startsWith("/admin")) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
+  // if (!role?.startsWith("admin") && pathname.startsWith("/admin")) {
+  //   return NextResponse.redirect(new URL("/", request.url));
+  // }
 
   // Xử lý response
   const response = NextResponse.next();
