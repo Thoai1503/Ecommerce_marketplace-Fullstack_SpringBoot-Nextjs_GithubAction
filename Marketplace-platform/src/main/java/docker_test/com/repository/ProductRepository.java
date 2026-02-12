@@ -90,39 +90,101 @@ public class ProductRepository implements IRepositories<Product> {
 
 	@Override
 	public Product GetById(int id) {
-		String sql = "SELECT \r\n"
-				+ "    p.*,\r\n"
-				+ "    pi.image_url\r\n"
-				+ "FROM product p\r\n"
-				+ "LEFT JOIN product_image pi ON p.id = pi.product_id \r\n"
-				+ "    AND pi.id = (\r\n"
-				+ "        SELECT MIN(id) \r\n"
-				+ "        FROM product_image \r\n"
-				+ "        WHERE product_id = p.id\r\n"
-				
-				+ "    )"
-				
-				+ " WHERE p.id = ?"
-				;
-		System.out.print("GetAll..");
+		 String sql = """
+		          SELECT 
+    p.id,
+    p.product_name,
+    p.product_slug,
+    p.shop_id,
+    p.price,
+    pi.image_url,
+     CASE 
+        WHEN COUNT(DISTINCT pi.id) > 0 THEN 
+            JSON_ARRAYAGG(
+            JSON_OBJECT(
+                    'id', pi.id,
+                    'product_id', pi.product_id,
+                    'image_url', pi.image_url
+                )
+            )
+        ELSE JSON_ARRAY()
+    END AS images,
+    
+    CASE 
+        WHEN COUNT(pv.id) >= 2 THEN 
+            JSON_ARRAYAGG(
+                JSON_OBJECT(
+                    'id', pv.id,
+                    'product_id',pv.product_id,
+                    'sku', pv.sku,	
+                    'price', pv.price,
+                    'stock_quantity', pv.stock_quantity,
+                    'image_url', pv.image_url
+                )
+            )
+        ELSE JSON_ARRAY()
+    END AS variants 
+    
+    
+FROM product p
+left join product_image pi on  p.id = pi.product_id 
+LEFT JOIN product_variant pv ON p.id = pv.product_id
+where p.id =?
+GROUP BY p.id, p.product_name, p.price ,pi.image_url
+ORDER BY p.id
+		            """;
+		        
+		System.out.print("Get by id..");
 		try (Connection con = dbConnection.getConn();
 				PreparedStatement ps = con.prepareStatement(sql)){
 	
 			  ps.setInt(1, id);
 			  ResultSet rs =	ps.executeQuery();
-			  while (rs.next()) {
-		          Product image = new Product();
-		          image.setId(rs.getInt("id"));
-		          image.setProduct_name(rs.getString("product_name"));
-		          image.setCategory_id(1);
-		          image.setShop_id(0);
-		          image.setPrice(rs.getDouble("price"));
-		          image.setOriginal_price(rs.getDouble("original_price"));
-		          image.setProduct_name(rs.getString("product_name"));
-		          image.setImage_url(rs.getString("image_url"));
-		          image.setCreated_at(rs.getTimestamp("created_at").toLocalDateTime());
-		      	   return image;
-		      }
+			  ObjectMapper mapper = new ObjectMapper();
+	            
+	            while (rs.next()) {
+	                Product product = new Product();
+	                product.setId(rs.getInt("id"));
+	                
+	                product.setProduct_name(rs.getString("product_name"));	
+	                product.setProduct_slug(rs.getString("product_slug"));
+	                product.setImage_url(rs.getString("image_url"));
+	                product.setPrice(rs.getDouble("price"));
+	                
+	                // Lấy JSON dưới dạng String
+	                String variantsJson = rs.getString("variants");
+	                
+	                // Parse JSON String thành List<VariantDTO>
+	                if (variantsJson != null && !variantsJson.equals("[]")) {
+	                    List<ProductVariant> variants = mapper.readValue(
+	                        variantsJson, 
+	                        mapper.getTypeFactory().constructCollectionType(
+	                            List.class, ProductVariant.class
+	                        )
+	                    );
+	                    product.setVariants(variants);
+	                } else {
+	                    product.setVariants(new ArrayList<>());
+	                }
+	                String imagesJson = rs.getString("images");
+	                
+	                // Parse JSON String thành List<ProductImage>
+	                if (imagesJson != null && !imagesJson.equals("[]")) {
+	                    List<ProductImage> images = mapper.readValue(
+	                        imagesJson, 
+	                        mapper.getTypeFactory().constructCollectionType(
+	                            List.class, ProductImage.class
+	                        )
+	                    );
+	                    product.setImages(images);
+	                } else {
+	                    product.setImages(new ArrayList<>());
+	                }
+	                
+	                return product;
+	            }
+	                
+	              
 		
 
 		}
@@ -154,6 +216,7 @@ public class ProductRepository implements IRepositories<Product> {
 		          Product image = new Product();
 		          image.setId(rs.getInt("id"));
 		          image.setProduct_name(rs.getString("product_name"));
+		          image.setProduct_slug(rs.getString("product_slug"));
 		          image.setCategory_id(1);
 		          image.setShop_id(0);
 		          image.setPrice(rs.getDouble("price"));
