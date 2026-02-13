@@ -1,15 +1,33 @@
 "use client";
 
+import { modelConfig, Product } from "@/data/product/product";
+import { API_URL } from "@/helper/api";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
-import React from "react";
+import React, { useEffect } from "react";
 
 const ProductDetail = (prop: any) => {
+  Product.setup({ path: `${API_URL}/product` });
+  const [product, setProduct] = React.useState<any>(null);
+  const data = Product.getProductDetails(4);
+  console.log("Fetched Product Data:", data);
+
   console.log("Product Detail Props:", JSON.stringify(prop.data));
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const fullUrl = pathname + "?" + searchParams.toString();
+
+  useEffect(() => {
+    // data.then((res) => {
+    //   setProduct(res.data);
+    // });
+    const fetchData = async () => {
+      const res = await Product.getProductDetails(4);
+      setProduct(res.data);
+    };
+    fetchData();
+  }, [pathname, searchParams]);
 
   console.log(fullUrl);
 
