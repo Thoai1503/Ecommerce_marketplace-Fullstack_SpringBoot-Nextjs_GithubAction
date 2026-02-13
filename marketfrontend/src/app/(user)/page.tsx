@@ -3,7 +3,7 @@ import React from "react";
 import Image from "next/image";
 import axios from "axios";
 import { API_URL, INTERNAL_API } from "@/helper/api";
-import { Product } from "@/validators/product";
+import { IProduct, Product } from "@/validators/product";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import AllProduct from "@/components/client/home_page/AllProduct";
@@ -15,7 +15,7 @@ export default async function Home() {
   console.log("Role: " + role);
 
   const res = await fetch(`${INTERNAL_API}/product`);
-  const products = ((await res.json()) as Partial<Product>[]) || [];
+  const products = ((await res.json()) as Partial<IProduct>[]) || [];
   // const { products } = useHomePage();
 
   if (products.length === 0 || !products) {
