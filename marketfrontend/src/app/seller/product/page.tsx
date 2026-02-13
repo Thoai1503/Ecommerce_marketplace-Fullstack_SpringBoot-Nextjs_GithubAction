@@ -1,7 +1,7 @@
 "use client";
 import { useSellerAuth } from "@/context/SellerAuthContext";
 import { useProductPage } from "@/feature/admin/hooks/useProductPage";
-import { Product } from "@/validators/product";
+import { IProduct } from "@/validators/product";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import React, { useState } from "react";
 
@@ -277,8 +277,10 @@ const page = () => {
           </thead>
           <tbody>
             {products
-              .filter((product): product is Product => product.id !== undefined)
-              .map((product: Product) => {
+              .filter(
+                (product): product is IProduct => product.id !== undefined,
+              )
+              .map((product: IProduct) => {
                 const hasVariants = (product.variants?.length ?? 0) >= 2;
                 const isExpanded = expandedProductIds.has(
                   product.id.toString(),

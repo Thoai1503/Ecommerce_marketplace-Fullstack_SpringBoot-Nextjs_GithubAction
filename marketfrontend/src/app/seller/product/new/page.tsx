@@ -602,7 +602,7 @@ const AddProductForm: React.FC = () => {
                           }}
                           onEditorChange={(newContent) => {
                             // setContent(newContent)
-                            setProduct((pre) => ({
+                            setProduct((pre: any) => ({
                               ...pre,
                               description: newContent,
                             }));
@@ -715,8 +715,8 @@ const AddProductForm: React.FC = () => {
                             value={product.price}
                             onChange={(event) => {
                               const { value, name } = event.target;
-                              setProduct((pre) => ({
-                                ...pre,
+                              setProduct((prev: any) => ({
+                                ...prev,
                                 [name]: value,
                                 original_price: product.price,
                               }));

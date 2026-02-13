@@ -578,7 +578,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                           }}
                           onEditorChange={(newContent) => {
                             // setContent(newContent)
-                            setProduct((pre) => ({
+                            setProduct((pre: any) => ({
                               ...pre,
                               description: newContent,
                             }));
@@ -691,7 +691,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                             value={product?.price}
                             onChange={(event) => {
                               const { value, name } = event.target;
-                              setProduct((pre) => ({
+                              setProduct((pre: any) => ({
                                 ...pre,
                                 [name]: value,
                                 original_price: product?.price,

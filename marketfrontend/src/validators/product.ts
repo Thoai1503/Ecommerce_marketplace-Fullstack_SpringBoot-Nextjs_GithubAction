@@ -1,6 +1,6 @@
 import { ProductImage } from "./productImage";
 
-export interface Product {
+export interface IProduct {
   id: number; // instead of int
   shop_id: number; // instead of long
   category_id: number;
