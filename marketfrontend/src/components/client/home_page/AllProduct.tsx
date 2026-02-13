@@ -1,14 +1,14 @@
 "use client";
-import { Product } from "@/validators/product";
+import { IProduct } from "@/validators/product";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 
 interface AllProductProps {
-  products: Partial<Product>[];
+  products: Partial<IProduct>[];
 }
 const AllProduct = ({ products }: AllProductProps) => {
-  const [data, setData] = React.useState<Partial<Product>[]>([]);
+  const [data, setData] = React.useState<Partial<IProduct>[]>([]);
   React.useEffect(() => {
     setData(products);
   }, [products]);
