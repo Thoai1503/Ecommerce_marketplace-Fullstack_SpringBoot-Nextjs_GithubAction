@@ -5,6 +5,8 @@ import Script from "next/script";
 import HeaderAuth from "@/components/HeaderAuth";
 import { cookies } from "next/headers";
 import { UserAuthProvider } from "@/context/UserAuthContext";
+import { AppProgressBar } from "next-nprogress-bar";
+import CustomProgressBar from "@/components/common/CustomProgressBar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +33,7 @@ export default async function UserLayout({
   return (
     <>
       <UserAuthProvider role={role}>
+        <CustomProgressBar />
         {/* ================= HEADER ================= */}
         <header className="sticky-top bg-white shadow-sm">
           {/* Utility Bar */}
