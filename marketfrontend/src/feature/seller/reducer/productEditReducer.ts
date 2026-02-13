@@ -1,5 +1,5 @@
 import { RootState } from "@/lib/store";
-import { Product } from "@/validators/product";
+import { IProduct } from "@/validators/product";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { ProductImage } from "../types";
 import { getProductById } from "../service";
@@ -8,7 +8,7 @@ interface ProductFormState {
   loading: boolean;
   error: string | null;
   success: boolean;
-  product: Product | null;
+  product: IProduct | null;
   image: ProductImage[] | null;
 }
 
@@ -20,7 +20,7 @@ export const initialProductFormState: ProductFormState = {
   image: null,
 };
 
-export const fetchProduct = createAsyncThunk<Product, number>(
+export const fetchProduct = createAsyncThunk<IProduct, number>(
   "product/fetch",
   async (id: number) => {
     const data = await getProductById(id);

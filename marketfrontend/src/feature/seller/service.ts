@@ -1,12 +1,12 @@
 import { DbCategory } from "@/helper/utils";
 import http from "@/lib/http";
-import { Product } from "@/validators/product";
+import { IProduct } from "@/validators/product";
 import { ProductImage } from "./types";
 import { Shop } from "@/validators/shop";
 
 export const addProduct = async (
-  product: Partial<Product>,
-): Promise<Product> => {
+  product: Partial<IProduct>,
+): Promise<IProduct> => {
   return await http
     .post("/seller/product", product)
     .then((res) => res.data)
@@ -14,7 +14,7 @@ export const addProduct = async (
       throw error;
     });
 };
-export const getProductById = async (id: number): Promise<Product> => {
+export const getProductById = async (id: number): Promise<IProduct> => {
   return await http
     .get(`/seller/product/${id}`)
     .then((res) => res.data)
