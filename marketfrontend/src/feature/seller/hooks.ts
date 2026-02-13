@@ -1,5 +1,5 @@
 // hooks/useAddProductSeller.ts
-import { Product } from "@/validators/product";
+import { IProduct } from "@/validators/product";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { categoryQuery, productImageQuery } from "./query";
@@ -18,7 +18,7 @@ export const useAddProductSeller = (
 
   //  alert(roles);
 
-  const [product, setProduct] = useState<Partial<Product>>({
+  const [product, setProduct] = useState<Partial<IProduct>>({
     product_name: "",
     product_slug: "",
     shop_id: 0,
@@ -49,7 +49,7 @@ export const useAddProductSeller = (
   };
 
   const { mutate: add } = useMutation({
-    mutationFn: (product: Partial<Product>) => addProduct(product),
+    mutationFn: (product: Partial<IProduct>) => addProduct(product),
     onSuccess: (data) => {
       //    message.success(`Lưu thành công sản phẩm thành công`);
       console.log("Added: " + JSON.stringify(data));

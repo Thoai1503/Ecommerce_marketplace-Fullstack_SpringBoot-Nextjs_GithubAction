@@ -1,10 +1,10 @@
 import { useSellerAuth } from "@/context/SellerAuthContext";
-import { Product } from "@/validators/product";
+import { IProduct } from "@/validators/product";
 import { useEffect, useState } from "react";
 import { getProductByShopId } from "../service";
 
 export const useProductPage = () => {
-  const [products, setProducts] = useState<Partial<Product>[]>([]);
+  const [products, setProducts] = useState<Partial<IProduct>[]>([]);
   const { shop } = useSellerAuth();
 
   useEffect(() => {
