@@ -3,7 +3,7 @@ import React from "react";
 import Image from "next/image";
 import axios from "axios";
 import { API_URL, INTERNAL_API } from "@/helper/api";
-import { IProduct, Product } from "@/validators/product";
+import { IProduct } from "@/validators/product";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import AllProduct from "@/components/client/home_page/AllProduct";
