@@ -28,8 +28,8 @@ export default async function ProductDetailPage({
   const res = await fetch(`${INTERNAL_API}/product/${productId}`);
 
   const data = await res.json();
-
-  console.log("API Response:", data);
+  console.log("API Response Data:", data);
+  // const productData = data?.data;
 
   if (!res.ok) {
     return (

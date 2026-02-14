@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public final class ProductVariant {
     private Integer id;
-    private Integer product_id;
+    private Integer product_id=0;
     private String variant_name;
     private String sku;
     private Double price;
@@ -26,7 +26,7 @@ public final class ProductVariant {
                          Double price, int stock_quantity, String image_url, Integer is_active,
                          LocalDateTime created_at, LocalDateTime updated_at) {
         this.id = id;
-        this.product_id = product_id;
+        this.product_id = 0;
         this.variant_name = variant_name;
         this.sku = sku;
         this.price = price;
