@@ -13,7 +13,7 @@ public final class ProductImage {
 		this.id = id;
 	}
 
-	private Integer product_id;
+	private Integer product_id=0;
     private String image_url;
     private Integer display_order;
     private Integer is_thumbnail;
@@ -28,7 +28,7 @@ public final class ProductImage {
     public ProductImage( Integer product_id, String image_url, 
                        Integer display_order, Integer is_thumbnail, LocalDateTime created_at) {
 
-        this.product_id = product_id;
+        this.product_id = 0;
         this.image_url = image_url;
         this.display_order = display_order;
         this.is_thumbnail = is_thumbnail;
