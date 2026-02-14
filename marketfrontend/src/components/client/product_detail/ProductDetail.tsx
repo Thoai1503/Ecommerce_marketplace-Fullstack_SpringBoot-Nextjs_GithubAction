@@ -2,39 +2,27 @@
 
 import { modelConfig, Product } from "@/data/product/product";
 import { API_URL } from "@/helper/api";
+import { IProduct } from "@/validators/product";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
-const ProductDetail = (prop: any) => {
-  Product.setup({ path: `${API_URL}/product` });
-  const [product, setProduct] = React.useState<any>(null);
-  const data = Product.getProductDetails(4);
-  console.log("Fetched Product Data:", data);
-
-  console.log("Product Detail Props:", JSON.stringify(prop.data));
+const ProductDetail = ({ data }: { data: IProduct }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
   const fullUrl = pathname + "?" + searchParams.toString();
 
-  useEffect(() => {
-    // data.then((res) => {
-    //   setProduct(res.data);
-    // });
-    const fetchData = async () => {
-      const res = await Product.getProductDetails(4);
-      setProduct(res.data);
-    };
-    fetchData();
-  }, [pathname, searchParams]);
+  const [selectedVariant, setSelectedVariant] = useState("xanh");
+  const [mainImage, setMainImage] = useState(
+    data.images[0]?.image_url || "/assets/images/ecommerce/product-1.jpg",
+  );
+  const [hoveredImage, setHoveredImage] = useState<string | null>(null);
 
-  console.log(fullUrl);
+  // Lấy ảnh hiển thị: ưu tiên ảnh đang hover, sau đó là ảnh chính
+  const displayImage = hoveredImage || mainImage;
 
-  const id = fullUrl.split(".p")[1]?.split("?")[0];
+  console.log("Product Detail Props:", JSON.stringify(data, null, 2));
 
-  console.log("Product ID:", id);
-  const [selectedVariant, setSelectedVariant] = React.useState("xanh");
   return (
     <div className="container my-5">
       <div className="app-content-area">
@@ -48,17 +36,19 @@ const ProductDetail = (prop: any) => {
                       {/* Left - Gallery */}
                       <div className="col-xl-6">
                         <div className="product" id="product">
-                          <div>
+                          <div className="position-relative overflow-hidden rounded border">
                             <Image
-                              src={prop.data.image_url}
-                              alt="Product image 1"
-                              className="img-fluid"
+                              src={displayImage}
+                              alt="Product image"
+                              className="img-fluid transition-all"
                               width={600}
                               height={600}
                               priority
+                              style={{
+                                transition: "all 0.3s ease-in-out",
+                              }}
                             />
                           </div>
-                          {/* Bạn có thể thêm các div khác cho carousel nếu muốn */}
                         </div>
 
                         {/* Thumbnails */}
@@ -67,16 +57,41 @@ const ProductDetail = (prop: any) => {
                             className="thumbnails row g-3"
                             id="product-thumbnails"
                           >
-                            {[1, 2, 3, 4].map((num) => (
-                              <div className="col-3" key={num}>
-                                <div className="thumbnails-img border rounded overflow-hidden">
+                            {data.images.map((pro) => (
+                              <div className="col-3" key={pro.id}>
+                                <div
+                                  className={`thumbnails-img border rounded overflow-hidden cursor-pointer position-relative ${
+                                    mainImage === pro.image_url
+                                      ? "border-primary border-3"
+                                      : ""
+                                  }`}
+                                  onMouseEnter={() =>
+                                    setHoveredImage(pro.image_url)
+                                  }
+                                  onMouseLeave={() => setHoveredImage(null)}
+                                  onClick={() => setMainImage(pro.image_url)}
+                                  style={{
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                  }}
+                                >
                                   <Image
-                                    src={`/assets/images/ecommerce/product-${num}.jpg`}
-                                    alt={`Thumbnail ${num}`}
+                                    src={pro.image_url}
+                                    alt={`Thumbnail ${pro.id}`}
                                     className="img-fluid"
                                     width={150}
                                     height={150}
+                                    style={{
+                                      transition: "transform 0.2s ease",
+                                    }}
                                   />
+                                  {/* Overlay khi hover */}
+                                  <div
+                                    className="position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-25 opacity-0"
+                                    style={{
+                                      transition: "opacity 0.2s ease",
+                                    }}
+                                  ></div>
                                 </div>
                               </div>
                             ))}
@@ -87,7 +102,7 @@ const ProductDetail = (prop: any) => {
                       {/* Right - Product Info */}
                       <div className="col-xl-6 col-12">
                         <div className="my-5 mx-xl-10">
-                          <h3>{prop.data.product_name}</h3>
+                          <h3>{data.product_name}</h3>
 
                           <div className="mb-3">
                             <span className="me-2 text-dark fw-bold">
@@ -119,19 +134,18 @@ const ProductDetail = (prop: any) => {
                             <div className="d-flex flex-wrap gap-3">
                               {/* Variant 1 - màu xanh */}
                               <div
-                                className={`variant-item text-center cursor-pointer border rounded p-2 ${selectedVariant === "xanh" ? "border-danger border-2" : "border-secondary"}`}
+                                className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === "xanh" ? "border-danger border-2" : "border-secondary"}`}
                                 onClick={() => setSelectedVariant("xanh")}
-                                style={{ width: "110px" }}
+                                style={{ width: "110px", cursor: "pointer" }}
                               >
                                 <Image
-                                  src="/assets/images/ecommerce/product-1.jpg" // thay bằng ảnh thực của màu xanh
+                                  src="/assets/images/ecommerce/product-1.jpg"
                                   alt="Màu xanh"
                                   width={80}
                                   height={80}
                                   className="img-fluid rounded mb-2"
                                 />
                                 <div className="small fw-medium">màu xanh</div>
-                                {/* Nếu muốn thêm icon check khi chọn */}
                                 {selectedVariant === "xanh" && (
                                   <i className="bi bi-check-circle-fill text-danger position-absolute top-0 end-0 m-1"></i>
                                 )}
@@ -139,12 +153,12 @@ const ProductDetail = (prop: any) => {
 
                               {/* Variant 2 - màu xám */}
                               <div
-                                className={`variant-item text-center cursor-pointer border rounded p-2 ${selectedVariant === "xam" ? "border-danger border-2" : "border-secondary"}`}
+                                className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === "xam" ? "border-danger border-2" : "border-secondary"}`}
                                 onClick={() => setSelectedVariant("xam")}
-                                style={{ width: "110px" }}
+                                style={{ width: "110px", cursor: "pointer" }}
                               >
                                 <Image
-                                  src="/assets/images/ecommerce/product-2.jpg" // thay bằng ảnh thực của màu xám
+                                  src="/assets/images/ecommerce/product-2.jpg"
                                   alt="Màu xám"
                                   width={80}
                                   height={80}
@@ -156,7 +170,42 @@ const ProductDetail = (prop: any) => {
                                 )}
                               </div>
 
-                              {/* Thêm variant khác nếu có */}
+                              {data.variants?.map((variant) => (
+                                <div
+                                  key={variant.id}
+                                  className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === variant.name ? "border-danger border-2" : "border-secondary"}`}
+                                  onClick={() =>
+                                    setSelectedVariant(
+                                      variant.sku
+                                        .toString()
+                                        .trim()
+                                        .toLowerCase(),
+                                    )
+                                  }
+                                  style={{ width: "110px", cursor: "pointer" }}
+                                >
+                                  <Image
+                                    src={
+                                      variant.image_url ||
+                                      "/assets/images/ecommerce/product-1.jpg"
+                                    }
+                                    alt={variant.name}
+                                    width={80}
+                                    height={80}
+                                    className="img-fluid rounded mb-2"
+                                  />
+                                  <div className="small fw-medium">
+                                    {variant.sku}
+                                  </div>
+                                  {selectedVariant ===
+                                    variant.sku
+                                      .toString()
+                                      .trim()
+                                      .toLowerCase() && (
+                                    <i className="bi bi-check-circle-fill text-danger position-absolute top-0 end-0 m-1"></i>
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           </div>
 
@@ -204,7 +253,6 @@ const ProductDetail = (prop: any) => {
                                   <ul>
                                     <li>Lorem ipsum dolor sit amet...</li>
                                     <li>Integer ut justo quis diam...</li>
-                                    {/* Thêm các mục khác */}
                                   </ul>
                                 </div>
                               </div>
@@ -237,14 +285,11 @@ const ProductDetail = (prop: any) => {
                                         <th>Material</th>
                                         <td>Mesh</td>
                                       </tr>
-                                      {/* Thêm các spec khác */}
                                     </tbody>
                                   </table>
                                 </div>
                               </div>
                             </div>
-
-                            {/* Thêm Free Shipping Policy, Refund Policy tương tự */}
                           </div>
 
                           {/* Ratings & Reviews */}
@@ -265,7 +310,6 @@ const ProductDetail = (prop: any) => {
                               </div>
 
                               <div className="col-md-8">
-                                {/* Progress bars giữ nguyên class Bootstrap */}
                                 <div className="d-flex align-items-center mb-2">
                                   <div className="text-nowrap me-3 text-muted">
                                     5 <i className="bi bi-star-fill ms-1"></i>
@@ -285,7 +329,6 @@ const ProductDetail = (prop: any) => {
                                   </div>
                                   <span className="text-muted ms-3">420</span>
                                 </div>
-                                {/* Copy các progress bar khác tương tự */}
                               </div>
                             </div>
 
@@ -304,8 +347,6 @@ const ProductDetail = (prop: any) => {
                                 <span className="ms-3">28 Nov 2023</span>
                               </div>
                             </div>
-
-                            {/* Thêm review khác tương tự */}
                           </div>
                         </div>
                       </div>
@@ -317,6 +358,26 @@ const ProductDetail = (prop: any) => {
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        .thumbnails-img:hover {
+          transform: scale(1.05);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .thumbnails-img:hover .bg-dark {
+          opacity: 1 !important;
+        }
+
+        .thumbnails-img img:hover {
+          transform: scale(1.1);
+        }
+
+        .variant-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+      `}</style>
     </div>
   );
 };
