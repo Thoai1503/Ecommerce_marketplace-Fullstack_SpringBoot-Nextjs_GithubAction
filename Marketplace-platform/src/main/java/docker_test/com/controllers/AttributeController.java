@@ -8,60 +8,62 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import docker_test.com.models.Unit;
-import docker_test.com.repository.UnitRepository;
+import docker_test.com.models.attribute.Attribute;
+import docker_test.com.repository.AttributeRepository;
 
+@CrossOrigin(origins = "http://localhost:3000")
 @RestController
-@RequestMapping("/unit")
-public class UnitController {
+@RequestMapping("/attribute")
+public class AttributeController {
 
-    private final UnitRepository unitRepository;
+    private final AttributeRepository attributeRepository;
 
-    public UnitController() {
-        this.unitRepository = UnitRepository.Instance();
+    public AttributeController() {
+        this.attributeRepository = AttributeRepository.Instance();
     }
 
     // ================= GET ALL =================
     @GetMapping
-    public ResponseEntity<List<Unit>> getAll() {
+    public ResponseEntity<List<Attribute>> getAll() {
 
-    	List<Unit> list = unitRepository.GetAll();
+    	List<Attribute> list = attributeRepository.GetAll();
+    	System.out.println("Attributes retrieved: " + list.size());
         return ResponseEntity.ok(list);
     }
 
     // ================= GET BY ID =================
     @GetMapping("/{id}")
-    public ResponseEntity<Unit> getById(@PathVariable int id) {
+    public ResponseEntity<Attribute> getById(@PathVariable int id) {
 
-        Unit unit = unitRepository.GetById(id);
+    	Attribute attribute = attributeRepository.GetById(id);
 
-        if (unit == null) {
+        if (attribute == null) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(unit);
+        return ResponseEntity.ok(attribute);
     }
 
     // ================= CREATE =================
     @PostMapping
-    public ResponseEntity<Unit> create(@RequestBody Unit item) throws SQLException {
+    public ResponseEntity<Attribute> create(@RequestBody Attribute item) throws SQLException {
 
-        if (item.getLabel() == null || item.getLabel().isBlank()) {
+        if (item.getName() == null || item.getName().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
 
-        Unit saved = unitRepository.Create(item);
+        Attribute saved = attributeRepository.Create(item);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     // ================= UPDATE =================
     @PutMapping("/{id}")
-    public ResponseEntity<Unit> update(
+    public ResponseEntity<Attribute> update(
             @PathVariable int id,
-            @RequestBody Unit item) {
+            @RequestBody Attribute item) {
 
         item.setId(id);
 
-        Unit updated = unitRepository.Update(item);
+        Attribute updated = attributeRepository.Update(item);
         if (updated == null) {
             return ResponseEntity.notFound().build();
         }
@@ -72,10 +74,10 @@ public class UnitController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable int id) {
 
-        Unit unit = new Unit();
-        unit.setId(id);
+    	Attribute attribute = new Attribute();
+    	attribute.setId(id);
 
-        boolean deleted = unitRepository.Delete(id);
+        boolean deleted = attributeRepository.Delete(id);
         if (!deleted) {
             return ResponseEntity.notFound().build();
         }
