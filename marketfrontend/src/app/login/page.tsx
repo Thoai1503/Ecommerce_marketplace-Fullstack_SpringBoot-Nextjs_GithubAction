@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { API_URL } from "@/helper/api";
@@ -218,4 +218,12 @@ const LoginForm = () => {
   );
 };
 
-export default LoginForm;
+const LoginPage = () => {
+  return (
+    <Suspense fallback={<div className="p-6 text-center">Đang tải trang đăng nhập...</div>}>
+      <LoginForm />
+    </Suspense>
+  );
+};
+
+export default LoginPage;
