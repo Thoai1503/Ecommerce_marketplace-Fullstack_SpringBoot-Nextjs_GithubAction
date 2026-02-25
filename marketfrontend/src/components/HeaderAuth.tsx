@@ -1,5 +1,8 @@
 "use client";
 
+import { logoutAction } from "@/app/actions/auth";
+import { useUserAuth } from "@/context/UserAuthContext";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type User = {
@@ -11,6 +14,18 @@ type User = {
 
 export default function HeaderAuth() {
   const [user, setUser] = useState<User | null>(null);
+  const { roles } = useUserAuth();
+
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logoutAction();
+    localStorage.removeItem("user");
+
+    // BẮT BUỘC để layout đọc lại cookie
+    router.refresh();
+    router.push("/login");
+  };
 
   useEffect(() => {
     const raw = localStorage.getItem("user");
@@ -80,7 +95,7 @@ export default function HeaderAuth() {
           />
 
           <span className="fw-medium user-name">
-            {user.fullName}
+            {user.fullName} {roles}
           </span>
 
           <div className="dropdown-menu-custom">
@@ -88,7 +103,7 @@ export default function HeaderAuth() {
               Profile
             </a>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="dropdown-item text-danger"
             >
               Logout

@@ -4,6 +4,7 @@ import java.sql.SQLException;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,8 +14,9 @@ import docker_test.com.factory.IRepoFactory;
 import docker_test.com.factory.RepoFactoryImpl;
 import docker_test.com.models.product.Product;
 import docker_test.com.repository.IRepositories;
+import docker_test.com.repository.ProductRepository;
 
-@RestController
+@RestController("sellerProductController")
 @RequestMapping("/seller/product")
 public class ProductController {
 	 private final IRepositories repositories;
@@ -29,7 +31,7 @@ public class ProductController {
 	 
 	 @GetMapping("")
 	 public ResponseEntity getAll() {
-		 var list = repositories.GetAll();
+		 var list =((ProductRepository) repositories).GetProductsWithVariants();
 		 
 		 return ResponseEntity.ok(list);
 	 } 
@@ -40,6 +42,26 @@ public class ProductController {
 		 System.out.print("Send..");
 		 
 		 var en = repositories.Create(product);
+		 
+		 
+		 return ResponseEntity.ok(en);
+	 }
+	 @GetMapping("{id}")
+	 public ResponseEntity getById( @PathVariable int id) {
+		
+		 System.out.print("Send get by id..");
+		 
+		 var en = repositories.GetById(id);
+		 
+		 
+		 return ResponseEntity.ok(en);
+	 }
+	 @GetMapping("shop/{id}")
+	 public ResponseEntity getByShopId( @PathVariable int id) {
+		
+		 System.out.print("Send get by shop id..");
+		 
+		 var en = ((ProductRepository)repositories).GetByShopId(id);
 		 
 		 
 		 return ResponseEntity.ok(en);

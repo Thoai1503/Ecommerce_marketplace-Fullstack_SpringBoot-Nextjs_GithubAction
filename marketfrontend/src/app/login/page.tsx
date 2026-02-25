@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 
-const API_URL = "http://localhost:8000";
+import { API_URL } from "@/helper/api";
 
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -35,7 +35,11 @@ const LoginForm = () => {
     }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    if (loading) return;
+
     const newErrors: typeof errors = {};
 
     if (!formData.email) {
@@ -56,6 +60,7 @@ const LoginForm = () => {
     try {
       const res = await fetch(`${API_URL}/users/login`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
@@ -66,12 +71,12 @@ const LoginForm = () => {
         setErrors({ general: text });
         return;
       }
+
       const user = JSON.parse(text);
 
       localStorage.setItem("user", JSON.stringify(user));
 
       window.location.href = "/";
-
     } catch (err) {
       setErrors({ general: "Không kết nối được server" });
     } finally {
@@ -90,13 +95,13 @@ const LoginForm = () => {
     >
       <div className="absolute inset-0 bg-blue-900/50 backdrop-blur-sm" />
 
-      <div className="relative z-10 w-full max-w-[420px] bg-white rounded-xl shadow-xl px-8 py-10">
-        <h1 className="text-2xl font-bold text-center text-gray-900">
-          Login
-        </h1>
-        <p className="text-center text-gray-500 mt-1 mb-8">
-          Welcome back!
-        </p>
+      {/* FORM */}
+      <form
+        onSubmit={handleSubmit}
+        className="relative z-10 w-full max-w-[420px] bg-white rounded-xl shadow-xl px-8 py-10"
+      >
+        <h1 className="text-2xl font-bold text-center text-gray-900">Login</h1>
+        <p className="text-center text-gray-500 mt-1 mb-8">Welcome back!</p>
 
         {/* EMAIL */}
         <div className="mb-5 text-black">
@@ -109,6 +114,7 @@ const LoginForm = () => {
             placeholder="Enter your email"
             value={formData.email}
             onChange={handleChange}
+            autoFocus
             className={`w-full h-12 rounded-lg border px-4
               focus:outline-none focus:ring-2
               ${
@@ -147,6 +153,7 @@ const LoginForm = () => {
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              tabIndex={-1}
             >
               👁
             </button>
@@ -170,8 +177,9 @@ const LoginForm = () => {
           </div>
         )}
 
+        {/* SUBMIT BUTTON */}
         <button
-          onClick={handleSubmit}
+          type="submit"
           disabled={loading}
           className="w-full h-12 mt-4 rounded-lg bg-blue-600 text-white font-semibold
                      hover:bg-blue-700 transition disabled:opacity-60"
@@ -190,7 +198,7 @@ const LoginForm = () => {
             </a>
           </p>
         </div>
-      </div>
+      </form>
     </div>
   );
 };
