@@ -32,414 +32,24 @@ interface Attribute {
 
 const GlobalAttributeManager = () => {
   // Danh sách thuộc tính chung (mở rộng cho nhiều ngành hàng)
-  const [attributes, setAttributes] = useState<Attribute[]>([
-    // Ngành điện thoại
-    {
-      id: 101,
-      name: "brand",
-      label: "Thương hiệu",
-      type: "dropdown",
-      values: [
-        { id: 1011, value: "Apple" },
-        { id: 1012, value: "Samsung" },
-        { id: 1013, value: "Xiaomi" },
-        { id: 1014, value: "Oppo" },
-        { id: 1015, value: "Huawei" },
-      ],
-      isRequired: true,
-      isFilterable: true,
-      isSearchable: true,
-      order: 1,
-    },
-    {
-      id: 102,
-      name: "battery_capacity",
-      label: "Dung lượng pin",
-      type: "dropdown",
-      unit: "mAh",
-      values: [
-        { id: 1021, value: "3000" },
-        { id: 1022, value: "4000" },
-        { id: 1023, value: "5000" },
-        { id: 1024, value: "6000" },
-      ],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: false,
-      order: 2,
-    },
-    {
-      id: 103,
-      name: "camera_resolution",
-      label: "Độ phân giải camera chính",
-      type: "multiple",
-      unit: "MP",
-      values: [
-        { id: 1031, value: "48" },
-        { id: 1032, value: "64" },
-        { id: 1033, value: "108" },
-        { id: 1034, value: "200" },
-      ],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: false,
-      order: 3,
-    },
-    {
-      id: 104,
-      name: "operating_system",
-      label: "Hệ điều hành",
-      type: "radio",
-      values: [
-        { id: 1041, value: "iOS" },
-        { id: 1042, value: "Android" },
-      ],
-      isRequired: true,
-      isFilterable: true,
-      isSearchable: false,
-      order: 4,
-    },
-    {
-      id: 105,
-      name: "release_year",
-      label: "Năm ra mắt",
-      type: "dropdown",
-      values: [
-        { id: 1051, value: "2022" },
-        { id: 1052, value: "2023" },
-        { id: 1053, value: "2024" },
-        { id: 1054, value: "2025" },
-      ],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: false,
-      order: 5,
-    },
-    // Ngành thời trang
-    {
-      id: 201,
-      name: "clothing_size",
-      label: "Kích cỡ quần áo",
-      type: "dropdown",
-      values: [
-        { id: 2011, value: "XS" },
-        { id: 2012, value: "S" },
-        { id: 2013, value: "M" },
-        { id: 2014, value: "L" },
-        { id: 2015, value: "XL" },
-        { id: 2016, value: "XXL" },
-      ],
-      isRequired: true,
-      isFilterable: true,
-      isSearchable: false,
-      order: 6,
-    },
-    {
-      id: 202,
-      name: "material",
-      label: "Chất liệu",
-      type: "multiple",
-      values: [
-        { id: 2021, value: "Cotton" },
-        { id: 2022, value: "Polyester" },
-        { id: 2023, value: "Wool" },
-        { id: 2024, value: "Silk" },
-        { id: 2025, value: "Denim" },
-      ],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: true,
-      order: 7,
-    },
-    {
-      id: 203,
-      name: "gender",
-      label: "Giới tính",
-      type: "radio",
-      values: [
-        { id: 2031, value: "Nam" },
-        { id: 2032, value: "Nữ" },
-        { id: 2033, value: "Unisex" },
-      ],
-      isRequired: true,
-      isFilterable: true,
-      isSearchable: false,
-      order: 8,
-    },
-    {
-      id: 204,
-      name: "fashion_style",
-      label: "Phong cách",
-      type: "checkbox",
-      values: [
-        { id: 2041, value: "Casual" },
-        { id: 2042, value: "Formal" },
-        { id: 2043, value: "Sporty" },
-        { id: 2044, value: "Vintage" },
-      ],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: false,
-      order: 9,
-    },
-    // Ngành thực phẩm
-    {
-      id: 301,
-      name: "weight",
-      label: "Trọng lượng",
-      type: "number",
-      unit: "g",
-      values: [],
-      isRequired: true,
-      isFilterable: false,
-      isSearchable: false,
-      order: 10,
-    },
-    {
-      id: 302,
-      name: "expiration_date",
-      label: "Hạn sử dụng",
-      type: "date",
-      values: [],
-      isRequired: true,
-      isFilterable: false,
-      isSearchable: false,
-      order: 11,
-    },
-    {
-      id: 303,
-      name: "ingredients",
-      label: "Thành phần",
-      type: "text",
-      values: [],
-      isRequired: false,
-      isFilterable: false,
-      isSearchable: true,
-      order: 12,
-    },
-    {
-      id: 304,
-      name: "diet_type",
-      label: "Loại chế độ ăn",
-      type: "multiple",
-      values: [
-        { id: 3041, value: "Vegan" },
-        { id: 3042, value: "Vegetarian" },
-        { id: 3043, value: "Gluten-Free" },
-        { id: 3044, value: "Organic" },
-      ],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: true,
-      order: 13,
-    },
-    // Ngành sách
-    {
-      id: 401,
-      name: "author",
-      label: "Tác giả",
-      type: "text",
-      values: [],
-      isRequired: true,
-      isFilterable: true,
-      isSearchable: true,
-      order: 14,
-    },
-    {
-      id: 402,
-      name: "publisher",
-      label: "Nhà xuất bản",
-      type: "dropdown",
-      values: [
-        { id: 4021, value: "Kim Đồng" },
-        { id: 4022, value: "Nhã Nam" },
-        { id: 4023, value: "Penguin Books" },
-        { id: 4024, value: "HarperCollins" },
-      ],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: true,
-      order: 15,
-    },
-    {
-      id: 403,
-      name: "genre",
-      label: "Thể loại",
-      type: "multiple",
-      values: [
-        { id: 4031, value: "Tiểu thuyết" },
-        { id: 4032, value: "Khoa học viễn tưởng" },
-        { id: 4033, value: "Lịch sử" },
-        { id: 4034, value: "Kinh tế" },
-        { id: 4035, value: "Truyện tranh" },
-      ],
-      isRequired: true,
-      isFilterable: true,
-      isSearchable: true,
-      order: 16,
-    },
-    {
-      id: 404,
-      name: "pages",
-      label: "Số trang",
-      type: "number",
-      values: [],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: false,
-      order: 17,
-    },
-    // Ngành điện gia dụng
-    {
-      id: 501,
-      name: "power_consumption",
-      label: "Công suất tiêu thụ",
-      type: "number",
-      unit: "W",
-      values: [],
-      isRequired: true,
-      isFilterable: true,
-      isSearchable: false,
-      order: 18,
-    },
-    {
-      id: 502,
-      name: "voltage",
-      label: "Điện áp",
-      type: "dropdown",
-      unit: "V",
-      values: [
-        { id: 5021, value: "110" },
-        { id: 5022, value: "220" },
-        { id: 5023, value: "240" },
-      ],
-      isRequired: true,
-      isFilterable: true,
-      isSearchable: false,
-      order: 19,
-    },
-    {
-      id: 503,
-      name: "energy_efficiency",
-      label: "Hiệu suất năng lượng",
-      type: "radio",
-      values: [
-        { id: 5031, value: "A+++" },
-        { id: 5032, value: "A++" },
-        { id: 5033, value: "A+" },
-        { id: 5034, value: "A" },
-      ],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: false,
-      order: 20,
-    },
-    // Ngành ô tô
-    {
-      id: 601,
-      name: "fuel_type",
-      label: "Loại nhiên liệu",
-      type: "dropdown",
-      values: [
-        { id: 6011, value: "Xăng" },
-        { id: 6012, value: "Diesel" },
-        { id: 6013, value: "Điện" },
-        { id: 6014, value: "Hybrid" },
-      ],
-      isRequired: true,
-      isFilterable: true,
-      isSearchable: true,
-      order: 21,
-    },
-    {
-      id: 602,
-      name: "transmission",
-      label: "Hộp số",
-      type: "radio",
-      values: [
-        { id: 6021, value: "Tự động" },
-        { id: 6022, value: "Số sàn" },
-      ],
-      isRequired: true,
-      isFilterable: true,
-      isSearchable: false,
-      order: 22,
-    },
-    {
-      id: 603,
-      name: "seats",
-      label: "Số chỗ ngồi",
-      type: "number",
-      values: [],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: false,
-      order: 23,
-    },
-    {
-      id: 604,
-      name: "engine_capacity",
-      label: "Dung tích động cơ",
-      type: "dropdown",
-      unit: "L",
-      values: [
-        { id: 6041, value: "1.0" },
-        { id: 6042, value: "1.5" },
-        { id: 6043, value: "2.0" },
-        { id: 6044, value: "2.5" },
-        { id: 6045, value: "3.0" },
-      ],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: false,
-      order: 24,
-    },
-    // Ngành mỹ phẩm
-    {
-      id: 701,
-      name: "skin_type",
-      label: "Loại da",
-      type: "multiple",
-      values: [
-        { id: 7011, value: "Da khô" },
-        { id: 7012, value: "Da dầu" },
-        { id: 7013, value: "Da hỗn hợp" },
-        { id: 7014, value: "Da nhạy cảm" },
-      ],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: true,
-      order: 25,
-    },
-    {
-      id: 702,
-      name: "volume",
-      label: "Dung tích",
-      type: "dropdown",
-      unit: "ml",
-      values: [
-        { id: 7021, value: "30" },
-        { id: 7022, value: "50" },
-        { id: 7023, value: "100" },
-        { id: 7024, value: "200" },
-      ],
-      isRequired: true,
-      isFilterable: true,
-      isSearchable: false,
-      order: 26,
-    },
-    {
-      id: 703,
-      name: "spf",
-      label: "Chỉ số chống nắng",
-      type: "number",
-      values: [],
-      isRequired: false,
-      isFilterable: true,
-      isSearchable: false,
-      order: 27,
-    },
-  ]);
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const API_URL = "http://localhost:8000/attribute";
+
+  useEffect(() => {
+    fetchAttributes();
+  }, []);
+
+  const fetchAttributes = async () => {
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      console.log("Fetched attributes:", data);
+      alert(data);
+      setAttributes(data);
+    } catch (err) {
+      console.error("Load attribute failed", err);
+    }
+  };
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAttribute, setSelectedAttribute] = useState<Attribute | null>(
@@ -475,8 +85,8 @@ const GlobalAttributeManager = () => {
 
   const filteredAttributes = attributes.filter(
     (attr) =>
-      attr.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      attr.name.toLowerCase().includes(searchTerm.toLowerCase())
+      attr.label?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      attr.name?.toLowerCase().includes(searchTerm?.toLowerCase())
   );
 
   const handleAddValue = () => {
@@ -513,33 +123,39 @@ const GlobalAttributeManager = () => {
     setTempValues([...attr.values]);
   };
 
-  const handleSaveAttribute = () => {
+  const handleSaveAttribute = async () => {
     if (!formData.name.trim() || !formData.label.trim()) {
-      alert("Vui lòng nhập tên thuộc tính và tên hiển thị!");
+      alert("Vui lòng nhập tên!");
       return;
     }
 
-    if (isEditing && selectedAttribute) {
-      // Cập nhật
-      setAttributes(
-        attributes.map((attr) =>
-          attr.id === selectedAttribute.id
-            ? { ...attr, ...formData, values: tempValues }
-            : attr
-        )
-      );
-    } else {
-      // Thêm mới
-      const newAttr: Attribute = {
-        id: Math.max(0, ...attributes.map((a) => a.id)) + 1,
-        ...formData,
-        values: tempValues,
-        order: attributes.length + 1,
-      };
-      setAttributes([...attributes, newAttr]);
-    }
+    const payload = {
+      ...formData,
+      values: tempValues,
+    };
 
-    handleResetForm();
+    try {
+      if (isEditing && selectedAttribute) {
+        // UPDATE
+        await fetch(`${API_URL}/${selectedAttribute.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // CREATE
+        await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      fetchAttributes();
+      handleResetForm();
+    } catch (err) {
+      console.error("Save failed", err);
+    }
   };
 
   const handleResetForm = () => {
@@ -558,12 +174,14 @@ const GlobalAttributeManager = () => {
     setIsEditing(false);
   };
 
-  const handleDeleteAttribute = (id: number) => {
-    if (confirm("Bạn có chắc muốn xóa thuộc tính chung này?")) {
-      setAttributes(attributes.filter((attr) => attr.id !== id));
-      if (selectedAttribute?.id === id) {
-        handleResetForm();
-      }
+  const handleDeleteAttribute = async (id: number) => {
+    if (!confirm("Bạn có chắc muốn xóa?")) return;
+
+    try {
+      await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      fetchAttributes();
+    } catch (err) {
+      console.error("Delete failed", err);
     }
   };
 
