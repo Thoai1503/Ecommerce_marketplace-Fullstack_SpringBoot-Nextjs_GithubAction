@@ -297,7 +297,7 @@ export default function RootLayout({
         }`}
         </style>
       </head>
-      <body className={`index-page`}>
+      <body className={`index-page`} suppressHydrationWarning>
         <main className="main">{children}</main>
 
         <Script src="/assets/js/main.js" strategy="afterInteractive" />
