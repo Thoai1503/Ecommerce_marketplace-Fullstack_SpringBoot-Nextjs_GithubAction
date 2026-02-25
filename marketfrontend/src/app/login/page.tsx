@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { API_URL } from "@/helper/api";
 
 const LoginForm = () => {
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get("redirect") || "/";
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -73,9 +76,18 @@ const LoginForm = () => {
 
       const user = JSON.parse(text);
 
+      // Lưu thông tin user ở client
       localStorage.setItem("user", JSON.stringify(user));
 
-      window.location.href = "/";
+      // Đặt cookie token để middleware có thể đọc và cho phép truy cập /admin, /seller,...
+      // Hiện tại middleware chỉ kiểm tra có token hay không, chưa verify nội dung
+      // Nên chỉ cần giá trị bất kỳ (có thể thay bằng user.token nếu backend trả về)
+      document.cookie = `token=${(user as any).token || "logged-in"}; path=/; max-age=${
+        60 * 60 * 24
+      }; SameSite=Lax`;
+
+      // Sau khi login thành công, điều hướng về trang mong muốn (nếu có ?redirect=...)
+      window.location.href = redirectPath;
     } catch (err) {
       setErrors({ general: "Không kết nối được server" });
     } finally {
