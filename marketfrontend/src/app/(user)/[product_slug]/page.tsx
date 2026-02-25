@@ -1,5 +1,7 @@
 import ProductDetail from "@/components/client/product_detail/ProductDetail";
+import { UserAuthProvider } from "@/context/UserAuthContext";
 import { INTERNAL_API } from "@/helper/api";
+import { cookies } from "next/headers";
 
 interface PageProps {
   params: Promise<{
@@ -30,7 +32,10 @@ export default async function ProductDetailPage({
   const data = await res.json();
   console.log("API Response Data:", data);
   // const productData = data?.data;
-
+  const role = (await cookies()).get("role")?.value;
+  const id = Number((await cookies()).get("user")?.value.toString());
+  console.log("User role: " + role);
+  console.log("User id: " + id);
   if (!res.ok) {
     return (
       <div>
