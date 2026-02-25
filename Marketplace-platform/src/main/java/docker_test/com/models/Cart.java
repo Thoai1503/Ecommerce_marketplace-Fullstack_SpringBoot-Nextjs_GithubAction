@@ -3,7 +3,7 @@ package docker_test.com.models;
 import java.time.LocalDateTime;
 
 public final class Cart {
-    private Integer cart_id;
+    private Integer id;
     private Integer user_id;
     private Integer product_id;
     private Integer variant_id;
@@ -17,9 +17,9 @@ public final class Cart {
         this.updated_at = LocalDateTime.now();
     }
 
-    public Cart(Integer cart_id, Integer user_id, Integer product_id, Integer variant_id,
-                int quantity, LocalDateTime added_at, LocalDateTime updated_at) {
-        this.cart_id = cart_id;
+    public Cart(Integer id, Integer user_id, Integer product_id, Integer variant_id,
+                Integer quantity, LocalDateTime added_at, LocalDateTime updated_at) {
+        this.id = 0;
         this.user_id = user_id;
         this.product_id = product_id;
         this.variant_id = variant_id;
@@ -28,12 +28,12 @@ public final class Cart {
         this.updated_at = updated_at;
     }
 
-    public long getCartId() {
-        return cart_id;
+    public long getId() {
+        return id;
     }
 
-    public void setCartId(Integer cart_id) {
-        this.cart_id = cart_id;
+    public void setId(Integer cart_id) {
+        this.id = cart_id;
     }
 
     public long getUserId() {
@@ -64,7 +64,7 @@ public final class Cart {
         return quantity;
     }
 
-    public void setQuantity(int quantity) {
+    public void setQuantity(Integer quantity) {
         this.quantity = quantity;
     }
 

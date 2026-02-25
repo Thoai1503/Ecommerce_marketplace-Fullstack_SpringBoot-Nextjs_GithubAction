@@ -9,7 +9,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.1</version>
+        <version>4.0.2</version>
         <relativePath/>
     </parent>
 
@@ -42,6 +42,21 @@
     </dependencyManagement>
 
     <dependencies>
+         <dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-kafka</artifactId>
+			     <scope>runtime</scope>
+		</dependency>
+		<dependency>
+    <groupId>com.fasterxml.jackson.core</groupId>
+    <artifactId>jackson-databind</artifactId>
+</dependency>
+
+		<dependency>
+		   	<groupId>group1</groupId>
+		   		<artifactId>base-domains</artifactId>
+		   		<version>0.0.1</version>
+		</dependency>
 
         <!-- Web Starter -->
         <dependency>
@@ -49,11 +64,11 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Eureka Client -->
-        <dependency>
+       <!-- 	 Eureka Client -->
+       <!-- <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-        </dependency>
+        </dependency>-->
 
         <!-- DevTools (optional) -->
         <dependency>

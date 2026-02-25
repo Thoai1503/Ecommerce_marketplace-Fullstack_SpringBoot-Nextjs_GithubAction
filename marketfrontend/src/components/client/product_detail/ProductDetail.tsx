@@ -1,18 +1,25 @@
 "use client";
 
+import { useUserAuth } from "@/context/UserAuthContext";
 import { modelConfig, Product } from "@/data/product/product";
 import { API_URL } from "@/helper/api";
-import { IProduct } from "@/validators/product";
+import { useAddToCartMutation } from "@/types/data/Cart";
+import { ICart } from "@/validators/cart";
+import { IProduct, Variant } from "@/validators/product";
+import { message } from "antd";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
 const ProductDetail = ({ data }: { data: IProduct }) => {
+  const { userId } = useUserAuth();
+  const { mutate: addToCart } = useAddToCartMutation();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fullUrl = pathname + "?" + searchParams.toString();
 
   const [selectedVariant, setSelectedVariant] = useState("xanh");
+  const [variant, setVariant] = useState<Variant | null>(null);
   const [mainImage, setMainImage] = useState(
     data.images[0]?.image_url || "/assets/images/ecommerce/product-1.jpg",
   );
@@ -21,8 +28,34 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
   // Lấy ảnh hiển thị: ưu tiên ảnh đang hover, sau đó là ảnh chính
   const displayImage = hoveredImage || mainImage;
 
-  console.log("Product Detail Props:", JSON.stringify(data, null, 2));
+  const handleAddToCart = (cart: ICart) => {
+    const formData = new FormData();
+    Object.entries(cart).forEach(([key, value]) => {
+      formData.append(key, String(value));
+    });
+    addToCart(formData, {
+      onSuccess: (data) => {
+        console.log(data);
+        message.success("Thêm vào giỏ hàng thành công");
+      },
+      onError: (error) => {
+        message.error(error.message);
+      },
+    });
+  };
 
+  useEffect(() => {
+    if (data) {
+      if (data.variants) {
+        if (data.variants.length < 2 && data.variants.length > 0) {
+          setVariant(data.variants[0]);
+          setSelectedVariant(data.variants[0].id);
+        }
+      }
+    }
+  }, [data]);
+  console.log("Product Detail Props:", JSON.stringify(data, null, 2));
+  console.log("Product Detail id:", userId);
   return (
     <div className="container my-5">
       <div className="app-content-area">
@@ -173,15 +206,11 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                               {data.variants?.map((variant) => (
                                 <div
                                   key={variant.id}
-                                  className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === variant.name ? "border-danger border-2" : "border-secondary"}`}
-                                  onClick={() =>
-                                    setSelectedVariant(
-                                      variant.sku
-                                        .toString()
-                                        .trim()
-                                        .toLowerCase(),
-                                    )
-                                  }
+                                  className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === variant.id ? "border-danger border-2" : "border-secondary"}`}
+                                  onClick={() => {
+                                    setSelectedVariant(variant.id);
+                                    setVariant(variant);
+                                  }}
                                   style={{ width: "110px", cursor: "pointer" }}
                                 >
                                   <Image
@@ -197,11 +226,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                   <div className="small fw-medium">
                                     {variant.sku}
                                   </div>
-                                  {selectedVariant ===
-                                    variant.sku
-                                      .toString()
-                                      .trim()
-                                      .toLowerCase() && (
+                                  {selectedVariant == variant.id && (
                                     <i className="bi bi-check-circle-fill text-danger position-absolute top-0 end-0 m-1"></i>
                                   )}
                                 </div>
@@ -212,7 +237,16 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                           {/* Buttons */}
                           <div className="row g-3">
                             <div className="col-md-6">
-                              <button className="btn btn-danger w-100">
+                              <button
+                                className="btn btn-danger w-100"
+                                onClick={() => {
+                                  handleAddToCart({
+                                    user_id: userId!,
+                                    product_id: data.id,
+                                    variant_id: Number(variant!.id),
+                                  });
+                                }}
+                              >
                                 <i className="bi bi-cart me-2"></i>Add To Cart
                               </button>
                             </div>
