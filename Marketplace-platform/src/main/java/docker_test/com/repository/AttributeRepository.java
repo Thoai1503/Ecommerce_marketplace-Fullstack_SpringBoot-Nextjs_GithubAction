@@ -10,42 +10,43 @@ import java.util.HashSet;
 import java.util.List;
 
 import docker_test.com.configs.DBConnection;
-import docker_test.com.mappers.UnitMapper;
-import docker_test.com.models.Unit;
+import docker_test.com.mappers.attribute.AttributeMapper;
+import docker_test.com.models.attribute.Attribute;
 
-public class UnitRepository implements IRepositories<Unit> {
+public class AttributeRepository implements IRepositories<Attribute> {
 
 	
-	private static UnitRepository instance=null;
+	private static AttributeRepository instance = null;
 	private DBConnection dbConnection;
-    private final UnitMapper mapper;
+    private final AttributeMapper mapper;
 	
 	
-	public UnitRepository () {
+	public AttributeRepository () {
 		this.dbConnection= DBConnection.getInstance();
-        this.mapper = new UnitMapper();
+        this.mapper = new AttributeMapper();
 	}
-	public static UnitRepository Instance() {
+	public static AttributeRepository Instance() {
 		if (instance==null) {
-			instance=new UnitRepository();
+			instance=new AttributeRepository();
 		}
 		return instance;
 	}
 	
 	
 	@Override
-    public Unit Create(Unit item) throws SQLException {
+    public Attribute Create(Attribute item) throws SQLException {
 
         String sql = """
-            INSERT INTO unit (label, symbol)
-            VALUES (?, ?)
+            INSERT INTO attribute (name, slug, data_type)
+            VALUES (?, ?, 0)
         """;
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            ps.setString(1, item.getLabel());
-            ps.setString(2, item.getSymbol());
+            ps.setString(1, item.getName());
+            ps.setString(2, item.getSlug());
+//            ps.setInt(3, item.getData_type());
 
             ps.executeUpdate();
 
@@ -59,21 +60,20 @@ public class UnitRepository implements IRepositories<Unit> {
     }
 
 	@Override
-    public Unit Update(Unit item) {
+    public Attribute Update(Attribute item) {
 
         String sql = """
-            UPDATE unit
-            SET label = ?, symbol = ?, status = ?
+            UPDATE attribute
+            SET name = ?, slug = ?, data_type = 0, status = ?
             WHERE id = ?
         """;
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            ps.setString(1, item.getLabel());
-            ps.setString(2, item.getSymbol());
+            ps.setString(1, item.getName());
+            ps.setString(2, item.getSlug());
             ps.setInt(3, item.getStatus());
-            ps.setInt(4, item.getId());
 
             return ps.executeUpdate() > 0 ? item : null;
 
@@ -87,7 +87,7 @@ public class UnitRepository implements IRepositories<Unit> {
 	@Override
     public boolean Delete(int id) {
 
-        String sql = "UPDATE unit SET status = 0 WHERE id = ?";
+        String sql = "UPDATE attribute SET status = 0 WHERE id = ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -102,14 +102,14 @@ public class UnitRepository implements IRepositories<Unit> {
     }
 
 	@Override
-    public Unit GetById(int id) {
+    public Attribute GetById(int id) {
 
         String sql = "SELECT * FROM unit WHERE id = ? AND status = 1";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            ps.setInt(1, id);
+            ps.setInt(1,id);
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
@@ -124,9 +124,9 @@ public class UnitRepository implements IRepositories<Unit> {
 
 
 	@Override
-    public List<Unit> GetAll() {
+    public List<Attribute> GetAll() {
 
-        String sql = "SELECT * FROM unit WHERE status = 1";
+        String sql = "SELECT * FROM attribute WHERE status = 1";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql);
@@ -139,5 +139,7 @@ public class UnitRepository implements IRepositories<Unit> {
         }
         return new ArrayList<>();
     }
+
+	
 }
 	
