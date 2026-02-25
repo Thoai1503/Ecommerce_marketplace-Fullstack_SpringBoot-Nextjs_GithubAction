@@ -7,6 +7,7 @@ import { cookies } from "next/headers";
 import { UserAuthProvider } from "@/context/UserAuthContext";
 import { AppProgressBar } from "next-nprogress-bar";
 import CustomProgressBar from "@/components/common/CustomProgressBar";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,10 +30,13 @@ export default async function UserLayout({
   children: React.ReactNode;
 }) {
   const role = (await cookies()).get("role")?.value;
+  const id = Number((await cookies()).get("user")?.value.toString());
   console.log("User role: " + role);
+  console.log("User id: " + id);
+  const queryCLient = new QueryClient();
   return (
     <>
-      <UserAuthProvider role={role}>
+      <UserAuthProvider role={role} user_id={id}>
         <CustomProgressBar />
         {/* ================= HEADER ================= */}
         <header className="sticky-top bg-white shadow-sm">
