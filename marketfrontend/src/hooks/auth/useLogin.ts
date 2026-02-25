@@ -47,7 +47,7 @@ const storeTokens = (data: LoginResponse, rememberMe: boolean) => {
 
 export const useLogin = () => {
   const router = useRouter();
-  const toast = useToast();
+  const { success, error } = useToast();
 
   return useMutation({
     mutationFn: (credentials: LoginRequest) => authService.login(credentials),
@@ -57,7 +57,7 @@ export const useLogin = () => {
       storeTokens(data, variables.rememberMe ?? false);
 
       // Show success message
-      toast.showSuccess(`Xin chào, ${data.user.name}! Đang chuyển hướng...`);
+      success(`Xin chào, ${data.user.name}! Đang chuyển hướng...`);
 
       // Determine redirect based on role
       const redirectPath = getRedirectPath(data.user.role);
@@ -68,14 +68,14 @@ export const useLogin = () => {
       }, 500);
     },
 
-    onError: (error: any) => {
+    onError: (err: any) => {
       // Extract error message
       const errorMessage = 
-        error.response?.data?.message || 
-        error.message || 
+        err.response?.data?.message || 
+        err.message || 
         'Đăng nhập thất bại. Vui lòng thử lại.';
       
-      toast.showError(errorMessage);
+      error(errorMessage);
     },
   });
 };
