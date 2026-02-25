@@ -1,48 +1,70 @@
 "use client";
+import { useSellerAuth } from "@/context/SellerAuthContext";
+import { useProductPage } from "@/feature/admin/hooks/useProductPage";
+import { IProduct } from "@/validators/product";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import React, { useState } from "react";
-interface Product {
-  id: string;
-  name: string;
-  image: string;
-  price: number;
-  stock: number;
-  sku: string;
-  productId: string;
-  modelId: string;
-  revenue: number;
-  status: string;
-  issues?: string;
-}
+
+// interface Product {
+//   id: string;
+//   name: string;
+//   image: string;
+//   price: number;
+//   stock: number;
+//   sku: string;
+//   productId: string;
+//   modelId: string;
+//   revenue: number;
+//   status: string;
+//   issues?: string;
+// }
 
 const page = () => {
+  const { shop, products } = useProductPage();
   const [activeTab, setActiveTab] = useState("all");
-  const [products] = useState<Product[]>([
-    {
-      id: "1",
-      name: "Đầu kẹp mũi khoan B10 0.6-6mm cho motor 775. Kẹp cho mũi khoa...",
-      image: "https://via.placeholder.com/80",
-      price: 89000,
-      stock: 94,
-      sku: "2060646500",
-      productId: "20606465001",
-      modelId: "180368799208",
-      revenue: 6,
-      status: "active",
-      issues: "1 Content Issue To Fix",
-    },
-    {
-      id: "2",
-      name: "Bộ đầu kẹp giữ lưỡi cắt trục 5mm. Dùng cho motor 775",
-      image: "https://via.placeholder.com/80",
-      price: 69000,
-      stock: 76,
-      sku: "-",
-      productId: "-",
-      modelId: "-",
-      revenue: 20,
-      status: "qualified",
-    },
-  ]);
+  //  alert("Shop in Product Page: " + JSON.stringify(shop));
+  // const [product] = useState<Product[]>([
+  //   {
+  //     id: "1",
+  //     name: "Đầu kẹp mũi khoan B10 0.6-6mm cho motor 775. Kẹp cho mũi khoa...",
+  //     image: "https://via.placeholder.com/80",
+  //     price: 89000,
+  //     stock: 94,
+  //     sku: "2060646500",
+  //     productId: "20606465001",
+  //     modelId: "180368799208",
+  //     revenue: 6,
+  //     status: "active",
+  //     issues: "1 Content Issue To Fix",
+  //   },
+  //   {
+  //     id: "2",
+  //     name: "Bộ đầu kẹp giữ lưỡi cắt trục 5mm. Dùng cho motor 775",
+  //     image: "https://via.placeholder.com/80",
+  //     price: 69000,
+  //     stock: 76,
+  //     sku: "-",
+  //     productId: "-",
+  //     modelId: "-",
+  //     revenue: 20,
+  //     status: "qualified",
+  //   },
+  // ]);
+  const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(
+    new Set(),
+  );
+
+  const toggleExpand = (productId: string) => {
+    setExpandedProductIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(productId)) {
+        newSet.delete(productId);
+      } else {
+        newSet.add(productId);
+      }
+      return newSet;
+    });
+  };
   return (
     <div className="flex-grow-1 overflow-auto">
       {/* Header */}
@@ -244,9 +266,7 @@ const page = () => {
         <table className="table table-hover mb-0">
           <thead className="table-light">
             <tr>
-              <th>
-                <input type="checkbox" className="form-check-input" />
-              </th>
+              <th style={{ width: "40px" }}></th> {/* checkbox + expand icon */}
               <th>Tên sản phẩm</th>
               <th>Giá</th>
               <th>Kho hàng</th>
@@ -256,87 +276,176 @@ const page = () => {
             </tr>
           </thead>
           <tbody>
-            {products.map((product) => (
-              <tr key={product.id}>
-                <td>
-                  <input type="checkbox" className="form-check-input" />
-                </td>
-                <td>
-                  <div className="d-flex align-items-start">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="rounded me-3"
-                      width="80"
-                    />
-                    <div className="flex-grow-1">
-                      <div className="fw-normal mb-1">{product.name}</div>
-                      <small className="text-muted d-block">
-                        SKU sản phẩm: {product.sku}
+            {products
+              .filter(
+                (product): product is IProduct => product.id !== undefined,
+              )
+              .map((product: IProduct) => {
+                const hasVariants = (product.variants?.length ?? 0) >= 2;
+                const isExpanded = expandedProductIds.has(
+                  product.id.toString(),
+                );
+
+                // Hàng  chính (parent)
+                const renderMainRow = () => (
+                  <tr key={product.id} className={isExpanded ? "bg-light" : ""}>
+                    <td>
+                      <div className="d-flex align-items-center">
+                        <input
+                          type="checkbox"
+                          className="form-check-input me-2"
+                        />
+                        {hasVariants && (
+                          <button
+                            className="btn btn-sm btn-link p-0 text-muted"
+                            onClick={() => toggleExpand(product.id.toString())}
+                            style={{ lineHeight: 1 }}
+                          >
+                            {isExpanded ? (
+                              <ChevronDown size={18} />
+                            ) : (
+                              <ChevronRight size={18} />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="d-flex align-items-start">
+                        <img
+                          src={
+                            product.image_url ||
+                            "https://via.placeholder.com/80"
+                          }
+                          alt={product.product_name}
+                          className="rounded me-3"
+                          width="80"
+                          height="80"
+                          style={{ objectFit: "cover" }}
+                        />
+                        <div className="flex-grow-1">
+                          <div className="fw-normal mb-1">
+                            {product.product_name}
+                          </div>
+                          <small className="text-muted d-block">
+                            SKU sản phẩm: {product.id || "-"}
+                          </small>
+                          <small className="text-muted d-block">
+                            ID Sản phẩm: {product.id}
+                          </small>
+                          {product.id && (
+                            <small className="text-muted d-block">
+                              Model ID: {product.id}
+                            </small>
+                          )}
+                          {hasVariants && (
+                            <small className="text-muted">
+                              {product.variants?.length} biến thể
+                            </small>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div>đ{(product.price ?? 0).toLocaleString()}</div>
+                      <small className="badge bg-warning text-dark">
+                        Price Bidding Eligible
                       </small>
-                      <small className="text-muted d-block">
-                        ID Sản phẩm: {product.productId}
-                      </small>
-                      <small className="text-muted d-block">
-                        Model ID: {product.modelId}
-                      </small>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div>đ{product.price.toLocaleString()}</div>
-                  <small className="badge bg-warning text-dark">
-                    Price Bidding Eligible
-                  </small>
-                </td>
-                <td>{product.stock}</td>
-                <td>
-                  <div className="small">Doanh số {product.revenue}</div>
-                  <div className="small text-muted">
-                    Doanh Số Trong 30 Ngày Gần Nhất 0
-                  </div>
-                  <div className="small text-muted">
-                    Lưu Lượng Truy Cập Trong 30 Ngày Gần Nhất 18
-                  </div>
-                </td>
-                <td>
-                  {product.issues && (
-                    <div className="d-flex align-items-center">
-                      <span className="badge bg-warning text-dark me-2">⚠</span>
-                      <span className="small">{product.issues}</span>
-                    </div>
-                  )}
-                  {product.status === "qualified" && (
-                    <div className="d-flex align-items-center text-success">
-                      <span className="me-2">✓</span>
-                      <span className="small">Content Qualified</span>
-                    </div>
-                  )}
-                </td>
-                <td>
-                  <div className="d-flex flex-column gap-1">
-                    <a
-                      href="#"
-                      className="text-primary text-decoration-none small"
+                    </td>
+                    <td>{product.stock_quantity ?? 0}</td>
+                    <td>
+                      <div className="small">Doanh số 120</div>
+                      <div className="small text-muted">
+                        Doanh Số Trong 30 Ngày Gần Nhất 0
+                      </div>
+                      <div className="small text-muted">
+                        Lưu Lượng Truy Cập 18
+                      </div>
+                    </td>
+                    <td>
+                      <div className="d-flex align-items-center">
+                        <span className="badge bg-warning text-dark me-2">
+                          ⚠
+                        </span>
+                        <span className="small">qualified</span>
+                      </div>
+                      <div className="d-flex align-items-center text-success">
+                        <span className="me-2">✓</span>
+                        <span className="small">Content Qualified</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="d-flex flex-column gap-1">
+                        <a
+                          href={`/seller/product/new?id=${product.id}`}
+                          className="text-primary text-decoration-none small"
+                        >
+                          Cập nhật
+                        </a>
+                        <a
+                          href="#"
+                          className="text-primary text-decoration-none small"
+                        >
+                          Đang quảng cáo
+                        </a>
+                        <a
+                          href="#"
+                          className="text-primary text-decoration-none small"
+                        >
+                          Xem thêm
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                );
+
+                // Các hàng variant (nếu có)
+                const renderVariantRows = () =>
+                  isExpanded &&
+                  product.variants?.map((variant) => (
+                    <tr
+                      key={variant.id}
+                      className="variant-row bg-light-subtle"
                     >
-                      Cập nhật
-                    </a>
-                    <a
-                      href="#"
-                      className="text-primary text-decoration-none small"
-                    >
-                      Đang quảng cáo
-                    </a>
-                    <a
-                      href="#"
-                      className="text-primary text-decoration-none small"
-                    >
-                      Xem thêm
-                    </a>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                      <td></td> {/* để trống cột checkbox + expand */}
+                      <td>
+                        <div className="d-flex align-items-center ps-5">
+                          {variant.image_url && (
+                            <img
+                              src={variant.image_url}
+                              alt={variant.name}
+                              className="rounded me-3"
+                              width="60"
+                              height="60"
+                              style={{ objectFit: "cover" }}
+                            />
+                          )}
+                          <div>
+                            <div className="fw-medium">{variant.name}</div>
+                            <small className="text-muted">
+                              SKU: {variant.sku || "-"}
+                            </small>
+                            <br />
+                            <small className="text-muted">
+                              Model ID: {variant.id || "-"}
+                            </small>
+                          </div>
+                        </div>
+                      </td>
+                      <td>đ{variant.price.toLocaleString()}</td>
+                      <td>{variant.stock_quantity}</td>
+                      <td>Doanh số 0</td>
+                      <td colSpan={2}></td> {/* để trống các cột còn lại */}
+                    </tr>
+                  ));
+
+                return (
+                  <React.Fragment key={product.id}>
+                    {renderMainRow()}
+                    {renderVariantRows()}
+                  </React.Fragment>
+                );
+              })}
           </tbody>
         </table>
       </div>
@@ -345,3 +454,4 @@ const page = () => {
 };
 
 export default page;
+//với mỗi sản phẩm tạo thêm các hàng sổ xuống nếu 2 từ 2 variant trở lên

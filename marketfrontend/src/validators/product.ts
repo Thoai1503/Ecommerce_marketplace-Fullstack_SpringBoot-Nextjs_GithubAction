@@ -1,9 +1,13 @@
-export interface Product {
+import { ProductImage } from "./productImage";
+
+export interface IProduct {
   id: number; // instead of int
   shop_id: number; // instead of long
   category_id: number;
   product_name: string;
   product_slug: string;
+  image_url: string;
+  images: ProductImage[] | [];
   description: string;
   price: number;
   original_price: number;
@@ -16,5 +20,17 @@ export interface Product {
   width: number;
   height: number;
   brand: number | null;
+  variants?: Variant[];
   is_active: number;
+}
+
+export interface Variant {
+  id: string;
+  name: string; // ví dụ: "Đen", "Xanh", "Size M",...
+  image_url?: string;
+  price: number;
+  stock_quantity: number;
+  sku: string;
+  //model_id: string;
+  // thêm các field khác nếu cần
 }

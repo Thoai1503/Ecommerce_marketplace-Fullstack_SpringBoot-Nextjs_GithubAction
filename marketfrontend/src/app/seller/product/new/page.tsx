@@ -1,11 +1,14 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import styles from "./new.module.css";
+import React, { useState, useRef, useEffect, use } from "react";
 import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Modal, Upload, UploadFile, UploadProps, message } from "antd";
-
+import { Editor } from "@tinymce/tinymce-react";
 import { useAddImageSeller, useAddProductSeller } from "@/feature/seller/hooks";
 import CategorySelectorModal from "@/feature/seller/components/CategorySelectorModal";
+import { useSellerSideBarContext } from "@/context/SellerSideBarContext";
+import EditProductForm from "@/components/seller/add_product_page/EditProductForm";
 
 interface ProductFormData {
   name: string;
@@ -33,22 +36,40 @@ interface TabSection {
 }
 
 const AddProductForm: React.FC = () => {
+  //get url param shop id
+
+  const editorRef = useRef(null) as any;
+  const { setOpen } = useSellerSideBarContext();
+  const [isEdit, setIsEdit] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // const handleSave = () => {
-  //   //  console.log("Saving product:", formData);
-  //   console.log("Images:", fileList);
-  //   message.success("Sản phẩm đã được lưu thành công!");
-  // };
+  // Check if window is defined
+  const isBrowser = typeof window !== "undefined";
 
+  const params = isBrowser
+    ? new URLSearchParams(window.location.search)
+    : new URLSearchParams();
+  const id = params.get("id");
+  console.log("Shop ID from URL:", id);
+
+  useEffect(() => {
+    setOpen(false);
+    console.log("Editor ref:", editorRef.current);
+    if (id) setIsEdit(true);
+  }, [editorRef, id]);
+
+  const { fileList, handleChange, handleSave, handleSaveImageAfterProduct } =
+    useAddImageSeller();
   const {
     product,
     handleChangeProduct,
     handleSubmitProduct,
     categories,
     setProduct,
-  } = useAddProductSeller();
-  const { fileList, handleChange, handleSave } = useAddImageSeller();
+    shop,
+  } = useAddProductSeller((id: number) => {
+    handleSaveImageAfterProduct(id);
+  });
   const showModal = () => {
     setIsModalOpen(true);
   };
@@ -165,10 +186,18 @@ const AddProductForm: React.FC = () => {
     if (confirm("Bạn có chắc muốn hủy bỏ? Các thay đổi sẽ không được lưu.")) {
       // Reset form hoặc navigate back
       console.log("Discarding changes...");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (isBrowser) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
   };
-
+  if (isEdit) {
+    return (
+      <>
+        <EditProductForm id={Number(id)} />
+      </>
+    );
+  }
   return (
     <>
       {/* Add scroll margin to all sections to prevent header overlap */}
@@ -352,7 +381,7 @@ const AddProductForm: React.FC = () => {
         </header>
 
         {/* Main Content */}
-        <main className="container-fluid px-4 py-4">
+        <main className="container px-4 py-4">
           <div className="row g-4">
             {/* Left Column */}
             <div className="col-lg-8">
@@ -378,6 +407,7 @@ const AddProductForm: React.FC = () => {
 
                   <div className="card-body">
                     <Upload.Dragger
+                      classNames={styles.productMediaUpload}
                       name="images"
                       multiple
                       maxCount={8}
@@ -385,7 +415,8 @@ const AddProductForm: React.FC = () => {
                       fileList={fileList}
                       beforeUpload={beforeUpload}
                       onChange={handleChange}
-                      className="product-media-upload w-100"
+                      className="product-media-upload w-100 "
+                      style={{ border: "1px dashed #4d85ff" }}
                     >
                       {fileList.length >= 8 ? null : (
                         <div className="p-4 text-center">
@@ -473,7 +504,7 @@ const AddProductForm: React.FC = () => {
                         <label className="form-label fw-semibold">
                           Description
                         </label>
-                        <div className="border rounded">
+                        {/* <div className="border rounded">
                           <div
                             className="btn-toolbar bg-light border-bottom p-2"
                             role="toolbar"
@@ -514,7 +545,70 @@ const AddProductForm: React.FC = () => {
                           <div className="bg-light px-3 py-1 text-end small text-muted border-top">
                             {formData.description.length}/3000
                           </div>
-                        </div>
+                        </div> */}
+                        <Editor
+                          apiKey="opbl478qvvrtoorhvqc4f7zei61txljv0gkj67k1ogzky57n" // có thể để trống khi test local
+                          initialValue="<p>Soạn thảo với upload ảnh...</p>"
+                          init={{
+                            height: 300,
+                            menubar: true,
+                            plugins: "image media link code",
+                            toolbar:
+                              "undo redo | bold italic | alignleft aligncenter alignright | image media link code",
+
+                            // URL API backend để nhận file upload
+                            images_upload_url: "http://localhost:5000/upload",
+
+                            // Custom handler nếu muốn tự điều khiển upload
+                            images_upload_handler: async (
+                              blobInfo: any,
+                              success: any,
+                              failure: any,
+                            ) => {
+                              try {
+                                const formData = new FormData();
+                                formData.append(
+                                  "file",
+                                  blobInfo.blob(),
+                                  blobInfo.filename(),
+                                );
+
+                                console.log(
+                                  "form data: " + JSON.stringify(formData),
+                                );
+                                const response = await fetch(
+                                  "http://localhost:5000/upload",
+                                  {
+                                    method: "POST",
+                                    body: formData,
+                                  },
+                                );
+
+                                const json = await response.json();
+                                // giả sử backend trả về { url: "http://localhost:5000/uploads/abc.png" }
+                                const imageUrl = json.url;
+
+                                // TinyMCE yêu cầu success(URL string)
+                                success(imageUrl);
+
+                                // Nếu muốn tự động chèn vào content luôn:
+                                editorRef.current?.insertContent(
+                                  `<img src="${imageUrl}" alt="${blobInfo.filename()}" />`,
+                                );
+                              } catch (err: any) {
+                                failure("Upload thất bại: " + err.message);
+                              }
+                            },
+                          }}
+                          onEditorChange={(newContent) => {
+                            // setContent(newContent)
+                            setProduct((pre: any) => ({
+                              ...pre,
+                              description: newContent,
+                            }));
+                            console.log(newContent);
+                          }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -621,8 +715,8 @@ const AddProductForm: React.FC = () => {
                             value={product.price}
                             onChange={(event) => {
                               const { value, name } = event.target;
-                              setProduct((pre) => ({
-                                ...pre,
+                              setProduct((prev: any) => ({
+                                ...prev,
                                 [name]: value,
                                 original_price: product.price,
                               }));
@@ -857,7 +951,7 @@ const AddProductForm: React.FC = () => {
                 </div>
 
                 {/* Pricing Snapshot */}
-                <div className="card shadow-sm mb-4">
+                {/* <div className="card shadow-sm mb-4">
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <h3 className="h6 fw-bold mb-0">Pricing Snapshot</h3>
@@ -904,10 +998,10 @@ const AddProductForm: React.FC = () => {
                       </small>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Variations */}
-                <div className="card shadow-sm mb-4">
+                {/* <div className="card shadow-sm mb-4">
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <h3 className="h6 fw-bold mb-0">Variations</h3>
@@ -937,7 +1031,7 @@ const AddProductForm: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Progress Indicator */}
                 <div className="card shadow-sm mb-4 border-danger">
@@ -1071,147 +1165,12 @@ const AddProductForm: React.FC = () => {
       </div>
 
       {/* Category Modal */}
-      {/* <Modal
-        title="Chọn Danh Mục Sản Phẩm"
-        width={1000}
-        closable
-        open={isModalOpen}
-        onOk={handleOk}
-        onCancel={handleCancel}
-        okText="Xác nhận"
-        cancelText="Hủy"
-        className="category-modal"
-      >
-        <div className="bg-gray-50 rounded-lg border p-4">
-          <div className="flex flex-col gap-3">
-        
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-2.5 text-gray-400 text-xl">
-                search
-              </span>
-              <input
-                className="w-full pl-10 pr-4 py-2 text-sm rounded-md border border-gray-300 bg-white focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                placeholder="Tìm kiếm danh mục..."
-                type="text"
-              />
-            </div>
-
-            <div className="relative">
-
-              <button className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white border rounded-l-md p-2 shadow-lg">
-                <span className="material-symbols-outlined text-gray-500 text-lg hover:text-red-500 transition-colors">
-                  chevron_left
-                </span>
-              </button>
-              <button className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white border rounded-r-md p-2 shadow-lg">
-                <span className="material-symbols-outlined text-gray-500 text-lg hover:text-red-500 transition-colors">
-                  chevron_right
-                </span>
-              </button>
-
-
-              <div className="flex overflow-x-auto overflow-y-hidden h-80 border border-gray-200 bg-white rounded-md scrollbar-thin scrollbar-thumb-red-300 scrollbar-track-gray-100 scrollbar-thumb-rounded snap-x snap-mandatory pb-2 pt-2">
-     
-                <div className="flex-none w-[280px] border-r border-gray-200 overflow-y-auto scroll-mt-0">
-                  <div className="p-3 space-y-1 sticky top-0 bg-white/95 backdrop-blur-sm z-5"></div>
-                  <div className="p-3 space-y-1">
-                    <button className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-100 rounded-lg flex justify-between items-center group transition-all">
-                      <span>Thời Trang Nữ</span>
-                      <span className="material-symbols-outlined text-gray-400 text-sm group-hover:text-gray-600 transition-colors">
-                        chevron_right
-                      </span>
-                    </button>
-                    <button className="w-full text-left px-3 py-2.5 text-sm bg-red-50 text-red-700 font-medium rounded-lg flex justify-between items-center shadow-sm">
-                      <span>Thời Trang Nam</span>
-                      <span className="material-symbols-outlined text-red-500 text-sm">
-                        chevron_right
-                      </span>
-                    </button>
-                    <button className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-100 rounded-lg flex justify-between items-center group transition-all">
-                      <span>Điện Tử</span>
-                      <span className="material-symbols-outlined text-gray-400 text-sm group-hover:text-gray-600 transition-colors">
-                        chevron_right
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex-none w-[280px] border-r border-gray-200 overflow-y-auto scroll-mt-0">
-                  <div className="p-3 space-y-1 sticky top-0 bg-white/95 backdrop-blur-sm z-5"></div>
-                  <div className="p-3 space-y-1">
-                    <button className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-100 rounded-lg flex justify-between items-center group transition-all">
-                      <span>Áo Thun</span>
-                      <span className="material-symbols-outlined text-gray-400 text-sm group-hover:text-gray-600">
-                        chevron_right
-                      </span>
-                    </button>
-                    <button className="w-full text-left px-3 py-2.5 text-sm bg-red-50 text-red-700 font-medium rounded-lg flex justify-between items-center shadow-sm">
-                      <span>Đồng Hồ</span>
-                      <span className="material-symbols-outlined text-red-500 text-sm">
-                        chevron_right
-                      </span>
-                    </button>
-                  </div>
-                </div>
-                <div className="flex-none w-[280px] border-r border-gray-200 overflow-y-auto scroll-mt-0">
-                  <div className="p-3 space-y-1 sticky top-0 bg-white/95 backdrop-blur-sm z-5"></div>
-                  <div className="p-3 space-y-1">
-                    <button className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-100 rounded-lg flex justify-between items-center group transition-all">
-                      <span>Áo Thun</span>
-                      <span className="material-symbols-outlined text-gray-400 text-sm group-hover:text-gray-600">
-                        chevron_right
-                      </span>
-                    </button>
-                    <button className="w-full text-left px-3 py-2.5 text-sm bg-red-50 text-red-700 font-medium rounded-lg flex justify-between items-center shadow-sm">
-                      <span>Đồng Hồ</span>
-                      <span className="material-symbols-outlined text-red-500 text-sm">
-                        chevron_right
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex-none w-[280px] border-r border-gray-200 overflow-y-auto scroll-mt-0">
-                  <div className="p-3 space-y-1 sticky top-0 bg-white/95 backdrop-blur-sm z-5"></div>
-                  <div className="p-3 space-y-1">
-                    <button className="w-full text-left px-3 py-2.5 text-sm hover:bg-gray-100 rounded-lg flex justify-between items-center text-gray-700">
-                      <span>Đồng Hồ Cơ</span>
-                    </button>
-                    <button className="w-full text-left px-3 py-2.5 text-sm bg-red-100 border-2 border-red-400 text-red-800 font-semibold rounded-lg flex justify-between items-center shadow-md">
-                      <span>Đồng Hồ Điện Tử</span>
-                      <span className="material-symbols-outlined text-red-500 text-sm">
-                        check
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-    
-
-                <div className="flex-none w-4" />
-              </div>
-            </div>
-
-
-            <div className="text-sm text-gray-600 flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <span className="font-semibold text-red-700">Đã chọn:</span>
-              <span className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-medium border border-red-200 min-w-0 truncate">
-                {selectedPath.join(" → ")}
-              </span>
-              <span className="text-xs text-gray-400 ml-auto">
-                ({selectedPath.length} cấp)
-              </span>
-            </div>
-          </div>
-        </div>
-
-     
-      </Modal> */}
 
       <CategorySelectorModal
         categories={categories}
         isModalOpen={isModalOpen}
         setIsModalOpen={setIsModalOpen}
+        setProduct={setProduct}
       />
 
       {/* Antd Upload Styles - Red Theme */}

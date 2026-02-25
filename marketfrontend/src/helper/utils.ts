@@ -1,4 +1,4 @@
-// Original JSON format from your database
+// Original JSON format from your database .
 export interface DbCategory {
   id: number;
   parent_id: number;
@@ -24,7 +24,7 @@ export interface Category {
 // Conversion function
 
 export function convertDbCategoriesToComponentFormat(
-  dbCategories: DbCategory[]
+  dbCategories: DbCategory[],
 ): Category[] {
   // First, convert each database category to component format
   const categoryMap = new Map<number, Category>();
@@ -366,7 +366,7 @@ export const slugify = (text: string): string => {
  */
 export const generateUniqueSlug = (
   text: string,
-  existingSlugs: string[] = []
+  existingSlugs: string[] = [],
 ): string => {
   const baseSlug = slugify(text);
 
