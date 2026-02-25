@@ -79,11 +79,6 @@ public class CategoryRepository implements IRepositories<Category>{
 		return false;
 	}
 
-	@Override
-	public Category GetById(Object item) {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 	@Override
 	public List<Category> GetAll() {
@@ -112,6 +107,11 @@ public class CategoryRepository implements IRepositories<Category>{
 			ex.printStackTrace();
 		}
 		
+		return null;
+	}
+	@Override
+	public Category GetById(int id) {
+		// TODO Auto-generated method stub
 		return null;
 	}
 

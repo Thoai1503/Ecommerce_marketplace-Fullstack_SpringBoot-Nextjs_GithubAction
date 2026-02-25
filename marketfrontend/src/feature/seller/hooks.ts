@@ -1,24 +1,35 @@
 // hooks/useAddProductSeller.ts
-import { Product } from "@/validators/product";
+import { IProduct } from "@/validators/product";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { categoryQuery, productImageQuery } from "./query";
 import { slugify, generateUniqueSlug, isValidSlug } from "@/helper/utils";
 import { addProduct, uploadToProduct } from "./service";
 import { message, UploadFile, UploadProps } from "antd";
+import { useSellerAuth } from "@/context/SellerAuthContext";
 
-export const useAddProductSeller = () => {
+export const useAddProductSeller = (
+  onSuccessCallback: (id: number) => void,
+  id?: number,
+) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const { roles, userId, shop } = useSellerAuth();
   const { data: categories } = useQuery(categoryQuery.list);
 
-  const [product, setProduct] = useState<Partial<Product>>({
+  //  alert(roles);
+
+  const [product, setProduct] = useState<Partial<IProduct>>({
     product_name: "",
     product_slug: "",
-    shop_id: 1,
+    shop_id: 0,
+    description: "",
     category_id: 2,
     original_price: 0,
     price: 0,
   });
+  useEffect(() => {
+    if (shop) setProduct((pre) => ({ ...pre, shop_id: shop.id }));
+  }, [shop]);
 
   const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
     // Giới hạn tối đa 8 ảnh như yêu cầu
@@ -38,10 +49,11 @@ export const useAddProductSeller = () => {
   };
 
   const { mutate: add } = useMutation({
-    mutationFn: (product: Partial<Product>) => addProduct(product),
+    mutationFn: (product: Partial<IProduct>) => addProduct(product),
     onSuccess: (data) => {
-      message.success(`Lưu thành công sản phẩm thành công`);
-      console.log(JSON.stringify(data));
+      //    message.success(`Lưu thành công sản phẩm thành công`);
+      console.log("Added: " + JSON.stringify(data));
+      onSuccessCallback(data.id);
     },
     onError: (error) => {
       //  alert(error.message);
@@ -151,14 +163,15 @@ export const useAddProductSeller = () => {
     generateUniqueProductSlug,
     fileList,
     handleChange,
+    shop,
   };
 };
 // hooks/useAddProductSeller.ts - useAddImageSeller section
-export const useAddImageSeller = () => {
-  console.log("🔧 useAddImageSeller hook called");
+export const useAddImageSeller = (id?: number) => {
+  console.log("🔧 useAddImageSeller hook called with id:", id);
 
   const { data, isLoading, isError, error } = useQuery(
-    productImageQuery.by_product_id(4),
+    productImageQuery.by_product_id(id || 0),
   );
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
@@ -186,11 +199,20 @@ export const useAddImageSeller = () => {
     if (newFileList.length > 8) {
       message.warning("Chỉ được upload tối đa 8 ảnh!");
     }
+    console.log("Image list:" + JSON.stringify(fileList));
+    const uploadImage = updatedList.filter((item) =>
+      item.thumbUrl?.startsWith("data:image"),
+    );
+    console.log("uploadImage: " + uploadImage.length);
   };
 
   const { mutate: upload } = useMutation({
-    mutationFn: (formData: FormData) => uploadToProduct(formData),
-    onSuccess: (data) => alert(data),
+    mutationFn: ({ id, formData }: { id: number; formData: FormData }) =>
+      uploadToProduct(id, formData),
+    onSuccess: (data) => {
+      console.log(data);
+      message.success(`Lưu thành công sản phẩm thành công`);
+    },
     onError: (error) => alert(error),
   });
 
@@ -208,7 +230,24 @@ export const useAddImageSeller = () => {
       fileList.filter((f) => f.originFileObj).length,
     );
     console.log("Form data:", formData);
-    upload(formData);
+    upload({ id: 1, formData: formData });
+    message.success("Sản phẩm đã được lưu thành công!");
+  };
+  const handleSaveImageAfterProduct = (product_id: number) => {
+    console.log("Images:", fileList);
+    const formData = new FormData();
+    fileList.forEach((file) => {
+      if (file.originFileObj) {
+        formData.append("images", file.originFileObj as Blob);
+      }
+    });
+
+    console.log(
+      "Images count:",
+      fileList.filter((f) => f.originFileObj).length,
+    );
+    console.log("Form data:", formData);
+    upload({ id: product_id, formData: formData });
     message.success("Sản phẩm đã được lưu thành công!");
   };
 
@@ -241,5 +280,5 @@ export const useAddImageSeller = () => {
     }
   }, [data, isLoading, isError]);
 
-  return { fileList, handleChange, handleSave };
+  return { fileList, handleChange, handleSave, handleSaveImageAfterProduct };
 };
