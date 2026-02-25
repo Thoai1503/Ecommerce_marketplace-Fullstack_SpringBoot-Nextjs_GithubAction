@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import GeneralSettings from './GeneralSettings';
 import ProfileSettings from './ProfileSettings';
@@ -10,7 +10,8 @@ import { Settings, User, CreditCard, Truck, Bell, Shield, ChevronRight } from 'l
 
 type SettingsTab = 'general' | 'profile' | 'payment' | 'shipping' | 'notifications';
 
-export default function SettingsPage() {
+// Nội dung chính của trang Settings, dùng useSearchParams bên trong Suspense
+function SettingsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -101,5 +102,14 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Bọc SettingsContent trong Suspense để tuân thủ yêu cầu của Next.js với useSearchParams
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Đang tải cấu hình...</div>}>
+      <SettingsContent />
+    </Suspense>
   );
 }
