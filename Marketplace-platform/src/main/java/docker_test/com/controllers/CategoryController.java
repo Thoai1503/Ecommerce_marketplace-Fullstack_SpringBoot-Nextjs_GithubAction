@@ -42,7 +42,7 @@ public class CategoryController {
    public  ResponseEntity create(@RequestBody Category item) throws SQLException {
 	   
 	   var list = repositories.Create(item);
-	   
+	   	
 	   return ResponseEntity.ok(list);
    }
    

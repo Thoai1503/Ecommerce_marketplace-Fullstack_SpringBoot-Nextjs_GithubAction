@@ -8,6 +8,7 @@ import {
 } from "react";
 
 interface UserAuthContextType {
+  userId: number | null;
   roles: "buyer" | "seller" | null;
   setRoles: React.Dispatch<React.SetStateAction<"buyer" | "seller" | null>>;
 }
@@ -19,25 +20,29 @@ const UserAuthContext = createContext<UserAuthContextType | undefined>(
 export const UserAuthProvider = ({
   role,
   children,
+  user_id,
 }: {
+  user_id: number;
   role: string | undefined;
   children: React.ReactNode;
 }) => {
   const [roles, setRoles] = useState<"buyer" | "seller" | null>(null);
-
+  const [userId, setUserId] = useState<number | null>(null);
   useEffect(() => {
     // Validate and set role when prop changes
     if (role === "buyer") {
+      setUserId(user_id);
       setRoles("buyer");
     } else if (role === "seller") {
       setRoles("seller");
+      setUserId(user_id);
     } else {
       setRoles(null);
     }
   }, [role]);
 
   return (
-    <UserAuthContext.Provider value={{ roles, setRoles }}>
+    <UserAuthContext.Provider value={{ roles, setRoles, userId }}>
       {children}
     </UserAuthContext.Provider>
   );
