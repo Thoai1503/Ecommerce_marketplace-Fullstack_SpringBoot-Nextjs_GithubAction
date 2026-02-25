@@ -3,6 +3,7 @@ package docker_test.com.controllers;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,10 +12,11 @@ import docker_test.com.dto.RegisterRequest;
 import docker_test.com.models.User;
 import docker_test.com.repository.UserRepository;
 import docker_test.com.utils.PasswordUtil;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/users")
-@CrossOrigin(origins = "http://localhost:3000")
+//@CrossOrigin(origins = "http://localhost:3000",    allowCredentials = "true")
 public class UserController {
 
     private final UserRepository userRepository;
@@ -38,7 +40,7 @@ public class UserController {
     /* ================= GET USER BY ID ================= */
     // GET http://localhost:8000/users/{id}
     @GetMapping("/{id}")
-    public ResponseEntity<?> getById(@PathVariable long id) {
+    public ResponseEntity<?> getById(@PathVariable int id) {
 
         User user = userRepository.GetById(id);
 
@@ -102,8 +104,11 @@ public class UserController {
     /* ================= LOGIN ================= */
     // POST http://localhost:8000/users/login
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest req) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest req,HttpServletResponse response) {
 
+    	
+    	System.out.print("Login..");
+    	
         // ✅ validate
         if (req.getEmail() == null || req.getPassword() == null) {
             return ResponseEntity
@@ -138,7 +143,25 @@ public class UserController {
 
         // ❌ không trả password
         user.setPasswordHash(null);
-
+        
+        ResponseCookie roleCookie = ResponseCookie.from("role", user.getUserType())
+    		    .httpOnly(true)
+    		    .secure(false)          // requires HTTPS
+    		    .path("/")
+    		    .maxAge(7 * 24 * 60 * 60)
+    		    .sameSite("Lax")
+    		    .build();
+    		response.addHeader("Set-Cookie", roleCookie.toString());
+            ResponseCookie userCookie = ResponseCookie.from("user", String.valueOf(user.getId()))
+        		    .httpOnly(true)
+        		    .secure(false)          // requires HTTPS
+        		    .path("/")
+        		    .maxAge(7 * 24 * 60 * 60)
+        		    .sameSite("Lax")
+        		    .build();
+        		response.addHeader("Set-Cookie", userCookie.toString());
+        
+        
         return ResponseEntity.ok(user);
     }
 
@@ -157,4 +180,39 @@ public class UserController {
 
         return ResponseEntity.ok("Deleted successfully");
     }
+    
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateProfile(
+            @PathVariable int id,
+            @RequestBody User req
+    ) {
+        User existing = userRepository.GetById(id);
+
+        if (existing == null) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("User not found");
+        }
+
+        // ✅ CHỈ UPDATE CÁC FIELD CHO PHÉP
+        existing.setFullName(req.getFullName());
+        existing.setPhone(req.getPhone());
+
+        // 🔒 dateOfBirth & gender chỉ set 1 lần
+        if (existing.getDateOfBirth() == null) {
+            existing.setDateOfBirth(req.getDateOfBirth());
+        }
+
+        if (existing.getGender() == null) {
+            existing.setGender(req.getGender());
+        }
+
+        User updated = userRepository.Update(existing);
+
+        // ❌ KHÔNG TRẢ PASSWORD
+        updated.setPasswordHash(null);
+
+        return ResponseEntity.ok(updated);
+    }
+
 }

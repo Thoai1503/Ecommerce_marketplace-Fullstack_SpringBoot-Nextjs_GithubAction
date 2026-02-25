@@ -1,13 +1,22 @@
 import { DbCategory } from "@/helper/utils";
 import http from "@/lib/http";
-import { Product } from "@/validators/product";
+import { IProduct } from "@/validators/product";
 import { ProductImage } from "./types";
+import { Shop } from "@/validators/shop";
 
 export const addProduct = async (
-  product: Partial<Product>,
-): Promise<Product> => {
+  product: Partial<IProduct>,
+): Promise<IProduct> => {
   return await http
     .post("/seller/product", product)
+    .then((res) => res.data)
+    .catch((error) => {
+      throw error;
+    });
+};
+export const getProductById = async (id: number): Promise<IProduct> => {
+  return await http
+    .get(`/seller/product/${id}`)
     .then((res) => res.data)
     .catch((error) => {
       throw error;
@@ -23,9 +32,12 @@ export const getAllCategory = async (): Promise<DbCategory[]> => {
     });
 };
 
-export const uploadToProduct = async (formData: FormData): Promise<any> => {
+export const uploadToProduct = async (
+  id: number,
+  formData: FormData,
+): Promise<any> => {
   return await http
-    .post("/seller/product-image/product/4", formData)
+    .post(`/seller/product-image/product/${id}`, formData)
     .then((res) => res.data)
     .catch((error) => {
       throw error;
@@ -37,6 +49,15 @@ export const getProductImageByProductId = async (
 ): Promise<ProductImage[]> => {
   return await http
     .get(`/seller/product-image/product/${product_id}`)
+    .then((res) => res.data)
+    .catch((error) => {
+      throw error;
+    });
+};
+
+export const getShopByUserId = async (user_id: number): Promise<Shop> => {
+  return await http
+    .get(`/seller/shop/user/${user_id}`)
     .then((res) => res.data)
     .catch((error) => {
       throw error;
