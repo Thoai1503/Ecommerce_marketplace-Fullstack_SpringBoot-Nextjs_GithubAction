@@ -17,33 +17,33 @@ public class ShopMapper implements RowMapper<Shop> {
 
         Shop shop = new Shop();
 
-        shop.setShopId(rs.getLong("shop_id"));
-        shop.setUserId(rs.getLong("user_id"));
+        shop.setId(rs.getLong("id"));
+        shop.setUser_id(rs.getLong("user_id"));
 
-        shop.setShopName(rs.getString("shop_name"));
-        shop.setShopDescription(rs.getString("shop_description"));
-        shop.setShopLogo(rs.getString("shop_logo"));
-        shop.setShopBanner(rs.getString("shop_banner"));
+        shop.setShop_name(rs.getString("shop_name"));
+        shop.setShop_description(rs.getString("shop_description"));
+        shop.setShop_logo(rs.getString("shop_logo"));
+        shop.setShop_banner(rs.getString("shop_banner"));
 
-        shop.setBusinessLicense(rs.getString("business_license"));
-        shop.setTaxCode(rs.getString("tax_code"));
+        shop.setBusiness_license(rs.getString("business_license"));
+        shop.setTax_code(rs.getString("tax_code"));
 
         shop.setRating(rs.getDouble("rating"));
-        shop.setTotalProducts(rs.getInt("total_products"));
-        shop.setTotalOrders(rs.getInt("total_orders"));
+        shop.setTotal_products(rs.getInt("total_products"));
+        shop.setTotal_orders(rs.getInt("total_orders"));
 
-        shop.setResponseRate(rs.getDouble("response_rate"));
-        shop.setResponseTime(rs.getInt("response_time"));
+        shop.setResponse_rate(rs.getDouble("response_rate"));
+        shop.setResponse_time(rs.getInt("response_time"));
 
-        shop.setVerified(rs.getInt("is_verified"));
-        shop.setActive(rs.getInt("is_active"));
+        shop.setIs_verified(rs.getInt("is_verified"));
+        shop.setIs_active(rs.getInt("is_active"));
 
         if (rs.getTimestamp("created_at") != null) {
-            shop.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
+            shop.setCreated_at(rs.getTimestamp("created_at").toLocalDateTime());
         }
 
         if (rs.getTimestamp("updated_at") != null) {
-            shop.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
+            shop.setUpdated_at(rs.getTimestamp("updated_at").toLocalDateTime());
         }
 
         return shop;
