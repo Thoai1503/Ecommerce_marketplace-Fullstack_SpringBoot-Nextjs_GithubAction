@@ -5,7 +5,7 @@ import Script from "next/script";
 import HeaderAuth from "@/components/HeaderAuth";
 import { cookies } from "next/headers";
 import { UserAuthProvider } from "@/context/UserAuthContext";
-import { AppProgressBar } from "next-nprogress-bar";
+
 import CustomProgressBar from "@/components/common/CustomProgressBar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
