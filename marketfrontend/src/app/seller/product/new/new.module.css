@@ -1,0 +1,32 @@
+/* file: ProductUpload.css hoặc styles.module.css */
+
+/* Khu vực drag chính */
+.product-media-upload .ant-upload-drag {
+  background: #fff8f8; /* nền hồng nhạt */
+  border: 2px dashed #ff4d4f; /* viền đỏ đậm */
+  border-radius: 12px;
+}
+
+/* Khi đang hover / drag over */
+.product-media-upload .ant-upload-drag:hover,
+.product-media-upload .ant-upload-drag.ant-upload-drag-hover {
+  border-color: #ff7875;
+  background: #fff1f0;
+}
+
+/* Icon mặc định (nếu không override children) */
+.product-media-upload .ant-upload-drag-icon {
+  color: #ff4d4f;
+  opacity: 0.8;
+}
+
+/* Text mặc định (nếu dùng text mặc định của antd) */
+.product-media-upload .ant-upload-text {
+  color: #cf1322;
+  font-weight: 600;
+}
+
+.product-media-upload .ant-upload-hint {
+  color: #595959;
+  font-size: 12px;
+}

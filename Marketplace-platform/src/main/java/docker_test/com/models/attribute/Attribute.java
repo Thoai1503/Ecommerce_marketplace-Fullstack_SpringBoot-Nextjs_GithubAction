@@ -2,12 +2,13 @@ package docker_test.com.models.attribute;
 
 public class Attribute {
       private Integer id;
-      public Attribute(Integer id, String name, String slug, Integer data_type) {
+      public Attribute(Integer id, String name, String slug, Integer data_type, Integer status) {
 		super();
 		this.id = id;
 		this.name = name;
 		this.slug = slug;
 		this.data_type = data_type;
+		this.status = status;
 	}
       public Attribute() {}
 	  public Integer getId() {
@@ -34,9 +35,16 @@ public class Attribute {
 	  public void setData_type(Integer data_type) {
 		  this.data_type = data_type;
 	  }
+	  public Integer getStatus() {
+		  return status;
+	  }
+	  public void setStatus(Integer status) {
+		  this.status = status;
+	  }
 	  private String name;
       private String slug;
       private Integer data_type;
+      private Integer status;
       public AttributeValue getAttribute_value() {
 		return attribute_value;
 	}
