@@ -1,7 +1,7 @@
 import http from "@/lib/http";
-import { Product } from "@/validators/product";
+import { IProduct } from "@/validators/product";
 
-export const getAllProduct = async (): Promise<Partial<Product>> => {
+export const getAllProduct = async (): Promise<Partial<IProduct>> => {
   return http
     .get("/product")
     .then((res) => res.data)
