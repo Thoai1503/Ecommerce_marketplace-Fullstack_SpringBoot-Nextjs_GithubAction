@@ -25,7 +25,7 @@ import {
   Info,
 } from "lucide-react";
 import { Skeleton } from "@mui/material";
-import { useCategoryPage } from "@/hooks/admin/category_page/useCategoryPage";
+import { useCategoryPage } from "@/hooks/admin/useCategoryPage";
 import {
   CButton,
   CToast,
@@ -443,7 +443,9 @@ const Page: React.FC = () => {
                         </button>
                       </div>
                     ) : (
-                      categories.map((category) => renderCategory(category))
+                      categories.map((category: any) =>
+                        renderCategory(category),
+                      )
                     )}
                   </div>
 
