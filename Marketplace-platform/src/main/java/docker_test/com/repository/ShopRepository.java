@@ -51,32 +51,32 @@ public class ShopRepository implements IRepositories<Shop> {
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            ps.setLong(1, item.getUserId());
-            ps.setString(2, item.getShopName());
-            ps.setString(3, item.getShopDescription());
-            ps.setString(4, item.getShopLogo());
-            ps.setString(5, item.getShopBanner());
-            ps.setString(6, item.getBusinessLicense());
-            ps.setString(7, item.getTaxCode());
+            ps.setLong(1, item.getUser_id());
+            ps.setString(2, item.getShop_name());
+            ps.setString(3, item.getShop_description());
+            ps.setString(4, item.getShop_logo());
+            ps.setString(5, item.getShop_banner());
+            ps.setString(6, item.getBusiness_license());
+            ps.setString(7, item.getTax_code());
 
             ps.setDouble(8, item.getRating());
-            ps.setInt(9, item.getTotalProducts());
-            ps.setInt(10, item.getTotalOrders());
+            ps.setInt(9, item.getTotal_products());
+            ps.setInt(10, item.getTotal_orders());
 
-            ps.setDouble(11, item.getResponseRate());
-            ps.setInt(12, item.getResponseTime());
+            ps.setDouble(11, item.getResponse_rate());
+            ps.setInt(12, item.getResponse_time());
 
-            ps.setInt(13, item.isVerified());
-            ps.setInt(14, item.isActive());
-            ps.setTimestamp(15, java.sql.Timestamp.valueOf(item.getCreatedAt()));
-            ps.setTimestamp(16, java.sql.Timestamp.valueOf(item.getUpdatedAt()));
+            ps.setInt(13, item.getIs_verified());
+            ps.setInt(14, item.getIs_active());
+            ps.setTimestamp(15, java.sql.Timestamp.valueOf(item.getCreated_at()));
+            ps.setTimestamp(16, java.sql.Timestamp.valueOf(item.getUpdated_at()));
 
             int rows = ps.executeUpdate();
 
             if (rows > 0) {
                 try (ResultSet rs = ps.getGeneratedKeys()) {
                     if (rs.next()) {
-                        item.setShopId(rs.getLong(1));
+                        item.setId(rs.getLong(1));
                     }
                 }
                 return item;
@@ -107,16 +107,16 @@ public class ShopRepository implements IRepositories<Shop> {
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            ps.setString(1, item.getShopName());
-            ps.setString(2, item.getShopDescription());
-            ps.setString(3, item.getShopLogo());
-            ps.setString(4, item.getShopBanner());
-            ps.setString(5, item.getBusinessLicense());
-            ps.setString(6, item.getTaxCode());
-            ps.setInt(7, item.isVerified());
-            ps.setInt(8, item.isActive());
+            ps.setString(1, item.getShop_name());
+            ps.setString(2, item.getShop_description());
+            ps.setString(3, item.getShop_logo());
+            ps.setString(4, item.getShop_banner());
+            ps.setString(5, item.getBusiness_license());
+            ps.setString(6, item.getTax_code());
+            ps.setInt(7, item.getIs_verified());
+            ps.setInt(8, item.getIs_active());
             ps.setTimestamp(9, java.sql.Timestamp.valueOf(LocalDateTime.now()));
-            ps.setLong(10, item.getShopId());
+            ps.setLong(10, item.getId());
 
             return ps.executeUpdate() > 0 ? item : null;
 
@@ -136,7 +136,7 @@ public class ShopRepository implements IRepositories<Shop> {
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            ps.setLong(1, item.getShopId());
+            ps.setLong(1, item.getId());
             return ps.executeUpdate() > 0;
 
         } catch (Exception ex) {
@@ -148,14 +148,14 @@ public class ShopRepository implements IRepositories<Shop> {
 
     /* ================= GET BY ID ================= */
     @Override
-    public Shop GetById(Object id) {
+    public Shop GetById(int id) {
 
         String sql = "SELECT * FROM shop WHERE shop_id = ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            ps.setLong(1, Long.parseLong(id.toString()));
+            ps.setLong(1,id);
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
@@ -167,6 +167,27 @@ public class ShopRepository implements IRepositories<Shop> {
         }
 
         return null;
+    }
+    
+    public Shop GetByUserId(int user_id) {
+    	System.out.print("Get by user id");
+    	String sql = "select * from shop where user_id = ?";
+    	try (Connection con = dbConnection.getConn();
+                PreparedStatement ps = con.prepareStatement(sql)){
+    	    ps.setLong(1, user_id);
+    	    
+    	    ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return shopMapper.RowMap(rs);
+            }
+
+    	}
+    	catch (Exception ex) {
+    		
+    	}
+    	
+    	return null;
     }
 
     /* ================= GET ALL ================= */
