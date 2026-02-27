@@ -1,6 +1,7 @@
 package docker_test.com.models.product;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public final class Product {
     
@@ -190,6 +191,26 @@ public final class Product {
     private Double width;
     private Double height;
     private String brand;
+    
+    public List<ProductVariant> getVariants() {
+		return variants;
+	}
+
+	public void setVariants(List<ProductVariant> variants) {
+		this.variants = variants;
+	}
+
+	private List<ProductVariant> variants;
+	public List<ProductImage> getImages() {
+		return images;
+	}
+
+	public void setImages(List<ProductImage> images) {
+		this.images = images;
+	}
+
+	private List<ProductImage> images;
+	
     private Integer is_active=1;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
