@@ -24,7 +24,7 @@ export interface IProduct {
   is_active: number;
 }
 
-interface Variant {
+export interface Variant {
   id: string;
   name: string; // ví dụ: "Đen", "Xanh", "Size M",...
   image_url?: string;
