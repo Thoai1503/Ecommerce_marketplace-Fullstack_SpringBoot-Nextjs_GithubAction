@@ -8,7 +8,7 @@ public interface IRepositories<T> {
 	T Create(T item) throws SQLException;
 	T Update(T item);
 	boolean Delete(int id );
-	T GetById(Object item);
+	T GetById(int id);
 	List<T> GetAll();
 	
 }

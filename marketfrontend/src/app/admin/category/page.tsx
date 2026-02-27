@@ -271,7 +271,7 @@ const Page: React.FC = () => {
         {hasChildren && category.isExpanded && (
           <div className="ms-4 border-start ps-3 mb-2">
             {category.children!.map((child) =>
-              renderCategory(child, level + 1)
+              renderCategory(child, level + 1),
             )}
           </div>
         )}
@@ -283,8 +283,13 @@ const Page: React.FC = () => {
     <>
       <style jsx global>{`
         body {
-          font-family: "Inter", "Plus Jakarta Sans", -apple-system,
-            BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-family:
+            "Inter",
+            "Plus Jakarta Sans",
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            sans-serif;
           background-color: #f8f9fa;
         }
 

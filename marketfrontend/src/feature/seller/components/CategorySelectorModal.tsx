@@ -122,12 +122,14 @@ interface Props {
   categories?: DbCategory[];
   isModalOpen: boolean;
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setProduct: React.Dispatch<React.SetStateAction<Partial<any>>>;
 }
 
 const CategorySelectorModal = ({
   categories = mockCategories,
   isModalOpen,
   setIsModalOpen,
+  setProduct,
 }: Props) => {
   const [searchText, setSearchText] = useState("");
   const [selectedPath, setSelectedPath] = useState<DbCategory[]>([]);
@@ -183,7 +185,10 @@ const CategorySelectorModal = ({
     levelIndex: number,
     isOtherOption: boolean = false,
   ) => {
+    setProduct((prev: any) => ({ ...prev, category_id: category.id }));
     //  alert(JSON.stringify(category));
+    // Cập nhật active path
+
     const newActivePath = [...activePath];
 
     // Reset các level sau level hiện tại
@@ -302,7 +307,7 @@ const CategorySelectorModal = ({
 
   // Render tất cả các cột dựa trên active path
   const renderAllColumns = () => {
-    const columns = [];
+    const columns = [] as React.ReactNode[];
 
     // Cột đầu tiên - Level 0
     columns.push(renderCategoryColumn(0, 0));
@@ -347,6 +352,10 @@ const CategorySelectorModal = ({
   const handleOk = () => {
     if (selectedPath.length > 0) {
       console.log("Selected category:", selectedPath[selectedPath.length - 1]);
+      setProduct((prev: any) => ({
+        ...prev,
+        category_id: selectedPath[selectedPath.length - 1].id,
+      }));
       console.log("Full path:", selectedPath);
       setIsModalOpen(false);
     }
@@ -358,12 +367,12 @@ const CategorySelectorModal = ({
 
   return (
     <div className="p-8">
-      <button
+      {/* <button
         onClick={() => setIsModalOpen(true)}
         className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
       >
         Chọn Danh Mục Sản Phẩm
-      </button>
+      </button> */}
 
       <Modal
         title={
