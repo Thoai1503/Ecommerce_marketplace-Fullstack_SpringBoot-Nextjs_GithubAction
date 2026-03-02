@@ -24,5 +24,6 @@ public class CartDTO {
 
 	    @NotNull
 	    @Min(1)
+	    @JsonProperty("quantity")
 	    private Integer quantity;
 }
