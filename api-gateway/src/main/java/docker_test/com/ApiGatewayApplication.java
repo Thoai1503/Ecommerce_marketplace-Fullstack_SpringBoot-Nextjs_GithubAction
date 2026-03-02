@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ApiGatewayApplication {
     @GetMapping("/hello")
     public String hello() {
-    	return "Hello";
+    	return "Hello api gateway";
     }
 	public static void main(String[] args) {
 		SpringApplication.run(ApiGatewayApplication.class, args);

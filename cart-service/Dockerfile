@@ -22,6 +22,6 @@ ENV JAVA_OPTS=""
 # Copy JAR from builder
 COPY --from=builder /workspace/target/*.jar ./app.jar
 
-EXPOSE 8001
+EXPOSE 8003
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
