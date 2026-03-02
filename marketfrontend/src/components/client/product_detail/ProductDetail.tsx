@@ -3,7 +3,7 @@
 import { useUserAuth } from "@/context/UserAuthContext";
 import { modelConfig, Product } from "@/data/product/product";
 import { API_URL } from "@/helper/api";
-import { useAddToCartMutation } from "@/types/data/Cart";
+import { Cart, useAddToCartMutation } from "@/types/data/Cart";
 import { ICart } from "@/validators/cart";
 import { IProduct, Variant } from "@/validators/product";
 import { message } from "antd";
@@ -13,6 +13,7 @@ import React, { useEffect, useState } from "react";
 
 const ProductDetail = ({ data }: { data: IProduct }) => {
   const { userId } = useUserAuth();
+  Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { mutate: addToCart } = useAddToCartMutation();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -33,7 +34,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
     Object.entries(cart).forEach(([key, value]) => {
       formData.append(key, String(value));
     });
-    addToCart(formData, {
+    addToCart(cart, {
       onSuccess: (data) => {
         console.log(data);
         message.success("Thêm vào giỏ hàng thành công");
@@ -244,6 +245,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                     user_id: userId!,
                                     product_id: data.id,
                                     variant_id: Number(variant!.id),
+                                    quantity: 1,
                                   });
                                 }}
                               >
