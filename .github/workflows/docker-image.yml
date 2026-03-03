@@ -2,7 +2,7 @@ name: CI/CD Ecommerce (Spring Boot + Next.js)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build-and-deploy:
@@ -28,7 +28,18 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 4. Build & Push BACKEND
+      - name: Build & Push API Gateway
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api-gateway
+          push: true
+          tags: |
+            thoaimanhlong/api-gateway:latest
+            thoaimanhlong/api-gateway:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 5. Build & Push BACKEND
       - name: Build & Push Backend
         uses: docker/build-push-action@v5
         with:
@@ -40,7 +51,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # 5. Build & Push FRONTEND
+      # 6. Build & Push FRONTEND
       - name: Build & Push Frontend
         uses: docker/build-push-action@v5
         with:
