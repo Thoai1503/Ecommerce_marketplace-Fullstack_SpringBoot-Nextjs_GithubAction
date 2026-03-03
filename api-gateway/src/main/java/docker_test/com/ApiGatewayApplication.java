@@ -19,6 +19,10 @@ public class ApiGatewayApplication {
     public String hello() {
     	return "Hello api gateway";
     }
+     @GetMapping("/test")
+    public String hello1() {
+    	return "Calling api testing";
+    }
 	public static void main(String[] args) {
 		SpringApplication.run(ApiGatewayApplication.class, args);
 	}
