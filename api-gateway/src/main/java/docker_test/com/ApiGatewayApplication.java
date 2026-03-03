@@ -23,6 +23,10 @@ public class ApiGatewayApplication {
     public String hello1() {
     	return "Calling api testing";
     }
+         @GetMapping("/test2")
+    public String hello2() {
+    	return "Calling api testing 2";
+    }
 	public static void main(String[] args) {
 		SpringApplication.run(ApiGatewayApplication.class, args);
 	}
