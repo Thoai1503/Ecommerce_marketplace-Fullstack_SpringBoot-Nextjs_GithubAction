@@ -38,6 +38,20 @@ jobs:
             thoaimanhlong/api-gateway:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      
+      
+      # 4. Build & Push Cart service
+      
+      - name: Build & Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./cart-service
+          push: true
+          tags: |
+            thoaimanhlong/cart-service:latest
+            thoaimanhlong/cart-service:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # 5. Build & Push BACKEND
       - name: Build & Push Backend
@@ -63,7 +77,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # 6. Deploy to VPS
+      # 7. Deploy to VPS
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
