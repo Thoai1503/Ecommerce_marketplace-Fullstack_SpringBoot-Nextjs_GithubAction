@@ -8,7 +8,7 @@ const BASE_CATEGORIES: Category[] = [
   {
     id: 'c1',
     categoryCode: 'EC23818',
-    name: 'Electronics',
+    name: 's',
     slug: 'electronics',
     description: 'Electronic devices, gadgets, and accessories.',
     thumbnailUrl: 'https://images.unsplash.com/photo-1498049860654-af1a5c5668ba?w=200&q=80',
