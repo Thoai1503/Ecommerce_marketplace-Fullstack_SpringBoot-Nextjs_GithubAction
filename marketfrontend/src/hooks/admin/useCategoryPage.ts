@@ -11,7 +11,7 @@ import { createCategory } from "@/service/category";
 
 type FormMode = "create" | "edit";
 
-// Thêm interface cho errors
+
 interface FormErrors {
   name?: string;
   slug?: string;
@@ -101,7 +101,7 @@ export const useCategoryPage = (
     e.preventDefault();
 
     if (!validateForm()) {
-      return; // Dừng nếu có lỗi
+      return;
     }
 
     if (formMode === "create") {
