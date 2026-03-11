@@ -2,10 +2,12 @@ package docker_test.com.repository;
 
 import java.sql.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.mappers.UserMapper;
+import docker_test.com.models.PageResult;
 import docker_test.com.models.User;
 
 public class UserRepository implements IRepositories<User> {
@@ -212,4 +214,87 @@ public class UserRepository implements IRepositories<User> {
         }
         return null;
     }
+    
+    /* ================= FILTER + SEARCH + PAGINATE ================= */
+
+    /* ================= FILTER + PAGINATE ================= */
+
+/* ================= FILTER + SEARCH + PAGINATE ================= */
+
+public PageResult<User> Filter(
+        String keyword,
+        String userType,
+        Integer isActive,
+        int page,
+        int pageSize
+) {
+	if (page < 1) page = 1;
+    if (pageSize < 1) pageSize = 20;
+    List<Object> params = new ArrayList<>();
+
+    StringBuilder where = new StringBuilder("WHERE 1=1 ");
+
+    if (keyword != null && !keyword.isBlank()) {
+        where.append("AND (email LIKE ? OR CAST(id AS CHAR) LIKE ? OR full_name LIKE ?) ");
+        params.add("%" + keyword.trim() + "%");
+        params.add("%" + keyword.trim() + "%");
+        params.add("%" + keyword.trim() + "%");
+    }
+
+    if (userType != null && !userType.isBlank()) {
+        where.append("AND user_type = ? ");
+        params.add(userType);
+    }
+
+    if (isActive != null) {
+        where.append("AND is_active = ? ");
+        params.add(isActive);
+    }
+
+    String countSql = "SELECT COUNT(*) FROM `user` " + where;
+    String dataSql  = "SELECT * FROM `user` " + where
+                    + "ORDER BY created_at DESC LIMIT ? OFFSET ?";
+
+    int offset = (page - 1) * pageSize;
+    long total = 0;
+    List<User> list = new ArrayList<>();
+
+    try (Connection con = dbConnection.getConn()) {
+
+        // đếm total
+        try (PreparedStatement ps = con.prepareStatement(countSql)) {
+            for (int i = 0; i < params.size(); i++)
+                ps.setObject(i + 1, params.get(i));
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) total = rs.getLong(1);
+        }
+
+        // lấy data
+        try (PreparedStatement ps = con.prepareStatement(dataSql)) {
+            for (int i = 0; i < params.size(); i++)
+                ps.setObject(i + 1, params.get(i));
+            ps.setInt(params.size() + 1, pageSize);
+            ps.setInt(params.size() + 2, offset);
+            ResultSet rs = ps.executeQuery();
+            list = mapper.RowsMap(rs);
+        }
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+
+    return new PageResult<>(list, total, page, pageSize);
 }
+    // helper bind dynamic params
+    private int bindParams(PreparedStatement ps, List<Object> params, int startIdx) throws SQLException {
+        int i = startIdx;
+        for (Object p : params) {
+            if (p instanceof String s) ps.setString(i, s);
+            else if (p instanceof Integer n) ps.setInt(i, n);
+            else ps.setObject(i, p);
+            i++;
+        }
+        return i;
+    }
+}
+	

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import docker_test.com.dto.LoginRequest;
 import docker_test.com.dto.RegisterRequest;
+import docker_test.com.models.PageResult;
 import docker_test.com.models.User;
 import docker_test.com.repository.UserRepository;
 import docker_test.com.utils.PasswordUtil;
@@ -213,6 +214,19 @@ public class UserController {
         updated.setPasswordHash(null);
 
         return ResponseEntity.ok(updated);
+    }
+ // GET http://localhost:8000/users/filter?keyword=abc&userType=buyer&isActive=1&page=1&pageSize=20
+    @GetMapping("/filter")
+    public ResponseEntity<PageResult<User>> filter(
+            @RequestParam(required = false)            String keyword,
+            @RequestParam(required = false)            String userType,
+            @RequestParam(required = false)            Integer isActive,
+            @RequestParam(defaultValue = "1")          int page,
+            @RequestParam(defaultValue = "20")         int pageSize
+    ) {
+        PageResult<User> result = userRepository.Filter(keyword, userType, isActive, page, pageSize);
+        result.getData().forEach(u -> u.setPasswordHash(null));
+        return ResponseEntity.ok(result);
     }
 
 }
