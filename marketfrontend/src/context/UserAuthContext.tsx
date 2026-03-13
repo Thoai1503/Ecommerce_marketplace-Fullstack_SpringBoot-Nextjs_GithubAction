@@ -37,6 +37,8 @@ export const UserAuthProvider = ({
       setRoles("seller");
       setUserId(user_id);
     } else {
+      setUserId(null);
+
       setRoles(null);
     }
   }, [role]);
