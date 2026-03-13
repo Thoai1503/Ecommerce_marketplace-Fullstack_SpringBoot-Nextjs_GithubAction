@@ -2,7 +2,7 @@ name: Frontend CI
 
 on:
   push:
-    branches: [ develop, feature/*,Diep ]
+    branches: [ develop, feature/*,Diep1 ]
     paths:
       - "marketfrontend/**"
   pull_request:
