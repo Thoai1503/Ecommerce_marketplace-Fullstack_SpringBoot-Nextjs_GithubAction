@@ -59,9 +59,9 @@ export interface NotificationSettings {
   emailOrder: boolean;      // Email khi có đơn mới
   emailStock: boolean;      // Email cảnh báo hết hàng
   emailWeeklyReport: boolean; // Email báo cáo tuần
-  systemSound: boolean;     // Âm thanh thông báo
-  systemPopup: boolean;     // Popup trên màn hình
-  securityLogin: boolean;   // Cảnh báo đăng nhập lạ
+  systemSound: boolean;
+  systemPopup: boolean;
+  securityLogin: boolean;
 }
 
 // --- UNIT TYPES ---
@@ -113,6 +113,9 @@ export interface Category {
   productStock: number; 
   attributeIds?: string[]; 
   createdAt: string;
+  parent_id?: number;
+  level?: number;
+  
 }
 
 // --- COUPON TYPES ---
