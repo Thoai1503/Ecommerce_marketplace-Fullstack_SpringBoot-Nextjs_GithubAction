@@ -4,12 +4,15 @@ package docker_test.com.factory;
 import org.springframework.stereotype.Component;
 
 import docker_test.com.models.product.ProductVariant;
+import docker_test.com.repository.AdminRepository;
+import docker_test.com.repository.BuyerRepository;
 import docker_test.com.repository.CategoryAttributeRepository;
 import docker_test.com.repository.CategoryRepository;
 import docker_test.com.repository.IRepositories;
 import docker_test.com.repository.ProductImageRepository;
 import docker_test.com.repository.ProductRepository;
 import docker_test.com.repository.ProductVariantRepository;
+import docker_test.com.repository.SellerRepository;
 import docker_test.com.repository.ShopRepository;
 import docker_test.com.repository.UnitRepository;
 import docker_test.com.repository.UserRepository;
@@ -24,7 +27,12 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	private final UnitRepository unitRepository;
 	private final CategoryAttributeRepository categoryAttributeRepository;
 	private final ProductRepository productRepository;
+	
 	private final UserRepository userRepository;
+	private final AdminRepository adminRepository;
+	private final SellerRepository sellerRepository;
+	private final BuyerRepository buyerRepository;
+
 	private final ProductImageRepository productImageRepository;
 	private final ShopRepository shopRepository;
 	private final ProductVariantRepository productVariantRepository;
@@ -45,7 +53,12 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		this.unitRepository =UnitRepository.Instance();
 		this.categoryAttributeRepository = CategoryAttributeRepository.Instance();
 		this.productRepository =ProductRepository.Instance();
+		
 		this.userRepository = UserRepository.Instance();
+		this.adminRepository = AdminRepository.Instance();
+		this.sellerRepository = SellerRepository.Instance();
+		this.buyerRepository = BuyerRepository.Instance();
+
 		this.productImageRepository = ProductImageRepository.Instance();
 		this.shopRepository = ShopRepository.Instance();
 		this.productVariantRepository = ProductVariantRepository.Instance();
@@ -59,7 +72,12 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		case "unit" -> (IRepositories) unitRepository;
 		case "category_attribute" -> (IRepositories) categoryAttributeRepository;
 		case "product" -> (IRepositories)  productRepository;
+		
 		case "user" -> (IRepositories) userRepository;
+		case "admin" -> (IRepositories) adminRepository;
+		case "seller" -> (IRepositories) sellerRepository;
+		case "buyer" -> (IRepositories) buyerRepository;
+
 		case "product_image" -> (IRepositories) productImageRepository;
 		case "shop" -> (IRepositories) shopRepository;
 		case "product_variant" -> (IRepositories<ProductVariant>) productVariantRepository;
