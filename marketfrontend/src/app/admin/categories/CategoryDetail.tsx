@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 
 import { useCategoryDetail } from "@/hooks/admin/useCategories";
 import { useSubCategories } from "@/hooks/admin/useSubCategories";
-import { useProducts } from "@/hooks/admin/useProducts";
 import { useAttributes } from "@/hooks/admin/useAttributes";
 import { useUnits } from "@/hooks/admin/useUnits";
 
@@ -20,7 +19,7 @@ import {
   CircleDot,
   Scale,
   Plus,
-  Layers
+  Layers,
 } from "lucide-react";
 
 import { CategoryStatus } from "@/types";
@@ -34,49 +33,59 @@ const StatusConfig: Record<
     label: "Active",
     color: "text-green-700",
     bgColor: "bg-green-50",
-    icon: <CheckCircle size={14} />
+    icon: <CheckCircle size={14} />,
   },
   HIDDEN: {
     label: "Hidden",
     color: "text-slate-500",
     bgColor: "bg-slate-100",
-    icon: <XCircle size={14} />
-  }
+    icon: <XCircle size={14} />,
+  },
 };
 
 export default function CategoryDetail() {
-
   const params = useParams<{ id: string }>();
   const id = params?.id || "";
 
   const router = useRouter();
   const { info } = useToast();
 
-  const { category, isLoading } = useCategoryDetail(id);
+  const { category, isLoading, deleteCategory } = useCategoryDetail(id);
   const { subCategories, loading: loadingSub } = useSubCategories(id);
 
   const { attributes } = useAttributes();
   const { units } = useUnits();
 
+  /* DELETE */
+
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this category?")) return;
+
+    try {
+      await deleteCategory();
+      info("Category deleted successfully");
+      router.push("/admin/categories/industries");
+    } catch (error) {
+      console.error(error);
+      info("Delete failed");
+    }
+  };
+
   /* ATTRIBUTES */
 
   const linkedAttributes = useMemo(() => {
-
     if (!category || !attributes || !category.attributeIds) return [];
 
     return attributes
       .filter((attr: any) => category.attributeIds?.includes(attr.id))
       .map((attr: any) => {
-
         const unit = units?.find((u: any) => u.id === attr.unitId);
 
         return {
           ...attr,
-          unitSymbol: unit?.symbol || null
+          unitSymbol: unit?.symbol || null,
         };
-
       });
-
   }, [category, attributes, units]);
 
   /* LOADING */
@@ -99,7 +108,6 @@ export default function CategoryDetail() {
   }
 
   return (
-
     <div className="p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8 pb-24">
 
       {/* HEADER */}
@@ -110,9 +118,9 @@ export default function CategoryDetail() {
 
           <button
             onClick={() => router.push("/admin/categories/industries")}
-            className="p-2 border rounded-xl"
+            className="p-2 rounded-xl bg-white shadow-sm hover:shadow-md transition"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={20}/>
           </button>
 
           <h1 className="text-2xl font-black">
@@ -127,9 +135,9 @@ export default function CategoryDetail() {
             onClick={() =>
               router.push(`/admin/categories/industries/create?parentId=${category.id}`)
             }
-            className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl"
+            className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:shadow-md transition"
           >
-            <Plus size={16} />
+            <Plus size={16}/>
             Subcategory
           </button>
 
@@ -137,17 +145,17 @@ export default function CategoryDetail() {
             onClick={() =>
               router.push(`/admin/categories/industries/${category.id}/edit`)
             }
-            className="flex items-center gap-2 px-5 py-2 border rounded-xl"
+            className="flex items-center gap-2 px-5 py-2 bg-white rounded-xl shadow hover:shadow-md transition"
           >
-            <Edit3 size={16} />
+            <Edit3 size={16}/>
             Edit
           </button>
 
           <button
-            onClick={() => info("Delete logic here")}
-            className="flex items-center gap-2 px-5 py-2 border text-red-600 rounded-xl"
+            onClick={handleDelete}
+            className="flex items-center gap-2 px-5 py-2 bg-white text-red-600 rounded-xl shadow hover:shadow-md transition"
           >
-            <Trash2 size={16} />
+            <Trash2 size={16}/>
             Delete
           </button>
 
@@ -163,7 +171,9 @@ export default function CategoryDetail() {
 
         <div className="space-y-6">
 
-          <div className="bg-white border rounded-2xl overflow-hidden">
+          {/* CATEGORY CARD */}
+
+          <div className="bg-white rounded-2xl shadow-md overflow-hidden">
 
             <div className="relative">
 
@@ -199,7 +209,7 @@ export default function CategoryDetail() {
 
           {/* SPECIFICATIONS */}
 
-          <div className="bg-white border rounded-2xl p-6">
+          <div className="bg-white rounded-2xl shadow-md p-6">
 
             <h3 className="font-black text-sm uppercase flex items-center gap-2 mb-4">
               <Settings size={16}/>
@@ -218,7 +228,7 @@ export default function CategoryDetail() {
 
                   <div
                     key={attr.id}
-                    className="flex items-center justify-between p-3 border rounded-xl"
+                    className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition"
                   >
 
                     <div className="flex items-center gap-2">
@@ -235,7 +245,7 @@ export default function CategoryDetail() {
                     </div>
 
                     {attr.unitSymbol && (
-                      <span className="text-xs bg-slate-100 px-2 rounded flex items-center gap-1">
+                      <span className="text-xs bg-white shadow-sm px-2 rounded flex items-center gap-1">
                         <Scale size={10}/>
                         {attr.unitSymbol}
                       </span>
@@ -253,11 +263,11 @@ export default function CategoryDetail() {
 
         </div>
 
-        {/* RIGHT → SUBCATEGORIES */}
+        {/* RIGHT */}
 
         <div className="lg:col-span-2">
 
-          <div className="bg-white border rounded-2xl p-6">
+          <div className="bg-white rounded-2xl shadow-md p-6">
 
             <div className="flex justify-between items-center mb-4">
 
@@ -273,7 +283,9 @@ export default function CategoryDetail() {
             </div>
 
             {loadingSub ? (
-              <p className="text-sm text-slate-400">Loading...</p>
+              <p className="text-sm text-slate-400">
+                Loading...
+              </p>
             ) : subCategories.length === 0 ? (
               <p className="text-sm text-slate-400">
                 No subcategories found
@@ -289,7 +301,7 @@ export default function CategoryDetail() {
                     onClick={() =>
                       router.push(`/admin/categories/industries/${sub.id}`)
                     }
-                    className="flex items-center justify-between p-4 border rounded-xl cursor-pointer hover:bg-slate-50"
+                    className="flex items-center justify-between p-4 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition bg-white"
                   >
 
                     <span className="font-bold text-sm">

@@ -25,7 +25,18 @@ export default async function Home() {
   //     </div>
   //   );
   // }
+  const res = await fetch("http://localhost:8000/api/categories", {
+    cache: "no-store",
+  });
 
+  const categories = await res.json();
+
+  const parentCategories = categories
+    .filter((c: any) => c.level === 0 && c.is_active === 1)
+    .sort(
+      (a: any, b: any) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
   return (
     <div className="container-fluid px-3 px-md-4">
       {/* Category Icons - Horizontal Scrollable */}
@@ -67,36 +78,50 @@ export default async function Home() {
         </div>
       </div>
       {/* Danh mục sản phẩm */}
+
       <h5 className="fw-bold mb-3 mt-5">DANH MỤC</h5>
-      <div className="row g-3 g-md-4">
-        {[
-          { name: "Giày Dép", color: "#ffe4b5", icon: "shoe" },
-          { name: "Nhà Cửa & Đời Sống", color: "#e0e0e0" },
-          { name: "Điện thoại & Phụ kiện", color: "#a5d8ff" },
-          { name: "Thời trang nam", color: "#ffd8a8" },
-          { name: "Sắc đẹp", color: "#ffc9c9" },
-          { name: "Mẹ & Bé", color: "#ffec99" },
-          { name: "Đồng hồ 1111", color: "#d9d9d9" },
-          { name: "Máy tính & Laptop", color: "#b2f2bb" },
-          { name: "Sức khỏe", color: "#d3f9d8" },
-          { name: "Xem thêm", color: "#e9ecef" },
-        ].map((cat, idx) => (
-          <div key={idx} className="col-4 col-md-3 col-lg-2">
-            <div className="text-center category-item shadow-sm rounded p-3 bg-white hover-lift">
-              <div
-                className="rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center"
-                style={{
-                  width: "70px",
-                  height: "70px",
-                  backgroundColor: cat.color,
-                }}
-              >
-                {cat.icon && (
-                  <i className={`bi bi-${cat.icon} fs-3 text-dark`}></i>
-                )}
+
+      <div className="row g-0 border rounded overflow-hidden">
+        {parentCategories.map((cat: any) => (
+          <div
+            key={cat.id}
+            className="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-1 border category-box"
+          >
+            <Link
+              href={`/category/${cat.category_slug}`}
+              className="text-decoration-none text-dark"
+            >
+              <div className="text-center p-3">
+                <div
+                  className="mx-auto mb-2 d-flex align-items-center justify-content-center rounded-circle bg-light"
+                  style={{
+                    width: "60",
+                    height: "60px",
+                  }}
+                >
+                  {cat.category_icon ? (
+                    <Image
+                      src={cat.category_icon}
+                      alt={cat.category_name}
+                      width={100}
+                      height={100}
+                    />
+                  ) : (
+                    <i className="bi bi-grid fs-3"></i>
+                  )}
+                </div>
+
+                <small
+                  className="category-name d-block"
+                  style={{
+                    fontSize: "13px",
+                    lineHeight: "16px",
+                  }}
+                >
+                  {cat.category_name}
+                </small>
               </div>
-              <small className="d-block fw-medium">{cat.name}</small>
-            </div>
+            </Link>
           </div>
         ))}
       </div>
