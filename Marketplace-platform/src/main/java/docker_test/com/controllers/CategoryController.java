@@ -145,4 +145,18 @@ public class CategoryController {
 
 		return ResponseEntity.ok("Deleted successfully");
 	}
+	
+	/* ================= GET BY PARENT ================= */
+	// GET http://localhost:8000/api/categories/children/{parentId}
+
+	@GetMapping("/children/{parentId}")
+	public ResponseEntity<List<Category>> getByParent(@PathVariable int parentId) {
+
+	    List<Category> list = repositories.GetAll()
+	            .stream()
+	            .filter(c -> c.getParent_id() != null && c.getParent_id() == parentId)
+	            .toList();
+
+	    return ResponseEntity.ok(list);
+	}
 }
