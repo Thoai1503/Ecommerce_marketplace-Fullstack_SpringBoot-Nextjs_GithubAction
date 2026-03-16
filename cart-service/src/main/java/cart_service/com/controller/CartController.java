@@ -1,7 +1,10 @@
 package cart_service.com.controller;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,8 +29,16 @@ public class CartController {
 	public String hello() {
 		return "Cart Service is running";
 	} 
+	@GetMapping("user/{id}")
+	public ResponseEntity< List<Cart>> getByUserId(@PathVariable int id){
+		return ResponseEntity.ok( cartService.getUserCart(id));
+	}
+	@GetMapping("variant/{id}")
+	public ResponseEntity< Cart> getByVariantId(@PathVariable int id){
+		return ResponseEntity.ok( cartService.getCartByVariantId(id));
+	}
 	@PostMapping("")
-	public ResponseEntity<CartDTO> create(@RequestBody @Valid CartDTO cartDto) {
+	public ResponseEntity<CartDTO> create(@RequestBody  CartDTO cartDto) {
 		
 		System.out.println("Cart body: "+ cartDto.toString());
 		
