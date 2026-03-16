@@ -17,7 +17,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class ApiGatewayApplication {
     @GetMapping("/hello")
     public String hello() {
-    	return "Hello";
+    	return "Hello api gateway";
+    }
+     @GetMapping("/test")
+    public String hello1() {
+    	return "Calling api testing";
+    }
+         @GetMapping("/test2")
+    public String hello2() {
+    	return "Calling api testing 2";
     }
 	public static void main(String[] args) {
 		SpringApplication.run(ApiGatewayApplication.class, args);

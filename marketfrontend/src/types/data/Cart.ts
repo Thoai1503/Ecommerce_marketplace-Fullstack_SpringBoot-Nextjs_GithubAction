@@ -6,7 +6,7 @@ import { IHttpError, IResponse } from "../core/api";
 import { useMutation } from "@tanstack/react-query";
 
 const modelConfig = {
-  path: "/cart",
+  path: "/api/cart",
   modal: "cart",
 };
 
@@ -16,16 +16,16 @@ export class Cart extends Model {
     findOne: "CARTS_FIND_ONE_QUERY",
   };
   static object = ObjectsFactory.factory<ICart>(modelConfig, this.queryKeys);
-  static addToCart(payload: FormData) {
-    return this.api.post<ICart>({ url: "", data: payload });
+  static addToCart(payload: ICart) {
+    return this.api.post<ICart>({ url: this.path, data: payload });
   }
 }
 
 Cart.setup({ path: "/api/cart", baseUrl: API_URL });
 
 export function useAddToCartMutation() {
-  return useMutation<ICart, IHttpError, FormData>({
-    mutationFn: (payload: FormData) => {
+  return useMutation<ICart, IHttpError, ICart>({
+    mutationFn: (payload: ICart) => {
       return Cart.addToCart(payload).then((r) => r.data);
     },
   });
