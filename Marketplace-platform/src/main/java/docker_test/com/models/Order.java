@@ -3,11 +3,11 @@ package docker_test.com.models;
 import java.time.LocalDateTime;
 
 public final class Order {
-    private long order_id;
+    private Long order_id;
     private String order_number;
-    private long user_id;
-    private long shop_id;
-    private long address_id;
+    private Long user_id;
+    private Long shop_id;
+    private Long address_id;
     private Double total_amount;
     private Double shipping_fee;
     private Double discount_amount;
@@ -34,7 +34,7 @@ public final class Order {
         this.updated_at = LocalDateTime.now();
     }
 
-    public Order(long order_id, String order_number, long user_id, long shop_id, long address_id,
+    public Order(Long order_id, String order_number, Long user_id, Long shop_id, Long address_id,
                  Double total_amount, Double shipping_fee, Double discount_amount,
                  Double final_amount, String payment_method, String payment_status,
                  String order_status, String note, Long voucher_id, String tracking_number,
@@ -62,19 +62,19 @@ public final class Order {
         this.updated_at = updated_at;
     }
 
-    public long getOrderId() { return order_id; }
+    public Long getOrderId() { return order_id; }
     public void setOrderId(long order_id) { this.order_id = order_id; }
     
     public String getOrderNumber() { return order_number; }
     public void setOrderNumber(String order_number) { this.order_number = order_number; }
     
-    public long getUserId() { return user_id; }
+    public Long getUserId() { return user_id; }
     public void setUserId(long user_id) { this.user_id = user_id; }
     
-    public long getShopId() { return shop_id; }
+    public Long getShopId() { return shop_id; }
     public void setShopId(long shop_id) { this.shop_id = shop_id; }
     
-    public long getAddressId() { return address_id; }
+    public Long getAddressId() { return address_id; }
     public void setAddressId(long address_id) { this.address_id = address_id; }
     
     public Double getTotalAmount() { return total_amount; }

@@ -11,6 +11,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { API_URL } from "@/helper/api";
 
+const API_BASE = "http://localhost:8080/api";
+
 // Token storage keys
 const TOKEN_KEYS = {
   ACCESS_TOKEN: "accessToken",
@@ -203,6 +205,19 @@ export const mockGet = async <T>(url: string, data: T): Promise<T> => {
   // Simulate network delay
   await new Promise((resolve) => setTimeout(resolve, 300));
   return data;
+};
+
+export const http2 = async (url: string, options?: RequestInit) => {
+  const res = await fetch(API_BASE + url, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    ...options,
+  });
+
+  if (!res.ok) throw new Error("API error");
+
+  return res.json();
 };
 
 export default http;
