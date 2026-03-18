@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 
 import cart_service.com.dto.CartDTO;
 import cart_service.com.models.Cart;
+import cart_service.com.models.Product;
+import cart_service.com.models.ProductVariant;
 import cart_service.com.repository.CartRepository;
 
 @Service
@@ -16,41 +18,59 @@ public class CartService {
   }
   
   public List<Cart> getUserCart(int userId) {
-      return cartRepository.findByUserId(userId);
+	  var data = cartRepository.findByUserId(userId);
+	  for (Cart item: data) {
+		  System.out.println(item);
+	  }
+      return data;
   }
   public Cart getCartByVariantId(int variantId) {
-      return cartRepository.findByVariantId(variantId);
+     // return cartRepository.findByVariantId(variantId);
+	  return null;
   }
 
   public void removeProduct(Long userId, Long productId) {
       cartRepository.deleteByUserIdAndProductId(userId, productId);
   }
   public Cart addToCart(CartDTO cartDto) {
-		Cart existedCartItem = cartRepository.findByVariantIdAndUserId(cartDto.getVariantId(),cartDto.getUserId());
+		Cart existedCartItem = cartRepository.findByProductVariant_IdAndUserId(cartDto.getVariantId(),cartDto.getUserId());
 		Cart cart = new Cart();
 		System.out.println("Quantity from DTO: " + cartDto.getQuantity());
 		int qty = cartDto.getQuantity() != null ? cartDto.getQuantity() : 1;
 		if (existedCartItem != null) {
+			
+			var pro = new Product();
+			var productVariant = new ProductVariant();
+			pro.setId(cartDto.getProductId());
+			productVariant.setId(cartDto.getVariantId());
 			int existingQty = existedCartItem.getQuantity() != null ? existedCartItem.getQuantity() : 0;
 			cart = Cart.builder()
 					    .id(existedCartItem.getId())
 						.userId(cartDto.getUserId())
-						.productId(cartDto.getProductId())
-						.variantId(cartDto.getVariantId())
+						.product(pro)
+						.productVariant(productVariant)
+					//	.productId(cartDto.getProductId())
+			//			.variantId(cartDto.getVariantId())
 						.quantity(existingQty + qty)
 						.build();
 		} else {
+			var pro = new Product();
+			var productVariant = new ProductVariant();
+			pro.setId(cartDto.getProductId());
+			productVariant.setId(cartDto.getVariantId());
 			cart = Cart.builder()
 								.userId(cartDto.getUserId())
-								.productId(cartDto.getProductId())
-								.variantId(cartDto.getVariantId())
+								.product(pro)
+								.productVariant(productVariant)
+								//.productId(cartDto.getProductId())
+							//	.variantId(cartDto.getVariantId())
+								
 								.quantity(qty)
 								.build();
 		}
-//List<Cart> en=	   cartRepository.findByUserId(1).stream().filter(c -> c.getUserId()==1).toList();
+
 	var en = cartRepository.save(cart);
-	 // if (en!=null) cartDto.setId(cart.getId());
-	
+
 	    return en;
   }
   
