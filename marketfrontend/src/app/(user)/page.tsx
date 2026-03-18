@@ -14,17 +14,17 @@ export default async function Home() {
   const role = cookieStore.get("role")?.value;
   console.log("Role: " + role);
 
-  // const res = await fetch(`${INTERNAL_API}/product`);
-  // const products = ((await res.json()) as Partial<IProduct>[]) || [];
+  const res = await fetch(`${INTERNAL_API}/product`);
+  const products = ((await res.json()) as Partial<IProduct>[]) || [];
   // const { products } = useHomePage();
 
-  // if (products.length === 0 || !products) {
-  //   return (
-  //     <div>
-  //       <h1>Loading...</h1>
-  //     </div>
-  //   );
-  // }
+  if (products.length === 0 || !products) {
+    return (
+      <div>
+        <h1>Loading...</h1>
+      </div>
+    );
+  }
 
   return (
     <div className="container-fluid px-3 px-md-4">
@@ -363,7 +363,7 @@ export default async function Home() {
             // </div>
             <></>
           ))}
-          {/* <AllProduct products={products} /> */}
+          <AllProduct products={products} />
         </div>
       </div>
     </div>
