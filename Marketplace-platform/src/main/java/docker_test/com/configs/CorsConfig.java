@@ -12,6 +12,7 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/**") // áp dụng cho toàn bộ API
                 .allowedOrigins(
                         "http://localhost:3000",
+                         "http://localhost:3002",
                         "http://localhost:5173",
                         "http://103.90.225.130:4000",
                         "http://103.90.225.130"
