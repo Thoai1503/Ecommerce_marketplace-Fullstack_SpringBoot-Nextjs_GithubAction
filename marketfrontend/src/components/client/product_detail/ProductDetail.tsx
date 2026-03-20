@@ -3,7 +3,7 @@
 import { useUserAuth } from "@/context/UserAuthContext";
 import { modelConfig, Product } from "@/data/product/product";
 import { API_URL } from "@/helper/api";
-import { useAddToCartMutation } from "@/types/data/Cart";
+import { Cart, useAddToCartMutation } from "@/types/data/Cart";
 import { ICart } from "@/validators/cart";
 import { IProduct, Variant } from "@/validators/product";
 import { message } from "antd";
@@ -13,12 +13,13 @@ import React, { useEffect, useState } from "react";
 
 const ProductDetail = ({ data }: { data: IProduct }) => {
   const { userId } = useUserAuth();
+  Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { mutate: addToCart } = useAddToCartMutation();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fullUrl = pathname + "?" + searchParams.toString();
 
-  const [selectedVariant, setSelectedVariant] = useState("xanh");
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
   const [variant, setVariant] = useState<Variant | null>(null);
   const [mainImage, setMainImage] = useState(
     data.images[0]?.image_url || "/assets/images/ecommerce/product-1.jpg",
@@ -29,13 +30,21 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
   const displayImage = hoveredImage || mainImage;
 
   const handleAddToCart = (cart: ICart) => {
+    if (!userId) {
+      message.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
+      return;
+    }
+    if (selectedVariant === null) {
+      message.warning("Vui lòng chọn phân loại sản phẩm");
+      return;
+    }
     const formData = new FormData();
     Object.entries(cart).forEach(([key, value]) => {
       formData.append(key, String(value));
     });
-    addToCart(formData, {
+    addToCart(cart, {
       onSuccess: (data) => {
-        console.log(data);
+        console.log("Added to cart:", data);
         message.success("Thêm vào giỏ hàng thành công");
       },
       onError: (error) => {
@@ -166,7 +175,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
 
                             <div className="d-flex flex-wrap gap-3">
                               {/* Variant 1 - màu xanh */}
-                              <div
+                              {/* <div
                                 className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === "xanh" ? "border-danger border-2" : "border-secondary"}`}
                                 onClick={() => setSelectedVariant("xanh")}
                                 style={{ width: "110px", cursor: "pointer" }}
@@ -182,10 +191,10 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                 {selectedVariant === "xanh" && (
                                   <i className="bi bi-check-circle-fill text-danger position-absolute top-0 end-0 m-1"></i>
                                 )}
-                              </div>
+                              </div> */}
 
                               {/* Variant 2 - màu xám */}
-                              <div
+                              {/* <div
                                 className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === "xam" ? "border-danger border-2" : "border-secondary"}`}
                                 onClick={() => setSelectedVariant("xam")}
                                 style={{ width: "110px", cursor: "pointer" }}
@@ -201,36 +210,41 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                 {selectedVariant === "xam" && (
                                   <i className="bi bi-check-circle-fill text-danger position-absolute top-0 end-0 m-1"></i>
                                 )}
-                              </div>
+                              </div> */}
 
-                              {data.variants?.map((variant) => (
-                                <div
-                                  key={variant.id}
-                                  className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === variant.id ? "border-danger border-2" : "border-secondary"}`}
-                                  onClick={() => {
-                                    setSelectedVariant(variant.id);
-                                    setVariant(variant);
-                                  }}
-                                  style={{ width: "110px", cursor: "pointer" }}
-                                >
-                                  <Image
-                                    src={
-                                      variant.image_url ||
-                                      "/assets/images/ecommerce/product-1.jpg"
-                                    }
-                                    alt={variant.name}
-                                    width={80}
-                                    height={80}
-                                    className="img-fluid rounded mb-2"
-                                  />
-                                  <div className="small fw-medium">
-                                    {variant.sku}
+                              {data.variants &&
+                                data.variants.length > 1 &&
+                                data.variants.map((variant) => (
+                                  <div
+                                    key={variant.id}
+                                    className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === variant.id ? "border-danger border-2" : "border-secondary"}`}
+                                    onClick={() => {
+                                      setSelectedVariant(variant.id);
+                                      setVariant(variant);
+                                    }}
+                                    style={{
+                                      width: "110px",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    <Image
+                                      src={
+                                        variant.image_url ||
+                                        "/assets/images/ecommerce/product-1.jpg"
+                                      }
+                                      alt={variant.name}
+                                      width={80}
+                                      height={80}
+                                      className="img-fluid rounded mb-2"
+                                    />
+                                    <div className="small fw-medium">
+                                      {variant.sku}
+                                    </div>
+                                    {selectedVariant == variant.id && (
+                                      <i className="bi bi-check-circle-fill text-danger position-absolute top-0 end-0 m-1"></i>
+                                    )}
                                   </div>
-                                  {selectedVariant == variant.id && (
-                                    <i className="bi bi-check-circle-fill text-danger position-absolute top-0 end-0 m-1"></i>
-                                  )}
-                                </div>
-                              ))}
+                                ))}
                             </div>
                           </div>
 
@@ -243,7 +257,8 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                   handleAddToCart({
                                     user_id: userId!,
                                     product_id: data.id,
-                                    variant_id: Number(variant!.id),
+                                    variant_id: Number(selectedVariant),
+                                    quantity: 1,
                                   });
                                 }}
                               >

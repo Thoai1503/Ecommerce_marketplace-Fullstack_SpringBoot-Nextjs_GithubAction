@@ -4,7 +4,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Minus, Plus, Trash2, Save, ShoppingBag } from 'lucide-react';
 import { Order, OrderItem } from '@/types/index';
-import { updateOrderItems } from '@/service/orders';
+// import { updateOrderItems } from '@/service/orders';
 
 interface EditItemsModalProps {
   isOpen: boolean;
@@ -42,15 +42,15 @@ export default function EditItemsModal({ isOpen, onClose, order, onSuccess }: Ed
     setItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    const success = await updateOrderItems(order.id, items, subtotal);
-    if (success) {
-      onSuccess();
-      onClose();
-    }
-    setIsSaving(false);
-  };
+  // const handleSave = async () => {
+  //   setIsSaving(true);
+  //   const success = await updateOrderItems(order.id, items, subtotal);
+  //   if (success) {
+  //     onSuccess();
+  //     onClose();
+  //   }
+  //   setIsSaving(false);
+  // };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -129,7 +129,7 @@ export default function EditItemsModal({ isOpen, onClose, order, onSuccess }: Ed
               Hủy bỏ
             </button>
             <button 
-              onClick={handleSave}
+              // onClick={handleSave}
               disabled={isSaving}
               className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-2xl shadow-lg shadow-blue-500/20 transition-all border-0 disabled:opacity-50"
             >
