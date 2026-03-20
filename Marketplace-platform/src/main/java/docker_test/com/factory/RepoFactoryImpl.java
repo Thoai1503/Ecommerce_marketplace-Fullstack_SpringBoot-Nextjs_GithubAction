@@ -7,6 +7,7 @@ import docker_test.com.models.product.ProductVariant;
 import docker_test.com.repository.CategoryAttributeRepository;
 import docker_test.com.repository.CategoryRepository;
 import docker_test.com.repository.IRepositories;
+import docker_test.com.repository.OrderRepository;
 import docker_test.com.repository.ProductImageRepository;
 import docker_test.com.repository.ProductRepository;
 import docker_test.com.repository.ProductVariantRepository;
@@ -28,6 +29,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	private final ProductImageRepository productImageRepository;
 	private final ShopRepository shopRepository;
 	private final ProductVariantRepository productVariantRepository;
+	private final OrderRepository orderRepository;
 
 	public static RepoFactoryImpl Instance() {
 	
@@ -49,6 +51,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		this.productImageRepository = ProductImageRepository.Instance();
 		this.shopRepository = ShopRepository.Instance();
 		this.productVariantRepository = ProductVariantRepository.Instance();
+		this.orderRepository = OrderRepository.Instance();
 	}
 
 	@Override
@@ -63,6 +66,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		case "product_image" -> (IRepositories) productImageRepository;
 		case "shop" -> (IRepositories) shopRepository;
 		case "product_variant" -> (IRepositories<ProductVariant>) productVariantRepository;
+		case "order" -> (IRepositories) orderRepository;
 		
 		//...ae thêm các định nghĩa Repository do ae tạo ở đây (Repository phải implement IRepositories)
 		   default -> throw new IllegalArgumentException("Unknown entity type: " + entityType);
