@@ -1,7 +1,14 @@
 import { mockGet } from "../lib/http";
+<<<<<<< HEAD
 import { Order, OrderItem, OrderStatus, Shipment } from "@/types/index";
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+=======
+import { http2 } from "../lib/http";
+import { Order, OrderItem, OrderStatus } from "@/types/index";
+
+// const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+>>>>>>> c0a1f7cc9a8518c42e84670ceef22ecdc13e67da
 
 const BASE_ORDERS: Order[] = [
   {
@@ -49,6 +56,7 @@ const BASE_ORDERS: Order[] = [
         status: "Packaging",
       },
     ],
+<<<<<<< HEAD
     shipments: [
       {
         id: "ship-001",
@@ -127,6 +135,8 @@ const BASE_ORDERS: Order[] = [
         ],
       },
     ],
+=======
+>>>>>>> c0a1f7cc9a8518c42e84670ceef22ecdc13e67da
     isFlagged: true,
     internalNote: "Khách hàng yêu cầu giao trước 5h chiều",
   },
@@ -274,7 +284,7 @@ const BASE_ORDERS: Order[] = [
   },
 ];
 
-// Generate 125 mock orders to test pagination (about 12-13 pages)
+//Generate 125 mock orders to test pagination (about 12-13 pages)
 const MOCK_ORDERS: Order[] = Array.from({ length: 125 }, (_, i) => {
   const base = BASE_ORDERS[i % BASE_ORDERS.length];
   return {
@@ -294,10 +304,19 @@ export const getOrderById = async (id: string): Promise<Order | null> => {
   return orders.find((o) => o.id === id) || orders[0];
 };
 
+<<<<<<< HEAD
+=======
+// export const updateOrderStatus = async (id: string, status: OrderStatus): Promise<boolean> => {
+//   await delay(600);
+//   return true;
+// };
+
+>>>>>>> c0a1f7cc9a8518c42e84670ceef22ecdc13e67da
 export const updateOrderStatus = async (
   id: string,
   status: OrderStatus,
 ): Promise<boolean> => {
+<<<<<<< HEAD
   await delay(600);
   return true;
 };
@@ -305,11 +324,30 @@ export const updateOrderStatus = async (
 export const updateOrderFlag = async (
   id: string,
   isFlagged: boolean,
+=======
+  await http2(`/admin/orders/${id}/status`, {
+    method: "PUT",
+    body: JSON.stringify({ status }),
+  });
+
+  return true;
+};
+
+// export const updateOrderFlag = async (id: string, isFlagged: boolean): Promise<boolean> => {
+//   await delay(500);
+//   return true;
+// };
+
+export const updateOrderNote = async (
+  id: string,
+  note: string,
+>>>>>>> c0a1f7cc9a8518c42e84670ceef22ecdc13e67da
 ): Promise<boolean> => {
   await delay(500);
   return true;
 };
 
+<<<<<<< HEAD
 export const updateOrderNote = async (
   id: string,
   note: string,
@@ -334,3 +372,35 @@ export const updateOrderItems = async (
   await delay(800);
   return true;
 };
+=======
+// export const updateTrackingNumber = async (id: string, trackingNumber: string): Promise<boolean> => {
+//   await delay(500);
+//   return true;
+// };
+
+export const updateTrackingNumber = async (
+  id: string,
+  trackingNumber: string,
+): Promise<boolean> => {
+  await http2(`/admin/orders/${id}/tracking`, {
+    method: "PUT",
+    body: JSON.stringify({ trackingNumber }),
+  });
+
+  return true;
+};
+
+export default {
+  getOrders,
+  getOrderById,
+  updateOrderStatus,
+  updateTrackingNumber,
+  // updateOrderFlag,
+  //  updateOrderNote,
+  // updateOrderItems
+};
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+>>>>>>> c0a1f7cc9a8518c42e84670ceef22ecdc13e67da
