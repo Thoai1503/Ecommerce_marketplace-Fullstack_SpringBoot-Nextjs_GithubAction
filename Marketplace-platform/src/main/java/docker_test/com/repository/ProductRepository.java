@@ -131,6 +131,7 @@ SELECT
         SELECT JSON_ARRAYAGG(
             JSON_OBJECT(
                 'id', pv.id,
+                'product_id',pv.product_id,
                 'variant_name', pv.variant_name,
                 'sku', pv.sku,
                 'price', pv.price,

@@ -76,5 +76,15 @@ services:
     networks:
       - ecommerce-net
 
+  logistics-frontend:
+    build: ./logistics-frontend
+    container_name: logistics-frontend
+    ports:
+      - "4001:3000"
+    environment:
+      - NEXT_PUBLIC_LOGISTICS_API_BASE_URL=http://api-gateway:8000
+    networks:
+      - ecommerce-net
+
 # additional services (eureka, databases, etc.) can be added here as needed
 
