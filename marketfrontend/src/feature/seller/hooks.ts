@@ -43,12 +43,6 @@ export const useAddProductSeller = (
     }
   };
 
-  const handleSave = () => {
-    //  console.log("Saving product:", formData);
-    console.log("Images:", fileList);
-    message.success("Sản phẩm đã được lưu thành công!");
-  };
-
   const { mutate: createVariant } = useMutation({
     mutationFn: (en: ProductVariant) => createProductVariant(en),
     onSuccess: (data) => {
@@ -77,19 +71,19 @@ export const useAddProductSeller = (
         original_price: 0,
         price: 0,
       });
-      createProductVariant({
+      createVariant({
         id: 0,
         product_id: data.id,
         variant_name: data.product_name,
         sku: `SKU-${data.id}`,
         price: data.original_price || 0,
         stock_quantity: data.stock_quantity || 0,
-        image_url: "",
+        image_url: data.image_url || "",
       });
     },
     onError: (error) => {
       //  alert(error.message);
-      message.error(error.message);
+      message.error("Lỗi thêm sản phẩm: " + error.message);
     },
   });
 
@@ -263,7 +257,7 @@ export const useAddImageSeller = (id?: number) => {
     );
     console.log("Form data:", formData);
     upload({ id: 1, formData: formData });
-    message.success("Sản phẩm đã được lưu thành công!");
+    //  message.success("Sản phẩm đã được lưu thành công!");
   };
   const handleSaveImageAfterProduct = (product_id: number) => {
     console.log("Images:", fileList);
