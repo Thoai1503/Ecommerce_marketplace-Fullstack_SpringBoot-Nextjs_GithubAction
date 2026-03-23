@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Check,
   Wallet,
@@ -19,6 +19,12 @@ import {
   ChevronUp,
 } from "lucide-react";
 import AddressModal from "@/components/client/checkout_page/AddressModal";
+import { useCheckoutPage } from "@/feature/client/hook";
+import { Cart } from "@/types/data/Cart";
+import { CartItem, GroupedCartByShop } from "@/validators/cart";
+import { createOrder } from "@/feature/client/service";
+import { id } from "zod/v4/locales";
+import { IOrderItem } from "@/validators/orderItem";
 
 interface Address {
   id: number;
@@ -28,7 +34,117 @@ interface Address {
   isDefault: boolean;
 }
 
+interface ShippingOption {
+  id: string;
+  name: string;
+  estimatedDays: string;
+  fee: number;
+}
+
+interface ShippingSelection {
+  [shopId: number]: string; // shopId -> shippingOptionId
+}
+
 export default function CheckoutPage() {
+  const { checkOut } = useCheckoutPage();
+  const cartItems = localStorage.getItem("selectedCartItems")
+    ? (JSON.parse(localStorage.getItem("selectedCartItems")!) as CartItem[])
+    : [];
+
+  // Group cart items by shop
+  const groupedByShop = useMemo(() => {
+    return cartItems.reduce(
+      (acc, item) => {
+        const shopId = item?.product?.shop?.id;
+        if (!acc[shopId]) {
+          acc[shopId] = {
+            shop: item?.product?.shop,
+            items: [],
+          };
+        }
+        acc[shopId].items.push(item);
+        return acc;
+      },
+      {} as Record<number, GroupedCartByShop & { items: CartItem[] }>,
+    );
+  }, [cartItems]);
+
+  console.log("Grouped cart items by shop:", groupedByShop);
+
+  // Shipping options (có thể lấy từ API)
+  const shippingOptions: ShippingOption[] = [
+    {
+      id: "standard",
+      name: "Giao hàng Tiêu chuẩn",
+      estimatedDays: "2-3 ngày làm việc",
+      fee: 0,
+    },
+    {
+      id: "fast",
+      name: "Giao hàng Nhanh",
+      estimatedDays: "1-2 ngày làm việc",
+      fee: 25000,
+    },
+    {
+      id: "express",
+      name: "Giao hàng Express",
+      estimatedDays: "Cùng ngày",
+      fee: 50000,
+    },
+  ];
+
+  // State để lưu lựa chọn vận chuyển cho mỗi shop
+  const [shippingSelections, setShippingSelections] =
+    useState<ShippingSelection>(
+      Object.keys(groupedByShop).reduce((acc, shopId) => {
+        acc[Number(shopId)] = "standard"; // mặc định chọn tiêu chuẩn
+        return acc;
+      }, {} as ShippingSelection),
+    );
+
+  // Hàm format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
+
+  // Hàm lấy thông tin vận chuyển đã chọn
+  const getSelectedShippingOption = (
+    shopId: number,
+    shippingOptionId: string,
+  ) => {
+    return shippingOptions.find((opt) => opt.id === shippingOptionId);
+  };
+
+  // Tính tổng phí vận chuyển
+  const calculateTotalShippingFee = () => {
+    return Object.entries(shippingSelections).reduce(
+      (total, [shopId, optionId]) => {
+        const option = getSelectedShippingOption(Number(shopId), optionId);
+        return total + (option?.fee || 0);
+      },
+      0,
+    );
+  };
+
+  // Tính tổng tiền sản phẩm
+  const calculateSubtotal = () => {
+    return cartItems.reduce(
+      (sum, item) => sum + (item.productVariant?.price ?? 0) * item.quantity,
+      0,
+    );
+  };
+  const [paymentInfo, setPaymentInfo] = useState<any>({
+    amount: 100000,
+    orderId: Date.now(),
+
+    user_id: 1,
+    method: "vnpay",
+    bankCode: "NCB",
+    orderInfo: "Thanh toán đơn hàng #123456" + Date.now(),
+  });
   const stepNumberBase: React.CSSProperties = {
     width: 24,
     height: 24,
@@ -306,7 +422,6 @@ export default function CheckoutPage() {
     },
   };
 
-  const [coupon, setCoupon] = useState("");
   const [showAddressPanel, setShowAddressPanel] = useState(false);
 
   const [selectedAddressId, setSelectedAddressId] = useState(1);
@@ -349,7 +464,37 @@ export default function CheckoutPage() {
     alert("Đã xác nhận phương thức thanh toán!");
   const handleChangeMethod = () =>
     alert("Chuyển sang chọn phương thức khác...");
-  const handleOrder = () => alert("Đặt hàng thành công!");
+  const handleOrder = () => {
+    //alert("Đặt hàng thành công!")
+    alert(
+      `Thông tin thanh toán:\nSố tiền: ${paymentInfo.amount}\nPhương thức: ${paymentInfo.method}\nMã đơn hàng: ${paymentInfo.orderId}`,
+    );
+    createOrder({
+      user_id: paymentInfo.user_id || 0,
+      shop_id: cartItems[0]?.product?.shop?.id || 0,
+      order_number: "ORD20250318001",
+      total_price: paymentInfo.amount || 0,
+      payment_method: paymentInfo.method || "unknown",
+      address_id: selectedAddressId || 0,
+      shipping_fee: 9000,
+      discount_amount: 0,
+      final_amount: paymentInfo.amount - 9000 || 0,
+      orders_items: cartItems.map((item) => ({
+        id: 1,
+        product_id: item?.product?.id || 0,
+        order_id: 1,
+        variant_id: item?.productVariant?.id || 0,
+        product_name: item?.product?.name || "",
+        variant_name: item?.productVariant?.variantName || "",
+        quantity: item?.quantity || 0,
+        price: item?.productVariant?.price || 0,
+      })) as IOrderItem[],
+      note: "",
+      tracking_number: "",
+      id: 0,
+    });
+    //   checkOut(paymentInfo);
+  };
 
   return (
     <>
@@ -401,7 +546,7 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                {/* Step 2 — Shipping (completed) */}
+                {/* Step 2 — Shipping Summary (read-only) */}
                 <section style={styles.cardCompleted}>
                   <div className="d-flex align-items-start justify-content-between">
                     <div className="d-flex gap-3 flex-grow-1">
@@ -410,40 +555,72 @@ export default function CheckoutPage() {
                       </div>
                       <div className="flex-grow-1">
                         <h3 style={styles.stepTitle}>Phương thức vận chuyển</h3>
-                        <div
-                          style={styles.shippingBox}
-                          className="d-flex justify-content-between align-items-center"
+                        <p
+                          className="text-muted"
+                          style={{ fontSize: 11, marginBottom: 12 }}
                         >
-                          <div>
-                            <p
-                              className="fw-bold mb-0"
-                              style={{ fontSize: 12 }}
-                            >
-                              Giao hàng Tiêu chuẩn
-                            </p>
-                            <p
-                              className="text-muted fst-italic mb-0"
-                              style={{ fontSize: 10 }}
-                            >
-                              Dự kiến nhận: 2-3 ngày làm việc
-                            </p>
-                          </div>
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 800,
-                              color: "#22c55e",
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            Miễn phí
-                          </span>
+                          Chọn phương thức vận chuyển cho từng cửa hàng ở bước
+                          kiểm tra sản phẩm
+                        </p>
+                        {/* Summary of shipping selections */}
+                        <div className="d-flex flex-column gap-2">
+                          {Object.entries(groupedByShop).map(
+                            ([shopIdStr, group]) => {
+                              const shopId = Number(shopIdStr);
+                              const selectedOptionId =
+                                shippingSelections[shopId] || "standard";
+                              const selectedOption = getSelectedShippingOption(
+                                shopId,
+                                selectedOptionId,
+                              );
+
+                              return (
+                                <div
+                                  key={shopId}
+                                  style={{
+                                    background: "#f8fafc",
+                                    borderRadius: 6,
+                                    padding: "8px 12px",
+                                    fontSize: 11,
+                                  }}
+                                >
+                                  <div className="d-flex justify-content-between align-items-center">
+                                    <div>
+                                      <span className="fw-bold">
+                                        {group.shop?.shopName}
+                                      </span>
+                                      <span
+                                        className="text-muted ms-2"
+                                        style={{ fontSize: 10 }}
+                                      >
+                                        {selectedOption?.name}
+                                      </span>
+                                    </div>
+                                    <span
+                                      style={{
+                                        fontSize: 10,
+                                        fontWeight: 800,
+                                        color:
+                                          selectedOption?.fee === 0
+                                            ? "#22c55e"
+                                            : "#137fec",
+                                        textTransform: "uppercase",
+                                      }}
+                                    >
+                                      {selectedOption?.fee === 0
+                                        ? "Miễn phí"
+                                        : formatCurrency(
+                                            selectedOption?.fee || 0,
+                                          )}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            },
+                          )}
                         </div>
                       </div>
                     </div>
-                    <a href="#" style={styles.linkPrimary}>
-                      Thay đổi
-                    </a>
                   </div>
                 </section>
 
@@ -525,92 +702,221 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                {/* Step 4 — Products */}
+                {/* Step 4 — Products (from CartItem) */}
                 <section style={styles.cardDefault}>
                   <div className="d-flex gap-3">
                     <div style={styles.stepPending}>4</div>
                     <div className="flex-grow-1">
                       <h3 style={styles.stepTitle} className="mb-3">
-                        Kiểm tra sản phẩm (2)
+                        Kiểm tra sản phẩm ({cartItems.length})
                       </h3>
-                      <div className="d-flex gap-3 py-3">
-                        <img
-                          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDdTfP81RNzA2xOfXNZRhTI3hN6m-cfiwYGJupyiW4wFDyTxRr7Wxupjy5hO_dGf_4FF8SR_pZkfO7YiMaxAyfR5M2JTQLkQ4mgWUQU0UgKuR2It8zmQx4kGekwzSSpVquZ5v_tNKq-b0-qjurpbCdROuuB9gz39eDsZeoZNnpyC1wZGsg4MM2pUlKVBNhFvLaPwNK-CyFrF15r0K8rhdhOHTjLTwhtAzEtOeKhhlQmdnvLerxcQK7fF0YZqBlOndhH2bcUkKy6Q"
-                          alt="Product 1"
-                          style={styles.productImg}
-                        />
-                        <div className="flex-grow-1 d-flex flex-column justify-content-center">
-                          <h4
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              lineHeight: 1.4,
-                              color: "#1e293b",
-                            }}
-                            className="mb-1"
-                          >
-                            Tai nghe Wireless Noise Cancelling Pro 2024
-                          </h4>
-                          <p
-                            className="text-muted mb-2"
-                            style={{ fontSize: 11 }}
-                          >
-                            Màu sắc: Space Grey | Bảo hành 12 tháng
-                          </p>
-                          <div className="d-flex align-items-center justify-content-between">
-                            <span
+
+                      {/* Group products by shop */}
+                      {Object.entries(groupedByShop).map(
+                        ([shopIdStr, group], groupIndex) => {
+                          const shopId = Number(shopIdStr);
+                          const selectedOptionId =
+                            shippingSelections[shopId] || "standard";
+                          const selectedOption = getSelectedShippingOption(
+                            shopId,
+                            selectedOptionId,
+                          );
+
+                          return (
+                            <div
+                              key={shopId}
+                              className="mb-4"
                               style={{
-                                fontSize: 12,
-                                fontWeight: 800,
-                                color: "#137fec",
+                                borderRadius: 8,
+                                border: "1px solid #f1f5f9",
+                                overflow: "hidden",
                               }}
                             >
-                              12.490.000₫
-                            </span>
-                            <span style={styles.qtyBadge}>Số lượng: 01</span>
-                          </div>
-                        </div>
-                      </div>
-                      <hr className="my-0" style={{ borderColor: "#f1f5f9" }} />
-                      <div className="d-flex gap-3 py-3">
-                        <img
-                          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQnmwV1eY0epLt7bbwCtHbY1cdY8srSYbx2ZpGYHRVFcFeZz49CYG06FNCmqgiDrmYUG7KWHuxV4W_hM9X9Y3rtXRh2ieERvsf21Lzyac1IsVO61Tk-A61nqZ14nYynDSaQ0kYV2eubKY1HSph44GnqxJ6c-OskgZarjJWY-kA0vB-HdUtq-HoJ3x6ccF1iRHokpe5-8Rv82ph0NumRTP0arqD61cJH2lDA1p7AzOtwAHSb2AveiyYN0wa94uH1w7CDPsrIl18Hg"
-                          alt="Product 2"
-                          style={styles.productImg}
-                        />
-                        <div className="flex-grow-1 d-flex flex-column justify-content-center">
-                          <h4
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              lineHeight: 1.4,
-                              color: "#1e293b",
-                            }}
-                            className="mb-1"
-                          >
-                            Smartphone flagship Ultra HD Display v2
-                          </h4>
-                          <p
-                            className="text-muted mb-2"
-                            style={{ fontSize: 11 }}
-                          >
-                            Dung lượng: 256GB | RAM: 12GB
-                          </p>
-                          <div className="d-flex align-items-center justify-content-between">
-                            <span
-                              style={{
-                                fontSize: 12,
-                                fontWeight: 800,
-                                color: "#137fec",
-                              }}
-                            >
-                              23.990.000₫
-                            </span>
-                            <span style={styles.qtyBadge}>Số lượng: 01</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div style={styles.reviewNote} className="mt-4">
+                              {/* Shop header */}
+                              <div
+                                style={{
+                                  background: "#f8fafc",
+                                  padding: "12px 16px",
+                                  borderBottom: "1px solid #f1f5f9",
+                                }}
+                              >
+                                <p
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    color: "#1e293b",
+                                    marginBottom: 0,
+                                  }}
+                                >
+                                  <i className="bi bi-shop text-primary me-2"></i>
+                                  {group.shop?.shopName}
+                                </p>
+                              </div>
+
+                              {/* Products */}
+                              <div style={{ padding: "16px" }}>
+                                {/* Products from this shop */}
+                                {group.items.map((item, index) => (
+                                  <div key={item.id}>
+                                    <div className="d-flex gap-3 py-2">
+                                      <img
+                                        src={
+                                          item.productVariant?.imageUrl ||
+                                          "/placeholder.png"
+                                        }
+                                        alt={item.product?.name}
+                                        style={styles.productImg}
+                                      />
+                                      <div className="flex-grow-1 d-flex flex-column justify-content-center">
+                                        <h4
+                                          style={{
+                                            fontSize: 13,
+                                            fontWeight: 700,
+                                            lineHeight: 1.4,
+                                            color: "#1e293b",
+                                          }}
+                                          className="mb-1"
+                                        >
+                                          {item.product?.name}
+                                        </h4>
+                                        <p
+                                          className="text-muted mb-2"
+                                          style={{ fontSize: 11 }}
+                                        >
+                                          {item.productVariant?.variantName &&
+                                            `Phân loại: ${item.productVariant.variantName}`}
+                                          {item.productVariant?.sku &&
+                                            ` | SKU: ${item.productVariant.sku}`}
+                                        </p>
+                                        <div className="d-flex align-items-center justify-content-between">
+                                          <span
+                                            style={{
+                                              fontSize: 12,
+                                              fontWeight: 800,
+                                              color: "#137fec",
+                                            }}
+                                          >
+                                            {formatCurrency(
+                                              item.productVariant?.price || 0,
+                                            )}
+                                          </span>
+                                          <span style={styles.qtyBadge}>
+                                            Số lượng:{" "}
+                                            {String(item.quantity).padStart(
+                                              2,
+                                              "0",
+                                            )}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {index < group.items.length - 1 && (
+                                      <hr
+                                        className="my-3"
+                                        style={{ borderColor: "#f1f5f9" }}
+                                      />
+                                    )}
+                                  </div>
+                                ))}
+
+                                {/* Shipping option selector */}
+                                <div
+                                  style={{
+                                    borderTop: "1px solid #f1f5f9",
+                                    marginTop: 16,
+                                    paddingTop: 16,
+                                  }}
+                                >
+                                  <p
+                                    style={{
+                                      fontSize: 12,
+                                      fontWeight: 700,
+                                      color: "#475569",
+                                      marginBottom: 10,
+                                    }}
+                                  >
+                                    <Truck
+                                      size={14}
+                                      className="me-2"
+                                      style={{ display: "inline" }}
+                                    />
+                                    Chọn phương thức vận chuyển
+                                  </p>
+                                  <div
+                                    style={{
+                                      background: "#f8fafc",
+                                      borderRadius: 8,
+                                      padding: 12,
+                                      border: "1px solid #e2e8f0",
+                                    }}
+                                  >
+                                    <div className="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                                      <div className="flex-grow-1">
+                                        <select
+                                          style={{
+                                            fontSize: 12,
+                                            fontWeight: 600,
+                                            padding: "8px 12px",
+                                            borderRadius: 6,
+                                            border: "1.5px solid #e2e8f0",
+                                            background: "white",
+                                            cursor: "pointer",
+                                            width: "100%",
+                                          }}
+                                          value={selectedOptionId}
+                                          onChange={(e) => {
+                                            setShippingSelections((prev) => ({
+                                              ...prev,
+                                              [shopId]: e.target.value,
+                                            }));
+                                          }}
+                                        >
+                                          {shippingOptions.map((option) => (
+                                            <option
+                                              key={option.id}
+                                              value={option.id}
+                                            >
+                                              {option.name} -{" "}
+                                              {option.estimatedDays}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div className="text-end">
+                                        <div
+                                          style={{
+                                            fontSize: 12,
+                                            fontWeight: 800,
+                                            color:
+                                              selectedOption?.fee === 0
+                                                ? "#22c55e"
+                                                : "#137fec",
+                                            textTransform: "uppercase",
+                                          }}
+                                        >
+                                          {selectedOption?.fee === 0
+                                            ? "Miễn phí"
+                                            : formatCurrency(
+                                                selectedOption?.fee || 0,
+                                              )}
+                                        </div>
+                                        <div
+                                          className="text-muted"
+                                          style={{ fontSize: 10 }}
+                                        >
+                                          {selectedOption?.estimatedDays}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        },
+                      )}
+
+                      <div style={styles.reviewNote} className="mt-2">
                         <span
                           style={{
                             fontSize: 11,
@@ -643,7 +949,9 @@ export default function CheckoutPage() {
                     >
                       Tổng kết đơn hàng
                     </h3>
-                    <span style={styles.itemsBadge}>2 sản phẩm</span>
+                    <span style={styles.itemsBadge}>
+                      {cartItems.length} sản phẩm
+                    </span>
                   </div>
                   <div className="p-4 d-flex flex-column gap-4">
                     <div className="d-flex flex-column gap-2">
@@ -652,7 +960,9 @@ export default function CheckoutPage() {
                         style={{ fontSize: 12 }}
                       >
                         <span className="text-muted">Tạm tính</span>
-                        <span className="fw-semibold">36.480.000₫</span>
+                        <span className="fw-semibold">
+                          {formatCurrency(calculateSubtotal())}
+                        </span>
                       </div>
                       <div
                         className="d-flex justify-content-between align-items-center"
@@ -663,11 +973,16 @@ export default function CheckoutPage() {
                           style={{
                             fontSize: 10,
                             fontWeight: 800,
-                            color: "#22c55e",
+                            color:
+                              calculateTotalShippingFee() === 0
+                                ? "#22c55e"
+                                : "#137fec",
                             textTransform: "uppercase",
                           }}
                         >
-                          Miễn phí
+                          {calculateTotalShippingFee() === 0
+                            ? "Miễn phí"
+                            : formatCurrency(calculateTotalShippingFee())}
                         </span>
                       </div>
                     </div>
@@ -676,12 +991,12 @@ export default function CheckoutPage() {
                         type="text"
                         style={styles.couponInput}
                         placeholder="Nhập mã giảm giá (nếu có)"
-                        value={coupon}
-                        onChange={(e) => setCoupon(e.target.value)}
                       />
                       <button
                         style={styles.couponApply}
-                        onClick={() => alert(`Áp dụng mã: ${coupon}`)}
+                        onClick={() =>
+                          alert("Chức năng áp dụng mã đang phát triển")
+                        }
                       >
                         Áp dụng
                       </button>
@@ -712,7 +1027,9 @@ export default function CheckoutPage() {
                             }}
                             className="mb-0"
                           >
-                            36.480.000₫
+                            {formatCurrency(
+                              calculateSubtotal() + calculateTotalShippingFee(),
+                            )}
                           </p>
                           <p
                             className="text-muted fst-italic mb-0"
@@ -763,7 +1080,7 @@ export default function CheckoutPage() {
                         </div>
                         <div className="d-flex align-items-center gap-1">
                           <Truck size={12} color="#22c55e" strokeWidth={2.5} />
-                          2-3 ngày
+                          Giao nhanh
                         </div>
                       </div>
                     </div>
