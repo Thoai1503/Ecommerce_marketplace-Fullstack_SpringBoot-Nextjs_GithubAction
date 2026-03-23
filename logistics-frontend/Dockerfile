@@ -1,0 +1,36 @@
+# syntax=docker/dockerfile:1
+
+############################
+# Build stage
+############################
+FROM node:20-bullseye AS builder
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Copy source
+COPY . .
+
+# Build
+RUN npm run build
+
+############################
+# Production stage
+############################
+FROM node:20-bullseye AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy nextjs build output and dependencies
+COPY --from=builder /app/next.config.js ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
