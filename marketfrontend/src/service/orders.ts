@@ -1,14 +1,8 @@
 import { mockGet } from "../lib/http";
-<<<<<<< HEAD
-import { Order, OrderItem, OrderStatus, Shipment } from "@/types/index";
-
-const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
-=======
 import { http2 } from "../lib/http";
 import { Order, OrderItem, OrderStatus } from "@/types/index";
 
 // const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
->>>>>>> c0a1f7cc9a8518c42e84670ceef22ecdc13e67da
 
 const BASE_ORDERS: Order[] = [
   {
@@ -56,87 +50,6 @@ const BASE_ORDERS: Order[] = [
         status: "Packaging",
       },
     ],
-<<<<<<< HEAD
-    shipments: [
-      {
-        id: "ship-001",
-        order_id: "1",
-        shop_id: "shop-101",
-        shopName: "📱 Shop Điện Tử A",
-        tracking_number: "GHTK123456789",
-        carrier_name: "GHTK",
-        shipping_status: "SHIPPING",
-        shipping_fee: 15000,
-        estimated_delivery_at: "2024-03-17T18:00:00Z",
-        created_at: "2024-03-15T10:30:00Z",
-        updated_at: "2024-03-16T08:00:00Z",
-        items: [
-          {
-            id: "i1",
-            productName: "iPhone 15 Pro Max",
-            productImage:
-              "https://images.unsplash.com/photo-1696446701796-da61225697cc?w=100&q=80",
-            sku: "APL-IP15PM-256-TI",
-            variant: "Titan Tự Nhiên, 256GB",
-            quantity: 1,
-            price: 25000000,
-            status: "Ready",
-          },
-        ],
-        statusHistory: [
-          {
-            status: "CONFIRMED",
-            description: "Đơn hàng đã được xác nhận từ Shop",
-            updatedAt: "2024-03-15T10:35:00Z",
-          },
-          {
-            status: "PICKED_UP",
-            description: "GHTK đã lấy hàng từ kho",
-            updatedAt: "2024-03-15T14:00:00Z",
-          },
-          {
-            status: "SHIPPING",
-            description: "Gói hàng đang trong quá trình vận chuyển",
-            updatedAt: "2024-03-16T08:00:00Z",
-          },
-        ],
-      },
-      {
-        id: "ship-002",
-        order_id: "1",
-        shop_id: "shop-202",
-        shopName: "👕 Shop Thời Trang B",
-        tracking_number: "GHN987654321",
-        carrier_name: "GHN",
-        shipping_status: "CONFIRMED",
-        shipping_fee: 15000,
-        estimated_delivery_at: "2024-03-18T20:00:00Z",
-        created_at: "2024-03-15T11:00:00Z",
-        updated_at: "2024-03-15T14:30:00Z",
-        items: [
-          {
-            id: "i2",
-            productName: "Tai nghe Sony WH-1000XM5",
-            productImage:
-              "https://images.unsplash.com/photo-1670054131709-646738c80084?w=100&q=80",
-            sku: "SNY-WH1000XM5-B",
-            variant: "Black",
-            quantity: 1,
-            price: 8500000,
-            status: "Packaging",
-          },
-        ],
-        statusHistory: [
-          {
-            status: "CONFIRMED",
-            description: "Đơn hàng đã được xác nhận từ Shop",
-            updatedAt: "2024-03-15T11:05:00Z",
-          },
-        ],
-      },
-    ],
-=======
->>>>>>> c0a1f7cc9a8518c42e84670ceef22ecdc13e67da
     isFlagged: true,
     internalNote: "Khách hàng yêu cầu giao trước 5h chiều",
   },
@@ -304,27 +217,15 @@ export const getOrderById = async (id: string): Promise<Order | null> => {
   return orders.find((o) => o.id === id) || orders[0];
 };
 
-<<<<<<< HEAD
-=======
 // export const updateOrderStatus = async (id: string, status: OrderStatus): Promise<boolean> => {
 //   await delay(600);
 //   return true;
 // };
 
->>>>>>> c0a1f7cc9a8518c42e84670ceef22ecdc13e67da
 export const updateOrderStatus = async (
   id: string,
   status: OrderStatus,
 ): Promise<boolean> => {
-<<<<<<< HEAD
-  await delay(600);
-  return true;
-};
-
-export const updateOrderFlag = async (
-  id: string,
-  isFlagged: boolean,
-=======
   await http2(`/admin/orders/${id}/status`, {
     method: "PUT",
     body: JSON.stringify({ status }),
@@ -341,38 +242,11 @@ export const updateOrderFlag = async (
 export const updateOrderNote = async (
   id: string,
   note: string,
->>>>>>> c0a1f7cc9a8518c42e84670ceef22ecdc13e67da
 ): Promise<boolean> => {
   await delay(500);
   return true;
 };
 
-<<<<<<< HEAD
-export const updateOrderNote = async (
-  id: string,
-  note: string,
-): Promise<boolean> => {
-  await delay(500);
-  return true;
-};
-
-export const updateTrackingNumber = async (
-  id: string,
-  trackingNumber: string,
-): Promise<boolean> => {
-  await delay(500);
-  return true;
-};
-
-export const updateOrderItems = async (
-  id: string,
-  items: OrderItem[],
-  totalAmount: number,
-): Promise<boolean> => {
-  await delay(800);
-  return true;
-};
-=======
 // export const updateTrackingNumber = async (id: string, trackingNumber: string): Promise<boolean> => {
 //   await delay(500);
 //   return true;
@@ -403,4 +277,3 @@ export default {
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
->>>>>>> c0a1f7cc9a8518c42e84670ceef22ecdc13e67da
