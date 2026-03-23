@@ -86,8 +86,8 @@ jobs:
           context: ./order-service
           push: true
           tags: |
-            thoaimanhlong/cart-service:latest
-            thoaimanhlong/cart-service:${{ github.sha }}
+            thoaimanhlong/order-service:latest
+            thoaimanhlong/order-service:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           
