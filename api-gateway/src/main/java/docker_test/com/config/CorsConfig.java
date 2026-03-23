@@ -19,6 +19,10 @@ public class CorsConfig {
         config.addAllowedOrigin("http://localhost:3000");
         config.addAllowedOrigin("http://localhost:5173");
         config.addAllowedOrigin("http://localhost:8001");
+<<<<<<< HEAD
+=======
+        config.addAllowedOrigin("http://localhost:8000");
+>>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
         config.addAllowedOrigin("http://103.90.225.130");
         config.addAllowedOrigin("http://103.90.225.130:4000");
 

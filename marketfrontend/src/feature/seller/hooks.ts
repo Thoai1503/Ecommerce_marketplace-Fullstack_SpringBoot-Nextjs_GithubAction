@@ -4,9 +4,16 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { categoryQuery, productImageQuery } from "./query";
 import { slugify, generateUniqueSlug, isValidSlug } from "@/helper/utils";
+<<<<<<< HEAD
 import { addProduct, uploadToProduct } from "./service";
 import { message, UploadFile, UploadProps } from "antd";
 import { useSellerAuth } from "@/context/SellerAuthContext";
+=======
+import { addProduct, createProductVariant, uploadToProduct } from "./service";
+import { message, UploadFile, UploadProps } from "antd";
+import { useSellerAuth } from "@/context/SellerAuthContext";
+import { ProductVariant } from "@/validators/productVariant";
+>>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
 
 export const useAddProductSeller = (
   onSuccessCallback: (id: number) => void,
@@ -48,12 +55,49 @@ export const useAddProductSeller = (
     message.success("Sản phẩm đã được lưu thành công!");
   };
 
+<<<<<<< HEAD
+=======
+  const { mutate: createVariant } = useMutation({
+    mutationFn: (en: ProductVariant) => createProductVariant(en),
+    onSuccess: (data) => {
+      console.log("Variant created:", data);
+      message.success(`Tạo biến thể sản phẩm thành công`);
+    },
+    onError: (error) => {
+      console.error("Error creating variant:", error);
+      message.error(`Lỗi khi tạo biến thể sản phẩm: ${error.message}`);
+    },
+  });
+
+>>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
   const { mutate: add } = useMutation({
     mutationFn: (product: Partial<IProduct>) => addProduct(product),
     onSuccess: (data) => {
       //    message.success(`Lưu thành công sản phẩm thành công`);
       console.log("Added: " + JSON.stringify(data));
       onSuccessCallback(data.id);
+<<<<<<< HEAD
+=======
+      // Reset form sau khi thêm thành công
+      setProduct({
+        product_name: "",
+        product_slug: "",
+        shop_id: shop?.id || 0,
+        description: "",
+        category_id: 2,
+        original_price: 0,
+        price: 0,
+      });
+      createProductVariant({
+        id: 0,
+        product_id: data.id,
+        variant_name: data.product_name,
+        sku: `SKU-${data.id}`,
+        price: data.original_price || 0,
+        stock_quantity: data.stock_quantity || 0,
+        image_url: "",
+      });
+>>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
     },
     onError: (error) => {
       //  alert(error.message);

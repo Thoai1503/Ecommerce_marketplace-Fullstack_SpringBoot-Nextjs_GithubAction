@@ -2,7 +2,10 @@ package docker_test.com.repository;
 
 import java.sql.*;
 import java.time.LocalDateTime;
+<<<<<<< HEAD
 import java.util.ArrayList;
+=======
+>>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
 import java.util.List;
 
 import docker_test.com.configs.DBConnection;
@@ -82,7 +85,6 @@ public class UserRepository implements IRepositories<User> {
                 }
             }
             return item;
-
         }
     }
 

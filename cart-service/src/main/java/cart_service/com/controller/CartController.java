@@ -30,13 +30,30 @@ public class CartController {
 		return "Cart Service is running";
 	} 
 	@GetMapping("user/{id}")
+<<<<<<< HEAD
 	public ResponseEntity< List<Cart>> getByUserId(@PathVariable int id){
 		return ResponseEntity.ok( cartService.getUserCart(id));
 	}
+=======
+	public ResponseEntity<List<Cart>> getByUserId(@PathVariable int id){
+		if(id==0) {
+			return ResponseEntity.status(500).body(null);
+		}
+		var data = cartService.getUserCart(id);
+	//var variants=	data.stream().filter(c->c.getProductVariant()!=null);
+//	System.out.print("Logs: "+ variants);
+		return ResponseEntity.ok(cartService.getUserCart(id));
+	}
+	
+>>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
 	@GetMapping("variant/{id}")
 	public ResponseEntity< Cart> getByVariantId(@PathVariable int id){
 		return ResponseEntity.ok( cartService.getCartByVariantId(id));
 	}
+<<<<<<< HEAD
+=======
+	
+>>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
 	@PostMapping("")
 	public ResponseEntity<CartDTO> create(@RequestBody  CartDTO cartDto) {
 		

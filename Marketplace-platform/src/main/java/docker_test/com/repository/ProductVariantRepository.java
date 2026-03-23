@@ -3,6 +3,7 @@ package docker_test.com.repository;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,7 +11,7 @@ import docker_test.com.configs.DBConnection;
 import docker_test.com.models.product.Product;
 import docker_test.com.models.product.ProductVariant;
 
-public class ProductVariantRepository implements IRepositories {
+public class ProductVariantRepository implements IRepositories<ProductVariant> {
 	private static ProductVariantRepository instance = null;
 	private DBConnection dbConnection;
 
@@ -25,29 +26,6 @@ public class ProductVariantRepository implements IRepositories {
  		this.dbConnection = DBConnection.getInstance();
 	}
 
-	@Override
-	public Object GetById(int id) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object Create(Object entity) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public java.util.List<?> GetAll() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Object Update(Object item) {
-		// TODO Auto-generated method stub
-		return null;
-	}
 
 	@Override
 	public boolean Delete(int id) {
@@ -79,6 +57,46 @@ public class ProductVariantRepository implements IRepositories {
 						ex.printStackTrace();
 					}
 					return null;
+	}
+
+	@Override
+	public ProductVariant Create(ProductVariant item) throws SQLException {
+		String sql = "insert into product_variant (product_id, variant_name, sku, price, stock_quantity, image_url) values (?,?,?,?,?,?)";
+		try(Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)){
+			  ps.setLong(1, item.getProduct_id());
+			  ps.setString(2, item.getVariant_name());
+			  ps.setString(3, item.getSku());
+			  ps.setDouble(4, item.getPrice());
+			  ps.setInt(5, item.getStock_quantity());
+			  ps.setString(6, item.getImage_url());
+			  int affectedRows = ps.executeUpdate();
+			  if (affectedRows > 0) {
+				  return item;
+			  }
+		}
+		catch(Exception ex) {
+			ex.printStackTrace();
+		}
+		return  null;
+	}
+
+	@Override
+	public ProductVariant Update(ProductVariant item) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<ProductVariant> GetAll() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ProductVariant GetById(int id) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

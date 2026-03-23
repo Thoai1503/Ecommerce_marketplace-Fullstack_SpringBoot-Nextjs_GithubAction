@@ -3,6 +3,10 @@ import http from "@/lib/http";
 import { IProduct } from "@/validators/product";
 import { ProductImage } from "./types";
 import { Shop } from "@/validators/shop";
+<<<<<<< HEAD
+=======
+import { ProductVariant } from "@/validators/productVariant";
+>>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
 
 export const addProduct = async (
   product: Partial<IProduct>,
@@ -63,3 +67,17 @@ export const getShopByUserId = async (user_id: number): Promise<Shop> => {
       throw error;
     });
 };
+<<<<<<< HEAD
+=======
+
+export const createProductVariant = async (
+  productVariant: ProductVariant,
+): Promise<ProductVariant> => {
+  return await http
+    .post("/seller/product-variant", productVariant)
+    .then((res) => res.data)
+    .catch((error) => {
+      throw error;
+    });
+};
+>>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
