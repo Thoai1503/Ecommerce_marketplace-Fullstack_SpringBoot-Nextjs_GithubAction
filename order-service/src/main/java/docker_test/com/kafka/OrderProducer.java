@@ -88,7 +88,13 @@ public class OrderProducer {
 		 
 		 
 
-	      kafkaTemplate.send("order_created", event);
+	      kafkaTemplate.send("order_created", event).whenComplete((result, ex) -> {
+	          if (ex != null) {
+	              LOGGER.error("Failed to send order event to Kafka", ex);
+	          } else {
+	              LOGGER.info("Order event sent to Kafka successfully");
+	          }
+	      });
 	 }
 }	
 
