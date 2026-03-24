@@ -103,13 +103,16 @@ jobs:
             set -e
 
             cd ${{ secrets.VPS_APP_DIR }}
-
+            
+            echo "🧹 Stop & remove old containers..."
+            docker compose down --remove-orphans
+            
             echo "🚀 Pull new images..."
             docker compose pull
-
-            echo "🚀 Restart containers..."
-            docker compose up -d
-
+            
+            echo "🚀 Start containers..."
+            docker compose up -d --build
+            
             echo "⏳ Waiting for containers to stabilize..."
             sleep 15
 
