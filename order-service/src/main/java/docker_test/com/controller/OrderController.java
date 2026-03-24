@@ -27,6 +27,7 @@ public class OrderController {
 		for(var item : list) {
 			System.out.println("Order Item - Product ID: " + item.getProduct_id() + ", Quantity: " + item.getQuantity() + ", Price: " + item.getPrice());
 		}
+		//sdsds
 		
 		 OrderCreatedEvent orderEvent = new OrderCreatedEvent();
 		 orderEvent.setStatus("PENDING");

@@ -30,7 +30,7 @@ public class CategoryController {
 
 	   repositories = RepoFactoryImpl.Instance().createRepo("category");
    }
-   //up
+   //upfscfcs
    @GetMapping("")
    public  ResponseEntity getAll() {
 	   
