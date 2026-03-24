@@ -28,9 +28,9 @@ public class OrderProducer {
     private final OrderItemRepository orderItemRepository;
     
     
-    private KafkaTemplate<String,String> kafkaTemplate;
+    private KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate;
 
-	 public OrderProducer(NewTopic newTopic, KafkaTemplate<String, String> kafkaTemplate,OrderRepository orderRepository,OrderItemRepository orderItemRepository) {
+	 public OrderProducer(NewTopic newTopic, KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate,OrderRepository orderRepository,OrderItemRepository orderItemRepository) {
 		super();
 		this.newTopic = newTopic;
 		this.kafkaTemplate = kafkaTemplate;
@@ -88,10 +88,11 @@ public class OrderProducer {
 		 
 		 
 
-		 kafkaTemplate.send("order_created", "HELLO")
+		 kafkaTemplate.send("order_created", event)
 		    .whenComplete((result, ex) -> {
 		        if (ex == null) {
-		            System.out.println("✅ Sent OK: " + result.getRecordMetadata());
+		        	//result.toString()
+		            System.out.println("✅ Sent OK: " + result.toString());
 		        } else {
 		            System.err.println("❌ SEND FAILED");
 		            ex.printStackTrace();
