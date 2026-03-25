@@ -17,16 +17,16 @@ public class OrderConsumer {
 	 @KafkaListener(topics = "${spring.kafka.topic.name}",groupId = "${spring.kafka.consumer.group-id}")
 	 public void consume(OrderCreatedEvent event) {
 		 var order = event.getOrder();
-		 System.out.println("Order  => " + order.toString());
-		 var orderItems = order.getOrders_items();
-		 for(var item: orderItems) {
-			 LOGGER.info(String.format("Order item => %s", item.toString()));
-
-		 }
-		
-		 order.getOrders_items().forEach(item -> {
-			 LOGGER.info(String.format("Order item => %s", item.toString()));
-		 });
+		 System.out.println("✅ Received OK: Order  => " + order.toString());
+//		 var orderItems = order.getOrders_items();
+//		 for(var item: orderItems) {
+//			 LOGGER.info(String.format("Order item => %s", item.toString()));
+//
+//		 }
+//		
+//		 order.getOrders_items().forEach(item -> {
+//			 LOGGER.info(String.format("Order item => %s", item.toString()));
+//		 });
 		 order.getOrders_items().stream().forEach(item -> {
 			 LOGGER.info(String.format("Order item => %s", item.toString()));
 
