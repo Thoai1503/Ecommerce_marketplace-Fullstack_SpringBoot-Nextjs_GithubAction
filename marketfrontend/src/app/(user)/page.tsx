@@ -14,8 +14,6 @@ export default async function Home() {
   const role = cookieStore.get("role")?.value;
   console.log("Role: " + role);
 
-  // const res = await fetch(`${INTERNAL_API}/product`);
-  // const products = ((await res.json()) as Partial<IProduct>[]) || [];
   // const { products } = useHomePage();
 
   // if (products.length === 0 || !products) {
@@ -25,18 +23,27 @@ export default async function Home() {
   //     </div>
   //   );
   // }
+
   const res = await fetch("http://localhost:8000/api/categories", {
     cache: "no-store",
   });
 
-  const categories = await res.json();
+  if (!res.ok) {
+    console.error("API error");
+  }
+
+  const data = await res.json();
+
+  const categories = Array.isArray(data) ? data : data.data;
 
   const parentCategories = categories
-    .filter((c: any) => c.level === 0 && c.is_active === 1)
+    .filter((c: any) => Number(c.level) === 0 && Number(c.is_active) === 1)
     .sort(
       (a: any, b: any) =>
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
+
+    console.log("Parent Categories:", parentCategories);
   return (
     <div className="container-fluid px-3 px-md-4">
       {/* Category Icons - Horizontal Scrollable */}
@@ -78,50 +85,27 @@ export default async function Home() {
         </div>
       </div>
       {/* Danh mục sản phẩm */}
-
       <h5 className="fw-bold mb-3 mt-5">DANH MỤC</h5>
-
-      <div className="row g-0 border rounded overflow-hidden">
-        {parentCategories.map((cat: any) => (
-          <div
-            key={cat.id}
-            className="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-1 border category-box"
-          >
-            <Link
-              href={`/category/${cat.category_slug}`}
-              className="text-decoration-none text-dark"
-            >
-              <div className="text-center p-3">
-                <div
-                  className="mx-auto mb-2 d-flex align-items-center justify-content-center rounded-circle bg-light"
-                  style={{
-                    width: "60",
-                    height: "60px",
-                  }}
-                >
-                  {cat.category_icon ? (
-                    <Image
-                      src={cat.category_icon}
-                      alt={cat.category_name}
-                      width={100}
-                      height={100}
-                    />
-                  ) : (
-                    <i className="bi bi-grid fs-3"></i>
-                  )}
-                </div>
-
-                <small
-                  className="category-name d-block"
-                  style={{
-                    fontSize: "13px",
-                    lineHeight: "16px",
-                  }}
-                >
-                  {cat.category_name}
-                </small>
+      <div className="row g-3 g-md-4">
+        {parentCategories.map((cat: any, idx: number) => (
+          <div key={idx} className="col-4 col-md-3 col-lg-2">
+            <div className="text-center category-item shadow-sm rounded p-3 bg-white hover-lift">
+              <div
+                className="rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center"
+                style={{
+                  width: "70px",
+                  height: "70px",
+                  backgroundColor: cat.color,
+                }}
+              >
+                {cat.category_icon && (
+                  <img src={cat.category_icon}
+                  style={{width:"100px", height:"100px", objectFit:"cover"}}
+                  />
+                )}
               </div>
-            </Link>
+              <small className="d-block fw-medium">{cat.category_name}</small>
+            </div>
           </div>
         ))}
       </div>

@@ -52,7 +52,7 @@ export default function CategoryForm() {
       slug: c.slug || c.category_slug || "",
       thumbnailUrl: c.thumbnailUrl || c.category_icon || "",
       status: c.status || (c.is_active === 1 ? "ACTIVE" : "HIDDEN"),
-      parentId: c.parent_id ?? 0,
+      parentId: c.parent_id ?? c.parentId ?? 0,
       level: c.level ?? 0,
     };
 
@@ -115,50 +115,37 @@ export default function CategoryForm() {
       });
       return;
     }
+    // 🔥 FIX: khai báo ở đây
+    const parentId =
+      (category as any)?.parent_id ?? (category as any)?.parentId ?? 0;
+
+    const level = (category as any)?.level ?? formData.level ?? 0;
 
     const payload = {
-      parent_id: isEditMode
-        ? ((category as any)?.parent_id ?? 0)
-        : formData.parentId,
-
+      parent_id: isEditMode ? parentId : formData.parentId,
       category_name: formData.name,
-
       category_slug: formData.slug,
-
       category_icon: formData.thumbnailUrl,
-
-      level: isEditMode ? ((category as any)?.level ?? 0) : formData.level,
-
+      level: isEditMode ? level : formData.level,
       is_active: formData.status === "ACTIVE" ? 1 : 0,
     };
 
     try {
       if (isEditMode) {
         await updateCategory(payload);
-
-        setToast({
-          message: "Category updated successfully",
-          type: "success",
-        });
       } else {
         await createCategory(payload);
-
-        setToast({
-          message: "Category created successfully",
-          type: "success",
-        });
       }
 
       setTimeout(() => {
-        router.push("/admin/categories/industries");
+        if (isEditMode && parentId > 0) {
+          router.push(`/admin/categories/industries/${parentId}`);
+        } else {
+          router.push("/admin/categories/industries");
+        }
       }, 800);
     } catch (error) {
       console.error(error);
-
-      setToast({
-        message: "Save failed",
-        type: "error",
-      });
     }
   };
   /* ================= LOADING ================= */

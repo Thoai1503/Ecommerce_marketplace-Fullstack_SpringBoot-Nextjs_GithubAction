@@ -74,11 +74,9 @@ public class CategoryRepository implements IRepositories<Category> {
 
         String sql = """
             UPDATE category
-            SET parent_id=?,
-                category_name=?,
+            SET category_name=?,
                 category_slug=?,
                 category_icon=?,
-                level=?,
                 is_active=?,
                 updated_at=NOW()
             WHERE id=?
@@ -89,22 +87,16 @@ public class CategoryRepository implements IRepositories<Category> {
             PreparedStatement ps = con.prepareStatement(sql)
         ) {
 
-            ps.setInt(1, item.getParent_id() != null ? item.getParent_id() : 0);
-            ps.setString(2, item.getCategory_name());
-            ps.setString(3, item.getCategory_slug());
-            ps.setString(4, item.getCategory_icon());
-            ps.setInt(5, item.getLevel() != null ? item.getLevel() : 0);
-            ps.setInt(6, item.getIs_active() != null ? item.getIs_active() : 1);
-            ps.setInt(7, item.getId());
+            ps.setString(1, item.getCategory_name());
+            ps.setString(2, item.getCategory_slug());
+            ps.setString(3, item.getCategory_icon());
+            ps.setInt(4, item.getIs_active() != null ? item.getIs_active() : 1);
+            ps.setInt(5, item.getId());
 
             int rows = ps.executeUpdate();
 
-            System.out.println("UPDATE ROWS = " + rows); // debug
-
             if (rows > 0) {
-
-                return GetById(item.getId()); // trả dữ liệu mới từ DB
-
+                return GetById(item.getId());
             }
 
         } catch (Exception ex) {

@@ -71,24 +71,18 @@ export type UnitType = 'WEIGHT' | 'LENGTH' | 'VOLUME' | 'QUANTITY' | 'OTHER';
 export interface Unit {
   id: string;
   label: string;     
-  symbol: string;    
-  type: UnitType;    
+  symbol: string;       
   status: UnitStatus;
-  createdAt: string;
 }
 
 // --- ATTRIBUTE TYPES ---
-export type AttributeOptionType = 'DROPDOWN' | 'RADIO';
 
+export type AttributeStatus = 'ACTIVE' | 'HIDDEN';
 export interface Attribute {
   id: string;
-  attributeCode: string; 
   name: string;
-  option: AttributeOptionType;
-  unitId?: string; 
-  published: boolean;
-  valuesCount: number; 
-  createdAt: string;
+  slug: string;
+  status: AttributeStatus; // 'ACTIVE' for active, 'HIDDEN' for inactive
 }
 
 export interface AttributeValue {

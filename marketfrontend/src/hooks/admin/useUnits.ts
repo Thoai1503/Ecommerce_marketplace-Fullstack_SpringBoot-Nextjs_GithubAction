@@ -1,67 +1,155 @@
+"use client";
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { unitsQuery } from '@/query/units';
-import { createUnit, updateUnit, deleteUnit } from '@/service/units';
-import { Unit } from '@/types/index';
+import { useEffect, useState } from "react";
 
-export const useUnits = () => {
-  const queryClient = useQueryClient();
+export type Unit = {
+  id: string;
+  label: string;
+  symbol: string;
+  status: "ACTIVE" | "INACTIVE";
+};
 
-  const { data, isLoading, isError, refetch } = useQuery(unitsQuery.all());
+const API_URL = "http://localhost:8000/api/unit";
 
-  const createMutation = useMutation({
-    mutationFn: createUnit,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'units'] }),
-  });
+// ================= MAP =================
+const mapUnit = (u: any): Unit => ({
+  id: String(u.id ?? ""),
+  label: u.label ?? "",
+  symbol: u.symbol ?? "",
+  status: u.status === 1 ? "ACTIVE" : "INACTIVE",
+});
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: Partial<Unit> }) => updateUnit(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'units'] }),
-  });
+// ================= HOOK =================
+export function useUnits() {
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteUnit,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'units'] }),
-  });
+  // ================= GET ALL =================
+  const fetchUnits = async () => {
+    try {
+      const res = await fetch(API_URL);
+
+      if (!res.ok) throw new Error("Fetch failed");
+
+      const data = await res.json();
+
+      setUnits(Array.isArray(data) ? data.map(mapUnit) : []);
+    } catch (err) {
+      console.error("Fetch units error:", err);
+      setUnits([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnits();
+  }, []);
+
+  // ================= CREATE =================
+  const createUnit = async (data: Partial<Unit>) => {
+    setIsSaving(true);
+
+    try {
+      const payload = {
+        label: data.label ?? "",
+        symbol: data.symbol ?? "",
+        status: data.status === "ACTIVE" ? 1 : 0,
+      };
+
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const text = await res.text();
+      console.log("CREATE RESPONSE:", res.status, text);
+
+      if (!res.ok) throw new Error(text || "Create failed");
+
+      await fetchUnits();
+    } catch (err) {
+      console.error("Create error:", err);
+      throw err;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ================= UPDATE =================
+  const updateUnit = async ({
+    id,
+    data,
+  }: {
+    id: string;
+    data: Partial<Unit>;
+  }) => {
+    setIsSaving(true);
+
+    try {
+      const payload = {
+        label: data.label ?? "",
+        symbol: data.symbol ?? "",
+        status: data.status === "ACTIVE" ? 1 : 0,
+      };
+
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const text = await res.text();
+      console.log("UPDATE RESPONSE:", res.status, text);
+
+      if (!res.ok) throw new Error(text || "Update failed");
+
+      await fetchUnits();
+    } catch (err) {
+      console.error("Update error:", err);
+      throw err;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ================= DELETE =================
+  const deleteUnit = async (id: string) => {
+    setIsDeleting(true);
+
+    try {
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+      });
+
+      const text = await res.text();
+      console.log("DELETE RESPONSE:", res.status, text);
+
+      if (!res.ok) throw new Error(text || "Delete failed");
+
+      await fetchUnits();
+    } catch (err) {
+      console.error("Delete error:", err);
+      throw err;
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return {
-    units: data || [],
+    units,
     isLoading,
-    isError,
-    refetch,
-    createUnit: createMutation.mutateAsync,
-    updateUnit: updateMutation.mutateAsync,
-    deleteUnit: deleteMutation.mutateAsync,
-    isDeleting: deleteMutation.isPending,
-    isSaving: createMutation.isPending || updateMutation.isPending,
+    isDeleting,
+    isSaving,
+    createUnit,
+    updateUnit,
+    deleteUnit,
   };
-};
-
-export const useUnitDetail = (id: string) => {
-  const queryClient = useQueryClient();
-
-  const query = useQuery(unitsQuery.detail(id));
-
-  const createMutation = useMutation({
-    mutationFn: createUnit,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'units'] }),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: (data: any) => updateUnit(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'units'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'units', id] });
-    },
-  });
-
-  return {
-    unit: query.data,
-    isLoading: query.isLoading,
-    isError: query.isError,
-    refetch: query.refetch,
-    createUnit: createMutation.mutateAsync,
-    updateUnit: updateMutation.mutateAsync,
-    isSaving: createMutation.isPending || updateMutation.isPending,
-  };
-};
+}

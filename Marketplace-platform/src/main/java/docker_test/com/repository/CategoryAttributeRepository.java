@@ -1,111 +1,166 @@
 package docker_test.com.repository;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.HashSet;
+import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
 
 import docker_test.com.configs.DBConnection;
+import docker_test.com.mappers.CategoryAttributeMapper;
 import docker_test.com.models.CategoryAttribute;
-import docker_test.com.models.Unit;
-import docker_test.com.models.attribute.Attribute;
-import docker_test.com.models.attribute.AttributeValue;
 
-public class CategoryAttributeRepository implements IRepositories<CategoryAttribute> {
+public class CategoryAttributeRepository {
 
-	private static CategoryAttributeRepository instance=null;
-	private DBConnection dbConnection;
-	
-	 public CategoryAttributeRepository() {
-		this.dbConnection= DBConnection.getInstance();
-	}
-	public static CategoryAttributeRepository Instance() {
-		if (instance==null) {
-			instance=new CategoryAttributeRepository();
-		}
-		return instance;
-	}
-	
-	@Override
-	public CategoryAttribute Create(CategoryAttribute item) throws SQLException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    private static CategoryAttributeRepository instance;
 
-	@Override
-	public CategoryAttribute Update(CategoryAttribute item) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    public static CategoryAttributeRepository Instance() {
+        if (instance == null) {
+            instance = new CategoryAttributeRepository();
+        }
+        return instance;
+    }
 
-	@Override
-	public boolean Delete(int id) {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    private CategoryAttributeRepository() {}
 
+    // ================= GET ALL =================
+    public List<CategoryAttribute> GetAll() {
+        List<CategoryAttribute> list = new ArrayList<>();
+        String sql = "SELECT * FROM category_attribute";
 
-	@Override
-	public List<CategoryAttribute> GetAll() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+        try (Connection conn = DBConnection.getConn();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
 
-	public HashSet<CategoryAttribute> GetByCategoryId(int category_id) {
-	     String sql =  "\r\n"
-	     		+ "SELECT *  FROM attribute a  join category_attribute ca on ca.attribute_id = a.id left join attribute_value av on a.id = av.attribute_id left join unit u on u.id = av.unit_id where category_id = ?";
-	     HashSet<CategoryAttribute> list = new HashSet<>();
-	     try(Connection con = dbConnection.getConn();
-	    		 PreparedStatement ps = con.prepareStatement(sql);
-	    		 ){
-	    	 
-	    	 ps.setInt(1, category_id);
-	    	 
-	    	 
-	    	 ResultSet rs = ps.executeQuery();
-	    	 
-	    	 while (rs.next()) {
-	    		 	CategoryAttribute ca = new CategoryAttribute();
-	    		 	ca.setAttribute_id(rs.getInt("attribute_id"));
-	    		 	ca.setCategory_id(rs.getInt("category_id"));
-	    		 	Attribute a = new Attribute();
-	    		 	AttributeValue av= new AttributeValue();
-	    		 	Unit u = new Unit();
-	    		 	u.setLabel(rs.getString("label"));
-	    		 	
-	    		 	u.setSymbol(rs.getString("symbol"));
-	    		 	u.setId(rs.getInt("unit_id"));
-	    		 	av.setUnit(u);
-	    		 	av.setUnit_id(rs.getInt("unit_id"));
-	    		 	av.setAttributeId(rs.getInt("attribute_id"));
-	    		 	av.setValue(rs.getString("value"));
-	    		 	a.setName(rs.getString("name"));
-	    			a.setSlug(rs.getString("slug"));
-	    			a.setData_type(rs.getInt("data_type"));
-	    			a.setAttribute_value(av);
-	    			ca.setAttribute(a);
-	    			
-	    			list.add(ca);
-	    	 }
-	    	 return list;
-	    	 
-	    	 
-	     }
-	     catch(Exception ex) {
-	    	 ex.printStackTrace();
-	     }
-	     
-	     
-		return null;
-	}
-	@Override
-	public CategoryAttribute GetById(int id) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+            while (rs.next()) {
+                list.add(CategoryAttributeMapper.map(rs));
+            }
 
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    // ================= GET BY ID =================
+    public CategoryAttribute GetById(int id) {
+        String sql = "SELECT * FROM category_attribute WHERE id = ?";
+
+        try (Connection conn = DBConnection.getConn();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return CategoryAttributeMapper.map(rs);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    // ================= GET BY CATEGORY =================
+    public List<CategoryAttribute> GetByCategoryId(long categoryId) {
+        List<CategoryAttribute> list = new ArrayList<>();
+        String sql = "SELECT * FROM category_attribute WHERE category_id = ?";
+
+        try (Connection conn = DBConnection.getConn();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setLong(1, categoryId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                list.add(CategoryAttributeMapper.map(rs));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+    // ================= CREATE =================
+    public CategoryAttribute Create(CategoryAttribute item) throws SQLException {
+
+        // check duplicate
+        String checkSql = "SELECT id FROM category_attribute WHERE category_id = ? AND attribute_id = ?";
+        try (Connection conn = DBConnection.getConn();
+             PreparedStatement ps = conn.prepareStatement(checkSql)) {
+
+            ps.setLong(1, item.getCategoryId());
+            ps.setInt(2, item.getAttributeId());
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                throw new SQLException("Duplicate category_attribute");
+            }
+        }
+
+        String sql = "INSERT INTO category_attribute (category_id, attribute_id, status) VALUES (?, ?, ?)";
+
+        try (Connection conn = DBConnection.getConn();
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            ps.setLong(1, item.getCategoryId());
+            ps.setInt(2, item.getAttributeId());
+            ps.setInt(3, item.getStatus());
+
+            int affected = ps.executeUpdate();
+
+            if (affected > 0) {
+                ResultSet keys = ps.getGeneratedKeys();
+                if (keys.next()) {
+                    item.setId(keys.getInt(1));
+                }
+                return item;
+            }
+        }
+
+        throw new SQLException("Insert failed");
+    }
+
+    // ================= UPDATE =================
+    public CategoryAttribute Update(CategoryAttribute item) throws SQLException {
+
+        String sql = "UPDATE category_attribute SET category_id = ?, attribute_id = ?, status = ? WHERE id = ?";
+
+        try (Connection conn = DBConnection.getConn();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setLong(1, item.getCategoryId());
+            ps.setInt(2, item.getAttributeId());
+            ps.setInt(3, item.getStatus());
+            ps.setInt(4, item.getId());
+
+            int affected = ps.executeUpdate();
+
+            if (affected > 0) {
+                return item;
+            }
+        }
+
+        throw new SQLException("Update failed");
+    }
+
+    // ================= DELETE =================
+    public boolean Delete(int id) {
+        String sql = "DELETE FROM category_attribute WHERE id = ?";
+
+        try (Connection conn = DBConnection.getConn();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
 }
