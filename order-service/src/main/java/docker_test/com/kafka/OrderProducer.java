@@ -16,6 +16,7 @@ import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
 import docker_test.com.repository.OrderItemRepository;
 import docker_test.com.repository.OrderRepository;
+import docker_test.com.service.OrderService;
 
 @Service
 public class OrderProducer {
@@ -27,18 +28,22 @@ public class OrderProducer {
     
     private final OrderItemRepository orderItemRepository;
     
+    private final OrderService  orderService;
     
     private KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate;
 
-	 public OrderProducer(NewTopic newTopic, KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate,OrderRepository orderRepository,OrderItemRepository orderItemRepository) {
+	 public OrderProducer(NewTopic newTopic, KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate,OrderRepository orderRepository,OrderItemRepository orderItemRepository,OrderService orderService) {
 		super();
 		this.newTopic = newTopic;
 		this.kafkaTemplate = kafkaTemplate;
 		this.orderRepository = orderRepository;
 		this.orderItemRepository = orderItemRepository;
+		this.orderService =orderService;
 	 }
 	 
 	 public void sendMessage(OrderCreatedEvent event) {
+		 var recipient = event.getRecipient();
+		 LOGGER.info(String.format("Recipient data => %s", recipient.toString()));
 		 LOGGER.info(String.format("Order event => %s", event.toString()));
 		 LOGGER.info(String.format("Order data => %s", event.getOrder().toString()));
 		 var order = new Order();
@@ -55,7 +60,7 @@ public class OrderProducer {
 		 order.setPaymentMethod(event.getOrder().getPayment_method());
 		 order.setShippingFee(event.getOrder().getShipping_fee());
 		 order.setUserId(event.getOrder().getUser_id());
-		 
+		
 		  
 		 var savedOrder = orderRepository.save(order);
 		 System.out.println("Order saved to database with ID: " + savedOrder.getId());
@@ -97,7 +102,7 @@ public class OrderProducer {
 		            System.err.println("❌ SEND FAILED");
 		            ex.printStackTrace();
 		        }
-		    });
+		 });
 	 }
 }	
 

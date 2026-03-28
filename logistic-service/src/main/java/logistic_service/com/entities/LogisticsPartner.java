@@ -66,7 +66,7 @@ public class LogisticsPartner  {
     // Relationships (nội bộ logistics service)
     // ----------------------------------------------------------------
 
- //   @OneToMany(mappedBy = "partner", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-  //  @Builder.Default
-  //  private List<Shipment> shipments = new ArrayList<>();
+//    @OneToMany(mappedBy = "partner", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+//    @Builder.Default
+//    private List<Shipment> shipments = new ArrayList<>();
 }

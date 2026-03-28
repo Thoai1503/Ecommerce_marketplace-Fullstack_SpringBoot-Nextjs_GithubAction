@@ -6,9 +6,28 @@ public class OrderDTO {
   public String getOrder_number() {
 		return order_number;
 	}
+  
+  public String getPhone() {
+	return phone;
+}
+
+  public void setPhone(String phone) {
+	this.phone = phone;
+  }
+
+  private String phone;
 
 	public void setOrder_number(String order_number) {
 		this.order_number = order_number;
+	}
+
+	private RecipientDTO recipient;
+  public RecipientDTO getRecipient() {
+		return recipient;
+	}
+
+	public void setRecipient(RecipientDTO recipient) {
+		this.recipient = recipient;
 	}
 
   private String order_number;
@@ -90,11 +109,12 @@ public class OrderDTO {
 		this.cancel_reason = cancel_reason;
 	}
 
-	public OrderDTO(Long id, String name, Long user_id, Long address_id, String order_number , Long shipping_fee, Long discount_amount,
+	public OrderDTO(Long id,String phone , String name, Long user_id, Long address_id, String order_number , Long shipping_fee, Long discount_amount,
 			String payment_method, Long final_amount, String order_status, String tracking_number,
 			double total_price) {
 		super();
 		this.id = id;
+		this.phone = phone;
 		this.name = name;
 		this.user_id = user_id;
 		this.order_number = order_number;

@@ -14,7 +14,7 @@ export const getAllProduct = async (): Promise<Partial<IProduct>> => {
 
 export const createOrder = async (orderData: IOrder): Promise<any> => {
   return axios
-    .post("http://localhost:8006/api/orders", orderData)
+    .post("http://localhost:8002/api/orders", orderData)
     .then((res) => res.data)
     .catch((error) => {
       throw error;

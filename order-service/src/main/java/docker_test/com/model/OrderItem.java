@@ -35,6 +35,12 @@ public class OrderItem {
 	@Column(name = "product_id", nullable = false)
 	private Long productId;
 	
+	@Column(name = "shop_id", nullable = false)
+	private Long shopId;
+	
+	@Column(name = "shipment_id", nullable = false)
+	private Long shipmentId;
+	
 	@Column(name = "variant_id", nullable = false)
 	private Long variantId;
 	

@@ -44,13 +44,13 @@ public class Recipient {
     private String address;
 
     @Column(name = "province", length = 100)
-    private Long province;
+    private Integer province;
 
     @Column(name = "district", length = 100)
-    private Long district;
+    private Integer district;
 
     @Column(name = "ward", length = 100)
-    private Long ward;
+    private Integer ward;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

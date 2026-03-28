@@ -24,4 +24,11 @@ public class OrderCreatedEvent {
 	private String message;
     private String status;
     private OrderDTO order;
+    public RecipientDTO getRecipient() {
+		return recipient;
+	}
+	public void setRecipient(RecipientDTO recipient) {
+		this.recipient = recipient;
+	}
+	private RecipientDTO recipient;
 }
