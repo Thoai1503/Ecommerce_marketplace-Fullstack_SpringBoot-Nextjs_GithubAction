@@ -17,6 +17,7 @@ public class CategoryController {
 
 	private final IRepositories<Category> repositories;
 
+<<<<<<< HEAD
 	public CategoryController() {
 		repositories = RepoFactoryImpl.Instance().createRepo("category");
 	}
@@ -160,3 +161,24 @@ public class CategoryController {
 	    return ResponseEntity.ok(list);
 	}
 }
+=======
+	   repositories = RepoFactoryImpl.Instance().createRepo("category");
+   }
+   //upfscfcs
+   @GetMapping("")
+   public  ResponseEntity getAll() {
+	   
+	   var list = repositories.GetAll();
+	   
+	   return ResponseEntity.ok(list);
+   }
+   @PostMapping("")
+   public  ResponseEntity create(@RequestBody Category item) throws SQLException {
+	   
+	   var list = repositories.Create(item);
+	   	
+	   return ResponseEntity.ok(list);
+   }
+   
+}
+>>>>>>> 2dd3107eb64965ef2f5db2a5a58f933e5d430ebf

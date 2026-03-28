@@ -38,10 +38,48 @@ public class CategoryRepository implements IRepositories<Category> {
             VALUES (?, ?, ?, ?, ?, ?)
         """;
 
+<<<<<<< HEAD
         try (
             Connection con = dbConnection.getConn();
             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
         ) {
+=======
+	@Override
+	public List<Category> GetAll() {
+		System.out.println("Get all category...");
+		List<Category> list = new ArrayList<Category>();
+		String sql ="select * from category";
+		
+		try(Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql);
+				){
+			  ResultSet rs =	ps.executeQuery();
+			  
+			  while (rs.next()) {
+		             Category ca = new Category();
+		             ca.setId(rs.getInt("id"));
+		             ca.setParent_id(rs.getInt("parent_id"));
+		             ca.setCategory_name(rs.getString("category_name"));
+		             ca.setCategory_slug(rs.getString("category_slug"));
+		             ca.setLevel(rs.getInt("level"));
+		           ca.setIs_active(rs.getInt("is_active"));
+		             list.add(ca);
+		      }
+			  return list;
+			
+		}
+		catch(Exception ex) {
+			ex.printStackTrace();
+		}
+		
+		return null;
+	}
+	@Override
+	public Category GetById(int id) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+>>>>>>> 2dd3107eb64965ef2f5db2a5a58f933e5d430ebf
 
             ps.setInt(1, item.getParent_id() != null ? item.getParent_id() : 0);
             ps.setString(2, item.getCategory_name());
