@@ -38,10 +38,9 @@ jobs:
             thoaimanhlong/api-gateway:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      
-      
+
       # 4. Build & Push Cart service
-      
+
       - name: Build & Push Backend
         uses: docker/build-push-action@v5
         with:
@@ -77,27 +76,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-<<<<<<< HEAD
-
       # 4. Build & Push Order service
-=======
-          
-      # 7. Build & Push Logistic service
-      - name: Build & Logistic service
-        uses: docker/build-push-action@v5
-        with:
-          context: ./logistic-service
-          push: true
-          tags: |
-            thoaimanhlong/logistic-service:latest
-            thoaimanhlong/logistic-service:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max          
 
-
-      # 8. Build & Push Order service
->>>>>>> fe8cefb03025c66c37994c39f81b0b8a32783617
-      
       - name: Build & Push Order service
         uses: docker/build-push-action@v5
         with:
@@ -108,13 +88,19 @@ jobs:
             thoaimanhlong/order-service:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          
 
-<<<<<<< HEAD
+      - name: Build & Push Logistic service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./logistic-service
+          push: true
+          tags: |
+            thoaimanhlong/logistic-service:latest
+            thoaimanhlong/logistic-service:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       # 7. Deploy to VPS
-=======
-      # 8. Deploy to VPS
->>>>>>> fe8cefb03025c66c37994c39f81b0b8a32783617
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
@@ -125,7 +111,6 @@ jobs:
             set -e
 
             cd ${{ secrets.VPS_APP_DIR }}
-<<<<<<< HEAD
 
             echo "🚀 Pull new images..."
             docker compose pull
@@ -133,18 +118,6 @@ jobs:
             echo "🚀 Restart containers..."
             docker compose up -d
 
-=======
-            
-            echo "🧹 Stop & remove old containers..."
-            docker compose down --remove-orphans
-            
-            echo "🚀 Pull new images..."
-            docker compose pull
-            
-            echo "🚀 Start containers..."
-            docker compose up -d --build
-            
->>>>>>> fe8cefb03025c66c37994c39f81b0b8a32783617
             echo "⏳ Waiting for containers to stabilize..."
             sleep 15
 
