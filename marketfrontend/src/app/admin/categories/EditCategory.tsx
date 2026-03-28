@@ -15,7 +15,8 @@ export default function CategoryForm() {
   const searchParams = useSearchParams();
 
   const id = params?.id as string;
-  const parentIdQuery = searchParams.get("parentId");
+  const parentIdQuery =
+    typeof window !== "undefined" ? searchParams.get("parentId") : null;
 
   const isEditMode = !!id;
 
