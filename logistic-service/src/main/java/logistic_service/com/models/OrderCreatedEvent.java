@@ -23,4 +23,6 @@ public class OrderCreatedEvent {
 		private String message;
 	    private String status;
 	    private Order order;
+
+	    
 }

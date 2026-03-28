@@ -482,6 +482,7 @@ export default function CheckoutPage() {
       orders_items: cartItems.map((item) => ({
         id: 1,
         product_id: item?.product?.id || 0,
+        shop_id: item?.product?.shop?.id || 0,
         order_id: 1,
         variant_id: item?.productVariant?.id || 0,
         product_name: item?.product?.name || "",

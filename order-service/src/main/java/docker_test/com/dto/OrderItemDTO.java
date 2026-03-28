@@ -4,6 +4,15 @@ public class OrderItemDTO {
 
 	private Long id;
 	private Integer order_id;
+	private Long shop_id;
+	public Long getShop_id() {
+		return shop_id;
+	}
+
+	public void setShop_id(Long shop_id) {
+		this.shop_id = shop_id;
+	}
+
 	private Long product_id;
 	public String getProduct_name() {
 		return product_name;
@@ -39,9 +48,10 @@ public class OrderItemDTO {
 	public OrderItemDTO() {
 	}
 
-	public OrderItemDTO(Long id, Integer order_id, Long product_id,Long variant_id, Integer quantity, double price) {
+	public OrderItemDTO(Long id, Integer order_id, Long shop_id, Long product_id,Long variant_id, Integer quantity, double price) {
 		this.id = id;
 		this.order_id = order_id;
+		this.shop_id = shop_id;
 		this.product_id = product_id;
 		this.variant_id = variant_id;
 		this.quantity = quantity;

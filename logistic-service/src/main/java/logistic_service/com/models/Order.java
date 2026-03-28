@@ -157,7 +157,13 @@ public class Order {
 
 
 
-
+    public Recipient getRecipient() {
+		return recipient;
+	}
+	public void setRecipient(Recipient recipient) {
+		this.recipient = recipient;
+	}
+	private Recipient recipient;
 
 	public Long getUser_id() {
 		return user_id;

@@ -4,6 +4,15 @@ public class OrderItem {
 
 	private Integer id;
 	private Integer order_id;
+	private Integer shop_id;
+	public Integer getShop_id() {
+		return shop_id;
+	}
+
+	public void setShop_id(Integer shop_id) {
+		this.shop_id = shop_id;
+	}
+
 	private Integer product_id;
 	public String getProduct_name() {
 		return product_name;
@@ -39,9 +48,10 @@ public class OrderItem {
 	public OrderItem() {
 	}
 
-	public OrderItem(Integer id, Integer order_id, Integer product_id,Integer variant_id, Integer quantity, double price) {
+	public OrderItem(Integer id, Integer order_id, Integer shop_id, Integer product_id,Integer variant_id, Integer quantity, double price) {
 		this.id = id;
 		this.order_id = order_id;
+		this.shop_id = shop_id;
 		this.product_id = product_id;
 		this.variant_id = variant_id;
 		this.quantity = quantity;
@@ -89,9 +99,11 @@ public class OrderItem {
 	}
 	
 	@Override
+
 	public String toString() {
-		return "OrderItem [id=" + id + ", variant_id=" + variant_id
-				+ ", order_id=" + order_id + ", product_id=" + product_id + ", quantity="
-				+ quantity + ", price=" + price + "]";
-	}
+		return "OrderItem [id=" + id + ", order_id=" + order_id + ", shop_id=" + shop_id + ", product_id="
+				+ product_id + ", variant_id=" + variant_id + ", quantity=" + quantity + ", price=" + price
+				+ ", product_name=" + product_name + ", variant_name=" + variant_name + "]";
+	}	
+	
 }

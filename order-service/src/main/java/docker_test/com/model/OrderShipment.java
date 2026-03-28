@@ -30,7 +30,7 @@ public class OrderShipment {
 	private Long orderId;
     
     @Column(name = "shop_id", nullable = false)
-	private String shopId;
+	private Long shopId;
     @Column(name = "tracking_number", nullable = false)
 	private String trackingNumber;
      @Column(name = "carrier_name", nullable = false)

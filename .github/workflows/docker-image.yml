@@ -77,6 +77,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+<<<<<<< HEAD
+
+      # 4. Build & Push Order service
+=======
           
       # 7. Build & Push Logistic service
       - name: Build & Logistic service
@@ -92,6 +96,7 @@ jobs:
 
 
       # 8. Build & Push Order service
+>>>>>>> fe8cefb03025c66c37994c39f81b0b8a32783617
       
       - name: Build & Push Order service
         uses: docker/build-push-action@v5
@@ -105,7 +110,11 @@ jobs:
           cache-to: type=gha,mode=max
           
 
+<<<<<<< HEAD
+      # 7. Deploy to VPS
+=======
       # 8. Deploy to VPS
+>>>>>>> fe8cefb03025c66c37994c39f81b0b8a32783617
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
@@ -116,6 +125,15 @@ jobs:
             set -e
 
             cd ${{ secrets.VPS_APP_DIR }}
+<<<<<<< HEAD
+
+            echo "🚀 Pull new images..."
+            docker compose pull
+
+            echo "🚀 Restart containers..."
+            docker compose up -d
+
+=======
             
             echo "🧹 Stop & remove old containers..."
             docker compose down --remove-orphans
@@ -126,6 +144,7 @@ jobs:
             echo "🚀 Start containers..."
             docker compose up -d --build
             
+>>>>>>> fe8cefb03025c66c37994c39f81b0b8a32783617
             echo "⏳ Waiting for containers to stabilize..."
             sleep 15
 

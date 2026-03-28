@@ -211,6 +211,7 @@ WHERE p.id = ?;
 
 	@Override
 	public List<Product> GetAll() {
+		System.out.print("Get all..");
 		List<Product> list = new ArrayList<Product>();
 		String sql = "SELECT \r\n"
 				+ "    p.*,\r\n"

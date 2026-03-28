@@ -65,6 +65,15 @@ public class Shipment  {
     private String shopRefId;
 
     /** FK nội bộ sang logistics_partner. */
+
+//    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+//    @JoinColumn(name = "partner_id", nullable = false,
+//                foreignKey = @ForeignKey(name = "fk_shipment_partner"))
+//    private LogisticsPartner partner;
+    
+    @Column(name = "partner_id", nullable = false)
+    private Integer partnerId;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "partner_id", nullable = false,
                 foreignKey = @ForeignKey(name = "fk_shipment_partner"))
@@ -81,13 +90,16 @@ public class Shipment  {
     @Builder.Default
     private ShipmentStatus status = ShipmentStatus.PENDING;
 
-    @Column(name = "shipping_fee", precision = 15, scale = 2)
-    @Builder.Default
-    private BigDecimal shippingFee = BigDecimal.ZERO;
 
-    @Column(name = "cod_amount", precision = 15, scale = 2)
+    @Column(name = "shipping_fee")
     @Builder.Default
-    private BigDecimal codAmount = BigDecimal.ZERO;
+    private Double shippingFee =  Double.valueOf(0);
+
+    @Column(name = "cod_amount")
+    @Builder.Default
+    private Double codAmount = Double.valueOf(0);
+
+ 
 
     /** Khối lượng gói hàng tính bằng gram. */
     @Column(name = "weight_gram")
