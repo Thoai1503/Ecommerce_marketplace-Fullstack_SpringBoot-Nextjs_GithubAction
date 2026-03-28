@@ -1,5 +1,6 @@
 name: CI/CD Ecommerce (Spring Boot + Next.js)
 
+#ee
 on:
   push:
     branches: ["main"]
