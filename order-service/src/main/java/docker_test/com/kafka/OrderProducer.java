@@ -44,10 +44,10 @@ public class OrderProducer {
 	 }
 	 
 	 public void sendMessage(OrderCreatedEvent event) {
-		 var recipient = event.getRecipient();
-		 LOGGER.info(String.format("Recipient data => %s", recipient.toString()));
-		 LOGGER.info(String.format("Order event => %s", event.toString()));
-		 LOGGER.info(String.format("Order data => %s", event.getOrder().toString()));
+//		 var recipient = event.getRecipient();
+//		 LOGGER.info(String.format("Recipient data => %s", recipient.toString()));
+//		 LOGGER.info(String.format("Order event => %s", event.toString()));
+//		 LOGGER.info(String.format("Order data => %s", event.getOrder().toString()));
 		 var order = new Order();
 		 	
 		 order.setAddressId(event.getOrder().getAddress_id());

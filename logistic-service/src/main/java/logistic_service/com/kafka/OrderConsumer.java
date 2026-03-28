@@ -12,6 +12,7 @@ import logistic_service.com.entities.Shipment;
 import logistic_service.com.models.OrderCreatedEvent;
 import logistic_service.com.repositories.RecipientRepository;
 import logistic_service.com.services.ShipmentService;
+import logistic_service.com.models.OrderCreatedEvent;
 
 
 @Service

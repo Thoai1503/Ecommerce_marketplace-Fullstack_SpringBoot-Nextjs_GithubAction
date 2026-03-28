@@ -79,7 +79,6 @@ public class Shipment  {
                 foreignKey = @ForeignKey(name = "fk_shipment_partner"))
     private LogisticsPartner partner;
 
-
     /** FK nội bộ sang recipient (snapshot người nhận). */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "recipient_id", nullable = false,
