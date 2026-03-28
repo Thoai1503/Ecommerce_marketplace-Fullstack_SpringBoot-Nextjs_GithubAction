@@ -29,7 +29,10 @@ public class OrderEventPublisher {
         event.setMessage("Order status is in pending state");
 
         log.info("Publishing order_created event for order_id={}", dto.getId());
+//fvdsedfvs
+//sdfsdf
 
+//dfvd
         kafkaTemplate.send(topicName, String.valueOf(dto.getId()), event)
                 .whenComplete((result, ex) -> {
                     if (ex == null) {

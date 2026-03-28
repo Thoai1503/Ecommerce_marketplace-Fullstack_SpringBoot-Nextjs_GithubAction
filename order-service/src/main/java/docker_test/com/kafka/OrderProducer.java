@@ -32,7 +32,9 @@ public class OrderProducer {
     
     private KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate;
 
+
 	 public OrderProducer(NewTopic newTopic, KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate,OrderRepository orderRepository,OrderItemRepository orderItemRepository,OrderService orderService) {
+
 		super();
 		this.newTopic = newTopic;
 		this.kafkaTemplate = kafkaTemplate;

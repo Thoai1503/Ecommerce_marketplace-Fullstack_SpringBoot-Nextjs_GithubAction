@@ -20,29 +20,29 @@ public class Recipient{
 	public void setAddress(String address) {
 		this.address = address;
 	}
-	public Integer getProvince() {
+	public Long getProvince() {
 		return province;
 	}
-	public void setProvince(Integer province) {
+	public void setProvince(Long province) {
 		this.province = province;
 	}
-	public Integer getDistrict() {
+	public Long getDistrict() {
 		return district;
 	}
-	public void setDistrict(Integer district) {
+	public void setDistrict(Long district) {
 		this.district = district;
 	}
-	public Integer getWard() {
+	public Long getWard() {
 		return ward;
 	}
-	public void setWard(Integer ward) {
+	public void setWard(Long ward) {
 		this.ward = ward;
 	}
 	private String name;
 	private String phone;
 	private String address;
-	private Integer province;
-	private Integer district;
-	private Integer ward;
+	private Long province;
+	private Long district;
+	private Long ward;
 
 }

@@ -29,6 +29,7 @@ public class OrderConsumer {
 	 @KafkaListener(topics = "${spring.kafka.topic.name}",groupId = "${spring.kafka.consumer.group-id}")
 	 public void consume(OrderCreatedEvent event) {
 		 var order = event.getOrder();
+
 		 
         var recipientDTO = event.getOrder().getRecipient();
 	
@@ -50,6 +51,22 @@ public class OrderConsumer {
 
 	
 	
+
+		 System.out.println("✅ Received OK: Order  => " + order.toString());
+//		 var orderItems = order.getOrders_items();
+//		 for(var item: orderItems) {
+//			 LOGGER.info(String.format("Order item => %s", item.toString()));
+//
+//		 }
+//		
+//		 order.getOrders_items().forEach(item -> {
+//			 LOGGER.info(String.format("Order item => %s", item.toString()));
+//		 });
+		 order.getOrders_items().stream().forEach(item -> {
+			 LOGGER.info(String.format("Order item => %s", item.toString()));
+
+		 });
+
 		LOGGER.info(String.format("Order event recieved in stock service => %s", event.toString())); 
 		//group order item by shop id
 		order.getOrders_items().stream().forEach(item -> {
