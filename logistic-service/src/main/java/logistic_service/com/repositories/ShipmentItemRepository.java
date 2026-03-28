@@ -5,9 +5,11 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import logistic_service.com.entities.ShipmentItem;
 
+@Repository
 public interface ShipmentItemRepository extends JpaRepository<ShipmentItem, Long> {
     
 	List<ShipmentItem> findByShipmentId(Long shipmentId);

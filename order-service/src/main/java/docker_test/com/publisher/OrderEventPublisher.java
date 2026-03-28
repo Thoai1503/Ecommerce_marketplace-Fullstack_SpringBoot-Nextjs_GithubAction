@@ -16,6 +16,7 @@ public class OrderEventPublisher {
     @Value("${spring.kafka.topic.name}")
     private String topicName;  // inject topic name, don't hardcode it
 
+    
     private final KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate;
 
     public OrderEventPublisher(KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate) {
@@ -24,6 +25,9 @@ public class OrderEventPublisher {
 
     public void publish(OrderDTO dto) {
         OrderCreatedEvent event = new OrderCreatedEvent();
+       // var recipient = dto.getRecipient();
+        
+        
         event.setOrder(dto);
         event.setStatus("PENDING");
         event.setMessage("Order status is in pending state");

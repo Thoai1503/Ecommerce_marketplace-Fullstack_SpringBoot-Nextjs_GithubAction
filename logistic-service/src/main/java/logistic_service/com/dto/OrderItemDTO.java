@@ -1,15 +1,24 @@
-package logistic_service.com.models;
+package logistic_service.com.dto;
 
-public class OrderItem {
+public class OrderItemDTO {
 
-	private Integer id;
-	private Integer order_id;
-	private Integer shop_id;
-	public Integer getShop_id() {
+	private Long id;
+	private Long order_id;
+	private Long shipment_id;
+	public Long getShipment_id() {
+		return shipment_id;
+	}
+
+	public void setShipment_id(Long shipment_id) {
+		this.shipment_id = shipment_id;
+	}
+
+	private Long shop_id;
+	public Long getShop_id() {
 		return shop_id;
 	}
 
-	public void setShop_id(Integer shop_id) {
+	public void setShop_id(Long shop_id) {
 		this.shop_id = shop_id;
 	}
 
@@ -45,10 +54,10 @@ public class OrderItem {
 	private Integer quantity;
 	private double price;
 
-	public OrderItem() {
+	public OrderItemDTO() {
 	}
 
-	public OrderItem(Integer id, Integer order_id, Integer shop_id, Integer product_id,Integer variant_id, Integer quantity, double price) {
+	public OrderItemDTO(Long id, Long order_id, Long shop_id, Integer product_id,Integer variant_id, Integer quantity, double price) {
 		this.id = id;
 		this.order_id = order_id;
 		this.shop_id = shop_id;
@@ -58,19 +67,19 @@ public class OrderItem {
 		this.price = price;
 	}
 
-	public Integer getId() {
+	public Long getId() {
 		return id;
 	}
 
-	public void setId(int id) {
+	public void setId(Long id) {
 		this.id = id;
 	}
 
-	public Integer getOrder_id() {
+	public Long getOrder_id() {
 		return order_id;
 	}
 
-	public void setOrder_id(Integer order_id ) {
+	public void setOrder_id(Long order_id ) {
 		this.order_id = order_id | 0;
 	}
 
@@ -101,7 +110,7 @@ public class OrderItem {
 	@Override
 
 	public String toString() {
-		return "OrderItem [id=" + id + ", order_id=" + order_id + ", shop_id=" + shop_id + ", product_id="
+		return "OrderItem [id=" + id + ", order_id=" + order_id + ", shipment_id=" + shipment_id + ", shop_id=" + shop_id + ", product_id="
 				+ product_id + ", variant_id=" + variant_id + ", quantity=" + quantity + ", price=" + price
 				+ ", product_name=" + product_name + ", variant_name=" + variant_name + "]";
 	}	

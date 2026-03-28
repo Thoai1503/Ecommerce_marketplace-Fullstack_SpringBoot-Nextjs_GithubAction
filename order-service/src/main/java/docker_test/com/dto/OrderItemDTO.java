@@ -3,7 +3,16 @@ package docker_test.com.dto;
 public class OrderItemDTO {
 
 	private Long id;
-	private Integer order_id;
+	private Long order_id;
+	private Long shipment_id;
+	public Long getShipment_id() {
+		return shipment_id;
+	}
+
+	public void setShipment_id(Long shipment_id) {
+		this.shipment_id = shipment_id;
+	}
+
 	private Long shop_id;
 	public Long getShop_id() {
 		return shop_id;
@@ -48,7 +57,7 @@ public class OrderItemDTO {
 	public OrderItemDTO() {
 	}
 
-	public OrderItemDTO(Long id, Integer order_id, Long shop_id, Long product_id,Long variant_id, Integer quantity, double price) {
+	public OrderItemDTO(Long id, Long order_id, Long shop_id, Long product_id,Long variant_id, Integer quantity, double price) {
 		this.id = id;
 		this.order_id = order_id;
 		this.shop_id = shop_id;
@@ -66,12 +75,12 @@ public class OrderItemDTO {
 		this.id = id;
 	}
 
-	public Integer getOrder_id() {
+	public Long getOrder_id() {
 		return order_id;
 	}
 
-	public void setOrder_id(Integer order_id ) {
-		this.order_id = order_id | 0;
+	public void setOrder_id(Long order_id ) {
+		this.order_id = order_id ;
 	}
 
 	public Long getProduct_id() {

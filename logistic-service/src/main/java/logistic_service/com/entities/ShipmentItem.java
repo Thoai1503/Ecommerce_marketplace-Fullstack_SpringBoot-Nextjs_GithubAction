@@ -33,13 +33,15 @@ public class ShipmentItem {
      * FK nội bộ sang shipment.
      * Khi shipment bị xoá, tất cả items sẽ bị xoá (CASCADE).
      */
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(
-        name = "shipment_id",
-        nullable = false,
-        foreignKey = @ForeignKey(name = "fk_item_shipment")
-    )
-    private Shipment shipment;
+//    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+//    @JoinColumn(
+//        name = "shipment_id",
+//        nullable = false,
+//        foreignKey = @ForeignKey(name = "fk_item_shipment")
+//    )
+//    private Shipment shipment;
+	@Column(name = "shipment_id", nullable = false)
+	private Long shipmentId;
 
     /** Tên sản phẩm tại thời điểm tạo vận đơn. */
     @Column(name = "product_name", nullable = false, length = 500)
@@ -55,7 +57,7 @@ public class ShipmentItem {
     private Integer quantity = 1;
 
     /** Giá tại thời điểm tạo vận đơn (VNĐ). */
-    @Column(name = "price", precision = 15, scale = 2)
-    @Builder.Default
-    private BigDecimal price = BigDecimal.ZERO;
+    @Column(name = "price")
+  
+    private Double price ;
 }

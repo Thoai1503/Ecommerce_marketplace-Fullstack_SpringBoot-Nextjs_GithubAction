@@ -1,10 +1,10 @@
-package logistic_service.com.models;
+package logistic_service.com.dto;
 
 import java.util.List;
 
-import logistic_service.com.models.OrderItem;
+import logistic_service.com.dto.OrderItemDTO;
 
-public class Order {
+public class OrderDTO {
   public String getOrder_number() {
 		return order_number;
 	}
@@ -36,11 +36,11 @@ public class Order {
 		this.address_id = address_id;
 	}
 
-	public Long getShipping_fee() {
+	public Double getShipping_fee() {
 		return shipping_fee;
 	}
 
-	public void setShipping_fee(Long shipping_fee) {
+	public void setShipping_fee(Double shipping_fee) {
 		this.shipping_fee = shipping_fee;
 	}
 
@@ -92,7 +92,7 @@ public class Order {
 		this.cancel_reason = cancel_reason;
 	}
 
-	public Order(Long id, String name, Long user_id, Long address_id, String order_number , Long shipping_fee, Long discount_amount,
+	public OrderDTO(Long id, String name, Long user_id, Long address_id, String order_number , Double shipping_fee, Long discount_amount,
 			String payment_method, Long final_amount, String order_status, String tracking_number,
 			double total_price) {
 		super();
@@ -113,7 +113,7 @@ public class Order {
 	}
 
 	private Long address_id;
-	private Long shipping_fee;
+	private Double shipping_fee;
 	private Long discount_amount;
 	private String payment_method;
 	private Long final_amount;
@@ -130,17 +130,17 @@ public class Order {
 	}
 
 	private double total_price;
-    public List<OrderItem> getOrders_items() {
+    public List<OrderItemDTO> getOrders_items() {
 		return orders_items;
 	}
 
-	public void setOrders_items(List<OrderItem> orders_items) {
+	public void setOrders_items(List<OrderItemDTO> orders_items) {
 		this.orders_items = orders_items;
 	}
 
-	private List<OrderItem> orders_items;
+	private List<OrderItemDTO> orders_items;
 	
-	public Order() {
+	public OrderDTO() {
 	}
 
 
@@ -157,13 +157,13 @@ public class Order {
 
 
 
-    public Recipient getRecipient() {
+    public RecipientDTO getRecipient() {
 		return recipient;
 	}
-	public void setRecipient(Recipient recipient) {
+	public void setRecipient(RecipientDTO recipient) {
 		this.recipient = recipient;
 	}
-	private Recipient recipient;
+	private RecipientDTO recipient;
 
 	public Long getUser_id() {
 		return user_id;

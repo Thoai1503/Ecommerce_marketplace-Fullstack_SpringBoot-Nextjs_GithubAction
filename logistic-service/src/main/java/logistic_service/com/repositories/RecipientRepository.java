@@ -13,6 +13,6 @@ public interface RecipientRepository extends JpaRepository<Recipient, Long> {
   //dgnhan vien thuc tien giapublic final kafka strong experienfce truy to ;aagfaaagttrebfawfesprivate static final long 
 	
 	
-	Optional<Recipient> findByPhone(String phone);
+	Recipient findByPhone(String phone);
 	
 }

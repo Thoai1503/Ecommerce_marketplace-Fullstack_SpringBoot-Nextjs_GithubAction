@@ -55,14 +55,14 @@ public class Shipment  {
      * Chỉ lưu để đối chiếu / callback — KHÔNG phải FK, không join ecommerce DB.
      */
     @Column(name = "order_ref_id", nullable = false, length = 100)
-    private String orderRefId;
+    private Long orderRefId;
 
     /**
      * shop_id bên ecommerce service.
      * KHÔNG phải FK — giao tiếp qua REST API hoặc Kafka.
      */
     @Column(name = "shop_ref_id", nullable = false, length = 100)
-    private String shopRefId;
+    private Long shopRefId;
 
     /** FK nội bộ sang logistics_partner. */
 
@@ -72,18 +72,23 @@ public class Shipment  {
 //    private LogisticsPartner partner;
     
     @Column(name = "partner_id", nullable = false)
-    private Integer partnerId;
+    private Long partnerId;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "partner_id", nullable = false,
-                foreignKey = @ForeignKey(name = "fk_shipment_partner"))
-    private LogisticsPartner partner;
+//    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+//    @JoinColumn(name = "partner_id", nullable = false,
+//                foreignKey = @ForeignKey(name = "fk_shipment_partner"))
+//    private LogisticsPartner partner;
 
     /** FK nội bộ sang recipient (snapshot người nhận). */
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "recipient_id", nullable = false,
-                foreignKey = @ForeignKey(name = "fk_shipment_recipient"))
-    private Recipient recipient;
+//    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+//    @JoinColumn(name = "recipient_id", nullable = false,
+//                foreignKey = @ForeignKey(name = "fk_shipment_recipient"))
+//    private Recipient recipient;
+    
+    @Column(name = "recipient_id", nullable = false)
+    private Long recipientId;
+
+    
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
@@ -126,10 +131,10 @@ public class Shipment  {
     // Relationships (nội bộ logistics service)
     // ----------------------------------------------------------------
 
-    @OneToMany(mappedBy = "shipment", fetch = FetchType.LAZY,
-               cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<ShipmentItem> items = new ArrayList<>();
+//    @OneToMany(mappedBy = "shipment", fetch = FetchType.LAZY,
+//               cascade = CascadeType.ALL, orphanRemoval = true)
+//    @Builder.Default
+//    private List<ShipmentItem> items = new ArrayList<>();
 
     @OneToMany(mappedBy = "shipment", fetch = FetchType.LAZY,
                cascade = CascadeType.ALL, orphanRemoval = true)
@@ -146,10 +151,10 @@ public class Shipment  {
     // Helper methods
     // ----------------------------------------------------------------
 
-    public void addItem(ShipmentItem item) {
-        items.add(item);
-        item.setShipment(this);
-    }
+//    public void addItem(ShipmentItem item) {
+//        items.add(item);
+//        item.setShipment(this);
+//    }
 
     public void addStatusHistory(ShipmentStatusHistory history) {
         statusHistories.add(history);
