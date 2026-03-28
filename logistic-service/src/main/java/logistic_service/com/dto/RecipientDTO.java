@@ -1,6 +1,6 @@
-package logistic_service.com.models;
+package logistic_service.com.dto;
 
-public class Recipient{
+public class RecipientDTO{
 
 	public String getName() {
 		return name;
@@ -40,6 +40,20 @@ public class Recipient{
 	}
 	private String name;
 	private String phone;
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
+	private Long id;
+	public Long getId() {
+		return id;
+	}
+	public void setId(Long id) {
+		this.id = id;
+	}
+	private String email;
 	private String address;
 	private Long province;
 	private Long district;

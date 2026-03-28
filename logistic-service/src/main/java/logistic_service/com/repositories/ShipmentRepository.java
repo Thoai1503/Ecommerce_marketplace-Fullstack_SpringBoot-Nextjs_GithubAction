@@ -27,17 +27,17 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
      * Lấy tất cả vận đơn của một order từ ecommerce.
      * Hỗ trợ multi-tracking (1 order -> N shipments).
      */
-    List<Shipment> findByOrderRefId(String orderRefId);
+    List<Shipment> findByOrderRefId(Long orderRefId);
 
     /**
      * Lấy tất cả vận đơn của một shop.
      */
-    List<Shipment> findByShopRefId(String shopRefId);
+    List<Shipment> findByShopRefId(Long shopRefId);
 
     /**
      * Lấy vận đơn của 1 shop với filter theo status.
      */
-    List<Shipment> findByShopRefIdAndStatus(String shopRefId, ShipmentStatus status);
+    List<Shipment> findByShopRefIdAndStatus(Long shopRefId, ShipmentStatus status);
 
     /**
      * Lấy vận đơn theo partner (nhà vận chuyển).
@@ -87,7 +87,7 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
      * Lấy vận đơn theo shop trong khoảng thời gian.
      */
     List<Shipment> findByShopRefIdAndCreatedAtBetween(
-        String shopRefId,
+        Long shopRefId,
         LocalDateTime startDate,
         LocalDateTime endDate
     );
@@ -100,7 +100,7 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
     /**
      * Đếm số vận đơn của shop.
      */
-    long countByShopRefId(String shopRefId);
+    long countByShopRefId(Long shopRefId);
 
     /**
      * Kiểm tra tracking code đã tồn tại hay chưa.

@@ -33,6 +33,7 @@ public class Recipient {
     @Column(name = "name", nullable = false)
     private String name;
 
+
     @Column(name = "phone", nullable = false, length = 20)
     private String phone;
 
@@ -64,7 +65,7 @@ public class Recipient {
     // Relationships
     // ----------------------------------------------------------------
 
-    @OneToMany(mappedBy = "recipient", fetch = FetchType.LAZY)
-    @Builder.Default
-    private List<Shipment> shipments = new ArrayList<>();
+//    @OneToMany(mappedBy = "recipient", fetch = FetchType.LAZY)
+//    @Builder.Default
+//    private List<Shipment> shipments = new ArrayList<>();
 }

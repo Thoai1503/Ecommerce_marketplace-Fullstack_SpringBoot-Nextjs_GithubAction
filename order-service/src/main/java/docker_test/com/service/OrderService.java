@@ -98,7 +98,14 @@ public class OrderService {
         	orderShipmetDto.setShopId(shopId);
         	orderShipmetDto.setTrackingNumber(null);
         	
+        	
+        	
         	var orderShipment = orderShipmentRepository.save(orderShipmetDto);
+        	
+	     	dto.getOrders_items().stream().filter(item->item.getShop_id()==shopId).forEach(item->{
+	     		item.setShipment_id(orderShipment.getId());
+	     	});
+        	
             log.info("Saved order shipmment -> {}", orderShipment.toString());
         	
             entry.getValue().forEach(item -> {
@@ -111,10 +118,16 @@ public class OrderService {
         
         
 
+        
+        dto.getOrders_items().stream().forEach(item ->{
+        	item.setOrder_id(saved.getId());
+        });
 
         dto.setId(saved.getId());
+        
         dto.setRecipient(dto.getRecipient());
         dto.setOrder_number(saved.getOrderNumber());
+        
         eventPublisher.publish(dto);
 
         return saved;
