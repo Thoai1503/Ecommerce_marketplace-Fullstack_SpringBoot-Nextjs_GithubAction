@@ -27,7 +27,7 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
      * Lấy tất cả vận đơn của một order từ ecommerce.
      * Hỗ trợ multi-tracking (1 order -> N shipments).
      */
-    List<Shipment> findByOrderRefId(Long orderRefId);
+    List<Shipment> findByOrderShipmentRefId(Long orderRefId);
 
     /**
      * Lấy tất cả vận đơn của một shop.

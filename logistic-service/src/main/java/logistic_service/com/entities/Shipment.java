@@ -54,8 +54,8 @@ public class Shipment  {
      * order_id bên ecommerce service.
      * Chỉ lưu để đối chiếu / callback — KHÔNG phải FK, không join ecommerce DB.
      */
-    @Column(name = "order_ref_id", nullable = false, length = 100)
-    private Long orderRefId;
+    @Column(name = "order_shipment_ref_id", nullable = false, length = 100)
+    private Long orderShipmentRefId;
 
     /**
      * shop_id bên ecommerce service.

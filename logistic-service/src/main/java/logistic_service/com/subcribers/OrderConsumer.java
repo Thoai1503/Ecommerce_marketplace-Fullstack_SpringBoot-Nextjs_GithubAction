@@ -30,7 +30,7 @@ public class OrderConsumer {
 		 LOGGER.info("Recieved order => {}",order.toString());
 		 LOGGER.info("Reci : {}",order.getRecipient().toString());
 		
-	     var createdRecipient=	 creatingService.createRecipient(order.getRecipient());
+	     var createdRecipient =	 creatingService.createRecipient(order.getRecipient());
 		order.getRecipient().setId(createdRecipient.getId());
 		
 		orderCreatedService.createShipment(order);
