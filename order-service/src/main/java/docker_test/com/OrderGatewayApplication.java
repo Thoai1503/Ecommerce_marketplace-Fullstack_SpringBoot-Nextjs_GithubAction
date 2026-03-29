@@ -16,7 +16,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 @RestController
 //@EnableDiscoveryClient
 
-@RequestMapping("/api/order")
+@RequestMapping("/api/orders")
 public class OrderGatewayApplication {
 
 	@GetMapping("")
