@@ -5,15 +5,21 @@ import { useState, useCallback, useEffect } from "react";
 import { categoryQuery, productImageQuery } from "./query";
 import { slugify, generateUniqueSlug, isValidSlug } from "@/helper/utils";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { addProduct, uploadToProduct } from "./service";
 import { message, UploadFile, UploadProps } from "antd";
 import { useSellerAuth } from "@/context/SellerAuthContext";
 =======
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 import { addProduct, createProductVariant, uploadToProduct } from "./service";
 import { message, UploadFile, UploadProps } from "antd";
 import { useSellerAuth } from "@/context/SellerAuthContext";
 import { ProductVariant } from "@/validators/productVariant";
+<<<<<<< HEAD
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
 export const useAddProductSeller = (
   onSuccessCallback: (id: number) => void,
@@ -49,6 +55,7 @@ export const useAddProductSeller = (
     }
   };
 
+<<<<<<< HEAD
   const handleSave = () => {
     //  console.log("Saving product:", formData);
     console.log("Images:", fileList);
@@ -57,6 +64,8 @@ export const useAddProductSeller = (
 
 <<<<<<< HEAD
 =======
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   const { mutate: createVariant } = useMutation({
     mutationFn: (en: ProductVariant) => createProductVariant(en),
     onSuccess: (data) => {
@@ -69,7 +78,10 @@ export const useAddProductSeller = (
     },
   });
 
+<<<<<<< HEAD
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   const { mutate: add } = useMutation({
     mutationFn: (product: Partial<IProduct>) => addProduct(product),
     onSuccess: (data) => {
@@ -77,7 +89,10 @@ export const useAddProductSeller = (
       console.log("Added: " + JSON.stringify(data));
       onSuccessCallback(data.id);
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
       // Reset form sau khi thêm thành công
       setProduct({
         product_name: "",
@@ -88,13 +103,18 @@ export const useAddProductSeller = (
         original_price: 0,
         price: 0,
       });
+<<<<<<< HEAD
       createProductVariant({
+=======
+      createVariant({
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
         id: 0,
         product_id: data.id,
         variant_name: data.product_name,
         sku: `SKU-${data.id}`,
         price: data.original_price || 0,
         stock_quantity: data.stock_quantity || 0,
+<<<<<<< HEAD
         image_url: "",
       });
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
@@ -102,6 +122,14 @@ export const useAddProductSeller = (
     onError: (error) => {
       //  alert(error.message);
       message.error(error.message);
+=======
+        image_url: data.image_url || "",
+      });
+    },
+    onError: (error) => {
+      //  alert(error.message);
+      message.error("Lỗi thêm sản phẩm: " + error.message);
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
     },
   });
 
@@ -275,7 +303,11 @@ export const useAddImageSeller = (id?: number) => {
     );
     console.log("Form data:", formData);
     upload({ id: 1, formData: formData });
+<<<<<<< HEAD
     message.success("Sản phẩm đã được lưu thành công!");
+=======
+    //  message.success("Sản phẩm đã được lưu thành công!");
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   };
   const handleSaveImageAfterProduct = (product_id: number) => {
     console.log("Images:", fileList);

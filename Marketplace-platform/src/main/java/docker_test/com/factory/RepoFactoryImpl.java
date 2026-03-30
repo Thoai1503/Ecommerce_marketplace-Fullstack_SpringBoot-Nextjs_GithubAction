@@ -25,6 +25,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	private final UnitRepository unitRepository;
 	private final CategoryAttributeRepository categoryAttributeRepository;
 	private final ProductRepository productRepository;
+<<<<<<< HEAD
 	
 	private final UserRepository userRepository;
 	private final AdminRepository adminRepository;
@@ -34,6 +35,13 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	private final ProductImageRepository productImageRepository;
 	private final ShopRepository shopRepository;
 	private final ProductVariantRepository productVariantRepository;
+=======
+	private final UserRepository userRepository;
+	private final ProductImageRepository productImageRepository;
+	private final ShopRepository shopRepository;
+	private final ProductVariantRepository productVariantRepository;
+	private final OrderRepository orderRepository;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
 	public static RepoFactoryImpl Instance() {
 	
@@ -51,6 +59,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		this.unitRepository =UnitRepository.Instance();
 		this.categoryAttributeRepository = CategoryAttributeRepository.Instance();
 		this.productRepository =ProductRepository.Instance();
+<<<<<<< HEAD
 		
 		this.userRepository = UserRepository.Instance();
 		this.adminRepository = AdminRepository.Instance();
@@ -60,6 +69,13 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		this.productImageRepository = ProductImageRepository.Instance();
 		this.shopRepository = ShopRepository.Instance();
 		this.productVariantRepository = ProductVariantRepository.Instance();
+=======
+		this.userRepository = UserRepository.Instance();
+		this.productImageRepository = ProductImageRepository.Instance();
+		this.shopRepository = ShopRepository.Instance();
+		this.productVariantRepository = ProductVariantRepository.Instance();
+		this.orderRepository = OrderRepository.Instance();
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 	}
 
 	@Override

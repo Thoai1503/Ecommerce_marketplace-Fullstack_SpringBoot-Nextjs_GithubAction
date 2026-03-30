@@ -3,20 +3,20 @@ package docker_test.com.utils;
 public final class StringValue {
 
     // User table
-	    public static final String USER_ID_COL = "id";
-	    public static final String USER_EMAIL_COL = "email";
-	    public static final String USER_PHONE_COL = "phone";
-	    public static final String USER_PASSWORD_COL = "password_hash";
-	    public static final String USER_FULLNAME_COL = "full_name";
-	    public static final String USER_AVATAR_COL = "avatar_url";
-	    public static final String USER_DOB_COL = "date_of_birth";
-	    public static final String USER_GENDER_COL = "gender";
-	    public static final String USER_TYPE_COL = "user_type";
-	    public static final String USER_VERIFIED_COL = "is_verified";
-	    public static final String USER_ACTIVE_COL = "is_active";
-	    public static final String USER_CREATED_AT_COL = "created_at";
-	    public static final String USER_UPDATED_AT_COL = "updated_at";
-	    public static final String USER_LAST_LOGIN_COL = "last_login";
+    public static final String USER_ID_COL = "id";
+    public static final String USER_EMAIL_COL = "email";
+    public static final String USER_PHONE_COL = "phone";
+    public static final String USER_PASSWORD_COL = "password_hash";
+    public static final String USER_FULLNAME_COL = "full_name";
+    public static final String USER_AVATAR_COL = "avatar_url";
+    public static final String USER_DOB_COL = "date_of_birth";
+    public static final String USER_GENDER_COL = "gender";
+    public static final String USER_TYPE_COL = "user_type";
+    public static final String USER_VERIFIED_COL = "is_verified";
+    public static final String USER_ACTIVE_COL = "is_active";
+    public static final String USER_CREATED_AT_COL = "created_at";
+    public static final String USER_UPDATED_AT_COL = "updated_at";
+    public static final String USER_LAST_LOGIN_COL = "last_login";
 
     // Addresses table
     public static final String ADDRESS_ID_COL = "id";

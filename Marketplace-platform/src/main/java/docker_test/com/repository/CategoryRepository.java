@@ -82,6 +82,7 @@ public class CategoryRepository implements IRepositories<Category>{
 
 	@Override
 	public List<Category> GetAll() {
+		System.out.println("Get all category...");
 		List<Category> list = new ArrayList<Category>();
 		String sql ="select * from category";
 		

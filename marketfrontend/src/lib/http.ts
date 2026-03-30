@@ -1,10 +1,14 @@
 /**
  * Axios HTTP Client with Authentication Interceptors
 <<<<<<< HEAD
+<<<<<<< HEAD
  * 
 =======
  *
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+ *
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
  * Features:
  * - Auto-attach access token to requests
  * - Auto-refresh token on 401
@@ -12,6 +16,7 @@
  * - Clear auth on refresh failure
  */
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { API_URL } from '@/helper/api';
@@ -23,6 +28,8 @@ const TOKEN_KEYS = {
   EXPIRES_AT: 'expiresAt',
   REMEMBER_ME: 'rememberMe',
 =======
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { API_URL } from "@/helper/api";
 
@@ -34,7 +41,10 @@ const TOKEN_KEYS = {
   REFRESH_TOKEN: "refreshToken",
   EXPIRES_AT: "expiresAt",
   REMEMBER_ME: "rememberMe",
+<<<<<<< HEAD
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 } as const;
 
 // Create axios instance
@@ -42,19 +52,28 @@ const http = axios.create({
   baseURL: API_URL,
   withCredentials: true,
   timeout: 10000,
+<<<<<<< HEAD
   headers: {
 <<<<<<< HEAD
     'Content-Type': 'application/json',
 =======
     "Content-Type": "application/json",
   },
+=======
+  // headers: {
+  //   "Content-Type": "application/json",
+  // },
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 });
 const addressAPI = axios.create({
   baseURL: "https://provinces.open-api.vn/api/",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
+<<<<<<< HEAD
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   },
 });
 
@@ -63,10 +82,14 @@ const addressAPI = axios.create({
  */
 const getToken = (): string | null => {
 <<<<<<< HEAD
+<<<<<<< HEAD
   if (typeof window === 'undefined') return null;
 =======
   if (typeof window === "undefined") return null;
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+  if (typeof window === "undefined") return null;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   return localStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN);
 };
 
@@ -75,10 +98,14 @@ const getToken = (): string | null => {
  */
 const getRefreshToken = (): string | null => {
 <<<<<<< HEAD
+<<<<<<< HEAD
   if (typeof window === 'undefined') return null;
 =======
   if (typeof window === "undefined") return null;
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+  if (typeof window === "undefined") return null;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   return localStorage.getItem(TOKEN_KEYS.REFRESH_TOKEN);
 };
 
@@ -87,10 +114,14 @@ const getRefreshToken = (): string | null => {
  */
 const isTokenExpired = (): boolean => {
 <<<<<<< HEAD
+<<<<<<< HEAD
   if (typeof window === 'undefined') return true;
 =======
   if (typeof window === "undefined") return true;
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+  if (typeof window === "undefined") return true;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   const expiresAt = localStorage.getItem(TOKEN_KEYS.EXPIRES_AT);
   if (!expiresAt) return false; // No expiration set
   return Date.now() >= parseInt(expiresAt, 10);
@@ -106,13 +137,19 @@ let failedQueue: Array<{
 }> = [];
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 const processQueue = (error: AxiosError | null, token: string | null = null) => {
 =======
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 const processQueue = (
   error: AxiosError | null,
   token: string | null = null,
 ) => {
+<<<<<<< HEAD
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -137,10 +174,14 @@ const refreshAccessToken = async (): Promise<string | null> => {
   if (!refreshToken) {
     isRefreshing = false;
 <<<<<<< HEAD
+<<<<<<< HEAD
     const error = new Error('No refresh token available') as AxiosError;
 =======
     const error = new Error("No refresh token available") as AxiosError;
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+    const error = new Error("No refresh token available") as AxiosError;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
     processQueue(error);
     return null;
   }
@@ -152,10 +193,14 @@ const refreshAccessToken = async (): Promise<string | null> => {
 
     const { accessToken, expiresIn } = response.data;
 <<<<<<< HEAD
+<<<<<<< HEAD
     
 =======
 
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
     // Store new token
     localStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, accessToken);
     if (expiresIn) {
@@ -172,6 +217,7 @@ const refreshAccessToken = async (): Promise<string | null> => {
     isRefreshing = false;
     processQueue(error as AxiosError);
 <<<<<<< HEAD
+<<<<<<< HEAD
     
     // Redirect to login if we're in browser
     if (typeof window !== 'undefined') {
@@ -179,13 +225,18 @@ const refreshAccessToken = async (): Promise<string | null> => {
     }
     
 =======
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
     // Redirect to login if we're in browser
     if (typeof window !== "undefined") {
       window.location.href = "/auth/login";
     }
 
+<<<<<<< HEAD
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
     return null;
   }
 };
@@ -195,10 +246,14 @@ const refreshAccessToken = async (): Promise<string | null> => {
  */
 export const clearAuth = () => {
 <<<<<<< HEAD
+<<<<<<< HEAD
   if (typeof window === 'undefined') return;
 =======
   if (typeof window === "undefined") return;
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+  if (typeof window === "undefined") return;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   localStorage.removeItem(TOKEN_KEYS.ACCESS_TOKEN);
   localStorage.removeItem(TOKEN_KEYS.REFRESH_TOKEN);
   localStorage.removeItem(TOKEN_KEYS.EXPIRES_AT);
@@ -219,19 +274,27 @@ http.interceptors.request.use(
     // Handle FormData
     if (config.data instanceof FormData) {
 <<<<<<< HEAD
+<<<<<<< HEAD
       delete config.headers['Content-Type'];
 =======
       delete config.headers["Content-Type"];
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+      delete config.headers["Content-Type"];
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
     }
 
     return config;
   },
 <<<<<<< HEAD
+<<<<<<< HEAD
   (error) => Promise.reject(error)
 =======
   (error) => Promise.reject(error),
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+  (error) => Promise.reject(error),
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 );
 
 /**
@@ -260,10 +323,14 @@ http.interceptors.response.use(
 
     return Promise.reject(error);
 <<<<<<< HEAD
+<<<<<<< HEAD
   }
 =======
   },
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+  },
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 );
 
 /**
@@ -273,12 +340,15 @@ http.interceptors.response.use(
 export const mockGet = async <T>(url: string, data: T): Promise<T> => {
   // Simulate network delay
 <<<<<<< HEAD
+<<<<<<< HEAD
   await new Promise(resolve => setTimeout(resolve, 300));
   return data;
 };
 
 export default http;
 =======
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   await new Promise((resolve) => setTimeout(resolve, 300));
   return data;
 };
@@ -298,4 +368,7 @@ export const http2 = async (url: string, options?: RequestInit) => {
 
 export default http;
 export { addressAPI };
+<<<<<<< HEAD
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5

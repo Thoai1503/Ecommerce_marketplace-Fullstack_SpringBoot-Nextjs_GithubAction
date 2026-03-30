@@ -4,9 +4,13 @@ import { IProduct } from "@/validators/product";
 import { ProductImage } from "./types";
 import { Shop } from "@/validators/shop";
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 import { ProductVariant } from "@/validators/productVariant";
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+import { ProductVariant } from "@/validators/productVariant";
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
 export const addProduct = async (
   product: Partial<IProduct>,
@@ -68,7 +72,10 @@ export const getShopByUserId = async (user_id: number): Promise<Shop> => {
     });
 };
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
 export const createProductVariant = async (
   productVariant: ProductVariant,
@@ -80,4 +87,7 @@ export const createProductVariant = async (
       throw error;
     });
 };
+<<<<<<< HEAD
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5

@@ -1,5 +1,9 @@
 "use client";
+<<<<<<< HEAD
 import { useState } from "react";
+=======
+import { useState, useMemo } from "react";
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 import {
   Check,
   Wallet,
@@ -19,6 +23,16 @@ import {
   ChevronUp,
 } from "lucide-react";
 import AddressModal from "@/components/client/checkout_page/AddressModal";
+<<<<<<< HEAD
+=======
+import { useCheckoutPage } from "@/feature/client/hook";
+import { Cart } from "@/types/data/Cart";
+import { CartItem, GroupedCartByShop } from "@/validators/cart";
+import { createOrder } from "@/feature/client/service";
+import { id } from "zod/v4/locales";
+import { IOrderItem } from "@/validators/orderItem";
+import { Recipient } from "@/validators/order";
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
 interface Address {
   id: number;
@@ -28,7 +42,121 @@ interface Address {
   isDefault: boolean;
 }
 
+<<<<<<< HEAD
 export default function CheckoutPage() {
+=======
+interface ShippingOption {
+  id: string;
+  name: string;
+  estimatedDays: string;
+  fee: number;
+}
+
+interface ShippingSelection {
+  [shopId: number]: string; // shopId -> shippingOptionId
+}
+
+export default function CheckoutPage() {
+  const { checkOut } = useCheckoutPage();
+  const cartItems = localStorage.getItem("selectedCartItems")
+    ? (JSON.parse(localStorage.getItem("selectedCartItems")!) as CartItem[])
+    : [];
+
+  // Group cart items by shop
+  const groupedByShop = useMemo(() => {
+    return cartItems.reduce(
+      (acc, item) => {
+        const shopId = item?.product?.shop?.id;
+        if (!acc[shopId]) {
+          acc[shopId] = {
+            shop: item?.product?.shop,
+            items: [],
+          };
+        }
+        acc[shopId].items.push(item);
+        return acc;
+      },
+      {} as Record<number, GroupedCartByShop & { items: CartItem[] }>,
+    );
+  }, [cartItems]);
+
+  console.log("Grouped cart items by shop:", groupedByShop);
+
+  // Shipping options (có thể lấy từ API)
+  const shippingOptions: ShippingOption[] = [
+    {
+      id: "standard",
+      name: "Giao hàng Tiêu chuẩn",
+      estimatedDays: "2-3 ngày làm việc",
+      fee: 0,
+    },
+    {
+      id: "fast",
+      name: "Giao hàng Nhanh",
+      estimatedDays: "1-2 ngày làm việc",
+      fee: 25000,
+    },
+    {
+      id: "express",
+      name: "Giao hàng Express",
+      estimatedDays: "Cùng ngày",
+      fee: 50000,
+    },
+  ];
+
+  // State để lưu lựa chọn vận chuyển cho mỗi shop
+  const [shippingSelections, setShippingSelections] =
+    useState<ShippingSelection>(
+      Object.keys(groupedByShop).reduce((acc, shopId) => {
+        acc[Number(shopId)] = "standard"; // mặc định chọn tiêu chuẩn
+        return acc;
+      }, {} as ShippingSelection),
+    );
+
+  // Hàm format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
+
+  // Hàm lấy thông tin vận chuyển đã chọn
+  const getSelectedShippingOption = (
+    shopId: number,
+    shippingOptionId: string,
+  ) => {
+    return shippingOptions.find((opt) => opt.id === shippingOptionId);
+  };
+
+  // Tính tổng phí vận chuyển
+  const calculateTotalShippingFee = () => {
+    return Object.entries(shippingSelections).reduce(
+      (total, [shopId, optionId]) => {
+        const option = getSelectedShippingOption(Number(shopId), optionId);
+        return total + (option?.fee || 0);
+      },
+      0,
+    );
+  };
+
+  // Tính tổng tiền sản phẩm
+  const calculateSubtotal = () => {
+    return cartItems.reduce(
+      (sum, item) => sum + (item.productVariant?.price ?? 0) * item.quantity,
+      0,
+    );
+  };
+  const [paymentInfo, setPaymentInfo] = useState<any>({
+    amount: 100000,
+    orderId: Date.now(),
+
+    user_id: 1,
+    method: "vnpay",
+    bankCode: "NCB",
+    orderInfo: "Thanh toán đơn hàng #123456" + Date.now(),
+  });
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   const stepNumberBase: React.CSSProperties = {
     width: 24,
     height: 24,
@@ -306,11 +434,19 @@ export default function CheckoutPage() {
     },
   };
 
+<<<<<<< HEAD
   const [coupon, setCoupon] = useState("");
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   const [showAddressPanel, setShowAddressPanel] = useState(false);
 
   const [selectedAddressId, setSelectedAddressId] = useState(1);
 
+<<<<<<< HEAD
+=======
+  const [recipient, setRecipient] = useState<Recipient | null>(null);
+
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   const [addresses, setAddresses] = useState<Address[]>([
     {
       id: 1,
@@ -349,7 +485,50 @@ export default function CheckoutPage() {
     alert("Đã xác nhận phương thức thanh toán!");
   const handleChangeMethod = () =>
     alert("Chuyển sang chọn phương thức khác...");
+<<<<<<< HEAD
   const handleOrder = () => alert("Đặt hàng thành công!");
+=======
+  const handleOrder = () => {
+    //alert("Đặt hàng thành công!")
+    alert(
+      `Thông tin thanh toán:\nSố tiền: ${paymentInfo.amount}\nPhương thức: ${paymentInfo.method}\nMã đơn hàng: ${paymentInfo.orderId}`,
+    );
+    createOrder({
+      user_id: paymentInfo.user_id || 0,
+      shop_id: cartItems[0]?.product?.shop?.id || 0,
+      recipient: {
+        name: "Ly Tieu Long",
+        phone: "0879454694",
+        address: "Phat Son",
+        district: 1,
+        province: 1,
+        ward: 1,
+      },
+      order_number: "ORD20250318001",
+      total_price: paymentInfo.amount || 0,
+      payment_method: paymentInfo.method || "unknown",
+      address_id: selectedAddressId || 0,
+      shipping_fee: 9000,
+      discount_amount: 0,
+      final_amount: paymentInfo.amount - 9000 || 0,
+      orders_items: cartItems.map((item) => ({
+        id: 1,
+        product_id: item?.product?.id || 0,
+        shop_id: item?.product?.shop?.id || 0,
+        order_id: 1,
+        variant_id: item?.productVariant?.id || 0,
+        product_name: item?.product?.name || "",
+        variant_name: item?.productVariant?.variantName || "",
+        quantity: item?.quantity || 0,
+        price: item?.productVariant?.price || 0,
+      })) as IOrderItem[],
+      note: "",
+      tracking_number: "",
+      id: 0,
+    });
+    //   checkOut(paymentInfo);
+  };
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
   return (
     <>
@@ -401,7 +580,11 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
+<<<<<<< HEAD
                 {/* Step 2 — Shipping (completed) */}
+=======
+                {/* Step 2 — Shipping Summary (read-only) */}
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                 <section style={styles.cardCompleted}>
                   <div className="d-flex align-items-start justify-content-between">
                     <div className="d-flex gap-3 flex-grow-1">
@@ -410,6 +593,7 @@ export default function CheckoutPage() {
                       </div>
                       <div className="flex-grow-1">
                         <h3 style={styles.stepTitle}>Phương thức vận chuyển</h3>
+<<<<<<< HEAD
                         <div
                           style={styles.shippingBox}
                           className="d-flex justify-content-between align-items-center"
@@ -444,6 +628,74 @@ export default function CheckoutPage() {
                     <a href="#" style={styles.linkPrimary}>
                       Thay đổi
                     </a>
+=======
+                        <p
+                          className="text-muted"
+                          style={{ fontSize: 11, marginBottom: 12 }}
+                        >
+                          Chọn phương thức vận chuyển cho từng cửa hàng ở bước
+                          kiểm tra sản phẩm
+                        </p>
+                        {/* Summary of shipping selections */}
+                        <div className="d-flex flex-column gap-2">
+                          {Object.entries(groupedByShop).map(
+                            ([shopIdStr, group]) => {
+                              const shopId = Number(shopIdStr);
+                              const selectedOptionId =
+                                shippingSelections[shopId] || "standard";
+                              const selectedOption = getSelectedShippingOption(
+                                shopId,
+                                selectedOptionId,
+                              );
+
+                              return (
+                                <div
+                                  key={shopId}
+                                  style={{
+                                    background: "#f8fafc",
+                                    borderRadius: 6,
+                                    padding: "8px 12px",
+                                    fontSize: 11,
+                                  }}
+                                >
+                                  <div className="d-flex justify-content-between align-items-center">
+                                    <div>
+                                      <span className="fw-bold">
+                                        {group.shop?.shopName}
+                                      </span>
+                                      <span
+                                        className="text-muted ms-2"
+                                        style={{ fontSize: 10 }}
+                                      >
+                                        {selectedOption?.name}
+                                      </span>
+                                    </div>
+                                    <span
+                                      style={{
+                                        fontSize: 10,
+                                        fontWeight: 800,
+                                        color:
+                                          selectedOption?.fee === 0
+                                            ? "#22c55e"
+                                            : "#137fec",
+                                        textTransform: "uppercase",
+                                      }}
+                                    >
+                                      {selectedOption?.fee === 0
+                                        ? "Miễn phí"
+                                        : formatCurrency(
+                                            selectedOption?.fee || 0,
+                                          )}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+                      </div>
+                    </div>
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                   </div>
                 </section>
 
@@ -525,12 +777,17 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
+<<<<<<< HEAD
                 {/* Step 4 — Products */}
+=======
+                {/* Step 4 — Products (from CartItem) */}
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                 <section style={styles.cardDefault}>
                   <div className="d-flex gap-3">
                     <div style={styles.stepPending}>4</div>
                     <div className="flex-grow-1">
                       <h3 style={styles.stepTitle} className="mb-3">
+<<<<<<< HEAD
                         Kiểm tra sản phẩm (2)
                       </h3>
                       <div className="d-flex gap-3 py-3">
@@ -611,6 +868,217 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                       <div style={styles.reviewNote} className="mt-4">
+=======
+                        Kiểm tra sản phẩm ({cartItems.length})
+                      </h3>
+
+                      {/* Group products by shop */}
+                      {Object.entries(groupedByShop).map(
+                        ([shopIdStr, group], groupIndex) => {
+                          const shopId = Number(shopIdStr);
+                          const selectedOptionId =
+                            shippingSelections[shopId] || "standard";
+                          const selectedOption = getSelectedShippingOption(
+                            shopId,
+                            selectedOptionId,
+                          );
+
+                          return (
+                            <div
+                              key={shopId}
+                              className="mb-4"
+                              style={{
+                                borderRadius: 8,
+                                border: "1px solid #f1f5f9",
+                                overflow: "hidden",
+                              }}
+                            >
+                              {/* Shop header */}
+                              <div
+                                style={{
+                                  background: "#f8fafc",
+                                  padding: "12px 16px",
+                                  borderBottom: "1px solid #f1f5f9",
+                                }}
+                              >
+                                <p
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    color: "#1e293b",
+                                    marginBottom: 0,
+                                  }}
+                                >
+                                  <i className="bi bi-shop text-primary me-2"></i>
+                                  {group.shop?.shopName}
+                                </p>
+                              </div>
+
+                              {/* Products */}
+                              <div style={{ padding: "16px" }}>
+                                {/* Products from this shop */}
+                                {group.items.map((item, index) => (
+                                  <div key={item.id}>
+                                    <div className="d-flex gap-3 py-2">
+                                      <img
+                                        src={
+                                          item.productVariant?.imageUrl ||
+                                          "/placeholder.png"
+                                        }
+                                        alt={item.product?.name}
+                                        style={styles.productImg}
+                                      />
+                                      <div className="flex-grow-1 d-flex flex-column justify-content-center">
+                                        <h4
+                                          style={{
+                                            fontSize: 13,
+                                            fontWeight: 700,
+                                            lineHeight: 1.4,
+                                            color: "#1e293b",
+                                          }}
+                                          className="mb-1"
+                                        >
+                                          {item.product?.name}
+                                        </h4>
+                                        <p
+                                          className="text-muted mb-2"
+                                          style={{ fontSize: 11 }}
+                                        >
+                                          {item.productVariant?.variantName &&
+                                            `Phân loại: ${item.productVariant.variantName}`}
+                                          {item.productVariant?.sku &&
+                                            ` | SKU: ${item.productVariant.sku}`}
+                                        </p>
+                                        <div className="d-flex align-items-center justify-content-between">
+                                          <span
+                                            style={{
+                                              fontSize: 12,
+                                              fontWeight: 800,
+                                              color: "#137fec",
+                                            }}
+                                          >
+                                            {formatCurrency(
+                                              item.productVariant?.price || 0,
+                                            )}
+                                          </span>
+                                          <span style={styles.qtyBadge}>
+                                            Số lượng:{" "}
+                                            {String(item.quantity).padStart(
+                                              2,
+                                              "0",
+                                            )}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {index < group.items.length - 1 && (
+                                      <hr
+                                        className="my-3"
+                                        style={{ borderColor: "#f1f5f9" }}
+                                      />
+                                    )}
+                                  </div>
+                                ))}
+
+                                {/* Shipping option selector */}
+                                <div
+                                  style={{
+                                    borderTop: "1px solid #f1f5f9",
+                                    marginTop: 16,
+                                    paddingTop: 16,
+                                  }}
+                                >
+                                  <p
+                                    style={{
+                                      fontSize: 12,
+                                      fontWeight: 700,
+                                      color: "#475569",
+                                      marginBottom: 10,
+                                    }}
+                                  >
+                                    <Truck
+                                      size={14}
+                                      className="me-2"
+                                      style={{ display: "inline" }}
+                                    />
+                                    Chọn phương thức vận chuyển
+                                  </p>
+                                  <div
+                                    style={{
+                                      background: "#f8fafc",
+                                      borderRadius: 8,
+                                      padding: 12,
+                                      border: "1px solid #e2e8f0",
+                                    }}
+                                  >
+                                    <div className="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                                      <div className="flex-grow-1">
+                                        <select
+                                          style={{
+                                            fontSize: 12,
+                                            fontWeight: 600,
+                                            padding: "8px 12px",
+                                            borderRadius: 6,
+                                            border: "1.5px solid #e2e8f0",
+                                            background: "white",
+                                            cursor: "pointer",
+                                            width: "100%",
+                                          }}
+                                          value={selectedOptionId}
+                                          onChange={(e) => {
+                                            setShippingSelections((prev) => ({
+                                              ...prev,
+                                              [shopId]: e.target.value,
+                                            }));
+                                          }}
+                                        >
+                                          {shippingOptions.map((option) => (
+                                            <option
+                                              key={option.id}
+                                              value={option.id}
+                                            >
+                                              {option.name} -{" "}
+                                              {option.estimatedDays}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div className="text-end">
+                                        <div
+                                          style={{
+                                            fontSize: 12,
+                                            fontWeight: 800,
+                                            color:
+                                              selectedOption?.fee === 0
+                                                ? "#22c55e"
+                                                : "#137fec",
+                                            textTransform: "uppercase",
+                                          }}
+                                        >
+                                          {selectedOption?.fee === 0
+                                            ? "Miễn phí"
+                                            : formatCurrency(
+                                                selectedOption?.fee || 0,
+                                              )}
+                                        </div>
+                                        <div
+                                          className="text-muted"
+                                          style={{ fontSize: 10 }}
+                                        >
+                                          {selectedOption?.estimatedDays}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        },
+                      )}
+
+                      <div style={styles.reviewNote} className="mt-2">
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                         <span
                           style={{
                             fontSize: 11,
@@ -643,7 +1111,13 @@ export default function CheckoutPage() {
                     >
                       Tổng kết đơn hàng
                     </h3>
+<<<<<<< HEAD
                     <span style={styles.itemsBadge}>2 sản phẩm</span>
+=======
+                    <span style={styles.itemsBadge}>
+                      {cartItems.length} sản phẩm
+                    </span>
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                   </div>
                   <div className="p-4 d-flex flex-column gap-4">
                     <div className="d-flex flex-column gap-2">
@@ -652,7 +1126,13 @@ export default function CheckoutPage() {
                         style={{ fontSize: 12 }}
                       >
                         <span className="text-muted">Tạm tính</span>
+<<<<<<< HEAD
                         <span className="fw-semibold">36.480.000₫</span>
+=======
+                        <span className="fw-semibold">
+                          {formatCurrency(calculateSubtotal())}
+                        </span>
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                       </div>
                       <div
                         className="d-flex justify-content-between align-items-center"
@@ -663,11 +1143,24 @@ export default function CheckoutPage() {
                           style={{
                             fontSize: 10,
                             fontWeight: 800,
+<<<<<<< HEAD
                             color: "#22c55e",
                             textTransform: "uppercase",
                           }}
                         >
                           Miễn phí
+=======
+                            color:
+                              calculateTotalShippingFee() === 0
+                                ? "#22c55e"
+                                : "#137fec",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {calculateTotalShippingFee() === 0
+                            ? "Miễn phí"
+                            : formatCurrency(calculateTotalShippingFee())}
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                         </span>
                       </div>
                     </div>
@@ -676,12 +1169,21 @@ export default function CheckoutPage() {
                         type="text"
                         style={styles.couponInput}
                         placeholder="Nhập mã giảm giá (nếu có)"
+<<<<<<< HEAD
                         value={coupon}
                         onChange={(e) => setCoupon(e.target.value)}
                       />
                       <button
                         style={styles.couponApply}
                         onClick={() => alert(`Áp dụng mã: ${coupon}`)}
+=======
+                      />
+                      <button
+                        style={styles.couponApply}
+                        onClick={() =>
+                          alert("Chức năng áp dụng mã đang phát triển")
+                        }
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                       >
                         Áp dụng
                       </button>
@@ -712,7 +1214,13 @@ export default function CheckoutPage() {
                             }}
                             className="mb-0"
                           >
+<<<<<<< HEAD
                             36.480.000₫
+=======
+                            {formatCurrency(
+                              calculateSubtotal() + calculateTotalShippingFee(),
+                            )}
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                           </p>
                           <p
                             className="text-muted fst-italic mb-0"
@@ -763,7 +1271,11 @@ export default function CheckoutPage() {
                         </div>
                         <div className="d-flex align-items-center gap-1">
                           <Truck size={12} color="#22c55e" strokeWidth={2.5} />
+<<<<<<< HEAD
                           2-3 ngày
+=======
+                          Giao nhanh
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                         </div>
                       </div>
                     </div>

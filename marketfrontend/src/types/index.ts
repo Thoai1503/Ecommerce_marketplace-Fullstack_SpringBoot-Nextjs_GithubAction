@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 import React from 'react';
 
@@ -11,6 +12,32 @@ export type SellerStatus = 'ACTIVE' | 'BLOCKED' | 'PENDING';
 // --- USER MANAGEMENT TYPES ---
 export type UserRole = 'USER' | 'SELLER' | 'ADMIN';
 export type UserStatus = 'ACTIVE' | 'BLOCKED';
+=======
+import React from "react";
+
+export type OrderStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "PROCESSING"
+  | "SHIPPED"
+  | "COMPLETED"
+  | "CANCELED"
+  | "REFUNDED";
+export type PaymentStatus = "PAID" | "UNPAID" | "REFUNDED";
+export type ProductStatus =
+  | "DRAFT"
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "HIDDEN";
+export type ItemStatus = "Ready" | "Packaging" | "Out of Stock";
+export type CustomerStatus = "ACTIVE" | "BANNED" | "INACTIVE";
+export type SellerStatus = "ACTIVE" | "BLOCKED" | "PENDING";
+
+// --- USER MANAGEMENT TYPES ---
+export type UserRole = "USER" | "SELLER" | "ADMIN";
+export type UserStatus = "ACTIVE" | "BLOCKED";
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
 export interface User {
   id: string;
@@ -22,7 +49,11 @@ export interface User {
 }
 
 // --- NOTIFICATION TYPES (NEW) ---
+<<<<<<< HEAD
 export type NotificationType = 'ORDER' | 'ALERT' | 'SYSTEM' | 'INFO';
+=======
+export type NotificationType = "ORDER" | "ALERT" | "SYSTEM" | "INFO";
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
 export interface AppNotification {
   id: string;
@@ -52,6 +83,7 @@ export interface AdminProfile {
   email: string;
   phone: string;
   avatar?: string;
+<<<<<<< HEAD
   role: 'ADMIN';
 }
 
@@ -73,11 +105,35 @@ export interface Unit {
   label: string;     
   symbol: string;    
   type: UnitType;    
+=======
+  role: "ADMIN";
+}
+
+export interface NotificationSettings {
+  emailOrder: boolean; // Email khi có đơn mới
+  emailStock: boolean; // Email cảnh báo hết hàng
+  emailWeeklyReport: boolean; // Email báo cáo tuần
+  systemSound: boolean; // Âm thanh thông báo
+  systemPopup: boolean; // Popup trên màn hình
+  securityLogin: boolean; // Cảnh báo đăng nhập lạ
+}
+
+// --- UNIT TYPES ---
+export type UnitStatus = "ACTIVE" | "INACTIVE";
+export type UnitType = "WEIGHT" | "LENGTH" | "VOLUME" | "QUANTITY" | "OTHER";
+
+export interface Unit {
+  id: string;
+  label: string;
+  symbol: string;
+  type: UnitType;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   status: UnitStatus;
   createdAt: string;
 }
 
 // --- ATTRIBUTE TYPES ---
+<<<<<<< HEAD
 export type AttributeOptionType = 'DROPDOWN' | 'RADIO';
 
 export interface Attribute {
@@ -88,6 +144,18 @@ export interface Attribute {
   unitId?: string; 
   published: boolean;
   valuesCount: number; 
+=======
+export type AttributeOptionType = "DROPDOWN" | "RADIO";
+
+export interface Attribute {
+  id: string;
+  attributeCode: string;
+  name: string;
+  option: AttributeOptionType;
+  unitId?: string;
+  published: boolean;
+  valuesCount: number;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   createdAt: string;
 }
 
@@ -100,24 +168,42 @@ export interface AttributeValue {
 }
 
 // --- CATEGORY TYPES ---
+<<<<<<< HEAD
 export type CategoryStatus = 'ACTIVE' | 'HIDDEN';
 
 export interface Category {
   id: string; 
   categoryCode: string; 
+=======
+export type CategoryStatus = "ACTIVE" | "HIDDEN";
+
+export interface Category {
+  id: string;
+  categoryCode: string;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   name: string;
   slug: string;
   description?: string;
   thumbnailUrl: string;
   status: CategoryStatus;
+<<<<<<< HEAD
   productStock: number; 
   attributeIds?: string[]; 
+=======
+  productStock: number;
+  attributeIds?: string[];
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   createdAt: string;
 }
 
 // --- COUPON TYPES ---
+<<<<<<< HEAD
 export type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
 export type CouponStatus = 'ACTIVE' | 'EXPIRED' | 'INACTIVE';
+=======
+export type DiscountType = "PERCENTAGE" | "FIXED_AMOUNT";
+export type CouponStatus = "ACTIVE" | "EXPIRED" | "INACTIVE";
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
 export interface Coupon {
   id: string;
@@ -125,9 +211,15 @@ export interface Coupon {
   name: string;
   discountType: DiscountType;
   discountValue: number;
+<<<<<<< HEAD
   startDate: string; 
   endDate: string;   
   usageLimit: number | null; 
+=======
+  startDate: string;
+  endDate: string;
+  usageLimit: number | null;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   usedCount: number;
   minOrderAmount: number | null;
   status: CouponStatus;
@@ -135,8 +227,13 @@ export interface Coupon {
 }
 
 // --- FINANCE TYPES ---
+<<<<<<< HEAD
 export type TransactionStatus = 'PAID' | 'PENDING' | 'CANCELLED';
 export type PaymentRequestStatus = 'PENDING' | 'PAID' | 'CANCELLED';
+=======
+export type TransactionStatus = "PAID" | "PENDING" | "CANCELLED";
+export type PaymentRequestStatus = "PENDING" | "PAID" | "CANCELLED";
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
 export interface Transaction {
   id: string;
@@ -154,11 +251,19 @@ export interface SellerPayment {
   id: string;
   sellerId: string;
   sellerName: string;
+<<<<<<< HEAD
   period: string; 
   revenue: number;
   commission: number;
   commissionRate: number;
   amount: number; 
+=======
+  period: string;
+  revenue: number;
+  commission: number;
+  commissionRate: number;
+  amount: number;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   status: PaymentRequestStatus;
   paidAt?: string;
   createdAt: string;
@@ -167,11 +272,19 @@ export interface SellerPayment {
 export interface FinanceStats {
   totalRevenue: number;
   thisMonthRevenue: number;
+<<<<<<< HEAD
   pendingPayoutsCount: number; 
   pendingPayoutsValue: number; 
   revenueTrend: number; 
   monthTrend: number; 
   payoutsTrend: number; 
+=======
+  pendingPayoutsCount: number;
+  pendingPayoutsValue: number;
+  revenueTrend: number;
+  monthTrend: number;
+  payoutsTrend: number;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 }
 // --------------------
 
@@ -193,6 +306,7 @@ export interface OrderItem {
   price: number;
   originalPrice?: number;
   discount?: number;
+<<<<<<< HEAD
   stockStatus?: 'IN_STOCK' | 'OUT_OF_STOCK' | 'LOW_STOCK';
   status: ItemStatus;
 }
@@ -204,6 +318,52 @@ export interface Product {
   description: string;
   sku: string;
   images: string[]; 
+=======
+  stockStatus?: "IN_STOCK" | "OUT_OF_STOCK" | "LOW_STOCK";
+  status: ItemStatus;
+}
+
+// Shipment interface for multi-tracking support
+export type ShipmentStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "PICKED_UP"
+  | "SHIPPING"
+  | "DELIVERING"
+  | "DELIVERED"
+  | "FAILED"
+  | "RETURNED";
+
+export interface ShipmentStatusHistory {
+  status: ShipmentStatus;
+  description?: string;
+  updatedAt: string;
+}
+
+export interface Shipment {
+  id: string;
+  order_id: string;
+  shop_id: string;
+  shopName: string;
+  tracking_number: string;
+  carrier_name?: string;
+  shipping_status: ShipmentStatus;
+  estimated_delivery_at?: string;
+  items: OrderItem[];
+  statusHistory?: ShipmentStatusHistory[];
+  shipping_fee?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Product {
+  id: string;
+  productCode: string;
+  name: string;
+  description: string;
+  sku: string;
+  images: string[];
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   category: string;
   price: number;
   originalPrice?: number;
@@ -212,7 +372,11 @@ export interface Product {
   sellerId: string;
   sellerName: string;
   sellerAvatar?: string;
+<<<<<<< HEAD
   attributes?: Record<string, string>; 
+=======
+  attributes?: Record<string, string>;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   createdAt: string;
   rejectReason?: string;
   viewCount?: number;
@@ -227,7 +391,11 @@ export interface Address {
 
 export interface Customer {
   id: string;
+<<<<<<< HEAD
   accountCode: string; 
+=======
+  accountCode: string;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   fullName: string;
   email: string;
   phone: string;
@@ -238,12 +406,20 @@ export interface Customer {
   status: CustomerStatus;
   joinedAt: string;
   addresses: Address[];
+<<<<<<< HEAD
   note?: string; 
+=======
+  note?: string;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 }
 
 export interface Seller {
   id: string;
+<<<<<<< HEAD
   accountCode: string; 
+=======
+  accountCode: string;
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   brandTitle: string;
   category: string;
   website?: string;
@@ -279,6 +455,7 @@ export interface Order {
   transactionId: string;
   deliveryNumber: string;
   status: OrderStatus;
+<<<<<<< HEAD
   priority: 'NORMAL' | 'HIGH';
   createdAt: string;
   updatedAt: string;
@@ -291,6 +468,21 @@ export interface Order {
 
 // --- DASHBOARD TYPES (PHASE 1) ---
 export type DashboardPeriod = 'today' | 'week' | 'month';
+=======
+  priority: "NORMAL" | "HIGH";
+  createdAt: string;
+  updatedAt: string;
+  items?: OrderItem[];
+  shipments?: Shipment[]; // New: Multi-tracking support
+  logs?: OrderLog[];
+  internalNote?: string;
+  isFlagged?: boolean;
+  trackingNumber?: string; // Deprecated: use shipments[].tracking_number instead
+}
+
+// --- DASHBOARD TYPES (PHASE 1) ---
+export type DashboardPeriod = "today" | "week" | "month";
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
 export interface DashboardStats {
   revenue: number;
@@ -298,7 +490,11 @@ export interface DashboardStats {
   newCustomers: number;
   activeProducts: number;
   changes: {
+<<<<<<< HEAD
     revenue: number;    // percentage
+=======
+    revenue: number; // percentage
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
     orders: number;
     newCustomers: number;
     activeProducts: number;

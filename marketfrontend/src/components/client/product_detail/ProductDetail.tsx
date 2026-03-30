@@ -20,10 +20,14 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
   const fullUrl = pathname + "?" + searchParams.toString();
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   const [selectedVariant, setSelectedVariant] = useState("xanh");
 =======
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   const [variant, setVariant] = useState<Variant | null>(null);
   const [mainImage, setMainImage] = useState(
     data.images[0]?.image_url || "/assets/images/ecommerce/product-1.jpg",
@@ -35,7 +39,10 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
 
   const handleAddToCart = (cart: ICart) => {
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
     if (!userId) {
       message.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
       return;
@@ -44,7 +51,10 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
       message.warning("Vui lòng chọn phân loại sản phẩm");
       return;
     }
+<<<<<<< HEAD
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
     const formData = new FormData();
     Object.entries(cart).forEach(([key, value]) => {
       formData.append(key, String(value));
@@ -52,10 +62,14 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
     addToCart(cart, {
       onSuccess: (data) => {
 <<<<<<< HEAD
+<<<<<<< HEAD
         console.log(data);
 =======
         console.log("Added to cart:", data);
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+        console.log("Added to cart:", data);
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
         message.success("Thêm vào giỏ hàng thành công");
       },
       onError: (error) => {
@@ -187,10 +201,14 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                             <div className="d-flex flex-wrap gap-3">
                               {/* Variant 1 - màu xanh */}
 <<<<<<< HEAD
+<<<<<<< HEAD
                               <div
 =======
                               {/* <div
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+                              {/* <div
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                                 className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === "xanh" ? "border-danger border-2" : "border-secondary"}`}
                                 onClick={() => setSelectedVariant("xanh")}
                                 style={{ width: "110px", cursor: "pointer" }}
@@ -207,16 +225,22 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                   <i className="bi bi-check-circle-fill text-danger position-absolute top-0 end-0 m-1"></i>
                                 )}
 <<<<<<< HEAD
+<<<<<<< HEAD
                               </div>
 
                               {/* Variant 2 - màu xám */}
                               <div
 =======
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                               </div> */}
 
                               {/* Variant 2 - màu xám */}
                               {/* <div
+<<<<<<< HEAD
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                                 className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === "xam" ? "border-danger border-2" : "border-secondary"}`}
                                 onClick={() => setSelectedVariant("xam")}
                                 style={{ width: "110px", cursor: "pointer" }}
@@ -232,6 +256,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                 {selectedVariant === "xam" && (
                                   <i className="bi bi-check-circle-fill text-danger position-absolute top-0 end-0 m-1"></i>
                                 )}
+<<<<<<< HEAD
 <<<<<<< HEAD
                               </div>
 
@@ -264,6 +289,8 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                 </div>
                               ))}
 =======
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                               </div> */}
 
                               {data.variants &&
@@ -299,7 +326,10 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                     )}
                                   </div>
                                 ))}
+<<<<<<< HEAD
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                             </div>
                           </div>
 
@@ -313,10 +343,14 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                     user_id: userId!,
                                     product_id: data.id,
 <<<<<<< HEAD
+<<<<<<< HEAD
                                     variant_id: Number(variant!.id),
 =======
                                     variant_id: Number(selectedVariant),
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+                                    variant_id: Number(selectedVariant),
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                                     quantity: 1,
                                   });
                                 }}

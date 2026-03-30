@@ -1,5 +1,9 @@
 "use client";
+<<<<<<< HEAD
 import React, { useEffect, useState } from "react";
+=======
+import React, { useEffect, useMemo, useState } from "react";
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import { useUserAuth } from "@/context/UserAuthContext";
@@ -23,8 +27,20 @@ const ShoppingCart: React.FC = () => {
     if (data) {
       setCartItems(data.map((item) => ({ ...item, selected: false })));
     }
+<<<<<<< HEAD
   }, [data]);
 
+=======
+    console.log("Fetched cart data:", data);
+  }, [data]);
+
+  // Lưu các item được chọn vào localStorage
+  useEffect(() => {
+    const selectedItems = cartItems.filter((item) => item.selected);
+    localStorage.setItem("selectedCartItems", JSON.stringify(selectedItems));
+  }, [cartItems]);
+
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   useEffect(() => {
     if (isError) {
       alert(
@@ -47,6 +63,7 @@ const ShoppingCart: React.FC = () => {
   };
 
   // Group items theo shop
+<<<<<<< HEAD
   const groupedByShop: Record<number, GroupedCartByShop> = cartItems.reduce(
     (acc, item) => {
       const shopId = item.product.shop.id;
@@ -61,6 +78,24 @@ const ShoppingCart: React.FC = () => {
       GroupedCartByShop & { items: (CartItem & { selected: boolean })[] }
     >,
   );
+=======
+  const groupedByShop: Record<number, GroupedCartByShop> = useMemo(() => {
+    return cartItems.reduce(
+      (acc, item) => {
+        const shopId = item?.product?.shop?.id;
+        if (!acc[shopId]) {
+          acc[shopId] = { shop: item?.product?.shop, items: [] };
+        }
+        acc[shopId].items.push(item);
+        return acc;
+      },
+      {} as Record<
+        number,
+        GroupedCartByShop & { items: (CartItem & { selected: boolean })[] }
+      >,
+    );
+  }, [cartItems]);
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
   // ===== Tính toán =====
   const calculateSubtotal = () => {
@@ -274,7 +309,11 @@ const ShoppingCart: React.FC = () => {
           )}
 
           {/* Shop Groups */}
+<<<<<<< HEAD
           {Object.entries(groupedByShop).map(([shopIdStr, group]) => {
+=======
+          {Object.entries(groupedByShop)?.map(([shopIdStr, group]) => {
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
             const shopId = Number(shopIdStr);
             const typedItems = group.items as (CartItem & {
               selected: boolean;
@@ -296,7 +335,11 @@ const ShoppingCart: React.FC = () => {
                   />
                   <i className="bi bi-shop text-primary"></i>
                   <span className="fw-bold text-uppercase small">
+<<<<<<< HEAD
                     {group.shop.shopName}
+=======
+                    {group?.shop?.shopName}
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                   </span>
                   <i className="bi bi-chevron-right text-muted"></i>
                 </div>
@@ -327,12 +370,17 @@ const ShoppingCart: React.FC = () => {
                                 item.productVariant?.imageUrl ??
                                 "/placeholder.png"
                               }
+<<<<<<< HEAD
                               alt={item.product.name}
+=======
+                              alt={item?.product?.name}
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                               className="w-100 h-100 object-fit-cover"
                             />
                           </div>
                           <div className="flex-grow-1 min-w-0">
                             <h6 className="fw-bold mb-1 text-truncate">
+<<<<<<< HEAD
                               {item.product.name}
                             </h6>
                             {item.productVariant && (
@@ -340,6 +388,15 @@ const ShoppingCart: React.FC = () => {
                                 Phân loại:{" "}
                                 <span className="text-dark fw-medium">
                                   {item.productVariant.variantName}
+=======
+                              {item?.product?.name}
+                            </h6>
+                            {item?.productVariant && (
+                              <div className="small text-muted d-flex align-items-center gap-1">
+                                Phân loại:{" "}
+                                <span className="text-dark fw-medium">
+                                  {item?.productVariant?.variantName}
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                                 </span>
                                 <i className="bi bi-chevron-down"></i>
                               </div>
@@ -514,6 +571,10 @@ const ShoppingCart: React.FC = () => {
                 <button
                   className="btn btn-primary w-100 py-3 fw-bold d-flex align-items-center justify-content-center gap-2"
                   disabled={selectedCount === 0}
+<<<<<<< HEAD
+=======
+                  onClick={() => (window.location.href = "/checkout")}
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                 >
                   MUA HÀNG ({selectedCount})
                   <i className="bi bi-arrow-right"></i>

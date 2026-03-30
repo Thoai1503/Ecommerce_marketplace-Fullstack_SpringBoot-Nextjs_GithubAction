@@ -31,10 +31,13 @@ public class CartController {
 	} 
 	@GetMapping("user/{id}")
 <<<<<<< HEAD
+<<<<<<< HEAD
 	public ResponseEntity< List<Cart>> getByUserId(@PathVariable int id){
 		return ResponseEntity.ok( cartService.getUserCart(id));
 	}
 =======
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 	public ResponseEntity<List<Cart>> getByUserId(@PathVariable int id){
 		if(id==0) {
 			return ResponseEntity.status(500).body(null);
@@ -45,15 +48,22 @@ public class CartController {
 		return ResponseEntity.ok(cartService.getUserCart(id));
 	}
 	
+<<<<<<< HEAD
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 	@GetMapping("variant/{id}")
 	public ResponseEntity< Cart> getByVariantId(@PathVariable int id){
 		return ResponseEntity.ok( cartService.getCartByVariantId(id));
 	}
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 	
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
+=======
+	
+>>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 	@PostMapping("")
 	public ResponseEntity<CartDTO> create(@RequestBody  CartDTO cartDto) {
 		
