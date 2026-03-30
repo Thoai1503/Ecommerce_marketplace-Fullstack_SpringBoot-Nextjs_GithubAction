@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { useCategoryDetail } from "@/hooks/admin/useCategories";
@@ -24,6 +24,12 @@ import {
 
 import { CategoryStatus } from "@/types";
 import { useToast } from "@/context/ToastContext";
+import { useCategoryAttributes } from "@/hooks/admin/useCategoryAttributes";
+import SelectAttributesModal from "@/components/admin/attributes/SelectAttributesModal";
+import SelectUnitModal from "@/components/admin/units/SelectUnitModal";
+import { useAttributeValues } from "@/hooks/admin/useAttributeValues";
+import { useAttributeUnits } from "@/hooks/admin/useAttributeUnits";
+import CreateValueModal from "@/components/admin/value/CreateValueModal";
 
 const StatusConfig: Record<
   CategoryStatus,
@@ -52,11 +58,109 @@ export default function CategoryDetail() {
 
   const { category, isLoading, deleteCategory } = useCategoryDetail(id);
   const { subCategories, loading: loadingSub } = useSubCategories(id);
-
   const { attributes } = useAttributes();
   const { units } = useUnits();
+  const [selectedAttr, setSelectedAttr] = useState<any>(null);
+  const [openUnitModal, setOpenUnitModal] = useState(false);
+  const { attributeUnits, deleteAttributeUnit } = useAttributeUnits();
+  const [collapsedAttrs, setCollapsedAttrs] = useState<number[]>([]);
+
+  const [openValueModal, setOpenValueModal] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState<any>(null);
   
-  /* DELETE */
+  const { values, createValue, deleteValue } = useAttributeValues();
+  const handleOpenUnitModal = (attr: any) => {
+    setSelectedAttr(attr);
+    setOpenUnitModal(true);
+  };
+  const toggleAttr = (attrId: number) => {
+    setCollapsedAttrs((prev) =>
+      prev.includes(attrId)
+        ? prev.filter((id) => id !== attrId)
+        : [...prev, attrId],
+    );
+  };
+  const handleRemoveValue = async (v: any) => {
+    const ok = confirm("Delete this value?");
+    if (!ok) return;
+
+    try {
+      await deleteValue(v.id);
+      info("Value removed");
+    } catch (err) {
+      console.error(err);
+      info("Delete failed");
+    }
+  };
+  const handleRemoveUnit = async (unit: any) => {
+    const ok = confirm("Delete this unit?");
+    if (!ok) return;
+
+    try {
+      await deleteAttributeUnit(unit.attributeUnitId); // 🔥 FIX
+      info("Unit removed");
+    } catch (err) {
+      console.error(err);
+      info("Delete failed");
+    }
+  };
+
+  const handleOpenValueModal = (attr: any, unit: any) => {
+    setSelectedAttr(attr);
+    setSelectedUnit(unit);
+    setOpenValueModal(true);
+  };
+  const addAttributeUnit = async (attributeId: number, unitId: number) => {
+    const res = await fetch("http://localhost:8000/api/attribute-unit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        attribute_id: attributeId,
+        unit_id: unitId,
+        status: 1,
+      }),
+    });
+
+    const text = await res.text();
+    console.log("ADD ATTRIBUTE UNIT:", res.status, text);
+
+    if (!res.ok) {
+      throw new Error(text || "Add failed");
+    }
+  };
+
+  const {
+    categoryAttributes,
+    loading: loadingAttr,
+    addAttributes,
+    removeAttribute,
+  } = useCategoryAttributes(category?.id);
+
+  const [openAttributeModal, setOpenAttributeModal] = useState(false);
+
+  // 🔥 DELETE ATTRIBUTE
+  const handleRemoveAttribute = async (attr: any) => {
+    const record = categoryAttributes.find(
+      (ca: any) => Number(ca.attributeId) === Number(attr.id),
+    );
+
+    if (!record) return;
+
+    const ok = confirm("Are you sure you want to delete this attribute?");
+    if (!ok) return;
+
+    try {
+      await removeAttribute(record.id);
+      info("Attribute removed");
+    } catch (err) {
+      console.error(err);
+      info("Remove failed");
+    }
+  };
+
+  // 🔥 DELETE CATEGORY
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this category?")) return;
 
@@ -70,24 +174,47 @@ export default function CategoryDetail() {
     }
   };
 
-  /* ATTRIBUTES */
-
+  // 🔥 MAP ATTRIBUTES
   const linkedAttributes = useMemo(() => {
-    if (!category || !attributes || !category.attributeIds) return [];
+    if (!categoryAttributes || !attributes) return [];
 
-    return attributes
-      .filter((attr: any) => category.attributeIds?.includes(attr.id))
-      .map((attr: any) => {
-        const unit = units?.find((u: any) => u.id === attr.unitId);
+    return categoryAttributes
+      .map((ca: any) => {
+        const attr = attributes.find(
+          (a: any) => Number(a.id) === Number(ca.attributeId),
+        );
+
+        if (!attr) return null;
+
+        const unitsOfAttr = attributeUnits
+          .filter((au: any) => Number(au.attribute_id) === Number(attr.id))
+          .map((au: any) => {
+            const unit = units.find(
+              (u: any) => Number(u.id) === Number(au.unit_id),
+            );
+
+            if (!unit) return null;
+            const valuesOfUnit = values.filter(
+              (v: any) =>
+                Number(v.attribute_id) === Number(attr.id) &&
+                Number(v.unit_id) === Number(unit.id),
+            );
+
+            return {
+              ...unit,
+              attributeUnitId: au.id,
+              values: valuesOfUnit, // 🔥 giữ pivot id
+            };
+          })
+          .filter(Boolean);
 
         return {
           ...attr,
-          unitSymbol: unit?.symbol || null,
+          units: unitsOfAttr, // 👈 MANY units
         };
-      });
-  }, [category, attributes, units]);
-
-  /* LOADING */
+      })
+      .filter(Boolean);
+  }, [categoryAttributes, attributes, units, attributeUnits, values]);
 
   if (isLoading) {
     return (
@@ -106,13 +233,11 @@ export default function CategoryDetail() {
     );
   }
 
-  // 🔥 FIX CHUẨN THEO DB
-const isChildCategory = !loadingSub && subCategories.length === 0;
+  const isChildCategory = !loadingSub && subCategories.length === 0;
 
   return (
     <div className="p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8 pb-24">
       {/* HEADER */}
-
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4">
           <button
@@ -126,17 +251,27 @@ const isChildCategory = !loadingSub && subCategories.length === 0;
         </div>
 
         <div className="flex gap-3">
-          <button
-            onClick={() =>
-              router.push(
-                `/admin/categories/industries/create?parentId=${category.id}`,
-              )
-            }
-            className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:shadow-md transition"
-          >
-            <Plus size={16} />
-            Subcategory
-          </button>
+          {!isChildCategory ? (
+            <button
+              onClick={() =>
+                router.push(
+                  `/admin/categories/industries/create?parentId=${category.id}`,
+                )
+              }
+              className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:shadow-md transition"
+            >
+              <Plus size={16} />
+              Subcategory
+            </button>
+          ) : (
+            <button
+              onClick={() => setOpenAttributeModal(true)}
+              className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-xl shadow hover:shadow-md transition"
+            >
+              <Plus size={16} />
+              Attribute
+            </button>
+          )}
 
           <button
             onClick={() =>
@@ -159,10 +294,8 @@ const isChildCategory = !loadingSub && subCategories.length === 0;
       </div>
 
       {/* GRID */}
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* LEFT */}
-
         <div className="space-y-6">
           <div className="bg-white rounded-2xl shadow-md overflow-hidden">
             <div className="relative">
@@ -192,7 +325,6 @@ const isChildCategory = !loadingSub && subCategories.length === 0;
         </div>
 
         {/* RIGHT */}
-
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl shadow-md p-6">
             <div className="flex justify-between items-center mb-4">
@@ -202,7 +334,7 @@ const isChildCategory = !loadingSub && subCategories.length === 0;
                 ) : (
                   <Layers size={16} />
                 )}
-                {isChildCategory ? "Specifications" : "Subcategories"}
+                {isChildCategory ? "Attributes" : "Subcategories"}
               </h3>
 
               {!isChildCategory && (
@@ -212,8 +344,7 @@ const isChildCategory = !loadingSub && subCategories.length === 0;
               )}
             </div>
 
-            {/* CHA */}
-
+            {/* SUBCATEGORY */}
             {!isChildCategory &&
               (loadingSub ? (
                 <p className="text-sm text-slate-400">Loading...</p>
@@ -242,41 +373,232 @@ const isChildCategory = !loadingSub && subCategories.length === 0;
                 </div>
               ))}
 
-            {/* CON */}
-
+            {/* ATTRIBUTES */}
             {isChildCategory &&
-              (linkedAttributes.length === 0 ? (
+              (loadingAttr ? (
+                <p className="text-sm text-slate-400">Loading attributes...</p>
+              ) : linkedAttributes.length === 0 ? (
                 <p className="text-sm text-slate-400">No attributes linked</p>
               ) : (
                 <div className="space-y-2">
-                  {linkedAttributes.map((attr: any) => (
-                    <div
-                      key={attr.id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition"
-                    >
-                      <div className="flex items-center gap-2">
-                        {attr.option === "DROPDOWN" ? (
-                          <List size={14} />
-                        ) : (
-                          <CircleDot size={14} />
+                  {linkedAttributes.map((attr: any) => {
+                    if (!attr) return null;
+
+                    return (
+                      <div key={attr.id}>
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition">
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            onClick={() => toggleAttr(attr.id)}
+                          >
+                            <span className="text-xs">
+                              {collapsedAttrs.includes(attr.id) ? "▶" : "▼"}
+                            </span>
+
+                            {attr.option === "DROPDOWN" ? (
+                              <List size={14} />
+                            ) : (
+                              <CircleDot size={14} />
+                            )}
+
+                            <span className="text-sm font-bold">
+                              {attr.name}
+                            </span>
+                          </div>
+
+                          {/* UNIT + ACTION */}
+                          <div className="flex items-center gap-2">
+                            {/* 🔥 ADD UNIT */}
+                            <button
+                              onClick={() => handleOpenUnitModal(attr)}
+                              className="text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+                            >
+                              + Unit
+                            </button>
+
+                            {/* 🔥 ADD VALUE (NO UNIT) */}
+                            <button
+                              onClick={() => handleOpenValueModal(attr, null)}
+                              className="text-xs px-2 py-1 bg-green-100 text-green-600 rounded hover:bg-green-200"
+                            >
+                              + Value
+                            </button>
+
+                            {/* DELETE */}
+                            <button
+                              onClick={() => handleRemoveAttribute(attr)}
+                              className="p-1 rounded hover:bg-red-100 text-red-500"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {!collapsedAttrs.includes(attr.id) && (
+                          <>
+                            {attr.units && attr.units.length > 0 && (
+                              <div className="flex flex-col gap-1 mt-1 ml-6">
+                                {attr.units.map((u: any) => (
+                                  <div key={u.id}>
+                                    {/* UNIT */}
+                                    <div className="flex items-center justify-between text-xs bg-white shadow-sm px-2 py-1 rounded">
+                                      <div className="flex items-center gap-1">
+                                        <Scale size={10} />
+                                        {u.symbol}
+                                      </div>
+
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() =>
+                                            handleOpenValueModal(attr, u)
+                                          }
+                                          className="text-blue-500 hover:text-blue-700 text-[11px]"
+                                        >
+                                          + Value
+                                        </button>
+
+                                        <button
+                                          onClick={() => handleRemoveUnit(u)}
+                                          className="text-red-400 hover:text-red-600"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* 🔥 VALUE LIST */}
+                                    {u.values && u.values.length > 0 && (
+                                      <div className="ml-6 mt-1 flex flex-col gap-1">
+                                        {u.values.map((v: any) => (
+                                          <div
+                                            key={v.id}
+                                            className="flex items-center justify-between text-[11px] px-2 py-1 bg-slate-100 rounded"
+                                          >
+                                            <span>{v.value}</span>
+
+                                            {/* 🔥 NÚT XOÁ */}
+                                            <button
+                                              onClick={() =>
+                                                handleRemoveValue(v)
+                                              }
+                                              className="text-red-400 hover:text-red-600 ml-2"
+                                              title="Delete value"
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {(!attr.units || attr.units.length === 0) && (
+                              <div className="flex flex-col gap-1 mt-1 ml-6">
+                                {values
+                                  .filter(
+                                    (v: any) =>
+                                      Number(v.attribute_id) ===
+                                      Number(attr.id),
+                                  )
+                                  .map((v: any) => (
+                                    <div
+                                      key={v.id}
+                                      className="flex items-center justify-between text-[11px] px-2 py-1 bg-slate-100 rounded"
+                                    >
+                                      <span>{v.value}</span>
+
+                                      <button
+                                        onClick={() => handleRemoveValue(v)}
+                                        className="text-red-400 hover:text-red-600"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+                          </>
                         )}
-
-                        <span className="text-sm font-bold">{attr.name}</span>
                       </div>
-
-                      {attr.unitSymbol && (
-                        <span className="text-xs bg-white shadow-sm px-2 rounded flex items-center gap-1">
-                          <Scale size={10} />
-                          {attr.unitSymbol}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ))}
           </div>
         </div>
       </div>
+
+      {/* MODAL */}
+      <SelectAttributesModal
+        open={openAttributeModal}
+        onClose={() => setOpenAttributeModal(false)}
+        attributes={attributes}
+        existingIds={categoryAttributes.map((a) => Number(a.attributeId))}
+        onSubmit={async (ids) => {
+          try {
+            await addAttributes(ids);
+            info("Attributes added successfully");
+            setOpenAttributeModal(false);
+          } catch (err) {
+            console.error(err);
+            info("Add attributes failed");
+          }
+        }}
+      />
+
+      <SelectUnitModal
+        open={openUnitModal}
+        onClose={() => setOpenUnitModal(false)}
+        units={units}
+        attribute={selectedAttr}
+        existingUnitIds={
+          selectedAttr?.units?.map((u: any) => Number(u.id)) || []
+        }
+        onSubmit={async (unitId) => {
+          if (!selectedAttr) return;
+
+          try {
+            await addAttributeUnit(Number(selectedAttr.id), Number(unitId));
+            info("Unit added successfully");
+            setOpenUnitModal(false);
+          } catch (err) {
+            console.error(err);
+            info("Add unit failed");
+          }
+        }}
+      />
+      <CreateValueModal
+        open={openValueModal}
+        onClose={() => setOpenValueModal(false)}
+        attribute={selectedAttr}
+        unit={selectedUnit}
+        onSubmit={async (value) => {
+          if (!selectedAttr) return;
+
+          try {
+            await createValue({
+              attribute_id: selectedAttr.id,
+              unit_id: selectedUnit?.id ?? null, // 🔥 FIX CHUẨN
+              value,
+            });
+
+            // 🔥 SUCCESS MESSAGE
+            const label = selectedUnit
+              ? `${value} ${selectedUnit.symbol}`
+              : value;
+
+            info(`Added: ${label}`);
+
+            setOpenValueModal(false);
+          } catch (err) {
+            console.error(err);
+            info("Add value failed");
+          }
+        }}
+      />
     </div>
   );
 }

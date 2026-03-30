@@ -1,28 +1,27 @@
 package docker_test.com.models.attribute;
 
-import docker_test.com.models.Unit;
+public class AttributeValue {
 
-public final class AttributeValue {
-	private int id;
+	private Integer id;
 	private int attribute_id;
-	private Integer unit_id;
+	private Integer unit_id; // 🔥 cho phép null
 	private String value;
 
 	public AttributeValue() {
 	}
 
-	public AttributeValue(int id, int attributeId, Integer unitId, String value) {
+	public AttributeValue(Integer id, int attribute_id, Integer unit_id, String value) {
 		this.id = id;
-		this.attribute_id = attributeId;
-		this.unit_id = unitId;
+		this.attribute_id = attribute_id;
+		this.unit_id = unit_id;
 		this.value = value;
 	}
 
-	public int getId() {
+	public Integer getId() {
 		return id;
 	}
 
-	public void setId(int id) {
+	public void setId(Integer id) {
 		this.id = id;
 	}
 
@@ -30,16 +29,16 @@ public final class AttributeValue {
 		return attribute_id;
 	}
 
-	public void setAttributeId(int attributeId) {
-		this.attribute_id = attributeId;
+	public void setAttribute_id(int attribute_id) {
+		this.attribute_id = attribute_id;
 	}
 
 	public Integer getUnit_id() {
 		return unit_id;
 	}
 
-	public void setUnit_id(Integer unitId) {
-		this.unit_id = unitId;
+	public void setUnit_id(Integer unit_id) {
+		this.unit_id = unit_id;
 	}
 
 	public String getValue() {
@@ -48,18 +47,5 @@ public final class AttributeValue {
 
 	public void setValue(String value) {
 		this.value = value;
-	}
-	public Unit unit;
-
-	public Unit getUnit() {
-		return unit;
-	}
-
-	public void setUnit(Unit unit) {
-		this.unit = unit;
-	}
-
-	public void setAttribute_id(int attribute_id) {
-		this.attribute_id = attribute_id;
 	}
 }
