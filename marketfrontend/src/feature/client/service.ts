@@ -1,3 +1,4 @@
+import { API_URL } from "@/helper/api";
 import http from "@/lib/http";
 import { IOrder } from "@/validators/order";
 import { IProduct } from "@/validators/product";
@@ -14,7 +15,7 @@ export const getAllProduct = async (): Promise<Partial<IProduct>> => {
 
 export const createOrder = async (orderData: IOrder): Promise<any> => {
   return axios
-    .post("http://localhost:8002/api/orders", orderData)
+    .post(`${API_URL}/api/orders`, orderData)
     .then((res) => res.data)
     .catch((error) => {
       throw error;
