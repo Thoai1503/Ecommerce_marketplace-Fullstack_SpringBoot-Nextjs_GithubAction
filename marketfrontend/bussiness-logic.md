@@ -36,9 +36,6 @@
 - [ ] FE: Form create/edit attribute.
 - [ ] FE: Trang manage attribute values.
 
-<<<<<<< HEAD
-#### 6. Units Management
-=======
 #### 6. Category-Attribute Management
 
 - [ ] FE: `/admin/categories/category-attributes` (list categories with linked attributes).
@@ -46,17 +43,12 @@
 - [ ] FE: Search and filter for easy management.
 
 #### 7. Units Management
->>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
 
 - [ ] API: CRUD units.
 - [ ] FE: `/admin/unit` (list + form create/edit).
 - [ ] Tích hợp chọn unit trong form sản phẩm/seller product.
 
-<<<<<<< HEAD
-#### 7. Products Management
-=======
 #### 8. Products Management
->>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
 
 - [ ] API: List/Detail/Update/Approve/Reject sản phẩm (từ seller).
 - [ ] FE: `/admin/products` (list + filter theo status).
@@ -185,11 +177,7 @@ Bạn là một senior backend + frontend developer. Hãy generate code đầy �
 
 ### Business Rules
 
-<<<<<<< HEAD
-- Category hỗ trợ cây cha–con (parent_id), tối đa 2–3 cấp.
-=======
 - Category hỗ trợ cây cha–con (parent_id), tối đa 4-5 cấp.
->>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
 - `slug` phải unique toàn hệ thống, auto-generate từ `name` nhưng có thể override.
 - `displayOrder` để sắp xếp thứ tự hiển thị trên storefront.
 - Không được xóa category khi còn sản phẩm ACTIVE → chỉ cho phép chuyển INACTIVE.
@@ -502,9 +490,6 @@ _Hãy generate lần lượt từng phần, bắt đầu từ phần 1 – Categ
     - Body: `{ "status": "PENDING" | "CONFIRMED" | "PROCESSING" | "SHIPPED" | "COMPLETED" | "CANCELED" | "REFUNDED" }`
   - (Optional) `GET /admin/orders/{orderId}/timeline` – lịch sử trạng thái.
 
-<<<<<<< HEAD
-#### Dev 4 – Catalog: Category, Attributes, Units
-=======
 # CATALOG MODULE – Dev 4 Prompt Specification
 
 **Admin E-commerce Platform | Phase 1**
@@ -1250,7 +1235,6 @@ Generate Units Management (backend + frontend đơn giản):
 ---
 
 _Catalog Module Specification v1.0 – Dev 4 – Admin E-commerce Platform_
->>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
 
 - **Category**:
   - `GET /admin/categories`
