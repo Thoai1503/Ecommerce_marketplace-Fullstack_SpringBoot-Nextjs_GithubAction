@@ -25,6 +25,7 @@ import { CartItem, GroupedCartByShop } from "@/validators/cart";
 import { createOrder } from "@/feature/client/service";
 import { id } from "zod/v4/locales";
 import { IOrderItem } from "@/validators/orderItem";
+import { Recipient } from "@/validators/order";
 
 interface Address {
   id: number;
@@ -426,6 +427,8 @@ export default function CheckoutPage() {
 
   const [selectedAddressId, setSelectedAddressId] = useState(1);
 
+  const [recipient, setRecipient] = useState<Recipient | null>(null);
+
   const [addresses, setAddresses] = useState<Address[]>([
     {
       id: 1,
@@ -472,6 +475,14 @@ export default function CheckoutPage() {
     createOrder({
       user_id: paymentInfo.user_id || 0,
       shop_id: cartItems[0]?.product?.shop?.id || 0,
+      recipient: {
+        name: "Ly Tieu Long",
+        phone: "0879454694",
+        address: "Phat Son",
+        district: 1,
+        province: 1,
+        ward: 1,
+      },
       order_number: "ORD20250318001",
       total_price: paymentInfo.amount || 0,
       payment_method: paymentInfo.method || "unknown",

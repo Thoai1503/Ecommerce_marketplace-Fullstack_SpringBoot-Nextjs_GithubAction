@@ -3,6 +3,7 @@ import { IOrderItem } from "./orderItem";
 export interface IOrder {
   id: number;
   user_id: number;
+  recipient?: Recipient;
   order_number: string;
   address_id: number;
   shop_id: number;
@@ -19,4 +20,13 @@ export interface IOrder {
   orders_items: IOrderItem[];
   note?: string;
   tracking_number?: string;
+}
+
+export interface Recipient {
+  name: string;
+  phone: string;
+  address: string;
+  province: number;
+  district: number;
+  ward: number;
 }
