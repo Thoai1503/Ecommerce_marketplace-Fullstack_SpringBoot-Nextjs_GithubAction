@@ -1,4 +1,6 @@
 import { getAllProvinces, getDistricts, getWards } from "@/services/addressAPI";
+
+import { District, Province, Ward } from "@/validators/addressAPIModel";
 import { useQuery } from "@tanstack/react-query";
 import { get } from "http";
 import {
@@ -868,9 +870,9 @@ const AddressModal = ({
                     <option value="" disabled>
                       Chọn tỉnh / thành phố
                     </option>
-                    {provinces.map((p: any) => (
-                      <option key={p.code} value={p.code}>
-                        {p.name}
+                    {provinces.map((p: Province) => (
+                      <option key={p.Code} value={p.ProvinceID}>
+                        {p.ProvinceName}
                       </option>
                     ))}
                   </select>
@@ -931,9 +933,9 @@ const AddressModal = ({
                         ? "Chọn quận / huyện"
                         : "Chọn tỉnh/thành trước"}
                     </option>
-                    {districts?.districts?.map((d: any) => (
-                      <option key={d.code} value={d.code}>
-                        {d.name}
+                    {districts?.map((d: District) => (
+                      <option key={d.DistrictID} value={d.DistrictID}>
+                        {d.DistrictName}
                       </option>
                     ))}
                   </select>
@@ -983,9 +985,9 @@ const AddressModal = ({
                         ? "Chọn phường / xã"
                         : "Chọn quận/huyện trước"}
                     </option>
-                    {wards?.wards?.map((w: any) => (
-                      <option key={w.code} value={w.code}>
-                        {w.name}
+                    {wards?.map((w: Ward) => (
+                      <option key={w.WardCode} value={w.WardCode}>
+                        {w.WardName}
                       </option>
                     ))}
                   </select>
