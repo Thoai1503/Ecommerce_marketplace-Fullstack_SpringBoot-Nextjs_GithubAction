@@ -10,7 +10,7 @@ public final class DBConnection {
 
     private static DBConnection instance;
     private static final Properties props = new Properties();
-    
+
     private static String getEnvOrProp(String envKey, String propKey) {
         String env = System.getenv(envKey);
         if (env != null && !env.isBlank()) {
@@ -19,18 +19,37 @@ public final class DBConnection {
         return props.getProperty(propKey);
     }
 
-
-    // Load config 1 lần duy nhất
     static {
-        try (InputStream input = DBConnection.class
-                .getClassLoader()
-                .getResourceAsStream("application.properties")) {
+        try {
+            // 🔥 Lấy profile hiện tại (dev, prod,...)
+        	String profile = System.getProperty("spring.profiles.active");
 
+        	if (profile == null) {
+        	    profile = System.getenv("SPRING_PROFILES_ACTIVE");
+        	}
+
+        	if (profile == null) {
+        	    profile = "local";
+        	}
+
+        	String fileName = "application-" + profile + ".properties";
+
+        	InputStream input = DBConnection.class
+        	        .getClassLoader()
+        	        .getResourceAsStream(fileName);
+
+        	// fallback
+        	if (input == null) {
+        	    input = DBConnection.class
+        	            .getClassLoader()
+        	            .getResourceAsStream("application.properties");
+        	}
             if (input == null) {
-                throw new RuntimeException("❌ Không tìm thấy application.properties");
+                throw new RuntimeException("❌ Không tìm thấy file config nào!");
             }
-            System.out.print("Find application.properties");
+
             props.load(input);
+
         } catch (Exception e) {
             throw new RuntimeException("❌ Lỗi load DB config", e);
         }
@@ -58,7 +77,7 @@ public final class DBConnection {
             ds.setUser(getEnvOrProp("DB_USER", "mysql.username"));
             ds.setPassword(getEnvOrProp("DB_PASSWORD", "mysql.password"));
 
-            ds.setUseSSL(false);
+            ds.setSslMode("REQUIRED");
 
             System.out.println("✅ Connecting to DB on port " + port);
             return ds.getConnection();
@@ -68,5 +87,4 @@ public final class DBConnection {
             return null;
         }
     }
-
 }
