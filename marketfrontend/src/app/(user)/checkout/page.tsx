@@ -26,13 +26,16 @@ import { createOrder } from "@/feature/client/service";
 import { id } from "zod/v4/locales";
 import { IOrderItem } from "@/validators/orderItem";
 import { Recipient } from "@/validators/order";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { useUserAuth } from "@/context/UserAuthContext";
+import { useAddresses } from "@/hooks/useAddresses";
 
 interface Address {
   id: number;
   name: string;
   phone: string;
   address: string;
-  isDefault: boolean;
+  isDefault: number; // 1 là mặc định, 0 là không
 }
 
 interface ShippingOption {
@@ -46,7 +49,139 @@ interface ShippingSelection {
   [shopId: number]: string; // shopId -> shippingOptionId
 }
 
+import { useEffect } from "react";
+import {} from "@/hooks/useAddresses";
+// ...existing code...
+
+// Dữ liệu mẫu cho city, district, ward (city vẫn dùng map tĩnh, district/ward lấy động)
+const cityMap = { 4: "TP. Hồ Chí Minh", 1: "Hà Nội" };
+
+import { useQuery, QueryClient } from "@tanstack/react-query";
+import { message } from "antd";
+
+// Hàm fetch districts theo provinceId
+async function fetchDistrictsByProvince(provinceId: number) {
+  const res = await fetch(
+    "https://dev-online-gateway.ghn.vn/shiip/public-api/master-data/district",
+    {
+      method: "POST",
+      headers: {
+        token: "6cc6a2a1-1f8e-11f1-a973-aee5264794df",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ province_id: provinceId }),
+    },
+  );
+  const data = await res.json();
+  return data?.data || [];
+}
+
+// Hàm fetch wards theo districtId
+async function fetchWardsByDistrict(districtId: number) {
+  const res = await fetch(
+    "https://dev-online-gateway.ghn.vn/shiip/public-api/master-data/ward?district_id",
+    {
+      method: "POST",
+      headers: {
+        token: "6cc6a2a1-1f8e-11f1-a973-aee5264794df",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ district_id: districtId }),
+    },
+  );
+  const data = await res.json();
+  return data?.data || [];
+}
+
+// Custom hook lấy district name có caching
+export function useDistrictName(provinceId: number, districtId: number) {
+  return useQuery({
+    queryKey: ["districts", provinceId],
+    queryFn: () => fetchDistrictsByProvince(provinceId),
+    select: (districts: any[]) => {
+      const found = districts.find((d) => d.DistrictID === districtId);
+      return found ? found.DistrictName : `Quận ${districtId}`;
+    },
+    enabled: !!provinceId && !!districtId,
+    staleTime: 1000 * 60 * 60, // 1h
+  });
+}
+
+// Custom hook lấy ward name có caching
+export function useWardName(districtId: number, wardCode: number) {
+  return useQuery({
+    queryKey: ["wards", districtId],
+    queryFn: () => fetchWardsByDistrict(districtId),
+    select: (wards: any[]) => {
+      const found = wards.find((w) => Number(w.WardCode) === Number(wardCode));
+      return found ? found.WardName : `Phường ${wardCode}`;
+    },
+    enabled: !!districtId && !!wardCode,
+    staleTime: 1000 * 60 * 60, // 1h
+  });
+}
+
 export default function CheckoutPage() {
+  const { userId, roles } = useUserAuth();
+  const { data: addressesQuery, isLoading: addressesLoading } = useAddresses(
+    userId || 0,
+  );
+  const [addresses, setAddresses] = useState<Address[]>([]);
+
+  useEffect(() => {
+    // Hàm async để mapping địa chỉ động sử dụng hooks caching
+    async function mapAddresses() {
+      if (addressesQuery && Array.isArray(addressesQuery)) {
+        // Sử dụng fetchDistrictsByProvince và fetchWardsByDistrict để lấy mapping
+        const mapped = await Promise.all(
+          addressesQuery.map(async (addr: any) => {
+            // Lấy tên district và ward qua hooks caching
+            let districtName = "";
+            let wardName = "";
+            try {
+              // Lấy danh sách district
+              const districts = await fetchDistrictsByProvince(addr.city);
+              const districtObj = districts.find(
+                (d: any) => d.DistrictID === addr.district,
+              );
+              districtName = districtObj
+                ? districtObj.DistrictName
+                : `Quận ${addr.district}`;
+            } catch {
+              districtName = `Quận ${addr.district}`;
+            }
+            try {
+              const wards = await fetchWardsByDistrict(addr.district);
+              const wardObj = wards.find(
+                (w: any) => Number(w.WardCode) === Number(addr.ward),
+              );
+              wardName = wardObj ? wardObj.WardName : `Phường ${addr.ward}`;
+            } catch {
+              wardName = `Phường ${addr.ward}`;
+            }
+            return {
+              id: addr.addressId,
+              name: addr.recipientName,
+              phone: addr.recipientPhone,
+              address:
+                addr.addressLine +
+                ", " +
+                wardName +
+                ", " +
+                districtName +
+                ", " +
+                (cityMap[
+                  String(addr.city) as unknown as keyof typeof cityMap
+                ] || `TP ${addr.city}`),
+              isDefault: addr.isDefault, // giữ đúng giá trị từ API (1 là mặc định)
+            };
+          }),
+        );
+        setAddresses(mapped);
+      }
+    }
+    mapAddresses();
+  }, [addressesQuery]);
   const { checkOut } = useCheckoutPage();
   const cartItems = localStorage.getItem("selectedCartItems")
     ? (JSON.parse(localStorage.getItem("selectedCartItems")!) as CartItem[])
@@ -424,44 +559,28 @@ export default function CheckoutPage() {
   };
 
   const [showAddressPanel, setShowAddressPanel] = useState(false);
-
   const [selectedAddressId, setSelectedAddressId] = useState(1);
-
-  const [recipient, setRecipient] = useState<Recipient | null>(null);
-
-  const [addresses, setAddresses] = useState<Address[]>([
-    {
-      id: 1,
-      name: "Nguyễn Văn A",
-      phone: "0901 234 567",
-      address: "123 Đường Lê Lợi, P. Bến Thành, Quận 1, TP. HCM",
-      isDefault: true,
-    },
-    {
-      id: 2,
-      name: "Nguyễn Văn A",
-      phone: "0912 345 678",
-      address: "456 Đường Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. HCM",
-      isDefault: false,
-    },
-    {
-      id: 3,
-      name: "Nguyễn Văn A",
-      phone: "0912 345 678",
-      address: "456 Đường Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. HCM",
-      isDefault: false,
-    },
-    {
-      id: 4,
-      name: "Nguyễn Văn A",
-      phone: "0912 345 678",
-      address: "456 Đường Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. HCM",
-      isDefault: false,
-    },
-  ]);
-
+  // State recipient lưu thông tin người nhận dựa trên địa chỉ đã chọn
+  const [recipient, setRecipient] = useState<any>(null);
+  // addresses được cập nhật từ API
+  // Lấy địa chỉ mặc định: ưu tiên selectedAddressId, nếu không thì lấy địa chỉ có isDefault === 1, nếu không có thì lấy địa chỉ đầu tiên
   const defaultAddress =
-    addresses.find((a) => a.id === selectedAddressId) || addresses[0];
+    addresses.find((a) => a.id === selectedAddressId) ||
+    addresses.find((a) => a.isDefault === 1) ||
+    addresses[0];
+
+  // Cập nhật recipient mỗi khi selectedAddressId hoặc addresses thay đổi
+  useEffect(() => {
+    if (defaultAddress) {
+      // Parse lại address để lấy các trường cần thiết (giả sử address dạng: 'addressLine, wardName, districtName, cityName')
+      // Nếu cần lấy ward/district/city id thì cần lưu thêm trong Address
+      setRecipient({
+        name: defaultAddress.name,
+        phone: defaultAddress.phone,
+        address: defaultAddress.address,
+      });
+    }
+  }, [selectedAddressId, addresses]);
 
   const handleConfirmPayment = () =>
     alert("Đã xác nhận phương thức thanh toán!");
@@ -472,17 +591,16 @@ export default function CheckoutPage() {
     alert(
       `Thông tin thanh toán:\nSố tiền: ${paymentInfo.amount}\nPhương thức: ${paymentInfo.method}\nMã đơn hàng: ${paymentInfo.orderId}`,
     );
+
+    if (!recipient) {
+      message.warning("Vui lòng chọn địa chỉ nhận hàng trước khi đặt hàng.");
+      return;
+    }
+
     createOrder({
       user_id: paymentInfo.user_id || 0,
       shop_id: cartItems[0]?.product?.shop?.id || 0,
-      recipient: {
-        name: "Ly Tieu Long",
-        phone: "0879454694",
-        address: "Phat Son",
-        district: 1,
-        province: 1,
-        ward: 1,
-      },
+      recipient: recipient || {},
       order_number: "ORD20250318001",
       total_price: paymentInfo.amount || 0,
       payment_method: paymentInfo.method || "unknown",
@@ -542,10 +660,10 @@ export default function CheckoutPage() {
                           className="fw-bold mb-1"
                           style={{ fontSize: 12, color: "#1e293b" }}
                         >
-                          {defaultAddress.name} • {defaultAddress.phone}
+                          {defaultAddress?.name} • {defaultAddress?.phone}
                         </p>
                         <p className="text-muted mb-0" style={{ fontSize: 12 }}>
-                          {defaultAddress.address}
+                          {defaultAddress?.address}
                         </p>
                       </div>
                     </div>
@@ -555,6 +673,15 @@ export default function CheckoutPage() {
                     >
                       Thay đổi
                     </button>
+                    {showAddressPanel && (
+                      <AddressModal
+                        setShowAddressPanel={setShowAddressPanel}
+                        addresses={addresses}
+                        setAddresses={setAddresses}
+                        selectedAddressId={selectedAddressId}
+                        setSelectedAddressId={setSelectedAddressId}
+                      />
+                    )}
                   </div>
                 </section>
 
@@ -1120,8 +1247,15 @@ export default function CheckoutPage() {
       </main>
 
       {/* ── ADDRESS MODAL ─────────────────────────────────────────────── */}
+      {/* Đảm bảo AddressModal luôn nhận đủ props từ component cha */}
       {showAddressPanel && (
-        <AddressModal setShowAddressPanel={setShowAddressPanel} />
+        <AddressModal
+          setShowAddressPanel={setShowAddressPanel}
+          addresses={addresses}
+          setAddresses={setAddresses}
+          selectedAddressId={selectedAddressId}
+          setSelectedAddressId={setSelectedAddressId}
+        />
       )}
     </>
   );

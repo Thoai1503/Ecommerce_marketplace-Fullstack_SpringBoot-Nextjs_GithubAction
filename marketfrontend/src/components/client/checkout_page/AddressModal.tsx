@@ -22,13 +22,24 @@ interface Address {
   name: string;
   phone: string;
   address: string;
-  isDefault: boolean;
+  isDefault: number; // 1 là mặc định, 0 là không
 }
+
+interface AddressModalProps {
+  setShowAddressPanel: React.Dispatch<React.SetStateAction<boolean>>;
+  addresses: Address[];
+  setAddresses: React.Dispatch<React.SetStateAction<Address[]>>;
+  selectedAddressId: number;
+  setSelectedAddressId: React.Dispatch<React.SetStateAction<number>>;
+}
+
 const AddressModal = ({
   setShowAddressPanel,
-}: {
-  setShowAddressPanel: React.Dispatch<React.SetStateAction<boolean>>;
-}) => {
+  addresses,
+  setAddresses,
+  selectedAddressId,
+  setSelectedAddressId,
+}: AddressModalProps) => {
   const [provinceId, setProvinceId] = useState<number | null>(null);
   const [districtId, setDistrictId] = useState<number | null>(null);
   const [wardId, setWardId] = useState<number | null>(null);
@@ -54,233 +65,8 @@ const AddressModal = ({
   console.log("Danh sách tỉnh thành:" + JSON.stringify(provinces));
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [selectedAddressId, setSelectedAddressId] = useState(1);
-  const [addresses, setAddresses] = useState<Address[]>([
-    {
-      id: 1,
-      name: "Nguyễn Văn A",
-      phone: "0901 234 567",
-      address: "123 Đường Lê Lợi, P. Bến Thành, Quận 1, TP. HCM",
-      isDefault: true,
-    },
-    {
-      id: 2,
-      name: "Nguyễn Văn A",
-      phone: "0912 345 678",
-      address: "456 Đường Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. HCM",
-      isDefault: false,
-    },
-    {
-      id: 3,
-      name: "Nguyễn Văn A",
-      phone: "0912 345 678",
-      address: "456 Đường Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. HCM",
-      isDefault: false,
-    },
-    {
-      id: 4,
-      name: "Nguyễn Văn A",
-      phone: "0912 345 678",
-      address: "456 Đường Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. HCM",
-      isDefault: false,
-    },
-  ]);
-  const addressData: Record<string, Record<string, string[]>> = {
-    "TP. Hồ Chí Minh": {
-      "Quận 1": [
-        "P. Bến Nghé",
-        "P. Bến Thành",
-        "P. Cô Giang",
-        "P. Cầu Kho",
-        "P. Cầu Ông Lãnh",
-        "P. Đa Kao",
-        "P. Nguyễn Cư Trinh",
-        "P. Nguyễn Thái Bình",
-        "P. Phạm Ngũ Lão",
-        "P. Tân Định",
-      ],
-      "Quận 3": [
-        "P. 1",
-        "P. 2",
-        "P. 3",
-        "P. 4",
-        "P. 5",
-        "P. 6",
-        "P. 7",
-        "P. 8",
-        "P. 9",
-        "P. 10",
-        "P. 11",
-        "P. 12",
-        "P. 13",
-        "P. 14",
-      ],
-      "Quận 7": [
-        "P. Bình Thuận",
-        "P. Phú Mỹ",
-        "P. Phú Thuận",
-        "P. Tân Hưng",
-        "P. Tân Kiểng",
-        "P. Tân Phong",
-        "P. Tân Phú",
-        "P. Tân Quy",
-      ],
-      "Bình Thạnh": [
-        "P. 1",
-        "P. 2",
-        "P. 3",
-        "P. 5",
-        "P. 6",
-        "P. 7",
-        "P. 11",
-        "P. 12",
-        "P. 13",
-        "P. 14",
-        "P. 15",
-        "P. 17",
-        "P. 19",
-        "P. 21",
-        "P. 22",
-        "P. 24",
-        "P. 25",
-        "P. 26",
-        "P. 27",
-        "P. 28",
-      ],
-      "Thủ Đức": [
-        "P. An Khánh",
-        "P. An Lợi Đông",
-        "P. An Phú",
-        "P. Bình Chiểu",
-        "P. Bình Thọ",
-        "P. Hiệp Bình Chánh",
-        "P. Hiệp Bình Phước",
-        "P. Linh Chiểu",
-        "P. Linh Đông",
-        "P. Linh Tây",
-        "P. Linh Trung",
-        "P. Linh Xuân",
-      ],
-    },
-    "Hà Nội": {
-      "Ba Đình": [
-        "P. Cống Vị",
-        "P. Điện Biên",
-        "P. Đội Cấn",
-        "P. Giảng Võ",
-        "P. Kim Mã",
-        "P. Liễu Giai",
-        "P. Ngọc Hà",
-        "P. Ngọc Khánh",
-        "P. Nguyễn Trung Trực",
-        "P. Phúc Xá",
-        "P. Quán Thánh",
-        "P. Thành Công",
-        "P. Trúc Bạch",
-        "P. Vĩnh Phúc",
-      ],
-      "Hoàn Kiếm": [
-        "P. Chương Dương",
-        "P. Cửa Đông",
-        "P. Cửa Nam",
-        "P. Đồng Xuân",
-        "P. Hàng Bạc",
-        "P. Hàng Bài",
-        "P. Hàng Bồ",
-        "P. Hàng Buồm",
-        "P. Hàng Đào",
-        "P. Hàng Gai",
-        "P. Hàng Mã",
-        "P. Hàng Trống",
-        "P. Lý Thái Tổ",
-        "P. Phan Chu Trinh",
-        "P. Phúc Tân",
-        "P. Tràng Tiền",
-      ],
-      "Đống Đa": [
-        "P. Cát Linh",
-        "P. Hàng Bột",
-        "P. Khâm Thiên",
-        "P. Kim Liên",
-        "P. Láng Hạ",
-        "P. Láng Thượng",
-        "P. Nam Đồng",
-        "P. Ngã Tư Sở",
-        "P. Ô Chợ Dừa",
-        "P. Phương Liên",
-        "P. Phương Mai",
-        "P. Quốc Tử Giám",
-        "P. Thịnh Quang",
-        "P. Thổ Quan",
-        "P. Trung Liệt",
-        "P. Trung Phụng",
-        "P. Văn Chương",
-        "P. Văn Miếu",
-      ],
-      "Cầu Giấy": [
-        "P. Dịch Vọng",
-        "P. Dịch Vọng Hậu",
-        "P. Mai Dịch",
-        "P. Nghĩa Đô",
-        "P. Nghĩa Tân",
-        "P. Quan Hoa",
-        "P. Trung Hòa",
-        "P. Yên Hòa",
-      ],
-    },
-    "Đà Nẵng": {
-      "Hải Châu": [
-        "P. Bình Hiên",
-        "P. Bình Thuận",
-        "P. Hải Châu 1",
-        "P. Hải Châu 2",
-        "P. Hòa Cường Bắc",
-        "P. Hòa Cường Nam",
-        "P. Hòa Thuận Đông",
-        "P. Hòa Thuận Tây",
-        "P. Nam Dương",
-        "P. Phước Ninh",
-        "P. Thạch Thang",
-        "P. Thanh Bình",
-        "P. Thuận Phước",
-      ],
-      "Sơn Trà": [
-        "P. An Hải Bắc",
-        "P. An Hải Đông",
-        "P. An Hải Tây",
-        "P. Mân Thái",
-        "P. Nại Hiên Đông",
-        "P. Phước Mỹ",
-        "P. Thọ Quang",
-      ],
-      "Ngũ Hành Sơn": ["P. Hòa Hải", "P. Hòa Quý", "P. Khuê Mỹ", "P. Mỹ An"],
-    },
-    "Cần Thơ": {
-      "Ninh Kiều": [
-        "P. An Bình",
-        "P. An Cư",
-        "P. An Hội",
-        "P. An Lạc",
-        "P. An Nghiệp",
-        "P. An Phú",
-        "P. Cái Khế",
-        "P. Hưng Lợi",
-        "P. Tân An",
-        "P. Thới Bình",
-        "P. Xuân Khánh",
-      ],
-      "Bình Thủy": [
-        "P. An Thới",
-        "P. Bình Thủy",
-        "P. Bùi Hữu Nghĩa",
-        "P. Long Hòa",
-        "P. Long Tuyền",
-        "P. Thới An Đông",
-        "P. Trà An",
-        "P. Trà Nóc",
-      ],
-    },
-  };
+  // addresses, setAddresses, selectedAddressId, setSelectedAddressId được truyền từ props
+  // Đã loại bỏ addressData tĩnh, dùng API động
   const styles: Record<string, React.CSSProperties> = {
     stepTitle: { fontSize: 13, fontWeight: 700, marginBottom: 8 },
     shippingBox: {
@@ -555,11 +341,11 @@ const AddressModal = ({
       name: form.name.trim(),
       phone: form.phone.trim(),
       address: fullAddress,
-      isDefault: form.setDefault,
+      isDefault: form.setDefault ? 1 : 0,
     };
     let updated = [...addresses];
     if (form.setDefault) {
-      updated = updated.map((a) => ({ ...a, isDefault: false }));
+      updated = updated.map((a) => ({ ...a, isDefault: 0 }));
     }
     updated.push(newAddr);
     setAddresses(updated);
@@ -578,7 +364,9 @@ const AddressModal = ({
   };
 
   const handleSetDefault = (id: number) => {
-    setAddresses(addresses.map((a) => ({ ...a, isDefault: a.id === id })));
+    setAddresses(
+      addresses.map((a) => ({ ...a, isDefault: a.id === id ? 1 : 0 })),
+    );
     setSelectedAddressId(id);
   };
 
@@ -682,7 +470,7 @@ const AddressModal = ({
                       <span style={{ fontSize: 12, color: "#64748b" }}>
                         {addr.phone}
                       </span>
-                      {addr.isDefault && (
+                      {addr.isDefault === 1 && (
                         <span
                           style={{
                             fontSize: 9,
@@ -718,7 +506,7 @@ const AddressModal = ({
                     className="d-flex gap-3 mt-2"
                     style={{ paddingLeft: 30 }}
                   >
-                    {!addr.isDefault && (
+                    {addr.isDefault !== 1 && (
                       <button
                         style={{
                           ...styles.linkPrimary,
