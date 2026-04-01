@@ -118,7 +118,7 @@ export const createCategory = async (data: any): Promise<Category> => {
 
 export const updateCategory = async (
   id: string,
-  data: any
+  data: any,
 ): Promise<Category> => {
   const res = await fetch(`${API_URL}/${id}`, {
     method: "PUT",

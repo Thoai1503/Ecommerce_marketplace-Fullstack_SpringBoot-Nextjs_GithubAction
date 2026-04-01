@@ -44,6 +44,18 @@ export default async function Home() {
     );
 
     console.log("Parent Categories:", parentCategories);
+  const res1 = await fetch(`${INTERNAL_API}/product`);
+  const products = ((await res1.json()) as Partial<IProduct>[]) || [];
+  // const { products } = useHomePage();
+
+  if (products.length === 0 || !products) {
+    return (
+      <div>
+        <h1>Loading...</h1>
+      </div>
+    );
+  }
+
   return (
     <div className="container-fluid px-3 px-md-4">
       {/* Category Icons - Horizontal Scrollable */}
@@ -372,7 +384,7 @@ export default async function Home() {
             // </div>
             <></>
           ))}
-          {/* <AllProduct products={products} /> */}
+          <AllProduct products={products} />
         </div>
       </div>
     </div>

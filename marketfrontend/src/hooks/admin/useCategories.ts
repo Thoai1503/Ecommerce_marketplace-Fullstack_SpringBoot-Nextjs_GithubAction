@@ -15,9 +15,7 @@ import { Category } from "@/types";
 export const useCategories = () => {
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError, refetch } = useQuery(
-    categoriesQuery.all()
-  );
+  const { data, isLoading, isError, refetch } = useQuery(categoriesQuery.all());
 
   /* DELETE */
 
@@ -33,13 +31,8 @@ export const useCategories = () => {
   /* UPDATE */
 
   const updateMutation = useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: Partial<Category>;
-    }) => updateCategory(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<Category> }) =>
+      updateCategory(id, data),
 
     onSuccess: () => {
       queryClient.invalidateQueries({

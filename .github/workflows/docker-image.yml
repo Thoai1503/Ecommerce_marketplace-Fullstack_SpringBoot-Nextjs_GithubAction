@@ -1,8 +1,9 @@
 name: CI/CD Ecommerce (Spring Boot + Next.js)
 
+#ee
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build-and-deploy:
@@ -28,7 +29,31 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 4. Build & Push BACKEND
+      - name: Build & Push API Gateway
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api-gateway
+          push: true
+          tags: |
+            thoaimanhlong/api-gateway:latest
+            thoaimanhlong/api-gateway:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 4. Build & Push Cart service
+
+      - name: Build & Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./cart-service
+          push: true
+          tags: |
+            thoaimanhlong/cart-service:latest
+            thoaimanhlong/cart-service:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 5. Build & Push BACKEND
       - name: Build & Push Backend
         uses: docker/build-push-action@v5
         with:
@@ -40,7 +65,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # 5. Build & Push FRONTEND
+      # 6. Build & Push FRONTEND
       - name: Build & Push Frontend
         uses: docker/build-push-action@v5
         with:
@@ -52,7 +77,31 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # 6. Deploy to VPS
+      # 4. Build & Push Order service
+
+      - name: Build & Push Order service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./order-service
+          push: true
+          tags: |
+            thoaimanhlong/order-service:latest
+            thoaimanhlong/order-service:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & Push Logistic service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./logistic-service
+          push: true
+          tags: |
+            thoaimanhlong/logistic-service:latest
+            thoaimanhlong/logistic-service:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 7. Deploy to VPS
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1
         with:
@@ -60,7 +109,41 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            set -e
+
             cd ${{ secrets.VPS_APP_DIR }}
+
+            echo "🚀 Pull new images..."
             docker compose pull
+
+            echo "🚀 Restart containers..."
             docker compose up -d
+
+            echo "⏳ Waiting for containers to stabilize..."
+            sleep 15
+
+            echo "🔍 Checking container status..."
+
+            # Kiểm tra container có exited không
+            FAILED=$(docker compose ps --status exited -q)
+
+            if [ ! -z "$FAILED" ]; then
+              echo "❌ Some containers exited!"
+              docker compose ps
+              docker compose logs
+              exit 1
+            fi
+
+            # Kiểm tra container có restart liên tục không
+            RESTARTING=$(docker compose ps | grep Restarting || true)
+
+            if [ ! -z "$RESTARTING" ]; then
+              echo "❌ Some containers are restarting!"
+              docker compose ps
+              docker compose logs
+              exit 1
+            fi
+
+            echo "✅ All containers are running"
+
             docker image prune -f

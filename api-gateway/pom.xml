@@ -16,6 +16,10 @@
     <groupId>group1</groupId>
     <artifactId>api-gateway</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+<<<<<<< HEAD
+=======
+    <packaging>jar</packaging>
+>>>>>>> b1e61f071ca45b7aa5c116f8b8285a226bed233e
     <name>api-gateway</name>
     <description>API Gateway for Microservice System</description>
 
@@ -38,6 +42,10 @@
 
     <dependencies>
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> b1e61f071ca45b7aa5c116f8b8285a226bed233e
         <!-- Spring Cloud Gateway (WebFlux included) -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
@@ -45,10 +53,13 @@
         </dependency>
 
         <!-- Eureka Client -->
+<<<<<<< HEAD
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
+=======
+>>>>>>> b1e61f071ca45b7aa5c116f8b8285a226bed233e
 
         <!-- Actuator (optional but recommended) -->
         <dependency>

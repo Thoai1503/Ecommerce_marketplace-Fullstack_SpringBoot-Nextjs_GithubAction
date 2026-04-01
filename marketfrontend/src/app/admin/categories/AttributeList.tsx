@@ -67,7 +67,6 @@ export default function AttributeList() {
   }, [attributes, activeTab, searchQuery]);
 
   const totalPages = Math.ceil(filteredAttributes.length / ITEMS_PER_PAGE);
-
   const paginatedAttributes = filteredAttributes.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE

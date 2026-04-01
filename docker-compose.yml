@@ -1,22 +1,90 @@
 version: "3.8"
 
-services:
-  backend:
-    image: thoaimanhlong/ecommerce-backend:latest
-    container_name: ecommerce-backend
-    ports:
-      - "8000:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-    restart: unless-stopped
+# services:
+#   backend:
+#     image: thoaimanhlong/ecommerce-backend:latest
+#     container_name: ecommerce-backend
+#     ports:
+#       - "8000:8080"
+#     environment:
+#       - SPRING_PROFILES_ACTIVE=prod
+#     restart: unless-stopped
 
-  frontend:
-    image: thoaimanhlong/ecommerce-frontend:latest
-    container_name: ecommerce-frontend
+#   frontend:
+#     image: thoaimanhlong/ecommerce-frontend:latest
+#     container_name: ecommerce-frontend
+#     ports:
+#       - "4000:3000"
+#     environment:
+#       - NODE_ENV=production
+#     depends_on:
+#       - backend
+#     restart: unless-stopped
+networks:
+  ecommerce-net:
+    driver: bridge
+
+services:
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      - cart-service
+      #- order-service
+      - marketplace-platform
+    # environment:
+    #   # route URI can refer to other containers by name
+    #   SPRING_CLOUD_GATEWAY_ROUTES_1_URI: http://cart-service:8003
+    #   SPRING_CLOUD_GATEWAY_ROUTES_0_URI: http://order-service:8082
+    #   SPRING_CLOUD_GATEWAY_ROUTES_2_URI: http://marketplace-platform:8000
+    networks:
+      - ecommerce-net
+
+  cart-service:
+    build: ./cart-service
+    container_name: cart-service
+    ports:
+      - "8003:8003"
+    networks:
+      - ecommerce-net
+
+  # order-service:
+  #   build: ./OrderService
+  #   container_name: order-service
+  #   ports:
+  #     - "8082:8082"
+  #   networks:
+  #     - ecommerce-net
+
+  marketplace-platform:
+    build: ./Marketplace-platform
+    container_name: marketplace-platform
+    ports:
+      - "8001:8080"
+    networks:
+      - ecommerce-net
+
+  marketfrontend:
+    build: ./marketfrontend
+    container_name: marketfrontend
     ports:
       - "4000:3000"
-    environment:
-      - NODE_ENV=production
     depends_on:
-      - backend
-    restart: unless-stopped
+      - marketplace-platform
+    networks:
+      - ecommerce-net
+
+  logistics-frontend:
+    build: ./logistics-frontend
+    container_name: logistics-frontend
+    ports:
+      - "4001:3000"
+    environment:
+      - NEXT_PUBLIC_LOGISTICS_API_BASE_URL=http://api-gateway:8000
+    networks:
+      - ecommerce-net
+
+# additional services (eureka, databases, etc.) can be added here as needed
+

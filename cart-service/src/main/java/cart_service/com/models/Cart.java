@@ -1,6 +1,7 @@
 package cart_service.com.models;
 
 import jakarta.persistence.*;
+import jakarta.persistence.criteria.CriteriaBuilder;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -11,7 +12,9 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+
 @Builder
+@ToString
 public class Cart {
 
     @Id
@@ -21,11 +24,12 @@ public class Cart {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "product_id", nullable = false)
-    private Long productId;
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name="product_id")
+    private Product product;
 
-    @Column(name = "variant_id")
-    private Long variantId;
+//    @Column(name = "variant_id")
+//    private Long variantId;
 
     @Column(nullable = false)
     private Integer quantity;
@@ -35,6 +39,10 @@ public class Cart {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+//
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="variant_id")
+    private ProductVariant productVariant;
 
     @PrePersist
     protected void onCreate() {
@@ -46,4 +54,9 @@ public class Cart {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+<<<<<<< HEAD
+=======
+    
+    
+>>>>>>> b1e61f071ca45b7aa5c116f8b8285a226bed233e
 }

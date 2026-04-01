@@ -4,9 +4,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { categoryQuery, productImageQuery } from "./query";
 import { slugify, generateUniqueSlug, isValidSlug } from "@/helper/utils";
-import { addProduct, uploadToProduct } from "./service";
+import { addProduct, createProductVariant, uploadToProduct } from "./service";
 import { message, UploadFile, UploadProps } from "antd";
 import { useSellerAuth } from "@/context/SellerAuthContext";
+import { ProductVariant } from "@/validators/productVariant";
 
 export const useAddProductSeller = (
   onSuccessCallback: (id: number) => void,
@@ -42,11 +43,17 @@ export const useAddProductSeller = (
     }
   };
 
-  const handleSave = () => {
-    //  console.log("Saving product:", formData);
-    console.log("Images:", fileList);
-    message.success("Sản phẩm đã được lưu thành công!");
-  };
+  const { mutate: createVariant } = useMutation({
+    mutationFn: (en: ProductVariant) => createProductVariant(en),
+    onSuccess: (data) => {
+      console.log("Variant created:", data);
+      message.success(`Tạo biến thể sản phẩm thành công`);
+    },
+    onError: (error) => {
+      console.error("Error creating variant:", error);
+      message.error(`Lỗi khi tạo biến thể sản phẩm: ${error.message}`);
+    },
+  });
 
   const { mutate: add } = useMutation({
     mutationFn: (product: Partial<IProduct>) => addProduct(product),
@@ -54,10 +61,29 @@ export const useAddProductSeller = (
       //    message.success(`Lưu thành công sản phẩm thành công`);
       console.log("Added: " + JSON.stringify(data));
       onSuccessCallback(data.id);
+      // Reset form sau khi thêm thành công
+      setProduct({
+        product_name: "",
+        product_slug: "",
+        shop_id: shop?.id || 0,
+        description: "",
+        category_id: 2,
+        original_price: 0,
+        price: 0,
+      });
+      createVariant({
+        id: 0,
+        product_id: data.id,
+        variant_name: data.product_name,
+        sku: `SKU-${data.id}`,
+        price: data.original_price || 0,
+        stock_quantity: data.stock_quantity || 0,
+        image_url: data.image_url || "",
+      });
     },
     onError: (error) => {
       //  alert(error.message);
-      message.error(error.message);
+      message.error("Lỗi thêm sản phẩm: " + error.message);
     },
   });
 
@@ -231,7 +257,7 @@ export const useAddImageSeller = (id?: number) => {
     );
     console.log("Form data:", formData);
     upload({ id: 1, formData: formData });
-    message.success("Sản phẩm đã được lưu thành công!");
+    //  message.success("Sản phẩm đã được lưu thành công!");
   };
   const handleSaveImageAfterProduct = (product_id: number) => {
     console.log("Images:", fileList);

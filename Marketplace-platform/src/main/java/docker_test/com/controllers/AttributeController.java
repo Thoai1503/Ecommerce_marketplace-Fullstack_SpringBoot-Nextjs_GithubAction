@@ -36,7 +36,6 @@ public class AttributeController {
         if (attribute == null) {
             return ResponseEntity.notFound().build();
         }
-
         return ResponseEntity.ok(attribute);
     }
 

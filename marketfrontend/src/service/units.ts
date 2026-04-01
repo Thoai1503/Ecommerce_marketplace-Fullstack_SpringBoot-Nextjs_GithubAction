@@ -60,7 +60,7 @@ export const createUnit = async (data: Partial<Unit>): Promise<Unit> => {
 // ================= UPDATE =================
 export const updateUnit = async (
   id: string,
-  data: Partial<Unit>
+  data: Partial<Unit>,
 ): Promise<Unit> => {
   const res = await fetch(`${API_URL}/${id}`, {
     method: "PUT",

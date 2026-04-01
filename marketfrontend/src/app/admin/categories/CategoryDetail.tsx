@@ -67,7 +67,7 @@ export default function CategoryDetail() {
 
   const [openValueModal, setOpenValueModal] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
-  
+
   const { values, createValue, deleteValue } = useAttributeValues();
   const handleOpenUnitModal = (attr: any) => {
     setSelectedAttr(attr);

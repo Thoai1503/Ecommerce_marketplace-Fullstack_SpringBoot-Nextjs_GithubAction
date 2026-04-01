@@ -131,6 +131,7 @@ SELECT
         SELECT JSON_ARRAYAGG(
             JSON_OBJECT(
                 'id', pv.id,
+                'product_id',pv.product_id,
                 'variant_name', pv.variant_name,
                 'sku', pv.sku,
                 'price', pv.price,
@@ -210,6 +211,7 @@ WHERE p.id = ?;
 
 	@Override
 	public List<Product> GetAll() {
+		System.out.print("Get all..");
 		List<Product> list = new ArrayList<Product>();
 		String sql = "SELECT \r\n"
 				+ "    p.*,\r\n"

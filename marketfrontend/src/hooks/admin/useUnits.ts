@@ -48,8 +48,6 @@ export function useUnits() {
     fetchUnits();
   }, []);
 
-  
-
   // ================= CREATE =================
   const createUnit = async (data: Partial<Unit>) => {
     setIsSaving(true);
@@ -144,7 +142,6 @@ export function useUnits() {
       setIsDeleting(false);
     }
   };
-  
 
   return {
     units,

@@ -11,7 +11,6 @@ import { createCategory } from "@/service/category";
 
 type FormMode = "create" | "edit";
 
-
 interface FormErrors {
   name?: string;
   slug?: string;
