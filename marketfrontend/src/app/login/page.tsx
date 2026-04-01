@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { API_URL } from "@/helper/api";
 
 const LoginForm = () => {
+  useEffect(() => {
+    //Debug api
+    console.log("API_URL:", API_URL);
+  }, []);
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get("redirect") || "/";
   const [showPassword, setShowPassword] = useState(false);
@@ -217,7 +221,11 @@ const LoginForm = () => {
 
 const LoginPage = () => {
   return (
-    <Suspense fallback={<div className="p-6 text-center">Đang tải trang đăng nhập...</div>}>
+    <Suspense
+      fallback={
+        <div className="p-6 text-center">Đang tải trang đăng nhập...</div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );
