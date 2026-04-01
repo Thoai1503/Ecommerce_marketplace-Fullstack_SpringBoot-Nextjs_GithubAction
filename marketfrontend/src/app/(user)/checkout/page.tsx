@@ -170,8 +170,9 @@ export default function CheckoutPage() {
                 ", " +
                 districtName +
                 ", " +
-                (cityMap[String(addr.city) as keyof typeof cityMap] ||
-                  `TP ${addr.city}`),
+                (cityMap[
+                  String(addr.city) as unknown as keyof typeof cityMap
+                ] || `TP ${addr.city}`),
               isDefault: addr.isDefault, // giữ đúng giá trị từ API (1 là mặc định)
             };
           }),
