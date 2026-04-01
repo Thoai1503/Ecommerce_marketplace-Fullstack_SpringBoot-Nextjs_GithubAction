@@ -27,7 +27,6 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 	}
 
 
-
 	@Override
 	public boolean Delete(int id) {
 		// TODO Auto-generated method stub

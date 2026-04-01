@@ -54,6 +54,9 @@ public class Cart {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+<<<<<<< HEAD
+=======
     
     
+>>>>>>> b1e61f071ca45b7aa5c116f8b8285a226bed233e
 }

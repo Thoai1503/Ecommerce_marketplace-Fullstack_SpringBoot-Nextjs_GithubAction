@@ -1,50 +1,50 @@
 package docker_test.com.models;
 
-import docker_test.com.models.attribute.Attribute;
-
 public class CategoryAttribute {
-	public Integer getId() {
+	private int id;
+	private long categoryId;
+	private int attributeId;
+	private int status;
+
+	public CategoryAttribute() {
+	}
+
+	public CategoryAttribute(int id, long categoryId, int attributeId, int status) {
+		this.id = id;
+		this.categoryId = categoryId;
+		this.attributeId = attributeId;
+		this.status = status;
+	}
+
+	public int getId() {
 		return id;
 	}
-	public void setId(Integer id) {
+
+	public void setId(int id) {
 		this.id = id;
 	}
-	public Integer getCategory_id() {
-		return category_id;
+
+	public long getCategoryId() {
+		return categoryId;
 	}
-	public void setCategory_id(Integer category_id) {
-		this.category_id = category_id;
+
+	public void setCategoryId(long categoryId) {
+		this.categoryId = categoryId;
 	}
-	public Integer getAttribute_id() {
-		return attribute_id;
+
+	public int getAttributeId() {
+		return attributeId;
 	}
-	public void setAttribute_id(Integer attribute_id) {
-		this.attribute_id = attribute_id;
+
+	public void setAttributeId(int attributeId) {
+		this.attributeId = attributeId;
 	}
-	public Integer getStatus() {
+
+	public int getStatus() {
 		return status;
 	}
-	public void setStatus(Integer status) {
+
+	public void setStatus(int status) {
 		this.status = status;
 	}
-	public CategoryAttribute(Integer id, Integer category_id, Integer attribute_id, Integer status) {
-		super();
-		this.id = id;
-		this.category_id = category_id;
-		this.attribute_id = attribute_id;
-		this.status = status;
-	}
-	public CategoryAttribute() {}
-	private Integer id;
-  private Integer category_id;
-  private Integer attribute_id;
-  private Integer status;
-  public Attribute getAttribute() {
-	return attribute;
-}
-  public void setAttribute(Attribute attribute) {
-	this.attribute = attribute;
-  }
-  private Attribute attribute;
-  
 }

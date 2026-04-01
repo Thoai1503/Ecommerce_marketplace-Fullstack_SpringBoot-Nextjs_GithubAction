@@ -1,6 +1,6 @@
 import { Category } from "@/types/index";
 
-const API_URL = "http://localhost:8000/category";
+const API_URL = "http://localhost:8000/api/categories";
 
 /* ================= HELPERS ================= */
 

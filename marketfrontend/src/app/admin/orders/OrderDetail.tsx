@@ -111,7 +111,6 @@ const AIInsightCard = ({
       <div className="absolute top-0 right-0 p-4 opacity-5">
         <BrainCircuit size={100} className="text-indigo-600" />
       </div>
-
       <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
         <Sparkles size={14} className="animate-pulse" /> AI Analysis
       </h3>

@@ -123,3 +123,20 @@ body {
   height: 40px;
   border-radius: 8px;
 }
+
+.category-box {
+  transition: all 0.2s ease;
+}
+
+.category-box:hover {
+  background: #fafafa;
+  transform: translateY(-2px);
+}
+
+.category-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: center;
+  height: 32px;
+}

@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class ApiGatewayApplication {
     @GetMapping("/hello")
     public String hello() {
+<<<<<<< HEAD
+    	return "Hello";
+=======
     	return "Hello api gateway";
     }
      @GetMapping("/test")
@@ -26,6 +29,7 @@ public class ApiGatewayApplication {
          @GetMapping("/test2")
     public String hello2() {
     	return "Calling api testing 2";
+>>>>>>> b1e61f071ca45b7aa5c116f8b8285a226bed233e
     }
 	public static void main(String[] args) {
 		SpringApplication.run(ApiGatewayApplication.class, args);

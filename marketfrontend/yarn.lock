@@ -529,8 +529,11 @@
 
 "@rc-component/drawer@~1.4.0":
   version "1.4.2"
+<<<<<<< HEAD
+=======
   resolved "https://registry.npmjs.org/@rc-component/drawer/-/drawer-1.4.2.tgz"
   integrity sha512-1ib+fZEp6FBu+YvcIktm+nCQ+Q+qIpwpoaJH6opGr4ofh2QMq+qdr5DLC4oCf5qf3pcWX9lUWPYX652k4ini8Q==
+>>>>>>> b1e61f071ca45b7aa5c116f8b8285a226bed233e
   dependencies:
     "@rc-component/motion" "^1.1.4"
     "@rc-component/portal" "^2.1.3"

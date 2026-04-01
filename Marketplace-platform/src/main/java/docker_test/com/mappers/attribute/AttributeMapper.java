@@ -11,34 +11,42 @@ import docker_test.com.utils.StringValue;
 
 public final class AttributeMapper implements IMapper<Attribute> {
 
+    private Attribute map(ResultSet rs) throws SQLException {
+        Attribute attribute = new Attribute();
+
+        attribute.setId(rs.getInt(StringValue.ATTRIBUTE_ID_COL));
+        attribute.setName(rs.getString(StringValue.ATTRIBUTE_NAME_COL));
+        attribute.setSlug(rs.getString(StringValue.ATTRIBUTE_SLUG_COL));
+        attribute.setStatus(rs.getInt(StringValue.ATTRIBUTE_STATUS_COL));
+
+        return attribute;
+    }
+
     @Override
     public Attribute RowMap(ResultSet rs) {
-        Attribute attribute = new Attribute();
         try {
-            attribute.setId(rs.getInt(StringValue.ATTRIBUTE_ID_COL));
-            attribute.setName(rs.getString(StringValue.ATTRIBUTE_NAME_COL));
-            attribute.setSlug(rs.getString(StringValue.ATTRIBUTE_SLUG_COL));
-            attribute.setData_type(rs.getInt(StringValue.ATTRIBUTE_DATA_TYPE_COL));
+            return map(rs);
         } catch (SQLException e) {
             e.printStackTrace();
+            return null;
         }
-        return attribute;
     }
 
     @Override
     public List<Attribute> RowsMap(ResultSet rs) {
         List<Attribute> list = new ArrayList<>();
         try {
-            while (rs.next()) list.add(RowMap(rs));
+            while (rs.next()) {
+                list.add(map(rs));
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return list;
     }
 
-	@Override
-	public Attribute mapRow(ResultSet rs, int rowNum) throws SQLException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @Override
+    public Attribute mapRow(ResultSet rs, int rowNum) throws SQLException {
+        return map(rs);
+    }
 }

@@ -111,7 +111,6 @@ const refreshAccessToken = async (): Promise<string | null> => {
     });
 
     const { accessToken, expiresIn } = response.data;
-
     // Store new token
     localStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, accessToken);
     if (expiresIn) {
