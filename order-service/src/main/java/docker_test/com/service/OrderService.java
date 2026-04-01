@@ -77,7 +77,7 @@ public class OrderService {
 
     // All DB writes + event publish happen in one transaction.
     // If any save fails, the whole operation rolls back.
-    @Transactional
+  //  @Transactional
     public Order placeOrder(OrderDTO dto) {
         log.info("Placing order for user_id={}", dto.getUser_id());
         var itemsByShopIdMap = groupByShopId(dto.getOrders_items());
