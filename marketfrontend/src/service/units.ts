@@ -16,6 +16,8 @@ export const getUnits = async (): Promise<Unit[]> => {
     label: u.label,
     symbol: u.symbol,
     status: u.status === 1 ? "ACTIVE" : "INACTIVE",
+    type: u.type,
+    createdAt: u.createdAt,
   }));
 };
 
@@ -32,6 +34,8 @@ export const getUnitById = async (id: string): Promise<Unit> => {
     label: u.label,
     symbol: u.symbol,
     status: u.status === 1 ? "ACTIVE" : "INACTIVE",
+    type: u.type,
+    createdAt: u.createdAt,
   };
 };
 
