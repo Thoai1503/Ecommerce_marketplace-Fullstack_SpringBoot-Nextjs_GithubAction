@@ -16,10 +16,7 @@
     <groupId>group1</groupId>
     <artifactId>api-gateway</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-<<<<<<< HEAD
-=======
     <packaging>jar</packaging>
->>>>>>> b1e61f071ca45b7aa5c116f8b8285a226bed233e
     <name>api-gateway</name>
     <description>API Gateway for Microservice System</description>
 
