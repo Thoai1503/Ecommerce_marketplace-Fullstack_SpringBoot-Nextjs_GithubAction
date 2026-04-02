@@ -17,15 +17,10 @@ public class CorsConfig {
         config.setAllowCredentials(true);
 
         config.addAllowedOrigin("http://localhost:3000");
-<<<<<<< HEAD
-        config.addAllowedOrigin("http://localhost:5173");
-        config.addAllowedOrigin("http://localhost:8001");
-=======
         config.addAllowedOrigin("http://localhost:3001");
         config.addAllowedOrigin("http://localhost:5173");
         config.addAllowedOrigin("http://localhost:8001");
         config.addAllowedOrigin("http://localhost:8000");
->>>>>>> b1e61f071ca45b7aa5c116f8b8285a226bed233e
         config.addAllowedOrigin("http://103.90.225.130");
         config.addAllowedOrigin("http://103.90.225.130:4000");
 
