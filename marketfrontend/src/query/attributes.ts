@@ -1,5 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
-import { getAttributes, getAttributeById } from "@/service/attributes";
+import {
+  getAttributes,
+  getAttributeById,
+  getAttributeValues,
+} from "@/service/attributes";
 
 export const attributesQuery = {
   all: () =>
@@ -16,6 +20,7 @@ export const attributesQuery = {
   values: (attributeId: string) =>
     queryOptions({
       queryKey: ["admin", "attributes", attributeId, "values"],
+      queryFn: () => getAttributeValues(attributeId),
       enabled: !!attributeId,
     }),
 };

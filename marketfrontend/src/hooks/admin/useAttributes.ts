@@ -1,85 +1,116 @@
-// src/hooks/admin/useAttributes.ts
-
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { attributesQuery } from "@/query/attributes";
 import {
-  getAttributeById,
   createAttribute,
   updateAttribute,
-  deleteAttribute
-} from '@/service/attributes';
+  deleteAttribute,
+  createAttributeValue,
+  updateAttributeValue,
+  deleteAttributeValue,
+} from "@/service/attributes";
 
-// ================= LIST =================
 export const useAttributes = () => {
   const queryClient = useQueryClient();
 
-  const query = useQuery(attributesQuery.all());
+  const { data, isLoading, isError, refetch } = useQuery(attributesQuery.all());
 
   const deleteMutation = useMutation({
     mutationFn: deleteAttribute,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'attributes'] });
-    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] }),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       updateAttribute(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'attributes'] });
-    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] }),
   });
 
   return {
-    attributes: query.data || [],
-    isLoading: query.isLoading,
-    isError: query.isError,
-    refetch: query.refetch,
-
+    attributes: data || [],
+    isLoading,
+    isError,
+    refetch,
     deleteAttribute: deleteMutation.mutateAsync,
     updateAttribute: updateMutation.mutateAsync,
-
     isDeleting: deleteMutation.isPending,
     isUpdating: updateMutation.isPending,
   };
 };
 
-// ================= DETAIL =================
 export const useAttributeDetail = (id: string) => {
   const queryClient = useQueryClient();
 
-  // 🔥 GET DETAIL
-  const query = useQuery({
-    queryKey: ['admin', 'attributes', id],
-    queryFn: () => getAttributeById(id),
-    enabled: !!id,
+  const query = useQuery(attributesQuery.detail(id));
+  const valuesQuery = useQuery(attributesQuery.values(id));
+
+  // --- Attribute Mutations ---
+  const createAttrMutation = useMutation({
+    mutationFn: createAttribute,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] }),
   });
 
-  // 🔥 CREATE
-  const createMutation = useMutation({
-    mutationFn: createAttribute,
+  const updateAttrMutation = useMutation({
+    mutationFn: (data: any) => updateAttribute(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'attributes'] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "attributes", id] });
     },
   });
 
-  // 🔥 UPDATE
-  const updateMutation = useMutation({
-    mutationFn: (data: any) => updateAttribute(id, data),
+  // --- Value Mutations ---
+  const createValueMutation = useMutation({
+    mutationFn: createAttributeValue,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'attributes'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'attributes', id] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "attributes", id, "values"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] }); // Update count
+    },
+  });
+
+  const updateValueMutation = useMutation({
+    mutationFn: ({ valueId, data }: { valueId: string; data: any }) =>
+      updateAttributeValue(valueId, data),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "attributes", id, "values"],
+      }),
+  });
+
+  const deleteValueMutation = useMutation({
+    mutationFn: deleteAttributeValue,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "attributes", id, "values"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] }); // Update count
     },
   });
 
   return {
     attribute: query.data,
+    values: valuesQuery.data || [],
     isLoading: query.isLoading,
-    isError: query.isError,
+    isLoadingValues: valuesQuery.isLoading,
+    isError: query.isError || valuesQuery.isError,
+    refetch: () => {
+      query.refetch();
+      valuesQuery.refetch();
+    },
 
-    createAttribute: createMutation.mutateAsync,
-    updateAttribute: updateMutation.mutateAsync,
+    createAttribute: createAttrMutation.mutateAsync,
+    updateAttribute: updateAttrMutation.mutateAsync,
+    isSaving: createAttrMutation.isPending || updateAttrMutation.isPending,
 
-    isSaving: createMutation.isPending || updateMutation.isPending,
+    createValue: createValueMutation.mutateAsync,
+    updateValue: updateValueMutation.mutateAsync,
+    deleteValue: deleteValueMutation.mutateAsync,
+    isUpdatingValues:
+      createValueMutation.isPending ||
+      updateValueMutation.isPending ||
+      deleteValueMutation.isPending,
   };
 };
