@@ -85,7 +85,11 @@ export default function CategoryDetail() {
     isLoading: loadingBrand,
     refresh: refreshBrand,
   } = useCategoryBrands(category?.id || "");
+<<<<<<< HEAD
 >>>>>>> b068db5 (Brands)
+=======
+>>>>>>> 377c2dbc919dfe1d16c685e1373a269a2ffe2115
+>>>>>>> 1b4db79053a46d9b3dc8334b86fecf63a7eb7408
 
   const { values, createValue, deleteValue } = useAttributeValues();
   const handleOpenUnitModal = (attr: any) => {
