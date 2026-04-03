@@ -33,6 +33,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	private final ProductVariantRepository productVariantRepository;
 	private final BrandRepository brandRepository;
 	private final CategoryBrandRepository categoryBrandRepisitory;
+	private final OrderRepository orderRepository;
 
 	public static RepoFactoryImpl Instance() {
 	
@@ -56,6 +57,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		this.productVariantRepository = ProductVariantRepository.Instance();
 		this.brandRepository = BrandRepository.Instance();
 		this.categoryBrandRepisitory = CategoryBrandRepository.Instance();
+		this.orderRepository = OrderRepository.Instance();
 	}
 
 	@Override
@@ -72,7 +74,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		case "product_variant" -> (IRepositories<ProductVariant>) productVariantRepository;
 		case "brand" -> (IRepositories) brandRepository;
 		case "category_brand" -> (IRepositories) categoryBrandRepisitory; 
-
+		case "order" -> (IRepositories) orderRepository;
 		default -> throw new IllegalArgumentException("Unknown entity type: " + entityType);
 		};
 	}
