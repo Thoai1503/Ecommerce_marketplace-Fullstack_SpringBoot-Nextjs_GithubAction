@@ -48,7 +48,7 @@ public class OrderRepository implements IRepositories<Order>{
 	) {
 
 	    StringBuilder sql = new StringBuilder(
-	            "SELECT o.* FROM `order` o WHERE 1=1 "
+	            "SELECT o.* FROM `orders` o WHERE 1=1 "
 	    );
 
 	    List<Object> params = new ArrayList<>();
@@ -127,7 +127,7 @@ public class OrderRepository implements IRepositories<Order>{
 
 	    String sql = """
 	            SELECT order_status, COUNT(*) total
-	            FROM `order`
+	            FROM `orders`
 	            GROUP BY order_status
 	            """;
 
@@ -155,7 +155,7 @@ public class OrderRepository implements IRepositories<Order>{
 
 	    String sql = """
 	            SELECT SUM(final_amount)
-	            FROM `order`
+	            FROM `orders`
 	            WHERE order_status = 'pending'
 	            """;
 
@@ -227,7 +227,7 @@ public class OrderRepository implements IRepositories<Order>{
 	) {
 
 	    StringBuilder sql = new StringBuilder(
-	            "SELECT COUNT(*) FROM `order` o WHERE 1=1 "
+	            "SELECT COUNT(*) FROM `orders` o WHERE 1=1 "
 	    );
 
 	    List<Object> params = new ArrayList<>();

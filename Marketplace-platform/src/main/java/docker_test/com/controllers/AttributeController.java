@@ -1,7 +1,6 @@
 package docker_test.com.controllers;
 
 import java.sql.SQLException;
-import java.util.HashSet;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -11,9 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import docker_test.com.models.attribute.Attribute;
 import docker_test.com.repository.AttributeRepository;
 
-@CrossOrigin(origins = "http://localhost:3000")
 @RestController
-@RequestMapping("/attribute")
+@RequestMapping("api/attribute")
 public class AttributeController {
 
     private final AttributeRepository attributeRepository;
@@ -25,9 +23,7 @@ public class AttributeController {
     // ================= GET ALL =================
     @GetMapping
     public ResponseEntity<List<Attribute>> getAll() {
-
-    	List<Attribute> list = attributeRepository.GetAll();
-    	System.out.println("Attributes retrieved: " + list.size());
+        List<Attribute> list = attributeRepository.GetAll();
         return ResponseEntity.ok(list);
     }
 
@@ -35,7 +31,7 @@ public class AttributeController {
     @GetMapping("/{id}")
     public ResponseEntity<Attribute> getById(@PathVariable int id) {
 
-    	Attribute attribute = attributeRepository.GetById(id);
+        Attribute attribute = attributeRepository.GetById(id);
 
         if (attribute == null) {
             return ResponseEntity.notFound().build();
@@ -61,12 +57,27 @@ public class AttributeController {
             @PathVariable int id,
             @RequestBody Attribute item) {
 
-        item.setId(id);
-
-        Attribute updated = attributeRepository.Update(item);
-        if (updated == null) {
+        // 🔥 Lấy dữ liệu cũ trước
+        Attribute existing = attributeRepository.GetById(id);
+        if (existing == null) {
             return ResponseEntity.notFound().build();
         }
+
+        // 🔥 Merge data (tránh mất name, slug)
+        if (item.getName() != null) {
+            existing.setName(item.getName());
+        }
+
+        if (item.getSlug() != null) {
+            existing.setSlug(item.getSlug());
+        }
+
+        if (item.getStatus() != null) {
+            existing.setStatus(item.getStatus());
+        }
+
+        Attribute updated = attributeRepository.Update(existing);
+
         return ResponseEntity.ok(updated);
     }
 
@@ -74,13 +85,12 @@ public class AttributeController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable int id) {
 
-    	Attribute attribute = new Attribute();
-    	attribute.setId(id);
-
         boolean deleted = attributeRepository.Delete(id);
+
         if (!deleted) {
             return ResponseEntity.notFound().build();
         }
+
         return ResponseEntity.noContent().build();
     }
 }

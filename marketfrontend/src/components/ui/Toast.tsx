@@ -25,13 +25,16 @@ const ToastComponent: React.FC<ToastProps> = ({ toast, onClose }) => {
   }, [toast.id, toast.duration, onClose]);
 
   const getToastStyles = () => {
-    const baseStyles = "flex items-center gap-3 p-4 rounded-lg shadow-lg min-w-[300px] max-w-md";
+    const baseStyles =
+      "flex items-center gap-3 p-4 rounded-xl shadow-xl min-w-[300px] max-w-md border";
+
     const typeStyles = {
-      success: "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-200",
-      error: "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200",
-      warning: "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200",
-      info: "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200",
+      success: "bg-green-100 border-green-500 text-green-900",
+      error: "bg-red-100 border-red-500 text-red-900",
+      warning: "bg-amber-100 border-amber-500 text-amber-900",
+      info: "bg-blue-100 border-blue-500 text-blue-900",
     };
+
     return `${baseStyles} ${typeStyles[toast.type]}`;
   };
 

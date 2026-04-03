@@ -11,42 +11,46 @@ import docker_test.com.utils.StringValue;
 
 public final class AttributeValueMapper implements IMapper<AttributeValue> {
 
+    public static AttributeValue map(ResultSet rs) throws SQLException {
+        AttributeValue item = new AttributeValue();
+
+        item.setId(rs.getInt(StringValue.ATTR_VALUE_ID_COL));
+        item.setAttribute_id(rs.getInt(StringValue.ATTR_VALUE_ATTRIBUTE_ID_COL));
+
+        int unitId = rs.getInt(StringValue.ATTR_VALUE_UNIT_ID_COL);
+        if (rs.wasNull()) {
+            item.setUnit_id(null);
+        } else {
+            item.setUnit_id(unitId);
+        }
+
+        item.setValue(rs.getString(StringValue.ATTR_VALUE_VALUE_COL));
+
+        return item;
+    }
+
     @Override
     public AttributeValue RowMap(ResultSet rs) {
-        AttributeValue attrValue = new AttributeValue();
         try {
-            attrValue.setId(rs.getInt(StringValue.ATTR_VALUE_ID_COL));
-            attrValue.setAttributeId(rs.getInt(StringValue.ATTR_VALUE_ATTRIBUTE_ID_COL));
-            
-            // Xử lý Integer null (unitId có thể null trong DB)
-            int unitId = rs.getInt(StringValue.ATTR_VALUE_UNIT_ID_COL);
-            if (!rs.wasNull()) {
-                attrValue.setUnit_id(unitId);
-            } else {
-                attrValue.setUnit_id(null);
-            }
-            
-            attrValue.setValue(rs.getString(StringValue.ATTR_VALUE_VALUE_COL));
+            return map(rs);
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-        return attrValue;
     }
 
     @Override
     public List<AttributeValue> RowsMap(ResultSet rs) {
         List<AttributeValue> list = new ArrayList<>();
         try {
-            while (rs.next()) list.add(RowMap(rs));
+            while (rs.next()) list.add(map(rs));
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
         return list;
     }
 
-	@Override
-	public AttributeValue mapRow(ResultSet rs, int rowNum) throws SQLException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    @Override
+    public AttributeValue mapRow(ResultSet rs, int rowNum) throws SQLException {
+        return map(rs);
+    }
 }

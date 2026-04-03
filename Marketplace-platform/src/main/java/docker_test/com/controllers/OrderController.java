@@ -52,7 +52,7 @@ public class OrderController {
 	   return ResponseEntity.ok(list);
    }
    
-   @GetMapping
+   @GetMapping("")
    public OrderPageResponse getOrders(
            @RequestParam(required = false) Long userId,
            @RequestParam(required = false) String startDate,

@@ -43,11 +43,17 @@ export const useAddProductSeller = (
     }
   };
 
-  const handleSave = () => {
-    //  console.log("Saving product:", formData);
-    console.log("Images:", fileList);
-    message.success("Sản phẩm đã được lưu thành công!");
-  };
+  const { mutate: createVariant } = useMutation({
+    mutationFn: (en: ProductVariant) => createProductVariant(en),
+    onSuccess: (data) => {
+      console.log("Variant created:", data);
+      message.success(`Tạo biến thể sản phẩm thành công`);
+    },
+    onError: (error) => {
+      console.error("Error creating variant:", error);
+      message.error(`Lỗi khi tạo biến thể sản phẩm: ${error.message}`);
+    },
+  });
 
   const { mutate: createVariant } = useMutation({
     mutationFn: (en: ProductVariant) => createProductVariant(en),
@@ -77,19 +83,27 @@ export const useAddProductSeller = (
         original_price: 0,
         price: 0,
       });
+<<<<<<< HEAD
       createProductVariant({
+=======
+      createVariant({
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
         id: 0,
         product_id: data.id,
         variant_name: data.product_name,
         sku: `SKU-${data.id}`,
         price: data.original_price || 0,
         stock_quantity: data.stock_quantity || 0,
+<<<<<<< HEAD
         image_url: "",
+=======
+        image_url: data.image_url || "",
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
       });
     },
     onError: (error) => {
       //  alert(error.message);
-      message.error(error.message);
+      message.error("Lỗi thêm sản phẩm: " + error.message);
     },
   });
 
@@ -263,7 +277,7 @@ export const useAddImageSeller = (id?: number) => {
     );
     console.log("Form data:", formData);
     upload({ id: 1, formData: formData });
-    message.success("Sản phẩm đã được lưu thành công!");
+    //  message.success("Sản phẩm đã được lưu thành công!");
   };
   const handleSaveImageAfterProduct = (product_id: number) => {
     console.log("Images:", fileList);

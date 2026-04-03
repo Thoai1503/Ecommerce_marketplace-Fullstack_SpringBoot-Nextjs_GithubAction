@@ -1,4 +1,9 @@
 import { getAllProvinces, getDistricts, getWards } from "@/services/addressAPI";
+<<<<<<< HEAD
+=======
+
+import { District, Province, Ward } from "@/validators/addressAPIModel";
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
 import { useQuery } from "@tanstack/react-query";
 import { get } from "http";
 import {
@@ -20,6 +25,7 @@ interface Address {
   name: string;
   phone: string;
   address: string;
+<<<<<<< HEAD
   isDefault: boolean;
 }
 const AddressModal = ({
@@ -27,6 +33,26 @@ const AddressModal = ({
 }: {
   setShowAddressPanel: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
+=======
+  isDefault: number; // 1 là mặc định, 0 là không
+}
+
+interface AddressModalProps {
+  setShowAddressPanel: React.Dispatch<React.SetStateAction<boolean>>;
+  addresses: Address[];
+  setAddresses: React.Dispatch<React.SetStateAction<Address[]>>;
+  selectedAddressId: number;
+  setSelectedAddressId: React.Dispatch<React.SetStateAction<number>>;
+}
+
+const AddressModal = ({
+  setShowAddressPanel,
+  addresses,
+  setAddresses,
+  selectedAddressId,
+  setSelectedAddressId,
+}: AddressModalProps) => {
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
   const [provinceId, setProvinceId] = useState<number | null>(null);
   const [districtId, setDistrictId] = useState<number | null>(null);
   const [wardId, setWardId] = useState<number | null>(null);
@@ -52,6 +78,7 @@ const AddressModal = ({
   console.log("Danh sách tỉnh thành:" + JSON.stringify(provinces));
 
   const [showAddForm, setShowAddForm] = useState(false);
+<<<<<<< HEAD
   const [selectedAddressId, setSelectedAddressId] = useState(1);
   const [addresses, setAddresses] = useState<Address[]>([
     {
@@ -279,6 +306,10 @@ const AddressModal = ({
       ],
     },
   };
+=======
+  // addresses, setAddresses, selectedAddressId, setSelectedAddressId được truyền từ props
+  // Đã loại bỏ addressData tĩnh, dùng API động
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
   const styles: Record<string, React.CSSProperties> = {
     stepTitle: { fontSize: 13, fontWeight: 700, marginBottom: 8 },
     shippingBox: {
@@ -553,11 +584,19 @@ const AddressModal = ({
       name: form.name.trim(),
       phone: form.phone.trim(),
       address: fullAddress,
+<<<<<<< HEAD
       isDefault: form.setDefault,
     };
     let updated = [...addresses];
     if (form.setDefault) {
       updated = updated.map((a) => ({ ...a, isDefault: false }));
+=======
+      isDefault: form.setDefault ? 1 : 0,
+    };
+    let updated = [...addresses];
+    if (form.setDefault) {
+      updated = updated.map((a) => ({ ...a, isDefault: 0 }));
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
     }
     updated.push(newAddr);
     setAddresses(updated);
@@ -576,7 +615,13 @@ const AddressModal = ({
   };
 
   const handleSetDefault = (id: number) => {
+<<<<<<< HEAD
     setAddresses(addresses.map((a) => ({ ...a, isDefault: a.id === id })));
+=======
+    setAddresses(
+      addresses.map((a) => ({ ...a, isDefault: a.id === id ? 1 : 0 })),
+    );
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
     setSelectedAddressId(id);
   };
 
@@ -680,7 +725,11 @@ const AddressModal = ({
                       <span style={{ fontSize: 12, color: "#64748b" }}>
                         {addr.phone}
                       </span>
+<<<<<<< HEAD
                       {addr.isDefault && (
+=======
+                      {addr.isDefault === 1 && (
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
                         <span
                           style={{
                             fontSize: 9,
@@ -716,7 +765,11 @@ const AddressModal = ({
                     className="d-flex gap-3 mt-2"
                     style={{ paddingLeft: 30 }}
                   >
+<<<<<<< HEAD
                     {!addr.isDefault && (
+=======
+                    {addr.isDefault !== 1 && (
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
                       <button
                         style={{
                           ...styles.linkPrimary,
@@ -868,9 +921,15 @@ const AddressModal = ({
                     <option value="" disabled>
                       Chọn tỉnh / thành phố
                     </option>
+<<<<<<< HEAD
                     {provinces.map((p: any) => (
                       <option key={p.code} value={p.code}>
                         {p.name}
+=======
+                    {provinces.map((p: Province) => (
+                      <option key={p.Code} value={p.ProvinceID}>
+                        {p.ProvinceName}
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
                       </option>
                     ))}
                   </select>
@@ -931,9 +990,15 @@ const AddressModal = ({
                         ? "Chọn quận / huyện"
                         : "Chọn tỉnh/thành trước"}
                     </option>
+<<<<<<< HEAD
                     {districts?.districts?.map((d: any) => (
                       <option key={d.code} value={d.code}>
                         {d.name}
+=======
+                    {districts?.map((d: District) => (
+                      <option key={d.DistrictID} value={d.DistrictID}>
+                        {d.DistrictName}
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
                       </option>
                     ))}
                   </select>
@@ -983,9 +1048,15 @@ const AddressModal = ({
                         ? "Chọn phường / xã"
                         : "Chọn quận/huyện trước"}
                     </option>
+<<<<<<< HEAD
                     {wards?.wards?.map((w: any) => (
                       <option key={w.code} value={w.code}>
                         {w.name}
+=======
+                    {wards?.map((w: Ward) => (
+                      <option key={w.WardCode} value={w.WardCode}>
+                        {w.WardName}
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
                       </option>
                     ))}
                   </select>

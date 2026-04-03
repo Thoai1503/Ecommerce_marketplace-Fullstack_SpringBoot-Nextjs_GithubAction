@@ -14,8 +14,38 @@ export default async function Home() {
   const role = cookieStore.get("role")?.value;
   console.log("Role: " + role);
 
-  // const res = await fetch(`${INTERNAL_API}/product`);
-  // const products = ((await res.json()) as Partial<IProduct>[]) || [];
+  // const { products } = useHomePage();
+
+  // if (products.length === 0 || !products) {
+  //   return (
+  //     <div>
+  //       <h1>Loading...</h1>
+  //     </div>
+  //   );
+  // }
+
+  const res = await fetch(`${INTERNAL_API}/api/categories`, {
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    console.error("API error");
+  }
+
+  const data = await res.json();
+
+  const categories = Array.isArray(data) ? data : data.data;
+
+  const parentCategories = categories
+    .filter((c: any) => Number(c.level) === 0 && Number(c.is_active) === 1)
+    .sort(
+      (a: any, b: any) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+
+  console.log("Parent Categories:", parentCategories);
+  const res1 = await fetch(`${INTERNAL_API}/product`);
+  const products = ((await res1.json()) as Partial<IProduct>[]) || [];
   // const { products } = useHomePage();
 
   // if (products.length === 0 || !products) {
@@ -69,18 +99,7 @@ export default async function Home() {
       {/* Danh mục sản phẩm */}
       <h5 className="fw-bold mb-3 mt-5">DANH MỤC</h5>
       <div className="row g-3 g-md-4">
-        {[
-          { name: "Giày Dép", color: "#ffe4b5", icon: "shoe" },
-          { name: "Nhà Cửa & Đời Sống", color: "#e0e0e0" },
-          { name: "Điện thoại & Phụ kiện", color: "#a5d8ff" },
-          { name: "Thời trang nam", color: "#ffd8a8" },
-          { name: "Sắc đẹp", color: "#ffc9c9" },
-          { name: "Mẹ & Bé", color: "#ffec99" },
-          { name: "Đồng hồ 1111", color: "#d9d9d9" },
-          { name: "Máy tính & Laptop", color: "#b2f2bb" },
-          { name: "Sức khỏe", color: "#d3f9d8" },
-          { name: "Xem thêm", color: "#e9ecef" },
-        ].map((cat, idx) => (
+        {parentCategories.map((cat: any, idx: number) => (
           <div key={idx} className="col-4 col-md-3 col-lg-2">
             <div className="text-center category-item shadow-sm rounded p-3 bg-white hover-lift">
               <div
@@ -91,11 +110,18 @@ export default async function Home() {
                   backgroundColor: cat.color,
                 }}
               >
-                {cat.icon && (
-                  <i className={`bi bi-${cat.icon} fs-3 text-dark`}></i>
+                {cat.category_icon && (
+                  <img
+                    src={cat.category_icon}
+                    style={{
+                      width: "100px",
+                      height: "100px",
+                      objectFit: "cover",
+                    }}
+                  />
                 )}
               </div>
-              <small className="d-block fw-medium">{cat.name}</small>
+              <small className="d-block fw-medium">{cat.category_name}</small>
             </div>
           </div>
         ))}

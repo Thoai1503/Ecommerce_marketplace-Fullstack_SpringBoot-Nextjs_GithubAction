@@ -26,9 +26,9 @@ const http = axios.create({
   baseURL: API_URL,
   withCredentials: true,
   timeout: 10000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  // headers: {
+  //   "Content-Type": "application/json",
+  // },
 });
 const addressAPI = axios.create({
   baseURL: "https://provinces.open-api.vn/api/",
@@ -111,7 +111,6 @@ const refreshAccessToken = async (): Promise<string | null> => {
     });
 
     const { accessToken, expiresIn } = response.data;
-
     // Store new token
     localStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, accessToken);
     if (expiresIn) {
@@ -212,7 +211,7 @@ export const http2 = async (url: string, options?: RequestInit) => {
     headers: {
       "Content-Type": "application/json",
     },
-    ...options
+    ...options,
   });
 
   if (!res.ok) throw new Error("API error");
