@@ -24,7 +24,7 @@ export default async function Home() {
   //   );
   // }
 
-  const res = await fetch(`${INTERNAL_API}/categories`, {
+  const res = await fetch(`${INTERNAL_API}/api/categories`, {
     cache: "no-store",
   });
 

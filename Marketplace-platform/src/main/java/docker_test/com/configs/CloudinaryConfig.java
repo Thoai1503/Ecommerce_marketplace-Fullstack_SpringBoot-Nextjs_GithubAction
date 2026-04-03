@@ -12,7 +12,7 @@ import java.util.Map;
 
 @Configuration
 public class CloudinaryConfig {
-    
+    // Inject Cloudinary configuration properties from application.properties
     @Value("${cloudinary.cloud-name}")
     private String cloudName;
     
