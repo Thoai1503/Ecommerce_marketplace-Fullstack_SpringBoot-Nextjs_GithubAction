@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { useCategoryDetail } from "@/hooks/admin/useCategories";
@@ -30,6 +30,9 @@ import SelectUnitModal from "@/components/admin/units/SelectUnitModal";
 import { useAttributeValues } from "@/hooks/admin/useAttributeValues";
 import { useAttributeUnits } from "@/hooks/admin/useAttributeUnits";
 import CreateValueModal from "@/components/admin/value/CreateValueModal";
+import SelectBrandModal from "@/components/admin/brands/SelectBrandModal";
+import { useBrands } from "@/hooks/admin/useBrands";
+import { useCategoryBrands } from "@/hooks/admin/userCategoryBrands";
 
 const StatusConfig: Record<
   CategoryStatus,
@@ -55,7 +58,7 @@ export default function CategoryDetail() {
 
   const router = useRouter();
   const { info } = useToast();
-
+  const [adding, setAdding] = useState(false);
   const { category, isLoading, deleteCategory } = useCategoryDetail(id);
   const { subCategories, loading: loadingSub } = useSubCategories(id);
   const { attributes } = useAttributes();
@@ -65,14 +68,48 @@ export default function CategoryDetail() {
   const { attributeUnits, deleteAttributeUnit } = useAttributeUnits();
   const [collapsedAttrs, setCollapsedAttrs] = useState<number[]>([]);
 
+  useEffect(() => {
+    if (attributes && attributes.length > 0) {
+      setCollapsedAttrs(attributes.map((a: any) => a.id));
+    }
+  }, [attributes]);
+
   const [openValueModal, setOpenValueModal] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
-  
+  const [openBrandModal, setOpenBrandModal] = useState(false);
+  const { brands } = useBrands();
+  const {
+    categoryBrands,
+    isLoading: loadingBrand,
+    refresh: refreshBrand,
+  } = useCategoryBrands(category?.id || "");
+
   const { values, createValue, deleteValue } = useAttributeValues();
   const handleOpenUnitModal = (attr: any) => {
     setSelectedAttr(attr);
     setOpenUnitModal(true);
   };
+
+  const linkedBrands = useMemo(() => {
+    if (!categoryBrands || !brands) return [];
+
+    return categoryBrands
+      .map((cb: any) => {
+        const brand = brands.find(
+          (b: any) => Number(b.id) === Number(cb.brand_id),
+        );
+
+        if (!brand) return null;
+
+        return {
+          ...brand,
+          categoryBrandId: cb.id,
+          status: cb.status,
+        };
+      })
+      .filter(Boolean);
+  }, [categoryBrands, brands]);
+
   const toggleAttr = (attrId: number) => {
     setCollapsedAttrs((prev) =>
       prev.includes(attrId)
@@ -251,7 +288,7 @@ export default function CategoryDetail() {
         </div>
 
         <div className="flex gap-3">
-          {!isChildCategory ? (
+          {!isChildCategory && (
             <button
               onClick={() =>
                 router.push(
@@ -263,14 +300,28 @@ export default function CategoryDetail() {
               <Plus size={16} />
               Subcategory
             </button>
-          ) : (
-            <button
-              onClick={() => setOpenAttributeModal(true)}
-              className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-xl shadow hover:shadow-md transition"
-            >
-              <Plus size={16} />
-              Attribute
-            </button>
+          )}
+
+          {isChildCategory && (
+            <>
+              {/* ATTRIBUTE */}
+              <button
+                onClick={() => setOpenAttributeModal(true)}
+                className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-xl shadow hover:shadow-md transition"
+              >
+                <Plus size={16} />
+                Attribute
+              </button>
+
+              {/* 🔥 BRAND */}
+              <button
+                onClick={() => setOpenBrandModal(true)}
+                className="flex items-center gap-2 px-5 py-2 bg-purple-600 text-white rounded-xl shadow hover:shadow-md transition"
+              >
+                <Plus size={16} />
+                Brand
+              </button>
+            </>
           )}
 
           <button
@@ -322,6 +373,68 @@ export default function CategoryDetail() {
               </div>
             </div>
           </div>
+          {/* ===== BRAND ===== */}
+          {isChildCategory && (
+            <div className="bg-white rounded-2xl shadow-md p-6 mt-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-black uppercase flex items-center gap-2">
+                  🏷️ Brands
+                </h3>
+
+                <span className="text-xs bg-slate-100 px-2 py-1 rounded">
+                  {linkedBrands.length}
+                </span>
+              </div>
+
+              {loadingBrand ? (
+                <p className="text-sm text-slate-400">Loading...</p>
+              ) : linkedBrands.length === 0 ? (
+                <p className="text-sm text-slate-400">No brands</p>
+              ) : (
+                <div className="space-y-2">
+                  {linkedBrands.map((b: any) => {
+                    return (
+                      <div
+                        key={b.categoryBrandId}
+                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition"
+                      >
+                        {/* LEFT */}
+                        <div className="flex items-center gap-3">
+                          {b.logo && (
+                            <img
+                              src={b.logo}
+                              className="w-10 h-6 object-contain"
+                            />
+                          )}
+                          <span className="text-sm font-semibold">
+                            {b.name}
+                          </span>
+                        </div>
+
+                        {/* RIGHT */}
+                        <button
+                          onClick={async () => {
+                            const ok = confirm("Remove this brand?");
+                            if (!ok) return;
+
+                            await fetch(
+                              `http://localhost:8000/api/category-brand/${b.categoryBrandId}`,
+                              { method: "DELETE" },
+                            );
+
+                            refreshBrand();
+                          }}
+                          className="text-red-500 hover:text-red-700 text-lg"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* RIGHT */}
@@ -596,6 +709,46 @@ export default function CategoryDetail() {
           } catch (err) {
             console.error(err);
             info("Add value failed");
+          }
+        }}
+      />
+      <SelectBrandModal
+        open={openBrandModal}
+        onClose={() => setOpenBrandModal(false)}
+        brands={brands}
+        existingIds={linkedBrands.map((b: any) => Number(b.id))}
+        onSubmit={async (ids: number[]) => {
+          if (ids.length === 0) return;
+
+          try {
+            setAdding(true);
+
+            await Promise.all(
+              ids.map((brandId) =>
+                fetch("http://localhost:8000/api/category-brand", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    category_id: Number(category.id),
+                    brand_id: brandId,
+                    status: 1,
+                  }),
+                }),
+              ),
+            );
+
+            // 🔥 refresh lại danh sách brand
+            refreshBrand?.();
+
+            // 🔥 đóng modal
+            setOpenBrandModal(false);
+          } catch (err) {
+            console.error("Add brand failed:", err);
+            alert("Add brand failed!");
+          } finally {
+            setAdding(false);
           }
         }}
       />

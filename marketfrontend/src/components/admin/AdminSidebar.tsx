@@ -163,16 +163,18 @@ export default function AdminSidebar({ isCollapsed, isMobileOpen, onToggleCollap
       ]
     },
     {
-      group: 'CẤU HÌNH',
+      group: 'CONFIGURATION',
       items: [
         { 
-          label: 'Danh mục', 
+          label: 'Categories', 
           id: 'categories',
           icon: <Layers />, 
           children: [
-            { label: 'Ngành hàng', path: '/admin/categories/industries', active: pathname === '/admin/categories/industries' },
-            { label: 'Thuộc tính', path: '/admin/categories/attributes', active: pathname === '/admin/categories/attributes' },
-            { label: 'Đơn vị tính', path: '/admin/categories/units', active: pathname === '/admin/categories/units' },
+            { label: 'Product industry', path: '/admin/categories/industries', active: pathname === '/admin/categories/industries' },
+            { label: 'Attributes', path: '/admin/categories/attributes', active: pathname === '/admin/categories/attributes' },
+            { label: 'Units', path: '/admin/categories/units', active: pathname === '/admin/categories/units' },
+            { label: 'Brands', path: '/admin/categories/brands', active: pathname === '/admin/categories/brands' },
+          
           ]
         },
         { label: 'Phân quyền', path: '/admin/users', icon: <ShieldCheck /> },
