@@ -5,6 +5,51 @@ import { Order, OrderItem, OrderStatus } from '@/types/index';
 
 // const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
+export interface OrderResponse {
+  orders: any[];
+  totalRecords: number;
+  totalPages: number;
+  currentPage: number;
+  statusStats: Record<string, number>;
+  pendingAmount: number;
+};
+
+const mapOrder = (o: any): Order => {
+  return {
+    id: o.orderId?.toString() || o.id?.toString(),
+
+    orderCode: o.orderNumber,
+
+    customerName: "Unknown", // chưa có trong DB
+    customerEmail: "",
+    customerPhone: "",
+
+    shippingAddress: "",
+
+    totalAmount: o.finalAmount,
+    subtotalAmount: o.totalAmount,
+    discountAmount: o.discountAmount,
+    shippingAmount: o.shippingFee,
+    taxAmount: 0,
+
+    itemsCount: 0,
+
+    paymentStatus: o.paymentStatus?.toUpperCase(),
+    paymentMethod: o.paymentMethod,
+
+    transactionId: "",
+    deliveryNumber: o.trackingNumber || "",
+
+    status: o.orderStatus?.toUpperCase(),
+
+    priority: "NORMAL",
+
+    createdAt: o.createdAt,
+    updatedAt: o.updatedAt,
+
+    items: []
+  };
+};
 
 // const BASE_ORDERS: Order[] = [
 //     { 
@@ -217,12 +262,18 @@ import { Order, OrderItem, OrderStatus } from '@/types/index';
 //   return orders.find(o => o.id === id) || orders[0];
 // };
 
-export const getOrders = async (): Promise<Order[]> => {
-  return await http2("/admin/order");
+export const getOrders = async () => {
+  const res = await http2("/admin/orders");
+
+  return {
+    ...res,
+    orders: res.orders.map(mapOrder)
+  };
 };
 
 export const getOrderById = async (id: string): Promise<Order> => {
-  return await http2(`/admin/order/${id}`);
+  const res = await http2(`/admin/orders/${id}`);
+  return mapOrder(res);
 };
 
 // export const updateOrderStatus = async (id: string, status: OrderStatus): Promise<boolean> => {

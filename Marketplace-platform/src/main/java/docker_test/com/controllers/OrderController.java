@@ -22,7 +22,7 @@ import docker_test.com.services.OrderService;
 import docker_test.com.repository.IRepositories;
 
 @RestController
-@RequestMapping("/api/admin/order")
+@RequestMapping("/api/admin/orders")
 //@CrossOrigin("*")
 public class OrderController {
 	
