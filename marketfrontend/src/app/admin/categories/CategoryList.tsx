@@ -40,7 +40,6 @@ export default function CategoryList() {
     id: string | null;
   }>({ isOpen: false, id: null });
 
-  // Calculate Stats
   const stats = useMemo(() => {
     const total = categories.length;
     const active = categories.filter((c) => c.status === "ACTIVE").length;
