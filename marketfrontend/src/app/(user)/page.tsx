@@ -24,7 +24,7 @@ export default async function Home() {
   //   );
   // }
 
-  const res = await fetch("http://localhost:8000/api/categories", {
+  const res = await fetch(`${INTERNAL_API}/categories`, {
     cache: "no-store",
   });
 
@@ -43,7 +43,7 @@ export default async function Home() {
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
 
-    console.log("Parent Categories:", parentCategories);
+  console.log("Parent Categories:", parentCategories);
   const res1 = await fetch(`${INTERNAL_API}/product`);
   const products = ((await res1.json()) as Partial<IProduct>[]) || [];
   // const { products } = useHomePage();
@@ -111,8 +111,13 @@ export default async function Home() {
                 }}
               >
                 {cat.category_icon && (
-                  <img src={cat.category_icon}
-                  style={{width:"100px", height:"100px", objectFit:"cover"}}
+                  <img
+                    src={cat.category_icon}
+                    style={{
+                      width: "100px",
+                      height: "100px",
+                      objectFit: "cover",
+                    }}
                   />
                 )}
               </div>
