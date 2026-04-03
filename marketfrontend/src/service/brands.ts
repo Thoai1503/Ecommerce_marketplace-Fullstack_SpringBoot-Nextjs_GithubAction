@@ -1,5 +1,10 @@
 const BASE_URL = "http://localhost:8000/api/brands";
 
+export const getBrandById = async (id: number) => {
+  const res = await fetch(`${BASE_URL}/${id}`);
+  if (!res.ok) throw new Error("Brand not found");
+  return mapBrand(await res.json());
+};
 // ===== SLUG =====
 export const generateSlug = (name: string) =>
   name

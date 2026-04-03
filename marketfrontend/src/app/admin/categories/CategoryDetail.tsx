@@ -76,8 +76,6 @@ export default function CategoryDetail() {
 
   const [openValueModal, setOpenValueModal] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
-<<<<<<< HEAD
-=======
   const [openBrandModal, setOpenBrandModal] = useState(false);
   const { brands } = useBrands();
   const {
@@ -85,7 +83,6 @@ export default function CategoryDetail() {
     isLoading: loadingBrand,
     refresh: refreshBrand,
   } = useCategoryBrands(category?.id || "");
->>>>>>> 377c2dbc919dfe1d16c685e1373a269a2ffe2115
 
   const { values, createValue, deleteValue } = useAttributeValues();
   const handleOpenUnitModal = (attr: any) => {
