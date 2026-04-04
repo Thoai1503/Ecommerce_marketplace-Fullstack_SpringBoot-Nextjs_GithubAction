@@ -14,7 +14,7 @@ const mapAttribute = (item: any) => ({
 
 // ================= GET ALL =================
 export const getAttributes = async () => {
-  const res = await fetch(`${API_URL}/attributes`);
+  const res = await fetch(`${API_URL}/api/attributes`);
   if (!res.ok) throw new Error("Fetch failed");
 
   const data = await res.json();
@@ -23,7 +23,7 @@ export const getAttributes = async () => {
 
 // ================= GET BY ID =================
 export const getAttributeById = async (id: string) => {
-  const res = await fetch(`${API_URL}/attributes/${id}`);
+  const res = await fetch(`${API_URL}/api/attributes/${id}`);
   if (!res.ok) throw new Error("Not found");
 
   const data = await res.json();
@@ -32,7 +32,7 @@ export const getAttributeById = async (id: string) => {
 
 // ================= CREATE =================
 export const createAttribute = async (data: any) => {
-  const res = await fetch(`${API_URL}/attributes`, {
+  const res = await fetch(`${API_URL}/api/attributes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -62,7 +62,7 @@ export const updateAttribute = async (id: string, data: any) => {
 
   const isActive = current.status === "ACTIVE";
 
-  const res = await fetch(`${API_URL}/attributes/${id}`, {
+  const res = await fetch(`${API_URL}/api/attributes/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -94,7 +94,7 @@ export const updateAttribute = async (id: string, data: any) => {
 
 // ================= DELETE =================
 export const deleteAttribute = async (id: string) => {
-  const res = await fetch(`${API_URL}/attributes/${id}`, {
+  const res = await fetch(`${API_URL}/api/attributes/${id}`, {
     method: "DELETE",
   });
 

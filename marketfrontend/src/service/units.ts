@@ -1,10 +1,11 @@
+import { API_URL } from "@/helper/api";
 import { Unit } from "@/types";
 
-const API_URL = "http://localhost:8000/api/unit";
+//const API_URL = "http://localhost:8000/api/unit";
 
 // ================= GET ALL =================
 export const getUnits = async (): Promise<Unit[]> => {
-  const res = await fetch(API_URL);
+  const res = await fetch(`${API_URL}/api/units`);
 
   if (!res.ok) throw new Error("Fetch failed");
 
@@ -23,7 +24,7 @@ export const getUnits = async (): Promise<Unit[]> => {
 
 // ================= GET BY ID =================
 export const getUnitById = async (id: string): Promise<Unit> => {
-  const res = await fetch(`${API_URL}/${id}`);
+  const res = await fetch(`${API_URL}/api/units/${id}`);
 
   if (!res.ok) throw new Error("Not found");
 
@@ -41,7 +42,7 @@ export const getUnitById = async (id: string): Promise<Unit> => {
 
 // ================= CREATE =================
 export const createUnit = async (data: Partial<Unit>): Promise<Unit> => {
-  const res = await fetch(API_URL, {
+  const res = await fetch(`${API_URL}/api/units`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -66,7 +67,7 @@ export const updateUnit = async (
   id: string,
   data: Partial<Unit>,
 ): Promise<Unit> => {
-  const res = await fetch(`${API_URL}/${id}`, {
+  const res = await fetch(`${API_URL}/api/units/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -88,7 +89,7 @@ export const updateUnit = async (
 
 // ================= DELETE =================
 export const deleteUnit = async (id: string): Promise<boolean> => {
-  const res = await fetch(`${API_URL}/${id}`, {
+  const res = await fetch(`${API_URL}/api/units/${id}`, {
     method: "DELETE",
   });
 
