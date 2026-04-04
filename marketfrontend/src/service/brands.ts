@@ -1,7 +1,9 @@
+import { API_URL } from "@/helper/api";
+
 const BASE_URL = "http://localhost:8000/api/brands";
 
 export const getBrandById = async (id: number) => {
-  const res = await fetch(`${BASE_URL}/${id}`);
+  const res = await fetch(`${API_URL}/brands/${id}`);
   if (!res.ok) throw new Error("Brand not found");
   return mapBrand(await res.json());
 };
@@ -26,7 +28,7 @@ const mapBrand = (item: any) => ({
 
 // ===== GET ALL =====
 export const getBrands = async () => {
-  const res = await fetch(BASE_URL);
+  const res = await fetch(`${API_URL}/brands`);
   const data = await res.json();
   return data.map(mapBrand);
 };
@@ -68,7 +70,7 @@ export const updateBrand = async (id: string, data: any) => {
 
 // ===== DELETE =====
 export const deleteBrand = async (id: string) => {
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const res = await fetch(`${API_URL}/brands/${id}`, {
     method: "DELETE",
   });
 
