@@ -3,7 +3,7 @@ import { API_URL } from "@/helper/api";
 const BASE_URL = "http://localhost:8000/api/brands";
 
 export const getBrandById = async (id: number) => {
-  const res = await fetch(`${API_URL}/brands/${id}`);
+  const res = await fetch(`${API_URL}/api/brands/${id}`);
   if (!res.ok) throw new Error("Brand not found");
   return mapBrand(await res.json());
 };
@@ -28,14 +28,14 @@ const mapBrand = (item: any) => ({
 
 // ===== GET ALL =====
 export const getBrands = async () => {
-  const res = await fetch(`${API_URL}/brands`);
+  const res = await fetch(`${API_URL}/api/brands`);
   const data = await res.json();
   return data.map(mapBrand);
 };
 
 // ===== CREATE =====
 export const createBrand = async (data: any) => {
-  const res = await fetch(BASE_URL, {
+  const res = await fetch(`${API_URL}/api/brands`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -54,7 +54,7 @@ export const createBrand = async (data: any) => {
 
 // ===== UPDATE =====
 export const updateBrand = async (id: string, data: any) => {
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const res = await fetch(`${API_URL}/api/brands/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -70,7 +70,7 @@ export const updateBrand = async (id: string, data: any) => {
 
 // ===== DELETE =====
 export const deleteBrand = async (id: string) => {
-  const res = await fetch(`${API_URL}/brands/${id}`, {
+  const res = await fetch(`${API_URL}/api/brands/${id}`, {
     method: "DELETE",
   });
 
