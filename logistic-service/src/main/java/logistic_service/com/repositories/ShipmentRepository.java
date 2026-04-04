@@ -3,6 +3,9 @@ package logistic_service.com.repositories;
 import logistic_service.com.entities.Shipment;
 import logistic_service.com.enums.ShipmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -15,7 +18,7 @@ import java.util.Optional;
  * ShipmentRepository - Quản lý các vận đơn trong logistics service.
  */
 @Repository
-public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
+public interface ShipmentRepository extends JpaRepository<Shipment, Long>, JpaSpecificationExecutor<Shipment> {
 
     /**
      * Tìm vận đơn theo tracking code.
@@ -28,6 +31,8 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
      * Hỗ trợ multi-tracking (1 order -> N shipments).
      */
     List<Shipment> findByOrderShipmentRefId(Long orderRefId);
+
+    Optional<Shipment> findFirstByOrderShipmentRefId(Long orderShipmentRefId);
 
     /**
      * Lấy tất cả vận đơn của một shop.
@@ -54,6 +59,8 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
      * Dùng để theo dõi, để quản lý, etc.
      */
     List<Shipment> findByStatus(ShipmentStatus status);
+
+    Page<Shipment> findByStatus(ShipmentStatus status, Pageable pageable);
 
     /**
      * Lấy vận đơn chưa giao (chưa đạt trạng thái DELIVERED, FAILED hoặc RETURNED).
@@ -91,7 +98,7 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
         LocalDateTime startDate,
         LocalDateTime endDate
     );
-
+    
     /**
      * Đếm số vận đơn theo status.
      */

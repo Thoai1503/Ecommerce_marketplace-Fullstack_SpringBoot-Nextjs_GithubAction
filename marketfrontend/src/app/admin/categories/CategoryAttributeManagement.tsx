@@ -61,8 +61,8 @@ export default function CategoryAttributeManagement() {
   const getLinkedAttributes = (category: any) => {
     if (!attributes || !category.attributeIds) return [];
     return attributes
-      .filter((attr) => category.attributeIds.includes(attr.id))
-      .map((attr) => {
+      .filter((attr: any) => category.attributeIds.includes(attr.id))
+      .map((attr: any) => {
         const unit = units?.find((u) => u.id === attr.unitId);
         return {
           ...attr,
@@ -193,7 +193,7 @@ export default function CategoryAttributeManagement() {
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
                         {linkedAttrs.length > 0 ? (
-                          linkedAttrs.map((attr) => (
+                          linkedAttrs.map((attr: any) => (
                             <span
                               key={attr.id}
                               className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
