@@ -35,6 +35,7 @@ public class OrderCreatedService {
 	
 	
 	public void createShipment(OrderDTO orderDTO) {
+		LOGGER.info("Creating shipment for Order ID: "+orderDTO.getId());
 		LOGGER.info("Recipient Id: "+orderDTO.getRecipient().getId());
 		var packageByShop = groupByShipment(orderDTO.getOrders_items());
 		
