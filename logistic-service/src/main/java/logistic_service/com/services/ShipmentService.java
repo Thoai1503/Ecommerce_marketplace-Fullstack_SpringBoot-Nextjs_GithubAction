@@ -8,7 +8,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import logistic_service.com.dto.PageResponse;
 import logistic_service.com.dto.RecipientDTO;
@@ -21,6 +23,7 @@ import logistic_service.com.entities.Shipment;
 import logistic_service.com.entities.ShipmentItem;
 import logistic_service.com.entities.ShipmentStatusHistory;
 import logistic_service.com.enums.ShipmentStatus;
+import logistic_service.com.exception.InvalidShipmentStatusTransitionException;
 import logistic_service.com.repositories.RecipientRepository;
 import logistic_service.com.repositories.ShipmentItemRepository;
 import logistic_service.com.repositories.ShipmentRepository;
@@ -51,6 +54,10 @@ public class ShipmentService {
 	}
 
 	public Shipment updateStatusByOrderShipmentRefId(Long orderShipmentRefId, ShipmentStatus newStatus) {
+		if (newStatus == null) {
+			throw new InvalidShipmentStatusTransitionException("Status is required.");
+		}
+
 		Shipment shipment = shipmentRepository.findFirstByOrderShipmentRefId(orderShipmentRefId)
 				.orElseThrow(() -> new IllegalArgumentException(
 						"Shipment not found with orderShipmentRefId: " + orderShipmentRefId));
@@ -62,7 +69,35 @@ public class ShipmentService {
 			shipment.setDeliveredAt(LocalDateTime.now());
 		}
         log.info("Updated shipment (orderShipmentRefId={}) to status: {}", orderShipmentRefId, newStatus);
-		return shipmentRepository.save(shipment);
+		try {
+			return shipmentRepository.save(shipment);
+		} catch (DataIntegrityViolationException | JpaSystemException ex) {
+			String dbMessage = extractRootCauseMessage(ex);
+			throw new InvalidShipmentStatusTransitionException(dbMessage);
+		}
+	}
+
+	private String extractRootCauseMessage(Throwable ex) {
+		Throwable current = ex;
+		while (current.getCause() != null) {
+			current = current.getCause();
+		}
+
+		String message = current.getMessage();
+		if (message == null || message.isBlank()) {
+			return "Invalid shipment status transition.";
+		}
+
+		int quotedStart = message.indexOf("'");
+		int quotedEnd = message.lastIndexOf("'");
+		if (quotedStart >= 0 && quotedEnd > quotedStart) {
+			String candidate = message.substring(quotedStart + 1, quotedEnd).trim();
+			if (!candidate.isBlank()) {
+				return candidate;
+			}
+		}
+
+		return "Invalid shipment status transition.";
 	}
 
 	public PageResponse<ShipmentSummaryResponse> getShipments(

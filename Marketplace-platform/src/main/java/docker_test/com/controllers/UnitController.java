@@ -11,7 +11,7 @@ import docker_test.com.models.Unit;
 import docker_test.com.repository.UnitRepository;
 
 @RestController
-@RequestMapping("/api/unit")
+@RequestMapping("/api/units")
 public class UnitController {
 
     private final UnitRepository unitRepository;
