@@ -48,8 +48,9 @@ public class OrderCreatedService {
 	        entry.getValue().forEach(item -> {
 	                   System.out.print("Item: "+item.toString());
 	                   item.setShipmentId(shipment.getId());
-	                   itemRepository.save(item);
-	                   
+	                   var en=     itemRepository.save(item);
+	                  LOGGER.info("Saved Shipment Item: " + en.toString());
+	              
 	                   
 	                   orderStatusPublisher.publish(new OrderPackageEvent(shipment.getId(), "PENDING"));    
 	    	});
