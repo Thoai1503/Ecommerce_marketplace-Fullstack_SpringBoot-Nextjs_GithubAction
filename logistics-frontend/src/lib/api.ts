@@ -13,8 +13,8 @@ export type ShipmentStatus =
   | "PENDING"
   | "CONFIRMED"
   | "PICKED_UP"
-  | "SHIPPING"
-  | "DELIVERING"
+  | "IN_TRANSIT"
+  | "OUT_FOR_DELIVERY"
   | "DELIVERED"
   | "FAILED"
   | "RETURNED";
@@ -98,7 +98,7 @@ const firstShipmentMockTimeline: ShipmentStatusHistory[] = [
   {
     id: 900003,
     shipmentId: FIRST_MOCK_TIMELINE_SHIPMENT_ID,
-    status: "SHIPPING",
+    status: "IN_TRANSIT",
     description: "Kiện hàng đang được trung chuyển",
     location: "Trạm phân loại Quận 7",
     updatedBy: "system",

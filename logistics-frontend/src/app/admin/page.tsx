@@ -9,8 +9,8 @@ const statusOptions: Array<{ label: string; value: ShipmentStatus | "" }> = [
   { label: "Đang chờ xử lý", value: "PENDING" },
   { label: "Đơn hàng đã xác nhận", value: "CONFIRMED" },
   { label: "Đã lấy hàng", value: "PICKED_UP" },
-  { label: "Đang vận chuyển", value: "SHIPPING" },
-  { label: "Đang giao hàng", value: "DELIVERING" },
+  { label: "Đang vận chuyển", value: "IN_TRANSIT" },
+  { label: "Đang giao hàng", value: "OUT_FOR_DELIVERY" },
   { label: "Đã giao hàng", value: "DELIVERED" },
   { label: "Thất bại", value: "FAILED" },
   { label: "Đã trả lại", value: "RETURNED" },
@@ -20,8 +20,8 @@ const statusLabel: Record<ShipmentStatus, string> = {
   PENDING: "Đang chờ xử lý",
   CONFIRMED: "Đơn hàng đã xác nhận",
   PICKED_UP: "Đã lấy hàng",
-  SHIPPING: "Đang vận chuyển",
-  DELIVERING: "Đang giao hàng",
+  IN_TRANSIT: "Đang vận chuyển",
+  OUT_FOR_DELIVERY: "Đang giao hàng",
   DELIVERED: "Đã giao hàng",
   FAILED: "Thất bại",
   RETURNED: "Đã trả lại",
@@ -62,6 +62,9 @@ export default function AdminPage() {
       {
         onSuccess: () => {
           refetch();
+        },
+        onError: (error) => {
+          alert(`Cập nhật trạng thái thất bại: ${String(error)}`);
         },
       },
     );

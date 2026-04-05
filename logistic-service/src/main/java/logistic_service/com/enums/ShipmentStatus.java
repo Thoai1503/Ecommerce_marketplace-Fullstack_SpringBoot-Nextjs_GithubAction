@@ -4,8 +4,8 @@ package logistic_service.com.enums;
  * Trạng thái vận đơn (Shipment Status).
  * 
  * Vòng đời của vận đơn:
- * PENDING -> CONFIRMED -> PICKED_UP -> SHIPPING -> DELIVERING -> DELIVERED
- * 
+ * PENDING -> CONFIRMED -> PICKED_UP -> IN_TRANSIT -> OUT_FOR_DELIVERY -> DELIVERED
+ *
  * Trường hợp bất thường:
  * Bất kỳ trạng thái nào -> FAILED
  * Bất kỳ trạng thái nào -> RETURNED
@@ -27,15 +27,14 @@ public enum ShipmentStatus {
     PICKED_UP("Đã lấy hàng"),
 
     /**
-     * Đang vận chuyển - Gói hàng đang trên đường đến điểm giao cuối cùng.
+     * Đang vận chuyển trung tuyến - Gói hàng đang trên đường đến điểm giao cuối cùng.
      */
-    SHIPPING("Đang vận chuyển"),
+    IN_TRANSIT("Đang vận chuyển"),
 
     /**
      * Đang giao hàng - Gói hàng đã đến điểm giao cuối cùng, sẽ giao tận nơi sớm.
      */
-    DELIVERING("Đang giao hàng"),
-
+    OUT_FOR_DELIVERY("Đang giao hàng"),
     /**
      * Đã giao hàng - Khách hàng đã nhận gói hàng thành công.
      */
@@ -68,6 +67,7 @@ public enum ShipmentStatus {
     public boolean isTerminalState() {
         return this == DELIVERED || this == FAILED || this == RETURNED;
     }
+
 
     /**
      * Kiểm tra xem trạng thái này có phải là trạng thái thành công hay không.
