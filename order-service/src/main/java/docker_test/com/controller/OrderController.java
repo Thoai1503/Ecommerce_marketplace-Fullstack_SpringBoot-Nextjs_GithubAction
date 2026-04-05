@@ -1,7 +1,5 @@
 package docker_test.com.controller;
 
-import java.util.stream.Collectors;
-
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,10 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import docker_test.com.dto.OrderDTO;
-import docker_test.com.dto.OrderItemDTO;
 import docker_test.com.dto.RecipientDTO;
-import docker_test.com.dto.OrderCreatedEvent;
-import docker_test.com.kafka.OrderProducer;
 import docker_test.com.model.Order;
 import docker_test.com.service.OrderService;
 import jakarta.validation.Valid;
