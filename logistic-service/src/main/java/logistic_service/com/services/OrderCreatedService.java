@@ -52,7 +52,7 @@ public class OrderCreatedService {
 	                  LOGGER.info("Saved Shipment Item: " + en.toString());
 	              
 	                   
-	                   orderStatusPublisher.publish(new OrderPackageEvent(shipment.getId(), "PENDING"));    
+	//                   orderStatusPublisher.publish(new OrderPackageEvent(shipment.getId(), "PENDING"));    
 	    	});
 		});
 	
