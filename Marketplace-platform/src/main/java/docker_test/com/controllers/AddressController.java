@@ -35,4 +35,22 @@ public class AddressController {
 			return ResponseEntity.notFound().build();
 		}
 	}
+
+
+    @PostMapping("/user")
+    public ResponseEntity<Address> createUserAddress(@RequestBody Address address) {
+        try {
+            Address createdAddress = addressService.createUserAddress(address);
+            if (createdAddress != null) {
+                LOGGER.info("Created new address with ID: {} for user ID: {} with recipient name: {} and address line: {}", createdAddress.getAddressId(), createdAddress.getUserId(), createdAddress.getRecipientName(), createdAddress.getAddressLine());
+                return ResponseEntity.ok(createdAddress);
+            } else {
+                LOGGER.warn("Failed to create address for user ID: {}. Invalid input data.", address.getUserId());
+                return ResponseEntity.badRequest().build();
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error creating address for user ID: {}. Exception: {}", address.getUserId(), e.getMessage());
+            return ResponseEntity.status(500).build();
+        }
+    }
 }
