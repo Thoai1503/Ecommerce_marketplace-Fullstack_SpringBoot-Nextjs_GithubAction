@@ -4,9 +4,8 @@
 
 // import { mockGet } from '../lib/http';
 import { http2 } from "../lib/http";
-import { Order, OrderItem, OrderStatus } from '@/types/index';
-
-// const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+import { Order, OrderItem, OrderStatus } from "@/types/index";
+const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 export interface OrderResponse {
   orders: any[];
@@ -15,7 +14,7 @@ export interface OrderResponse {
   currentPage: number;
   statusStats: Record<string, number>;
   pendingAmount: number;
-};
+}
 
 const mapOrder = (o: any): Order => {
   return {
@@ -50,19 +49,19 @@ const mapOrder = (o: any): Order => {
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
 
-    items: []
+    items: [],
   };
 };
 
 // const BASE_ORDERS: Order[] = [
-//     { 
-//       id: '1', 
-//       orderCode: '#ORD-0001', 
-//       customerName: 'Nguyễn Văn A', 
+//     {
+//       id: '1',
+//       orderCode: '#ORD-0001',
+//       customerName: 'Nguyễn Văn A',
 //       customerEmail: 'abc@email.com',
 //       customerPhone: '0901234567',
 //       shippingAddress: '123 Đường ABC, Quận 1, TP.HCM',
-//       totalAmount: 2500000, 
+//       totalAmount: 2500000,
 //       subtotalAmount: 2200000,
 //       discountAmount: 50000,
 //       shippingAmount: 30000,
@@ -72,43 +71,43 @@ const mapOrder = (o: any): Order => {
 //       paymentMethod: 'Mastercard (**** 7812)',
 //       transactionId: '#TXN-123456',
 //       deliveryNumber: '',
-//       status: 'PENDING', 
+//       status: 'PENDING',
 //       priority: 'NORMAL',
 //       createdAt: '2024-03-15T10:00:00Z',
 //       updatedAt: '2024-03-15T10:00:00Z',
 //       items: [
-//         { 
-//           id: 'i1', 
-//           productName: 'iPhone 15 Pro Max', 
+//         {
+//           id: 'i1',
+//           productName: 'iPhone 15 Pro Max',
 //           productImage: 'https://images.unsplash.com/photo-1696446701796-da61225697cc?w=100&q=80',
 //           sku: 'APL-IP15PM-256-TI',
 //           variant: 'Titan Tự Nhiên, 256GB',
-//           quantity: 1, 
-//           price: 25000000, 
-//           status: 'Ready' 
+//           quantity: 1,
+//           price: 25000000,
+//           status: 'Ready'
 //         },
-//         { 
-//           id: 'i2', 
-//           productName: 'Tai nghe Sony WH-1000XM5', 
+//         {
+//           id: 'i2',
+//           productName: 'Tai nghe Sony WH-1000XM5',
 //           productImage: 'https://images.unsplash.com/photo-1670054131709-646738c80084?w=100&q=80',
 //           sku: 'SNY-WH1000XM5-B',
 //           variant: 'Black',
-//           quantity: 1, 
-//           price: 8500000, 
-//           status: 'Packaging' 
+//           quantity: 1,
+//           price: 8500000,
+//           status: 'Packaging'
 //         }
 //       ],
 //       isFlagged: true,
 //       internalNote: 'Khách hàng yêu cầu giao trước 5h chiều'
 //     },
-//     { 
-//       id: '2', 
-//       orderCode: '#ORD-0002', 
-//       customerName: 'Trần Thị B', 
+//     {
+//       id: '2',
+//       orderCode: '#ORD-0002',
+//       customerName: 'Trần Thị B',
 //       customerEmail: 'b@email.com',
 //       customerPhone: '0912345678',
 //       shippingAddress: '456 Lê Lợi, Quận Hải Châu, Đà Nẵng',
-//       totalAmount: 1250000, 
+//       totalAmount: 1250000,
 //       subtotalAmount: 1200000,
 //       discountAmount: 0,
 //       shippingAmount: 50000,
@@ -118,21 +117,21 @@ const mapOrder = (o: any): Order => {
 //       paymentMethod: 'Thanh toán khi nhận hàng (COD)',
 //       transactionId: '',
 //       deliveryNumber: '',
-//       status: 'CONFIRMED', 
+//       status: 'CONFIRMED',
 //       priority: 'HIGH',
 //       createdAt: '2024-03-14T08:30:00Z',
 //       updatedAt: '2024-03-14T09:00:00Z',
 //       items: [],
 //       isFlagged: false
 //     },
-//     { 
-//       id: '3', 
-//       orderCode: '#ORD-0003', 
-//       customerName: 'Lê Văn C', 
+//     {
+//       id: '3',
+//       orderCode: '#ORD-0003',
+//       customerName: 'Lê Văn C',
 //       customerEmail: 'c@email.com',
 //       customerPhone: '0987654321',
 //       shippingAddress: '789 Cầu Giấy, Hà Nội',
-//       totalAmount: 5600000, 
+//       totalAmount: 5600000,
 //       subtotalAmount: 5500000,
 //       discountAmount: 0,
 //       shippingAmount: 100000,
@@ -142,21 +141,21 @@ const mapOrder = (o: any): Order => {
 //       paymentMethod: 'Chuyển khoản ngân hàng',
 //       transactionId: 'TXN-998877',
 //       deliveryNumber: 'GHN-123456',
-//       status: 'SHIPPED', 
+//       status: 'SHIPPED',
 //       priority: 'NORMAL',
 //       createdAt: '2024-03-12T14:20:00Z',
 //       updatedAt: '2024-03-13T10:00:00Z',
 //       items: [],
 //       trackingNumber: 'GHN-123456'
 //     },
-//     { 
-//       id: '4', 
-//       orderCode: '#ORD-0004', 
-//       customerName: 'Phạm Minh D', 
+//     {
+//       id: '4',
+//       orderCode: '#ORD-0004',
+//       customerName: 'Phạm Minh D',
 //       customerEmail: 'd@email.com',
 //       customerPhone: '0933445566',
 //       shippingAddress: '101 Võ Văn Kiệt, Quận 1, TP.HCM',
-//       totalAmount: 890000, 
+//       totalAmount: 890000,
 //       subtotalAmount: 850000,
 //       discountAmount: 0,
 //       shippingAmount: 40000,
@@ -166,21 +165,21 @@ const mapOrder = (o: any): Order => {
 //       paymentMethod: 'Ví MoMo',
 //       transactionId: 'TXN-MOMO-001',
 //       deliveryNumber: '',
-//       status: 'CANCELED', 
+//       status: 'CANCELED',
 //       priority: 'NORMAL',
 //       createdAt: '2024-03-11T09:15:00Z',
 //       updatedAt: '2024-03-11T10:00:00Z',
 //       items: [],
 //       internalNote: 'Khách hàng đổi ý, đã hoàn tiền qua MoMo'
 //     },
-//     { 
-//       id: '5', 
-//       orderCode: '#ORD-0005', 
-//       customerName: 'Hoàng Thị E', 
+//     {
+//       id: '5',
+//       orderCode: '#ORD-0005',
+//       customerName: 'Hoàng Thị E',
 //       customerEmail: 'e@email.com',
 //       customerPhone: '0944556677',
 //       shippingAddress: 'Resort 5 Sao, Phú Quốc',
-//       totalAmount: 15200000, 
+//       totalAmount: 15200000,
 //       subtotalAmount: 15200000,
 //       discountAmount: 0,
 //       shippingAmount: 0,
@@ -190,20 +189,20 @@ const mapOrder = (o: any): Order => {
 //       paymentMethod: 'Visa Credit (**** 4242)',
 //       transactionId: 'TXN-VISA-999',
 //       deliveryNumber: 'DHL-888999',
-//       status: 'COMPLETED', 
+//       status: 'COMPLETED',
 //       priority: 'NORMAL',
 //       createdAt: '2024-03-01T10:00:00Z',
 //       updatedAt: '2024-03-05T16:00:00Z',
 //       items: []
 //     },
-//     { 
-//       id: '6', 
-//       orderCode: '#ORD-0006', 
-//       customerName: 'Vũ Văn F', 
+//     {
+//       id: '6',
+//       orderCode: '#ORD-0006',
+//       customerName: 'Vũ Văn F',
 //       customerEmail: 'f@email.com',
 //       customerPhone: '0955667788',
 //       shippingAddress: '22 Lý Tự Trọng, Quận 1, TP.HCM',
-//       totalAmount: 450000, 
+//       totalAmount: 450000,
 //       subtotalAmount: 420000,
 //       discountAmount: 0,
 //       shippingAmount: 30000,
@@ -213,20 +212,20 @@ const mapOrder = (o: any): Order => {
 //       paymentMethod: 'ZaloPay',
 //       transactionId: 'TXN-ZALO-222',
 //       deliveryNumber: '',
-//       status: 'PROCESSING', 
+//       status: 'PROCESSING',
 //       priority: 'NORMAL',
 //       createdAt: '2024-03-15T08:00:00Z',
 //       updatedAt: '2024-03-15T08:30:00Z',
 //       items: []
 //     },
-//     { 
-//       id: '7', 
-//       orderCode: '#ORD-0007', 
-//       customerName: 'Ngô Thị G', 
+//     {
+//       id: '7',
+//       orderCode: '#ORD-0007',
+//       customerName: 'Ngô Thị G',
 //       customerEmail: 'g@email.com',
 //       customerPhone: '0966778899',
 //       shippingAddress: '12 Nguyễn Văn Linh, Đà Nẵng',
-//       totalAmount: 2100000, 
+//       totalAmount: 2100000,
 //       subtotalAmount: 2000000,
 //       discountAmount: 0,
 //       shippingAmount: 100000,
@@ -236,7 +235,7 @@ const mapOrder = (o: any): Order => {
 //       paymentMethod: 'Chuyển khoản ngân hàng',
 //       transactionId: 'TXN-BANK-555',
 //       deliveryNumber: 'JnT-555666',
-//       status: 'REFUNDED', 
+//       status: 'REFUNDED',
 //       priority: 'NORMAL',
 //       createdAt: '2024-02-28T14:00:00Z',
 //       updatedAt: '2024-03-05T09:00:00Z',
@@ -272,7 +271,7 @@ export const getOrders = async () => {
 
   return {
     ...res,
-    orders: (res.orders || []).map(mapOrder)
+    orders: (res.orders || []).map(mapOrder),
   };
 };
 
@@ -288,12 +287,11 @@ export const getOrderById = async (id: string): Promise<Order> => {
 
 export const updateOrderStatus = async (
   id: string,
-  status: OrderStatus
+  status: OrderStatus,
 ): Promise<boolean> => {
-
   await http2(`/admin/orders/${id}/status`, {
     method: "PUT",
-    body: JSON.stringify({ status })
+    body: JSON.stringify({ status }),
   });
 
   return true;
@@ -304,10 +302,13 @@ export const updateOrderStatus = async (
 //   return true;
 // };
 
-// export const updateOrderNote = async (id: string, note: string): Promise<boolean> => {
-//   await delay(500);
-//   return true;
-// };
+export const updateOrderNote = async (
+  id: string,
+  note: string,
+): Promise<boolean> => {
+  await delay(500);
+  return true;
+};
 
 // export const updateTrackingNumber = async (id: string, trackingNumber: string): Promise<boolean> => {
 //   await delay(500);
@@ -316,12 +317,11 @@ export const updateOrderStatus = async (
 
 export const updateTrackingNumber = async (
   id: string,
-  trackingNumber: string
+  trackingNumber: string,
 ): Promise<boolean> => {
-
   await http2(`/admin/orders/${id}/tracking`, {
     method: "PUT",
-    body: JSON.stringify({ trackingNumber })
+    body: JSON.stringify({ trackingNumber }),
   });
 
   return true;

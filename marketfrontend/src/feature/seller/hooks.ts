@@ -43,17 +43,17 @@ export const useAddProductSeller = (
     }
   };
 
-  const { mutate: createVariant } = useMutation({
-    mutationFn: (en: ProductVariant) => createProductVariant(en),
-    onSuccess: (data) => {
-      console.log("Variant created:", data);
-      message.success(`Tạo biến thể sản phẩm thành công`);
-    },
-    onError: (error) => {
-      console.error("Error creating variant:", error);
-      message.error(`Lỗi khi tạo biến thể sản phẩm: ${error.message}`);
-    },
-  });
+  // const { mutate: createVariant } = useMutation({
+  //   mutationFn: (en: ProductVariant) => createProductVariant(en),
+  //   onSuccess: (data) => {
+  //     console.log("Variant created:", data);
+  //     message.success(`Tạo biến thể sản phẩm thành công`);
+  //   },
+  //   onError: (error) => {
+  //     console.error("Error creating variant:", error);
+  //     message.error(`Lỗi khi tạo biến thể sản phẩm: ${error.message}`);
+  //   },
+  // });
 
   const { mutate: createVariant } = useMutation({
     mutationFn: (en: ProductVariant) => createProductVariant(en),
