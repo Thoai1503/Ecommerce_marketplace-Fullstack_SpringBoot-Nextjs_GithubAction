@@ -10,4 +10,8 @@ public class AddressService {
     public List<Address> getAddressesByUserId(long userId) {
         return addressRepository.findByUserId(userId);
     }
+    
+    public Address getAddressByShopId(long shopId) {
+		return addressRepository.getByShopId(shopId);
+	}
 }

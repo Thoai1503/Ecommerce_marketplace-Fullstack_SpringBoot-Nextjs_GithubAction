@@ -35,6 +35,16 @@ public class ProductVariantController  {
 		var list = ((ProductVariantRepository)repositories).GetByProductId(id);
 		return ResponseEntity.ok(list);
 	}
+	
+	@GetMapping("/{id}")
+	public ResponseEntity getById(@PathVariable int id) {
+		var variant = repositories.GetById(id);
+		if (variant == null) {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.ok(variant);
+	}
+	
 	@PostMapping("")
 	public ResponseEntity   create(@RequestBody ProductVariant productVariant) throws SQLException {
 		var en = ((ProductVariantRepository)repositories).Create(productVariant);

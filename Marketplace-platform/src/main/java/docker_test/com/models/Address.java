@@ -5,6 +5,15 @@ import java.time.LocalDateTime;
 public final class Address {
     private long address_id;
     private long user_id;
+    public long getShop_id() {
+		return shop_id;
+	}
+
+	public void setShop_id(long shop_id) {
+		this.shop_id = shop_id;
+	}
+
+	private long shop_id;
     private String recipient_name;
     private String recipient_phone;
     private String address_line;
@@ -30,11 +39,12 @@ public final class Address {
         this.updated_at = LocalDateTime.now();
     }
 
-    public Address(long address_id, long user_id, String recipient_name, String recipient_phone,
+    public Address(long address_id, long user_id, long shop_id, String recipient_name, String recipient_phone,
                    String address_line, Long ward, Long district, Long city,
                    String postal_code, int is_default, LocalDateTime created_at,
                    LocalDateTime updated_at) {
         this.address_id = address_id;
+        this.shop_id = shop_id;
         this.user_id = user_id;
         this.recipient_name = recipient_name;
         this.recipient_phone = recipient_phone;

@@ -50,6 +50,35 @@ public class AddressRepository implements IRepositories<Address> {
         // ...existing code for get all...
         return null;
     }
+    public Address getByShopId(long shopId) {
+		System.out.println("Finding address for shop ID: " + shopId);
+		String sql = "SELECT * FROM address WHERE shop_id = ?";
+		try (Connection conn = dbConnection.getConn();
+			 PreparedStatement stmt = conn.prepareStatement(sql)) {
+			stmt.setLong(1, shopId);
+			ResultSet rs = stmt.executeQuery();
+			if (rs.next()) {
+				return new Address(
+					rs.getLong("id"),
+					rs.getLong("user_id"),
+					rs.getLong("shop_id"),
+					rs.getString("recipient_name"),
+					rs.getString("recipient_phone"),
+					rs.getString("address_line"),
+					rs.getLong("ward"),
+					rs.getLong("district"),
+					rs.getLong("city"),
+					rs.getString("postal_code"),
+					rs.getInt("is_default"),
+					rs.getTimestamp("created_at").toLocalDateTime(),
+					rs.getTimestamp("updated_at").toLocalDateTime()
+				);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			}
+		return null;
+		}
 
     public List<Address> findByUserId(long userId) {
     	System.out.println("Finding addresses for user ID: " + userId);
@@ -63,6 +92,7 @@ public class AddressRepository implements IRepositories<Address> {
                 Address address = new Address(
                     rs.getLong("id"),
                     rs.getLong("user_id"),
+                    rs.getLong("shop_id"),
                     rs.getString("recipient_name"),
                     rs.getString("recipient_phone"),
                     rs.getString("address_line"),
@@ -79,6 +109,7 @@ public class AddressRepository implements IRepositories<Address> {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+       
         return addresses;
     }
 }
