@@ -48,13 +48,13 @@ export default async function Home() {
   const products = ((await res1.json()) as Partial<IProduct>[]) || [];
   // const { products } = useHomePage();
 
-  if (products.length === 0 || !products) {
-    return (
-      <div>
-        <h1>Loading...</h1>
-      </div>
-    );
-  }
+  // if (products.length === 0 || !products) {
+  //   return (
+  //     <div>
+  //       <h1>Loading...</h1>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="container-fluid px-3 px-md-4">
@@ -394,7 +394,7 @@ export default async function Home() {
             // </div>
             <></>
           ))}
-          <AllProduct products={products} />
+          {/* <AllProduct products={products} /> */}
         </div>
       </div>
     </div>

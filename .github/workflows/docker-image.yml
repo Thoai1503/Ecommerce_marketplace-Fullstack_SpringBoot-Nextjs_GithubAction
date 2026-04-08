@@ -125,7 +125,7 @@ jobs:
             thoaimanhlong/logistics-frontend:latest
             thoaimanhlong/logistics-frontend:${{ github.sha }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max          
+          cache-to: type=gha,mode=max
 
       # 7. Deploy to VPS
       - name: Deploy to VPS
