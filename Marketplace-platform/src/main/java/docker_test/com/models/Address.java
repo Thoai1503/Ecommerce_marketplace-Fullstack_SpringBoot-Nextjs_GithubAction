@@ -3,17 +3,17 @@ package docker_test.com.models;
 import java.time.LocalDateTime;
 
 public final class Address {
-    private long address_id;
-    private long user_id;
-    public long getShop_id() {
+    private Long address_id;
+    private Long user_id;
+    public Long getShop_id() {
 		return shop_id;
 	}
 
-	public void setShop_id(long shop_id) {
+	public void setShop_id(Long shop_id) {
 		this.shop_id = shop_id;
 	}
 
-	private long shop_id;
+	private Long shop_id;
     private String recipient_name;
     private String recipient_phone;
     private String address_line;
@@ -25,11 +25,11 @@ public final class Address {
 		return is_default;
 	}
 
-	public void setIsDefault(int is_default) {
+	public void setIsDefault(Integer is_default) {
 		this.is_default = is_default;
 	}
 
-	private int is_default;
+	private Integer is_default;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
 
@@ -39,9 +39,9 @@ public final class Address {
         this.updated_at = LocalDateTime.now();
     }
 
-    public Address(long address_id, long user_id, long shop_id, String recipient_name, String recipient_phone,
+    public Address(Long address_id, Long user_id, Long shop_id, String recipient_name, String recipient_phone,
                    String address_line, Long ward, Long district, Long city,
-                   String postal_code, int is_default, LocalDateTime created_at,
+                   String postal_code, Integer is_default, LocalDateTime created_at,
                    LocalDateTime updated_at) {
         this.address_id = address_id;
         this.shop_id = shop_id;
@@ -58,19 +58,19 @@ public final class Address {
         this.updated_at = updated_at;
     }
 
-    public long getAddressId() {
+    public Long getAddressId() {
         return address_id;
     }
 
-    public void setAddressId(long address_id) {
+    public void setAddressId(Long address_id) {
         this.address_id = address_id;
     }
 
-    public long getUserId() {
+    public Long getUserId() {
         return user_id;
     }
 
-    public void setUserId(long user_id) {
+    public void setUserId(Long user_id) {
         this.user_id = user_id;
     }
 
@@ -134,7 +134,7 @@ public final class Address {
         return is_default;
     }
 
-    public void setDefault(int is_default) {
+    public void setDefault(Integer is_default) {
         this.is_default = is_default;
     }
 

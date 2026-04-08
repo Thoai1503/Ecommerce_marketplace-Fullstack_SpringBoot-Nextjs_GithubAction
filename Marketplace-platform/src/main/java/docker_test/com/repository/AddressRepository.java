@@ -3,6 +3,7 @@ package docker_test.com.repository;
 import docker_test.com.models.Address;
 import docker_test.com.configs.DBConnection;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +24,68 @@ public class AddressRepository implements IRepositories<Address> {
 
     @Override
     public Address Create(Address item) throws SQLException {
-        // ...existing code for create...
+        String sql = """
+            INSERT INTO address
+            (user_id, shop_id, recipient_name, recipient_phone, address_line,
+             ward, district, city, postal_code, is_default, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """;
+
+        try (
+            Connection conn = dbConnection.getConn();
+            PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
+        ) {
+            stmt.setLong(1, item.getUserId());
+
+            if (item.getShop_id() > 0) {
+                stmt.setLong(2, item.getShop_id());
+            } else {
+                stmt.setNull(2, Types.BIGINT);
+            }
+
+            stmt.setString(3, item.getRecipientName());
+            stmt.setString(4, item.getRecipientPhone());
+            stmt.setString(5, item.getAddressLine());
+
+            if (item.getWard() != null) {
+                stmt.setLong(6, item.getWard());
+            } else {
+                stmt.setNull(6, Types.BIGINT);
+            }
+
+            if (item.getDistrict() != null) {
+                stmt.setLong(7, item.getDistrict());
+            } else {
+                stmt.setNull(7, Types.BIGINT);
+            }
+
+            if (item.getCity() != null) {
+                stmt.setLong(8, item.getCity());
+            } else {
+                stmt.setNull(8, Types.BIGINT);
+            }
+
+            stmt.setString(9, item.getPostalCode());
+            stmt.setInt(10, item.getIsDefault());
+
+            LocalDateTime createdAt = item.getCreatedAt() != null ? item.getCreatedAt() : LocalDateTime.now();
+            LocalDateTime updatedAt = item.getUpdatedAt() != null ? item.getUpdatedAt() : LocalDateTime.now();
+            stmt.setTimestamp(11, Timestamp.valueOf(createdAt));
+            stmt.setTimestamp(12, Timestamp.valueOf(updatedAt));
+
+            int rows = stmt.executeUpdate();
+            if (rows > 0) {
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        item.setAddressId(rs.getLong(1));
+                    }
+                }
+                item.setCreatedAt(createdAt);
+                item.setUpdatedAt(updatedAt);
+                return item;
+            }
+        }
+
         return null;
     }
 
