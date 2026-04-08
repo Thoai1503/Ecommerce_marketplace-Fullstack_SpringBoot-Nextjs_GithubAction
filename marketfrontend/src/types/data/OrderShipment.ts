@@ -25,7 +25,7 @@ export class OrderShipments extends Model {
       queryFn: (): Promise<IOrderShipment[]> =>
         this.api
           .get<IOrderShipment[]>({
-            url: `${API_URL}${this.path}/shop/${shopId}`,
+            url: `${API_URL}/api/orders/shipments/shop/${shopId}`,
           })
           .then((r) => r.data),
     };

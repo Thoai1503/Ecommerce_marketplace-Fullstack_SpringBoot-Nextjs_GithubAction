@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { productQuery } from "./query";
 import { checkOutAPI } from "@/services/checkout";
+import { calculateFeeOfLOGS } from "@/service/calculateFeeAPI";
 
 export const useHomePage = () => {
   const { data: products } = useQuery(productQuery.list);
@@ -21,6 +22,15 @@ export const useCheckoutPage = () => {
     },
     onError: (error) => {
       alert("Lỗi khi thanh toán: " + error);
+    },
+  });
+  const {} = useMutation({
+    mutationFn: (param: any) => calculateFeeOfLOGS(param),
+    onSuccess: (data) => {
+      console.log("Fee LOGS:", data);
+    },
+    onError: (error) => {
+      console.error("Lỗi khi tính phí LOGS:", error);
     },
   });
 

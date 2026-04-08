@@ -1,0 +1,13 @@
+version: "3.8"
+services:
+  logistic-service:
+    image: thoaimanhlong/logistic-service:latest
+    container_name: logistic-service
+    ports:
+      - "8007:8007"
+    environment:
+      SPRING_PROFILES_ACTIVE: "prod"
+      DATABASE_URL: "jdbc:mysql://103.90.225.130:3306/logistic_service?ssl-mode=REQUIRED&serverTimezone=Asia/Ho_Chi_Minh"
+      DATABASE_USERNAME: "root"
+      DATABASE_PASSWORD: "123456"
+    restart: unless-stopped

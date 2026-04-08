@@ -2,13 +2,13 @@
 
 import { Timeline } from "@/components/Timeline";
 import { ShipmentStatus } from "@/lib/api";
-import { useTracking } from "@/lib/hooks";
+import { useShipmentTimeline, useTracking } from "@/lib/hooks";
 import { useState } from "react";
 
 const statusLabels: Record<ShipmentStatus, string> = {
   PENDING: "Đang chờ xử lý",
   CONFIRMED: "Đơn hàng đã xác nhận",
-  RECEIVED: "Đã nhận hàng",
+  PICKED_UP: "Đã lấy hàng",
   IN_TRANSIT: "Đang vận chuyển",
   OUT_FOR_DELIVERY: "Đang giao hàng",
   DELIVERED: "Đã giao hàng",
@@ -22,7 +22,7 @@ function statusBadge(status: ShipmentStatus) {
   const palettes: Record<ShipmentStatus, string> = {
     PENDING: "bg-yellow-50 text-yellow-700",
     CONFIRMED: "bg-blue-50 text-blue-700",
-    RECEIVED: "bg-sky-50 text-sky-700",
+    PICKED_UP: "bg-sky-50 text-sky-700",
     IN_TRANSIT: "bg-indigo-50 text-indigo-700",
     OUT_FOR_DELIVERY: "bg-orange-50 text-orange-700",
     DELIVERED: "bg-green-50 text-green-700",
@@ -41,6 +41,8 @@ export default function TrackingPage() {
   const [submitted, setSubmitted] = useState(false);
   const { data, isFetching, isError, error, refetch } =
     useTracking(trackingCode);
+  const { data: timelineData, isFetching: isTimelineFetching } =
+    useShipmentTimeline(data?.id);
 
   return (
     <div className="space-y-10">
@@ -120,32 +122,48 @@ export default function TrackingPage() {
               </h2>
               <dl className="mt-3 space-y-2 text-sm text-zinc-600">
                 <div>
+                  <dt className="font-medium text-zinc-800">Order Ref</dt>
+                  <dd>{data.orderShipmentRefId}</dd>
+                </div>
+                <div>
                   <dt className="font-medium text-zinc-800">Người nhận</dt>
-                  <dd>{data.customer?.name}</dd>
+                  <dd>{data.recipient?.name ?? "N/A"}</dd>
                 </div>
                 <div>
                   <dt className="font-medium text-zinc-800">Số điện thoại</dt>
-                  <dd>{data.customer?.phone}</dd>
+                  <dd>{data.recipient?.phone ?? "N/A"}</dd>
                 </div>
                 <div>
                   <dt className="font-medium text-zinc-800">Địa chỉ</dt>
-                  <dd>{data.customer?.address}</dd>
+                  <dd>{data.recipient?.address ?? "N/A"}</dd>
                 </div>
               </dl>
             </div>
 
             <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-5">
-              <h2 className="text-sm font-semibold text-zinc-700">Sản phẩm</h2>
+              <h2 className="text-sm font-semibold text-zinc-700">
+                Sản phẩm trong kiện hàng
+              </h2>
               <ul className="mt-3 space-y-2 text-sm text-zinc-600">
                 {data.items && data.items.length > 0 ? (
                   data.items.map((item) => (
-                    <li key={item.id} className="flex justify-between">
-                      <span>{item.productName}</span>
-                      <span className="font-medium">x{item.quantity}</span>
+                    <li
+                      key={item.id}
+                      className="rounded-md border border-zinc-200 bg-white px-3 py-2"
+                    >
+                      <div className="font-medium text-zinc-800">
+                        {item.productName}
+                      </div>
+                      <div className="text-xs text-zinc-500">
+                        SL: {item.quantity}
+                        {item.price !== undefined
+                          ? ` | Giá: ${item.price.toLocaleString("vi-VN")}`
+                          : ""}
+                      </div>
                     </li>
                   ))
                 ) : (
-                  <li className="text-zinc-500">Không có thông tin sản phẩm</li>
+                  <li>Không có dữ liệu sản phẩm</li>
                 )}
               </ul>
             </div>
@@ -155,8 +173,10 @@ export default function TrackingPage() {
                 Tiến trình giao hàng
               </h2>
               <div className="mt-3">
-                {data.statusHistory && data.statusHistory.length > 0 ? (
-                  <Timeline history={data.statusHistory} />
+                {isTimelineFetching ? (
+                  <p className="text-sm text-zinc-500">Đang tải timeline...</p>
+                ) : timelineData && timelineData.length > 0 ? (
+                  <Timeline history={timelineData} />
                 ) : (
                   <p className="text-sm text-zinc-500">
                     Không có lịch sử trạng thái

@@ -11,7 +11,7 @@ import docker_test.com.models.attribute.Attribute;
 import docker_test.com.repository.AttributeRepository;
 
 @RestController
-@RequestMapping("api/attribute")
+@RequestMapping("api/attributes")
 public class AttributeController {
 
     private final AttributeRepository attributeRepository;

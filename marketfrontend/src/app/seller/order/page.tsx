@@ -4,9 +4,10 @@ import { useOrderPage } from "@/feature/admin/hooks/useOrderPage";
 import { OrderShipments } from "@/types/data/OrderShipment";
 import { IOrder } from "@/validators/order";
 import { IOrderShipment } from "@/validators/orderShipment";
+import { convertAddressToNames } from "@/services/addressService";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 
 const page = () => {
   OrderShipments.setup({ path: "/seller/order-shipment" });
@@ -15,7 +16,35 @@ const page = () => {
   );
 
   console.log("Order Shipments Data:", JSON.stringify(orderShipments, null, 2));
-  const { shop, orders } = useOrderPage();
+  const { shop, orders: mockOrders } = useOrderPage();
+
+  // Combine API data (top) + Mock data (bottom)
+  const combinedOrders = useMemo(() => {
+    const apiOrders =
+      orderShipments?.map((shipment: any) => ({
+        id: shipment.orderId,
+        order_number: shipment.order?.orderNumber,
+        order_code: shipment.order?.orderNumber,
+        total_price: shipment.order?.finalAmount,
+        status:
+          shipment.shippingStatus === "PENDING"
+            ? "pending_shipment"
+            : "shipped",
+        buyer_name: shipment.recipient?.recipientName,
+        orders_items: shipment.items,
+        tracking_number: shipment.trackingNumber,
+        tracking_carrier: shipment.carrierName,
+        recipient: shipment.recipient,
+        _source: "api",
+      })) ?? [];
+
+    const mockOrders_ = mockOrders.map((order: any) => ({
+      ...order,
+      _source: "mock",
+    }));
+
+    return [...apiOrders, ...mockOrders_];
+  }, [orderShipments, mockOrders]);
   const [activeTab, setActiveTab] = useState("all");
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(
     new Set(),
@@ -185,7 +214,7 @@ const page = () => {
       {/* Order Count */}
       <div className="bg-white mx-3 p-3 border-bottom d-flex justify-content-between align-items-center">
         <div>
-          <span className="fw-bold">{orders.length} Đơn hàng</span>
+          <span className="fw-bold">{combinedOrders.length} Đơn hàng</span>
         </div>
         <div className="d-flex gap-2">
           <button className="btn btn-sm btn-outline-secondary">
@@ -216,16 +245,35 @@ const page = () => {
             </tr>
           </thead>
           <tbody>
-            {orders
-              //   .filter((order): order is IOrder => order.id !== undefined)
+            {combinedOrders
               .filter((order) => order.id !== undefined)
               .map((order: any) => {
                 const hasItems = (order.orders_items?.length ?? 0) > 0;
-                const isExpanded = expandedOrderIds.has(order.id.toString());
+                const orderKey = `${order.id}-${order._source}`;
+                const isExpanded = expandedOrderIds.has(orderKey);
+                const buyerName =
+                  order.buyer_name || order.recipient?.name || "Khach mua";
+                const buyerAvatar =
+                  order.buyer_avatar ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    buyerName,
+                  )}&background=0D8ABC&color=fff`;
+                const orderCode =
+                  order.order_code || order.order_number || "N/A";
+
+                // Get address info from recipient if available
+                const addressInfo = order.recipient
+                  ? convertAddressToNames(
+                      order.recipient.city,
+                      order.recipient.district,
+                      order.recipient.ward,
+                      order.recipient.addressLine,
+                    )
+                  : null;
 
                 // Hàng chính (parent)
                 const renderMainRow = () => (
-                  <tr key={order.id} className={isExpanded ? "bg-light" : ""}>
+                  <tr key={orderKey} className={isExpanded ? "bg-light" : ""}>
                     <td>
                       <div className="d-flex align-items-center">
                         <input
@@ -235,7 +283,7 @@ const page = () => {
                         {hasItems && (
                           <button
                             className="btn btn-sm btn-link p-0 text-muted"
-                            onClick={() => toggleExpand(order.id.toString())}
+                            onClick={() => toggleExpand(orderKey)}
                             style={{ lineHeight: 1 }}
                           >
                             {isExpanded ? (
@@ -249,8 +297,34 @@ const page = () => {
                     </td>
                     <td>
                       <div className="flex-grow-1">
-                        <div className="fw-normal mb-1">
-                          <strong>{order.order_code}</strong>
+                        <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
+                          <div className="d-flex align-items-center gap-2">
+                            <img
+                              src={buyerAvatar}
+                              alt={buyerName}
+                              width="32"
+                              height="32"
+                              className="rounded-circle border"
+                              style={{ objectFit: "cover" }}
+                            />
+                            <div className="d-flex flex-column">
+                              <strong className="mb-0">{buyerName}</strong>
+                              <small className="text-muted">
+                                Mã đơn hàng:{" "}
+                                <span className="fw-semibold">{orderCode}</span>
+                              </small>
+                              {addressInfo && (
+                                <small className="text-muted">
+                                  Địa chỉ: {addressInfo.fullAddress}
+                                </small>
+                              )}
+                              {order._source === "api" && (
+                                <span className="badge bg-success ms-auto">
+                                  API
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                         <small className="text-muted d-block">
                           {order.orders_items && order.orders_items.length > 0
@@ -334,7 +408,7 @@ const page = () => {
                   isExpanded &&
                   order.orders_items?.map((item: any, index: number) => (
                     <tr
-                      key={`${order.id}-${item.id}`}
+                      key={`${orderKey}-${item.id}`}
                       className="item-row bg-light-subtle"
                     >
                       <td></td> {/* để trống cột checkbox + expand */}
@@ -384,19 +458,23 @@ const page = () => {
                   ));
 
                 return (
-                  <React.Fragment key={order.id}>
+                  <React.Fragment key={orderKey}>
                     {renderMainRow()}
                     {renderItemRows()}
                   </React.Fragment>
                 );
               })}
           </tbody>
+          <tbody>
+            {combinedOrders.length === 0 && (
+              <tr>
+                <td colSpan={6} className="p-5 text-center text-muted">
+                  <p>Không có đơn hàng nào</p>
+                </td>
+              </tr>
+            )}
+          </tbody>
         </table>
-        {orders.length === 0 && (
-          <div className="p-5 text-center text-muted">
-            <p>Không có đơn hàng nào</p>
-          </div>
-        )}
       </div>
     </div>
   );

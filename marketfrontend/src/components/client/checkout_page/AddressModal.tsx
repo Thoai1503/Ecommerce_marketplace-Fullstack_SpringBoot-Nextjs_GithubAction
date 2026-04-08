@@ -1,8 +1,11 @@
 import { getAllProvinces, getDistricts, getWards } from "@/services/addressAPI";
+import { useUserAuth } from "@/context/UserAuthContext";
+import { useCreateUserAddress } from "@/hooks/useAddresses";
 
 import { District, Province, Ward } from "@/validators/addressAPIModel";
+import type { Address } from "@/components/client/checkout_page/types";
 import { useQuery } from "@tanstack/react-query";
-import { get } from "http";
+import { message } from "antd";
 import {
   Check,
   ChevronDown,
@@ -16,14 +19,6 @@ import {
   X,
 } from "lucide-react";
 import React, { useState } from "react";
-
-interface Address {
-  id: number;
-  name: string;
-  phone: string;
-  address: string;
-  isDefault: number; // 1 là mặc định, 0 là không
-}
 
 interface AddressModalProps {
   setShowAddressPanel: React.Dispatch<React.SetStateAction<boolean>>;
@@ -40,9 +35,12 @@ const AddressModal = ({
   selectedAddressId,
   setSelectedAddressId,
 }: AddressModalProps) => {
+  const { userId } = useUserAuth();
+  const { mutateAsync: createAddressMutate, isPending: isCreatingAddress } =
+    useCreateUserAddress();
+
   const [provinceId, setProvinceId] = useState<number | null>(null);
   const [districtId, setDistrictId] = useState<number | null>(null);
-  const [wardId, setWardId] = useState<number | null>(null);
 
   const { data: provinces = [] } = useQuery({
     queryKey: ["provinces"],
@@ -333,34 +331,77 @@ const AddressModal = ({
     return Object.keys(errors).length === 0;
   };
 
-  const handleAddAddress = () => {
+  const handleAddAddress = async () => {
     if (!validateForm()) return;
-    const fullAddress = `${form.street}, ${form.ward}, ${form.district}, ${form.province}`;
-    const newAddr: Address = {
-      id: Date.now(),
-      name: form.name.trim(),
-      phone: form.phone.trim(),
-      address: fullAddress,
-      isDefault: form.setDefault ? 1 : 0,
-    };
-    let updated = [...addresses];
-    if (form.setDefault) {
-      updated = updated.map((a) => ({ ...a, isDefault: 0 }));
+    if (!userId) {
+      message.warning("Vui lòng đăng nhập để thêm địa chỉ.");
+      return;
     }
-    updated.push(newAddr);
-    setAddresses(updated);
-    if (form.setDefault) setSelectedAddressId(newAddr.id);
-    setForm({
-      name: "",
-      phone: "",
-      province: "",
-      district: "",
-      ward: "",
-      street: "",
-      setDefault: false,
-    });
-    setFormErrors({});
-    setShowAddForm(false);
+
+    const selectedProvince = provinces.find(
+      (p: Province) => Number(p.ProvinceID) === Number(form.province),
+    );
+    const selectedDistrict = districts?.find(
+      (d: District) => Number(d.DistrictID) === Number(form.district),
+    );
+    const selectedWard = wards?.find(
+      (w: Ward) => Number(w.WardCode) === Number(form.ward),
+    );
+
+    try {
+      const created = await createAddressMutate({
+        userId,
+        recipientName: form.name.trim(),
+        recipientPhone: form.phone.trim(),
+        addressLine: form.street.trim(),
+        ward: Number(form.ward),
+        district: Number(form.district),
+        city: Number(form.province),
+        postalCode: "",
+        isDefault: form.setDefault ? 1 : 0,
+      });
+
+      const createdAddress: Address = {
+        id: created.addressId,
+        name: created.recipientName,
+        phone: created.recipientPhone,
+        address:
+          `${created.addressLine}, ` +
+          `${selectedWard?.WardName || `Phường ${form.ward}`}, ` +
+          `${selectedDistrict?.DistrictName || `Quận ${form.district}`}, ` +
+          `${selectedProvince?.ProvinceName || `TP ${form.province}`}`,
+        ward: created.ward,
+        district: created.district,
+        city: created.city,
+        isDefault: created.isDefault ?? (form.setDefault ? 1 : 0),
+      };
+
+      setAddresses((prev) => {
+        if (form.setDefault) {
+          return [...prev.map((a) => ({ ...a, isDefault: 0 })), createdAddress];
+        }
+        return [...prev, createdAddress];
+      });
+      setSelectedAddressId(createdAddress.id);
+
+      setForm({
+        name: "",
+        phone: "",
+        province: "",
+        district: "",
+        ward: "",
+        street: "",
+        setDefault: false,
+      });
+      setFormErrors({});
+      setShowAddForm(false);
+      message.success("Thêm địa chỉ thành công.");
+    } catch (error: any) {
+      const errorMessage =
+        error?.response?.data?.message ||
+        "Không thể thêm địa chỉ. Vui lòng thử lại.";
+      message.error(errorMessage);
+    }
   };
 
   const handleSetDefault = (id: number) => {
@@ -644,7 +685,6 @@ const AddressModal = ({
                       setProvinceId(
                         e.target.value ? Number(e.target.value) : null,
                       );
-                      setWardId(null);
                     }}
                     style={{
                       ...styles.input,
@@ -703,7 +743,6 @@ const AddressModal = ({
                       setDistrictId(
                         e.target.value ? Number(e.target.value) : null,
                       );
-                      setWardId(null);
                     }}
                     disabled={!form.province}
                     style={{
@@ -875,6 +914,7 @@ const AddressModal = ({
               {/* Submit */}
               <button
                 onClick={handleAddAddress}
+                disabled={isCreatingAddress}
                 style={{
                   background: "#137fec",
                   color: "white",
@@ -891,10 +931,11 @@ const AddressModal = ({
                   justifyContent: "center",
                   gap: 8,
                   boxShadow: "0 4px 14px rgba(19,127,236,0.2)",
+                  opacity: isCreatingAddress ? 0.7 : 1,
                 }}
               >
                 <Plus size={15} strokeWidth={2.5} />
-                Lưu địa chỉ
+                {isCreatingAddress ? "Đang lưu..." : "Lưu địa chỉ"}
               </button>
             </div>
           )}

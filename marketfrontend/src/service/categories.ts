@@ -1,7 +1,8 @@
 import { Category } from "@/types/index";
 
-const API_URL = "http://localhost:8000/api/categories";
+//const API_URL = "http://localhost:8000/api/categories";
 
+import { API_URL } from "@/helper/api";
 /* ================= HELPERS ================= */
 
 export const generateSlug = (name: string): string => {
@@ -66,7 +67,7 @@ const mapCategory = (c: any): Category => ({
 /* ================= GET ALL (LEVEL = 0) ================= */
 
 export const getCategories = async (): Promise<Category[]> => {
-  const res = await fetch(API_URL);
+  const res = await fetch(`${API_URL}/api/categories`);
 
   if (!res.ok) {
     throw new Error("Failed to fetch categories");
@@ -83,7 +84,7 @@ export const getCategories = async (): Promise<Category[]> => {
 /* ================= GET BY ID ================= */
 
 export const getCategoryById = async (id: string): Promise<Category> => {
-  const res = await fetch(`${API_URL}/${id}`);
+  const res = await fetch(`${API_URL}/api/categories/${id}`);
 
   if (!res.ok) {
     throw new Error("Category not found");
@@ -97,7 +98,7 @@ export const getCategoryById = async (id: string): Promise<Category> => {
 /* ================= CREATE ================= */
 
 export const createCategory = async (data: any): Promise<Category> => {
-  const res = await fetch(API_URL, {
+  const res = await fetch(`${API_URL}/api/categories`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -120,7 +121,7 @@ export const updateCategory = async (
   id: string,
   data: any,
 ): Promise<Category> => {
-  const res = await fetch(`${API_URL}/${id}`, {
+  const res = await fetch(`${API_URL}/api/categories/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -140,7 +141,7 @@ export const updateCategory = async (
 /* ================= DELETE ================= */
 
 export const deleteCategory = async (id: string): Promise<boolean> => {
-  const res = await fetch(`${API_URL}/${id}`, {
+  const res = await fetch(`${API_URL}/api/categories/${id}`, {
     method: "DELETE",
   });
 

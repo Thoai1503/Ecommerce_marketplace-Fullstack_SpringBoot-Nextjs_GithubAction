@@ -8,10 +8,6 @@ import {
 
 import { Category } from "@/types";
 
-/* ============================= */
-/* GET ALL CATEGORIES            */
-/* ============================= */
-
 export const useCategories = () => {
   const queryClient = useQueryClient();
 

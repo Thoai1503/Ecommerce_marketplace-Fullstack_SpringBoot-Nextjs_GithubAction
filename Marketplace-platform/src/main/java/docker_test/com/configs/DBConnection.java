@@ -14,6 +14,18 @@ public final class DBConnection {
     private static final Properties props = new Properties();
     private static HikariDataSource dataSource;
 
+    private static int getEnvInt(String key, int defaultValue) {
+        String value = System.getenv(key);
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException ignored) {
+            return defaultValue;
+        }           
+    }
+
     private static String getEnvOrProp(String envKey, String propKey) {
         String env = System.getenv(envKey);
         if (env != null && !env.isBlank()) {
@@ -51,7 +63,17 @@ public final class DBConnection {
             config.addDataSourceProperty("cachePrepStmts", "true");
             config.addDataSourceProperty("prepStmtCacheSize", "250");
             config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-            config.setMaximumPoolSize(10); // You can adjust pool size as needed
+            // Keep pool very small because this app also uses Spring's own datasource pool.
+            int maxPoolSize = getEnvInt("DB_POOL_SIZE", 2);
+            int minIdle = Math.min(getEnvInt("DB_MIN_IDLE", 1), maxPoolSize);
+            config.setMaximumPoolSize(Math.max(1, maxPoolSize));
+            config.setMinimumIdle(Math.max(0, minIdle));
+            config.setConnectionTimeout(getEnvInt("DB_CONNECTION_TIMEOUT", 15000));
+            config.setIdleTimeout(getEnvInt("DB_IDLE_TIMEOUT", 30000));
+            config.setMaxLifetime(getEnvInt("DB_MAX_LIFETIME", 600000));
+            // Do not fail the whole app at startup if DB is temporarily saturated.
+            config.setInitializationFailTimeout(-1);
+            config.setConnectionTestQuery("SELECT 1");
             dataSource = new HikariDataSource(config);
         } catch (Exception e) {
             throw new RuntimeException("❌ Lỗi load DB config hoặc HikariCP", e);

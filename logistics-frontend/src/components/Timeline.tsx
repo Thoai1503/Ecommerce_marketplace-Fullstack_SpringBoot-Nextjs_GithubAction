@@ -5,7 +5,7 @@ import { ShipmentStatus, ShipmentStatusHistory } from "@/lib/api";
 const statusLabels: Record<ShipmentStatus, string> = {
   PENDING: "Đang chờ xử lý",
   CONFIRMED: "Đơn hàng đã xác nhận",
-  RECEIVED: "Đã nhận hàng",
+  PICKED_UP: "Đã lấy hàng",
   IN_TRANSIT: "Đang vận chuyển",
   OUT_FOR_DELIVERY: "Đang giao hàng",
   DELIVERED: "Đã giao hàng",
@@ -16,7 +16,7 @@ const statusLabels: Record<ShipmentStatus, string> = {
 const statusColors: Record<ShipmentStatus, string> = {
   PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200",
   CONFIRMED: "bg-blue-100 text-blue-800 border-blue-200",
-  RECEIVED: "bg-sky-100 text-sky-800 border-sky-200",
+  PICKED_UP: "bg-sky-100 text-sky-800 border-sky-200",
   IN_TRANSIT: "bg-indigo-100 text-indigo-800 border-indigo-200",
   OUT_FOR_DELIVERY: "bg-orange-100 text-orange-800 border-orange-200",
   DELIVERED: "bg-green-100 text-green-800 border-green-200",

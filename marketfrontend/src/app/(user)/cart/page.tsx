@@ -5,8 +5,19 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import { useUserAuth } from "@/context/UserAuthContext";
 import { Cart } from "@/types/data/Cart";
 import { API_URL } from "@/helper/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { CartItem, GroupedCartByShop } from "@/validators/cart";
+import { productVariantQuery } from "@/query/productVariant";
+
+type CartStateItem = CartItem & {
+  selected: boolean;
+};
+
+type EnrichedCartItem = CartStateItem & {
+  width?: number;
+  height?: number;
+  weight?: number;
+};
 
 const ShoppingCart: React.FC = () => {
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
@@ -14,33 +25,61 @@ const ShoppingCart: React.FC = () => {
   const { data, isError, status } = useQuery(Cart.getByUserId(userId || 0));
 
   // State lưu danh sách cartItems từ API + selected flag
-  const [cartItems, setCartItems] = useState<
-    (CartItem & { selected: boolean })[]
-  >([]);
+  const [cartItems, setCartItems] = useState<CartStateItem[]>([]);
 
   // Sync dữ liệu từ API vào state khi data thay đổi
   useEffect(() => {
     if (data) {
-      setCartItems(data.map((item) => ({ ...item, selected: false })));
+      setCartItems((prev) =>
+        data.map((item) => ({
+          ...item,
+          selected:
+            prev.find((prevItem) => prevItem.id === item.id)?.selected ?? false,
+        })),
+      );
     }
-    console.log("Fetched cart data:", data);
   }, [data]);
+
+  const variantQueries = useQueries({
+    queries: cartItems.map((item) => {
+      const variantId = item.productVariant?.id;
+
+      return {
+        ...productVariantQuery.detail(variantId ?? 0),
+        enabled: Boolean(variantId),
+      };
+    }),
+  });
+  console.log("Variant Queries:", variantQueries);
+
+  const enrichedCartItems = useMemo<EnrichedCartItem[]>(() => {
+    return cartItems.map((item, index) => {
+      const variantData = variantQueries[index]?.data;
+
+      return {
+        ...item,
+        width: variantData?.width ?? 0,
+        height: variantData?.height ?? 0,
+        weight: variantData?.weight ?? 0,
+      };
+    });
+  }, [cartItems, variantQueries]);
 
   // Lưu các item được chọn vào localStorage
   useEffect(() => {
-    const selectedItems = cartItems.filter((item) => item.selected);
+    const selectedItems = enrichedCartItems.filter((item) => item.selected);
     localStorage.setItem("selectedCartItems", JSON.stringify(selectedItems));
-  }, [cartItems]);
+  }, [enrichedCartItems]);
 
   useEffect(() => {
     if (isError) {
       alert(
         "Đã xảy ra lỗi khi tải dữ liệu giỏ hàng. Vui lòng thử lại sau. " +
           status,
-      );
+      ); //
       console.error("Error fetching cart data");
     }
-  }, [isError]);
+  }, [isError, status]);
 
   const [voucher, setVoucher] = useState("");
   const discount = 50000;
@@ -55,7 +94,7 @@ const ShoppingCart: React.FC = () => {
 
   // Group items theo shop
   const groupedByShop: Record<number, GroupedCartByShop> = useMemo(() => {
-    return cartItems.reduce(
+    return enrichedCartItems.reduce(
       (acc, item) => {
         const shopId = item?.product?.shop?.id;
         if (!acc[shopId]) {
@@ -69,11 +108,11 @@ const ShoppingCart: React.FC = () => {
         GroupedCartByShop & { items: (CartItem & { selected: boolean })[] }
       >,
     );
-  }, [cartItems]);
+  }, [enrichedCartItems]);
 
   // ===== Tính toán =====
   const calculateSubtotal = () => {
-    return cartItems
+    return enrichedCartItems
       .filter((item) => item.selected)
       .reduce(
         (sum, item) => sum + (item.productVariant?.price ?? 0) * item.quantity,
@@ -85,12 +124,16 @@ const ShoppingCart: React.FC = () => {
     return calculateSubtotal() - discount + shippingFee;
   };
 
-  const selectedCount = cartItems.filter((item) => item.selected).length;
+  const selectedCount = enrichedCartItems.filter(
+    (item) => item.selected,
+  ).length;
 
   // ===== Checkbox logic =====
   const isAllSelected =
-    cartItems.length > 0 && cartItems.every((item) => item.selected);
-  const isIndeterminate = cartItems.some((i) => i.selected) && !isAllSelected;
+    enrichedCartItems.length > 0 &&
+    enrichedCartItems.every((item) => item.selected);
+  const isIndeterminate =
+    enrichedCartItems.some((item) => item.selected) && !isAllSelected;
 
   const toggleSelectAll = () => {
     setCartItems((prev) =>

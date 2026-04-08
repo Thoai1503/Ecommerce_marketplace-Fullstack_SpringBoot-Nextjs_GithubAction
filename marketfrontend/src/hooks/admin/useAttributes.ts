@@ -1,58 +1,70 @@
+// src/hooks/admin/useAttributes.ts
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { attributesQuery } from "@/query/attributes";
 import {
+  getAttributeById,
   createAttribute,
   updateAttribute,
   deleteAttribute,
-  createAttributeValue,
-  updateAttributeValue,
-  deleteAttributeValue,
 } from "@/service/attributes";
 
+// ================= LIST =================
 export const useAttributes = () => {
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError, refetch } = useQuery(attributesQuery.all());
+  const query = useQuery(attributesQuery.all());
 
   const deleteMutation = useMutation({
     mutationFn: deleteAttribute,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] });
+    },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       updateAttribute(id, data),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] });
+    },
   });
 
   return {
-    attributes: data || [],
-    isLoading,
-    isError,
-    refetch,
+    attributes: query.data || [],
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
+
     deleteAttribute: deleteMutation.mutateAsync,
     updateAttribute: updateMutation.mutateAsync,
+
     isDeleting: deleteMutation.isPending,
     isUpdating: updateMutation.isPending,
   };
 };
 
+// ================= DETAIL =================
 export const useAttributeDetail = (id: string) => {
   const queryClient = useQueryClient();
 
-  const query = useQuery(attributesQuery.detail(id));
-  const valuesQuery = useQuery(attributesQuery.values(id));
-
-  // --- Attribute Mutations ---
-  const createAttrMutation = useMutation({
-    mutationFn: createAttribute,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] }),
+  // 🔥 GET DETAIL
+  const query = useQuery({
+    queryKey: ["admin", "attributes", id],
+    queryFn: () => getAttributeById(id),
+    enabled: !!id,
   });
 
-  const updateAttrMutation = useMutation({
+  // 🔥 CREATE
+  const createMutation = useMutation({
+    mutationFn: createAttribute,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] });
+    },
+  });
+
+  // 🔥 UPDATE
+  const updateMutation = useMutation({
     mutationFn: (data: any) => updateAttribute(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] });
@@ -60,57 +72,14 @@ export const useAttributeDetail = (id: string) => {
     },
   });
 
-  // --- Value Mutations ---
-  const createValueMutation = useMutation({
-    mutationFn: createAttributeValue,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["admin", "attributes", id, "values"],
-      });
-      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] }); // Update count
-    },
-  });
-
-  const updateValueMutation = useMutation({
-    mutationFn: ({ valueId, data }: { valueId: string; data: any }) =>
-      updateAttributeValue(valueId, data),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: ["admin", "attributes", id, "values"],
-      }),
-  });
-
-  const deleteValueMutation = useMutation({
-    mutationFn: deleteAttributeValue,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["admin", "attributes", id, "values"],
-      });
-      queryClient.invalidateQueries({ queryKey: ["admin", "attributes"] }); // Update count
-    },
-  });
-
   return {
     attribute: query.data,
-    values: valuesQuery.data || [],
     isLoading: query.isLoading,
-    isLoadingValues: valuesQuery.isLoading,
-    isError: query.isError || valuesQuery.isError,
-    refetch: () => {
-      query.refetch();
-      valuesQuery.refetch();
-    },
+    isError: query.isError,
 
-    createAttribute: createAttrMutation.mutateAsync,
-    updateAttribute: updateAttrMutation.mutateAsync,
-    isSaving: createAttrMutation.isPending || updateAttrMutation.isPending,
+    createAttribute: createMutation.mutateAsync,
+    updateAttribute: updateMutation.mutateAsync,
 
-    createValue: createValueMutation.mutateAsync,
-    updateValue: updateValueMutation.mutateAsync,
-    deleteValue: deleteValueMutation.mutateAsync,
-    isUpdatingValues:
-      createValueMutation.isPending ||
-      updateValueMutation.isPending ||
-      deleteValueMutation.isPending,
+    isSaving: createMutation.isPending || updateMutation.isPending,
   };
 };
