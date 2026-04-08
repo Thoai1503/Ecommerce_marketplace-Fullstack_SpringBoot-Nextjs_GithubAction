@@ -567,10 +567,13 @@ export default function CheckoutPage() {
     }
   }, [selectedAddressId, addresses]);
 
-  const handleConfirmPayment = () =>
-    alert("Đã xác nhận phương thức thanh toán!");
-  const handleChangeMethod = () =>
-    alert("Chuyển sang chọn phương thức khác...");
+  const handleConfirmPayment = (method: string) => {
+    setPaymentInfo((prev: any) => ({ ...prev, method }));
+    alert(`Xac nhan thanh toan bang: ${method.toUpperCase()}`);
+  };
+  const handlePaymentMethodChange = (method: string) => {
+    setPaymentInfo((prev: any) => ({ ...prev, method }));
+  };
 
   const handleShippingOptionChange = async (
     shopId: number,
@@ -741,7 +744,7 @@ export default function CheckoutPage() {
             formatCurrency={formatCurrency}
             onShippingOptionChange={handleShippingOptionChange}
             onConfirmPayment={handleConfirmPayment}
-            onChangePaymentMethod={handleChangeMethod}
+            onPaymentMethodChange={handlePaymentMethodChange}
           />
 
           <CheckoutOrderSummary

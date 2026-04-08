@@ -1,6 +1,14 @@
 "use client";
 
-import { Check, CheckCircle, Truck, Wallet } from "lucide-react";
+import React from "react";
+import {
+  Check,
+  CheckCircle,
+  Truck,
+  Wallet,
+  CreditCard,
+  Banknote,
+} from "lucide-react";
 import { CartItem, GroupedCartByShop } from "@/validators/cart";
 import AddressModal from "@/components/client/checkout_page/AddressModal";
 import {
@@ -8,6 +16,34 @@ import {
   ShippingOption,
   ShippingSelection,
 } from "@/components/client/checkout_page/types";
+
+type PaymentMethod = "cod" | "vnpay" | "bank";
+
+const PAYMENT_OPTIONS: {
+  id: PaymentMethod;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+}[] = [
+  {
+    id: "cod",
+    label: "Thanh toán khi nhận hàng (COD)",
+    description: "Trả tiền mặt khi nhận hàng tại nhà.",
+    icon: <Banknote size={24} color="#22c55e" strokeWidth={1.5} />,
+  },
+  {
+    id: "vnpay",
+    label: "VNPay",
+    description: "Thanh toán qua cổng VNPay (ATM, QR, thẻ quốc tế).",
+    icon: <CreditCard size={24} color="#137fec" strokeWidth={1.5} />,
+  },
+  {
+    id: "bank",
+    label: "Chuyển khoản ngân hàng",
+    description: "Chuyển khoản trực tiếp qua tài khoản ngân hàng.",
+    icon: <Wallet size={24} color="#f59e0b" strokeWidth={1.5} />,
+  },
+];
 
 interface CheckoutLeftStepsProps {
   styles: Record<string, React.CSSProperties>;
@@ -29,8 +65,8 @@ interface CheckoutLeftStepsProps {
   shippingOptions: ShippingOption[];
   formatCurrency: (amount: number) => string;
   onShippingOptionChange: (shopId: number, optionId: string) => void;
-  onConfirmPayment: () => void;
-  onChangePaymentMethod: () => void;
+  onConfirmPayment: (method: PaymentMethod) => void;
+  onPaymentMethodChange?: (method: PaymentMethod) => void;
 }
 
 export default function CheckoutLeftSteps({
@@ -51,11 +87,20 @@ export default function CheckoutLeftSteps({
   formatCurrency,
   onShippingOptionChange,
   onConfirmPayment,
-  onChangePaymentMethod,
+  onPaymentMethodChange,
 }: CheckoutLeftStepsProps) {
+  const [selectedPayment, setSelectedPayment] =
+    React.useState<PaymentMethod>("cod");
+
+  const handleSelectPayment = (method: PaymentMethod) => {
+    setSelectedPayment(method);
+    onPaymentMethodChange?.(method);
+  };
+
   return (
     <div className="col-12 col-lg-7">
       <div className="d-flex flex-column gap-3">
+        {/* ── BƯỚC 1: Địa chỉ nhận hàng ── */}
         <section style={styles.cardCompleted}>
           <div className="d-flex align-items-start justify-content-between">
             <div className="d-flex gap-3 flex-grow-1">
@@ -93,81 +138,10 @@ export default function CheckoutLeftSteps({
           </div>
         </section>
 
-        <section style={styles.cardCompleted}>
-          <div className="d-flex align-items-start justify-content-between">
-            <div className="d-flex gap-3 flex-grow-1">
-              <div style={styles.stepDone}>
-                <Check size={12} strokeWidth={3} />
-              </div>
-              <div className="flex-grow-1">
-                <h3 style={styles.stepTitle}>Phương thức vận chuyển</h3>
-                <p
-                  className="text-muted"
-                  style={{ fontSize: 11, marginBottom: 12 }}
-                >
-                  Chọn phương thức vận chuyển cho từng cửa hàng ở bước kiểm tra
-                  sản phẩm
-                </p>
-                <div className="d-flex flex-column gap-2">
-                  {Object.entries(groupedByShop).map(([shopIdStr, group]) => {
-                    const shopId = Number(shopIdStr);
-                    const selectedOptionId =
-                      shippingSelections[shopId] || "standard";
-                    const selectedOption = getSelectedShippingOption(
-                      shopId,
-                      selectedOptionId,
-                    );
-
-                    return (
-                      <div
-                        key={shopId}
-                        style={{
-                          background: "#f8fafc",
-                          borderRadius: 6,
-                          padding: "8px 12px",
-                          fontSize: 11,
-                        }}
-                      >
-                        <div className="d-flex justify-content-between align-items-center">
-                          <div>
-                            <span className="fw-bold">
-                              {group.shop?.shopName}
-                            </span>
-                            <span
-                              className="text-muted ms-2"
-                              style={{ fontSize: 10 }}
-                            >
-                              {selectedOption?.name}
-                            </span>
-                          </div>
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 800,
-                              color:
-                                selectedOption?.fee === 0
-                                  ? "#22c55e"
-                                  : "#137fec",
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            {selectedOption?.fee === 0
-                              ? "Miễn phí"
-                              : formatCurrency(selectedOption?.fee || 0)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
+        {/* ── BƯỚC 2: Kiểm tra kiện hàng & chọn hãng vận chuyển ── */}
         <section style={styles.cardActive}>
           <div className="d-flex gap-3">
-            <div style={styles.stepActive}>3</div>
+            <div style={styles.stepActive}>2</div>
             <div className="flex-grow-1">
               <h3
                 style={{
@@ -176,70 +150,7 @@ export default function CheckoutLeftSteps({
                   letterSpacing: "0.03em",
                 }}
               >
-                Phương thức thanh toán
-              </h3>
-              <p className="text-muted mb-4" style={{ fontSize: 12 }}>
-                Xác nhận phương thức thanh toán ưu tiên của bạn.
-              </p>
-              <div style={styles.paymentBox} className="mb-4">
-                <div className="d-flex align-items-center gap-3">
-                  <div style={styles.paymentIconBox}>
-                    <Wallet size={28} color="#137fec" strokeWidth={1.5} />
-                  </div>
-                  <div>
-                    <p
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 800,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.07em",
-                        color: "#64748b",
-                      }}
-                      className="mb-0"
-                    >
-                      Thanh toán qua
-                    </p>
-                    <p
-                      style={{ fontSize: 18, fontWeight: 800 }}
-                      className="mb-0"
-                    >
-                      Vi Momo (•••• 567)
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <p className="fw-semibold mb-3" style={{ fontSize: 13 }}>
-                  Đây có phải là phương thức thanh toán bạn muốn sử dụng?
-                </p>
-                <div className="d-flex flex-column flex-sm-row gap-2">
-                  <button
-                    style={styles.btnPrimary}
-                    className="flex-fill d-flex align-items-center justify-content-center gap-2"
-                    onClick={onConfirmPayment}
-                  >
-                    XÁC NHẬN &amp; TIẾP TỤC
-                    <CheckCircle size={16} strokeWidth={2} />
-                  </button>
-                  <button
-                    style={styles.btnSecondary}
-                    className="flex-fill"
-                    onClick={onChangePaymentMethod}
-                  >
-                    CHỌN PHƯƠNG THỨC KHÁC
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section style={styles.cardDefault}>
-          <div className="d-flex gap-3">
-            <div style={styles.stepPending}>4</div>
-            <div className="flex-grow-1">
-              <h3 style={styles.stepTitle} className="mb-3">
-                Kiểm tra sản phẩm (
+                Kiểm tra kiện hàng &amp; chọn hãng vận chuyển (
                 {Object.values(groupedByShop).reduce(
                   (n, g) => n + g.items.length,
                   0,
@@ -373,7 +284,7 @@ export default function CheckoutLeftSteps({
                             className="me-2"
                             style={{ display: "inline" }}
                           />
-                          Chọn phương thức vận chuyển
+                          Chọn hãng vận chuyển
                         </p>
                         <div
                           style={{
@@ -463,6 +374,114 @@ export default function CheckoutLeftSteps({
                   Vui lòng rà soát kỹ các mặt hàng trước khi thanh toán
                 </span>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── BƯỚC 3: Phương thức thanh toán (bước cuối) ── */}
+        <section style={styles.cardDefault}>
+          <div className="d-flex gap-3">
+            <div style={styles.stepPending}>3</div>
+            <div className="flex-grow-1">
+              <h3
+                style={{
+                  ...styles.stepTitle,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.03em",
+                }}
+              >
+                Phương thức thanh toán
+              </h3>
+              <p className="text-muted mb-3" style={{ fontSize: 12 }}>
+                Chọn phương thức thanh toán phù hợp với bạn.
+              </p>
+
+              <div className="d-flex flex-column gap-2 mb-4">
+                {PAYMENT_OPTIONS.map((opt) => {
+                  const isSelected = selectedPayment === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => handleSelectPayment(opt.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                        background: isSelected
+                          ? "rgba(19,127,236,0.05)"
+                          : "#f8fafc",
+                        border: isSelected
+                          ? "2px solid #137fec"
+                          : "2px solid #e2e8f0",
+                        borderRadius: 10,
+                        padding: "12px 16px",
+                        width: "100%",
+                        textAlign: "left",
+                        cursor: "pointer",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 8,
+                          background: "white",
+                          boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {opt.icon}
+                      </div>
+                      <div className="flex-grow-1">
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: isSelected ? "#137fec" : "#1e293b",
+                          }}
+                        >
+                          {opt.label}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "#94a3b8",
+                            marginTop: 2,
+                          }}
+                        >
+                          {opt.description}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: "50%",
+                          border: isSelected
+                            ? "5px solid #137fec"
+                            : "2px solid #cbd5e1",
+                          flexShrink: 0,
+                          transition: "all 0.15s",
+                        }}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                style={styles.btnPrimary}
+                className="w-100 d-flex align-items-center justify-content-center gap-2"
+                onClick={() => onConfirmPayment(selectedPayment)}
+              >
+                XÁC NHẬN THANH TOÁN
+                <CheckCircle size={16} strokeWidth={2} />
+              </button>
             </div>
           </div>
         </section>
