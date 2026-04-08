@@ -11,7 +11,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { API_URL } from "@/helper/api";
 
-const API_BASE = "http://localhost:8080/api";
+const API_BASE = "http://localhost:8000/api";
 
 // Token storage keys
 const TOKEN_KEYS = {

@@ -22,6 +22,10 @@ ENV JAVA_OPTS=""
 # Copy JAR from builder
 COPY --from=builder /workspace/target/*.jar ./app.jar
 
+<<<<<<< HEAD:OrderService/Dockerfile
+EXPOSE 8002
+=======
 EXPOSE 8007
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3:logistic-service/Dockerfile
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]

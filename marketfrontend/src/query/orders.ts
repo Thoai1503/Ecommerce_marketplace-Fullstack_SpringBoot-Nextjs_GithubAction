@@ -5,6 +5,6 @@ import { getOrders } from '@/service/orders';
 export const ordersQuery = {
   all: () => queryOptions({
     queryKey: ['admin', 'orders'],
-    queryFn: getOrders,
+    queryFn:() => getOrders(),
   }),
 };
