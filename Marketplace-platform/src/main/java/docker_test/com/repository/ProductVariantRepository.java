@@ -39,7 +39,7 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 							PreparedStatement ps = con.prepareStatement(sql)){
 						  ps.setInt(1, productId);
 						  ResultSet rs = ps.executeQuery();
-			             
+						  																																																																					
 						  while(rs.next()) {
 							  ProductVariant productVariant = new ProductVariant();
 							  productVariant.setImage_url(rs.getString("image_url"));
@@ -95,7 +95,34 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 
 	@Override
 	public ProductVariant GetById(int id) {
-		// TODO Auto-generated method stub
+	
+		System.out.println("id: "+id);
+		String sql = "select * from product_variant where id =?";
+		try(Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)){
+			  ps.setInt(1, id);
+			  ResultSet rs = ps.executeQuery();
+			 
+			  if(rs.next()) {
+				  ProductVariant productVariant = new ProductVariant();
+				  productVariant.setId(rs.getInt("id"));
+				  productVariant.setImage_url(rs.getString("image_url"));
+				  productVariant.setPrice(rs.getDouble("price"));
+				  productVariant.setProduct_id(rs.getInt("product_id"));
+				  productVariant.setWeight(rs.getLong("weight"));
+				  productVariant.setHeight(rs.getLong("height"));
+				  productVariant.setWidth(rs.getLong("width"));
+				  productVariant.setStock_quantity(rs.getInt("stock_quantity"));
+				  productVariant.setVariant_name(rs.getString("variant_name"));
+				 
+				  return productVariant;
+				  
+			  }
+		}
+		catch(Exception ex) {
+			ex.printStackTrace();
+		}
+		
 		return null;
 	}
 

@@ -23,4 +23,16 @@ public class AddressController {
         
         return ResponseEntity.ok(addresses);
     }
+    @GetMapping("/shop/{shopId}")
+    public ResponseEntity<Address> getAddressByShopId(@PathVariable long shopId) {
+		Address address = addressService.getAddressByShopId(shopId);
+		
+		if (address != null) {
+			LOGGER.info("Retrieved address for shop ID: {} with recipient name: {} and address line: {}", shopId, address.getRecipientName(), address.getAddressLine());
+			return ResponseEntity.ok(address);
+		} else {
+			LOGGER.warn("No address found for shop ID: {}", shopId);
+			return ResponseEntity.notFound().build();
+		}
+	}
 }

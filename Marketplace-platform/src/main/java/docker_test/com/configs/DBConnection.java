@@ -51,7 +51,15 @@ public final class DBConnection {
             config.addDataSourceProperty("cachePrepStmts", "true");
             config.addDataSourceProperty("prepStmtCacheSize", "250");
             config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-            config.setMaximumPoolSize(10); // You can adjust pool size as needed
+            // Keep pool small to avoid exhausting MySQL max_connections across services
+            String poolSizeEnv = System.getenv("DB_POOL_SIZE");
+            int poolSize = (poolSizeEnv != null && !poolSizeEnv.isBlank()) ? Integer.parseInt(poolSizeEnv) : 5;
+            config.setMaximumPoolSize(poolSize);
+            config.setMinimumIdle(2);
+            config.setConnectionTimeout(20000);
+            config.setIdleTimeout(300000);
+            config.setMaxLifetime(900000);	
+            config.setConnectionTestQuery("SELECT 1");
             dataSource = new HikariDataSource(config);
         } catch (Exception e) {
             throw new RuntimeException("❌ Lỗi load DB config hoặc HikariCP", e);

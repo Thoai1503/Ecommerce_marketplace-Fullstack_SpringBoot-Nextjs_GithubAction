@@ -8,7 +8,7 @@ export const getAddressesByUserId = async (
   return response.data;
 };
 
-interface AddressResponse {
+export interface AddressResponse {
   ward: number;
   district: number;
   city: number;
@@ -21,3 +21,10 @@ interface AddressResponse {
   updatedAt: string;
   userId: number;
 }
+
+export const getAddressByShopId = async (
+  shopId: number,
+): Promise<AddressResponse> => {
+  const response = await http.get(`/addresses/shop/${shopId}`);
+  return response.data;
+};

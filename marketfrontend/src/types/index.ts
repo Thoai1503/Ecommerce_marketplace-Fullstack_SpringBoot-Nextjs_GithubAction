@@ -368,3 +368,28 @@ export interface TopProduct {
   stock: number;
   totalRevenue: number;
 }
+
+export interface CalculateFeePayload {
+  from_district_id: number;
+  from_ward_code: string;
+  service_id?: number;
+  service_type_id?: number | null;
+  to_district_id: number;
+  to_ward_code: string;
+  height: number;
+  length: number;
+  weight: number;
+  width: number;
+  insurance_value?: number;
+  cod_failed_amount: number;
+  coupon: null;
+  items: Package[];
+}
+export interface Package {
+  name: string;
+  quantity: number;
+  height: number;
+  weight: number;
+  length: number;
+  width: number;
+}
