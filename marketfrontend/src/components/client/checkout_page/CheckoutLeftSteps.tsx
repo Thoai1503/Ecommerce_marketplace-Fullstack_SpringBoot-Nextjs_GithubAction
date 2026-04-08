@@ -12,10 +12,10 @@ import {
 import { CartItem, GroupedCartByShop } from "@/validators/cart";
 import AddressModal from "@/components/client/checkout_page/AddressModal";
 import {
-  Address,
   ShippingOption,
   ShippingSelection,
 } from "@/components/client/checkout_page/types";
+import type { Address } from "@/components/client/checkout_page/types";
 
 type PaymentMethod = "cod" | "vnpay" | "bank";
 

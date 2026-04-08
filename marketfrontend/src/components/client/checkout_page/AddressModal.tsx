@@ -3,6 +3,7 @@ import { useUserAuth } from "@/context/UserAuthContext";
 import { useCreateUserAddress } from "@/hooks/useAddresses";
 
 import { District, Province, Ward } from "@/validators/addressAPIModel";
+import type { Address } from "@/components/client/checkout_page/types";
 import { useQuery } from "@tanstack/react-query";
 import { message } from "antd";
 import {
@@ -18,17 +19,6 @@ import {
   X,
 } from "lucide-react";
 import React, { useState } from "react";
-
-interface Address {
-  id: number;
-  name: string;
-  phone: string;
-  ward: number;
-  district: number;
-  city: number;
-  address: string;
-  isDefault: number; // 1 là mặc định, 0 là không
-}
 
 interface AddressModalProps {
   setShowAddressPanel: React.Dispatch<React.SetStateAction<boolean>>;
