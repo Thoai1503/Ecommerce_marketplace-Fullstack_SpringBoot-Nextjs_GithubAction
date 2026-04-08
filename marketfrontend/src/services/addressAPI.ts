@@ -16,12 +16,6 @@ export const getAllProvinces = async (): Promise<Province[]> => {
     });
 };
 
-<<<<<<< HEAD
-export const getDistricts = async (provinceId: number): Promise<any> => {
-  return await addressAPI
-    .get(`/v1/p/${provinceId}?depth=2`)
-    .then((res) => res.data)
-=======
 export const getDistricts = async (provinceId: number): Promise<District[]> => {
   return await addressAPI
     .get(`${PROVINCE_API}/district?province_id=${provinceId}`, {
@@ -30,18 +24,11 @@ export const getDistricts = async (provinceId: number): Promise<District[]> => {
       },
     })
     .then((res) => res.data.data)
->>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
     .catch((error) => {
       throw error;
     });
 };
 
-<<<<<<< HEAD
-export const getWards = async (districtId: number): Promise<any> => {
-  return await addressAPI
-    .get(`/v1/d/${districtId}?depth=2`)
-    .then((res) => res.data)
-=======
 export const getWards = async (districtId: number): Promise<Ward[]> => {
   return await addressAPI
     .get(`${PROVINCE_API}/ward?district_id=${districtId}`, {
@@ -50,7 +37,6 @@ export const getWards = async (districtId: number): Promise<Ward[]> => {
       },
     })
     .then((res) => res.data.data)
->>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
     .catch((error) => {
       throw error;
     });

@@ -19,31 +19,31 @@ export interface OrderResponse {
 
 const mapOrder = (o: any): Order => {
   return {
-    id: o.orderId?.toString() || o.id?.toString(),
+    id: (o.orderId || o.id)?.toString(),
 
-    orderCode: o.orderNumber,
+    orderCode: o.orderNumber || "",
 
-    customerName: "Unknown", // chưa có trong DB
+    customerName: "Customer",
     customerEmail: "",
     customerPhone: "",
 
     shippingAddress: "",
 
-    totalAmount: o.finalAmount,
-    subtotalAmount: o.totalAmount,
-    discountAmount: o.discountAmount,
-    shippingAmount: o.shippingFee,
+    totalAmount: o.finalAmount || 0,
+    subtotalAmount: o.totalAmount || 0,
+    discountAmount: o.discountAmount || 0,
+    shippingAmount: o.shippingFee || 0,
     taxAmount: 0,
 
     itemsCount: 0,
 
-    paymentStatus: o.paymentStatus?.toUpperCase(),
-    paymentMethod: o.paymentMethod,
+    paymentStatus: (o.paymentStatus || "pending").toUpperCase(),
+    paymentMethod: o.paymentMethod || "",
 
     transactionId: "",
     deliveryNumber: o.trackingNumber || "",
 
-    status: o.orderStatus?.toUpperCase(),
+    status: (o.orderStatus || "pending").toUpperCase(),
 
     priority: "NORMAL",
 
@@ -268,9 +268,11 @@ const mapOrder = (o: any): Order => {
 export const getOrders = async () => {
   const res = await http2("/admin/orders");
 
+  console.log("Raw orders response:", res);
+
   return {
     ...res,
-    orders: res.orders.map(mapOrder)
+    orders: (res.orders || []).map(mapOrder)
   };
 };
 

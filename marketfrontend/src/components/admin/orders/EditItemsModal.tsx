@@ -1,14 +1,8 @@
 "use client";
 
-<<<<<<< HEAD
-import React, { useState, useMemo } from 'react';
-import { X, Minus, Plus, Trash2, Save, ShoppingBag } from 'lucide-react';
-import { Order, OrderItem } from '@/types/index';
-=======
 import React, { useState, useMemo } from "react";
 import { X, Minus, Plus, Trash2, Save, ShoppingBag } from "lucide-react";
 import { Order, OrderItem } from "@/types/index";
->>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
 // import { updateOrderItems } from '@/service/orders';
 
 interface EditItemsModalProps {
@@ -162,11 +156,7 @@ export default function EditItemsModal({
             >
               Hủy bỏ
             </button>
-<<<<<<< HEAD
-            <button 
-=======
             <button
->>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
               // onClick={handleSave}
               disabled={isSaving}
               className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-2xl shadow-lg shadow-blue-500/20 transition-all border-0 disabled:opacity-50"

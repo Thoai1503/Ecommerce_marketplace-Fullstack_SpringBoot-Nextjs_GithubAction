@@ -83,22 +83,14 @@ export const useAddProductSeller = (
         original_price: 0,
         price: 0,
       });
-<<<<<<< HEAD
-      createProductVariant({
-=======
       createVariant({
->>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
         id: 0,
         product_id: data.id,
         variant_name: data.product_name,
         sku: `SKU-${data.id}`,
         price: data.original_price || 0,
         stock_quantity: data.stock_quantity || 0,
-<<<<<<< HEAD
-        image_url: "",
-=======
         image_url: data.image_url || "",
->>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
       });
     },
     onError: (error) => {
