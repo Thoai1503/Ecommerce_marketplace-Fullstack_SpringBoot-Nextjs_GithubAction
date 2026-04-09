@@ -695,7 +695,9 @@ export default function CheckoutPage() {
         product_name: item?.product?.name || "",
         variant_name: item?.productVariant?.variantName || "",
         quantity: item?.quantity || 0,
-        price: item?.productVariant?.price || 0,
+        price:
+          (item?.productVariant?.price || 0) +
+          (shippingFees[item?.product?.shop?.id || 0] || 0),
       })) as IOrderItem[],
       note: "",
       tracking_number: "",
