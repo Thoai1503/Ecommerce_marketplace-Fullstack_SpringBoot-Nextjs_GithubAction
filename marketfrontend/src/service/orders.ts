@@ -347,15 +347,60 @@ export const mapOrder = (o: any): Order => {
 //   return orders.find(o => o.id === id) || orders[0];
 // };
 
-export const getOrders = async () => {
-  const res = await http2("/api/admin/orders");
+/**
+ * Fetch orders with optional filters and pagination
+ * @param filters Object containing status, search, paymentStatus, dates, amounts, sortBy, sortOrder, page, size
+ * @returns OrderResponse with mapped orders
+ */
+export const getOrdersWithFilters = async (
+  filters: {
+    status?: string;
+    search?: string;
+    paymentStatus?: string;
+    startDate?: string;
+    endDate?: string;
+    minAmount?: number;
+    maxAmount?: number;
+    sortBy?: string;
+    sortOrder?: string;
+    page?: number;
+    size?: number;
+  } = {},
+) => {
+  const params = new URLSearchParams();
 
-  console.log("Raw orders response:", res);
+  // Add non-empty filters to query params
+  if (filters.status && filters.status !== "ALL")
+    params.set("status", filters.status);
+  if (filters.search) params.set("search", filters.search);
+  if (filters.paymentStatus && filters.paymentStatus !== "all")
+    params.set("paymentStatus", filters.paymentStatus);
+  if (filters.startDate) params.set("startDate", filters.startDate);
+  if (filters.endDate) params.set("endDate", filters.endDate);
+  if (filters.minAmount !== undefined && filters.minAmount > 0)
+    params.set("minAmount", filters.minAmount.toString());
+  if (filters.maxAmount !== undefined && filters.maxAmount > 0)
+    params.set("maxAmount", filters.maxAmount.toString());
+  if (filters.sortBy) params.set("sortBy", filters.sortBy);
+  if (filters.sortOrder) params.set("sortOrder", filters.sortOrder);
+  if (filters.page) params.set("page", filters.page.toString());
+  if (filters.size) params.set("size", filters.size.toString());
+
+  const queryString = params.toString();
+  const url = `/api/admin/orders${queryString ? `?${queryString}` : ""}`;
+
+  const res = await http2(url);
+
+  console.log("Orders response with filters:", res);
 
   return {
     ...res,
     orders: (res.orders || []).map(mapOrder),
   };
+};
+
+export const getOrders = async () => {
+  return getOrdersWithFilters();
 };
 
 export const getOrderById = async (id: string): Promise<Order> => {

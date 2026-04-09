@@ -93,7 +93,7 @@ public class OrderRepository implements IRepositories<Order>{
 	        direction = "DESC";
 	    }
 
-//	    sql.append("ORDER BY ").append(sortColumn).append(" ").append(direction);
+	    sql.append("ORDER BY ").append(sortColumn).append(" ").append(direction);
 
 	    // Pagination
 	    if (page < 1) page = 1;
