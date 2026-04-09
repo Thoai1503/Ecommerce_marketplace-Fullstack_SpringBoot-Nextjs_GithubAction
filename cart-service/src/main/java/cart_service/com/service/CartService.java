@@ -32,6 +32,17 @@ public class CartService {
   public void removeProduct(Long userId, Long productId) {
       cartRepository.deleteByUserIdAndProductId(userId, productId);
   }
+
+  public void updateQuantity(Long cartId, int quantity) {
+      Cart cart = cartRepository.findById(cartId)
+          .orElseThrow(() -> new RuntimeException("Cart item not found: " + cartId));
+      cart.setQuantity(quantity);
+      cartRepository.save(cart);
+  }
+
+  public void deleteById(Long cartId) {
+      cartRepository.deleteById(cartId);
+  }
   public Cart addToCart(CartDTO cartDto) {
 		Cart existedCartItem = cartRepository.findByProductVariant_IdAndUserId(cartDto.getVariantId(),cartDto.getUserId());
 		Cart cart = new Cart();

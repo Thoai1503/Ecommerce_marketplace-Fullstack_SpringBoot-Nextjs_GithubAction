@@ -17,6 +17,7 @@ type EnrichedCartItem = CartStateItem & {
   width?: number;
   height?: number;
   weight?: number;
+  stockQuantity?: number;
 };
 
 const ShoppingCart: React.FC = () => {
@@ -26,6 +27,9 @@ const ShoppingCart: React.FC = () => {
 
   // State lưu danh sách cartItems từ API + selected flag
   const [cartItems, setCartItems] = useState<CartStateItem[]>([]);
+  // Track items đang được update/delete để disable tương tác
+  const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
+  const [stockWarning, setStockWarning] = useState<Record<number, string>>({});
 
   // Sync dữ liệu từ API vào state khi data thay đổi
   useEffect(() => {
@@ -61,6 +65,9 @@ const ShoppingCart: React.FC = () => {
         width: variantData?.width ?? 0,
         height: variantData?.height ?? 0,
         weight: variantData?.weight ?? 0,
+        // Ưu tiên data fresh từ variantQuery, fallback về data gốc trong cartItem
+        stockQuantity:
+          variantData?.stockQuantity ?? item.productVariant?.stockQuantity ?? 0,
       };
     });
   }, [cartItems, variantQueries]);
@@ -176,18 +183,82 @@ const ShoppingCart: React.FC = () => {
   };
 
   // ===== CRUD =====
-  const updateQuantity = (itemId: number, delta: number) => {
+  const updateQuantity = async (itemId: number, delta: number) => {
+    const currentItem = enrichedCartItems.find((i) => i.id === itemId);
+    if (!currentItem) return;
+    if (updatingItems.has(itemId)) return;
+
+    const stock = currentItem.stockQuantity ?? Infinity;
+    const rawQty = Math.max(1, currentItem.quantity + delta);
+    const newQty = delta > 0 ? Math.min(rawQty, stock) : rawQty;
+
+    if (delta > 0 && rawQty > stock) {
+      setStockWarning((prev) => ({
+        ...prev,
+        [itemId]: `Chi con ${stock} san pham trong kho`,
+      }));
+    } else {
+      setStockWarning((prev) => {
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
+      });
+    }
+
+    if (newQty === currentItem.quantity) return;
+
+    // Optimistic update
     setCartItems((prev) =>
       prev.map((item) =>
-        item.id === itemId
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item,
+        item.id === itemId ? { ...item, quantity: newQty } : item,
       ),
     );
+    setUpdatingItems((prev) => new Set(prev).add(itemId));
+    try {
+      await Cart.updateCartItem(itemId, newQty);
+    } catch {
+      // Rollback on error
+      setCartItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId
+            ? { ...item, quantity: currentItem.quantity }
+            : item,
+        ),
+      );
+    } finally {
+      setUpdatingItems((prev) => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+    }
   };
 
-  const removeItem = (itemId: number) => {
+  const removeItem = async (itemId: number) => {
+    if (updatingItems.has(itemId)) return;
+    setUpdatingItems((prev) => new Set(prev).add(itemId));
+    // Optimistic remove
+    const snapshot = cartItems.find((i) => i.id === itemId);
     setCartItems((prev) => prev.filter((item) => item.id !== itemId));
+    setStockWarning((prev) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
+    try {
+      await Cart.deleteCartItem(itemId);
+    } catch {
+      // Restore item on error
+      if (snapshot) {
+        setCartItems((prev) => [...prev, snapshot]);
+      }
+    } finally {
+      setUpdatingItems((prev) => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+    }
   };
 
   // ===== Suggestions (giữ mock data) =====
@@ -328,9 +399,7 @@ const ShoppingCart: React.FC = () => {
           {/* Shop Groups */}
           {Object.entries(groupedByShop)?.map(([shopIdStr, group]) => {
             const shopId = Number(shopIdStr);
-            const typedItems = group.items as (CartItem & {
-              selected: boolean;
-            })[];
+            const typedItems = group.items as EnrichedCartItem[];
 
             return (
               <div key={shopId} className="card shadow-sm mb-3">
@@ -418,27 +487,65 @@ const ShoppingCart: React.FC = () => {
                             <div className="d-md-none small text-muted mb-1">
                               Số lượng
                             </div>
-                            <div className="btn-group" role="group">
+                            <div
+                              className="btn-group"
+                              role="group"
+                              style={{
+                                opacity: updatingItems.has(item.id) ? 0.6 : 1,
+                              }}
+                            >
                               <button
                                 className="btn btn-outline-secondary btn-sm"
                                 onClick={() => updateQuantity(item.id, -1)}
+                                disabled={
+                                  updatingItems.has(item.id) ||
+                                  item.quantity <= 1
+                                }
                               >
                                 <i className="bi bi-dash"></i>
                               </button>
                               <input
                                 type="text"
                                 className="form-control form-control-sm text-center"
-                                value={item.quantity}
+                                value={
+                                  updatingItems.has(item.id)
+                                    ? "..."
+                                    : item.quantity
+                                }
                                 readOnly
                                 style={{ width: "50px" }}
                               />
                               <button
                                 className="btn btn-outline-secondary btn-sm"
                                 onClick={() => updateQuantity(item.id, 1)}
+                                disabled={
+                                  updatingItems.has(item.id) ||
+                                  item.quantity >=
+                                    (item.stockQuantity ?? Infinity)
+                                }
                               >
                                 <i className="bi bi-plus"></i>
                               </button>
                             </div>
+                            {stockWarning[item.id] && (
+                              <div
+                                className="text-danger mt-1"
+                                style={{ fontSize: "11px" }}
+                              >
+                                <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                                {stockWarning[item.id]}
+                              </div>
+                            )}
+                            {(item.stockQuantity ?? 0) > 0 &&
+                              (item.stockQuantity ?? 0) <= 5 && (
+                                <div
+                                  className="text-warning mt-1"
+                                  style={{ fontSize: "11px" }}
+                                >
+                                  <i className="bi bi-clock-history me-1"></i>
+                                  Con {item.stockQuantity} san pham
+                                </div>
+                              )}
                           </div>
 
                           {/* Subtotal */}
@@ -457,10 +564,19 @@ const ShoppingCart: React.FC = () => {
                           {/* Delete */}
                           <div className="col-6 col-md-3">
                             <button
-                              className="btn btn-link text-muted p-2"
+                              className="btn btn-link text-danger p-2"
                               onClick={() => removeItem(item.id)}
+                              disabled={updatingItems.has(item.id)}
+                              title="Xoa san pham"
                             >
-                              <i className="bi bi-trash"></i>
+                              {updatingItems.has(item.id) ? (
+                                <span
+                                  className="spinner-border spinner-border-sm"
+                                  role="status"
+                                />
+                              ) : (
+                                <i className="bi bi-trash"></i>
+                              )}
                             </button>
                           </div>
                         </div>

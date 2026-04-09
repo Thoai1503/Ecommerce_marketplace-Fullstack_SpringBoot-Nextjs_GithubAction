@@ -9,11 +9,39 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import React, { useState, useMemo } from "react";
 
+type PendingShipmentOrder = {
+  shipmentId: number;
+  orderId: number;
+  buyerName: string;
+  recipient: any;
+  items: any[];
+};
+
+const mapShippingStatusToUiStatus = (shippingStatus?: string) => {
+  switch ((shippingStatus || "").toUpperCase()) {
+    case "PENDING":
+      return "pending_shipment";
+    case "CONFIRMED":
+      return "confirmed";
+    case "SHIPPED":
+      return "shipped";
+    case "IN_TRANSIT":
+      return "in_transit";
+    case "DELIVERED":
+      return "delivered";
+    case "CANCELED":
+    case "CANCELLED":
+      return "cancelled";
+    default:
+      return "pending_shipment";
+  }
+};
+
 const page = () => {
   OrderShipments.setup({ path: "/seller/order-shipment" });
-  const { data: orderShipments } = useQuery<IOrderShipment[]>(
-    OrderShipments.getByShopId(2),
-  );
+  const { data: orderShipments, refetch: refetchOrderShipments } = useQuery<
+    IOrderShipment[]
+  >(OrderShipments.getByShopId(2));
 
   console.log("Order Shipments Data:", JSON.stringify(orderShipments, null, 2));
   const { shop, orders: mockOrders } = useOrderPage();
@@ -22,14 +50,12 @@ const page = () => {
   const combinedOrders = useMemo(() => {
     const apiOrders =
       orderShipments?.map((shipment: any) => ({
+        shipmentId: shipment.shipmentId,
         id: shipment.orderId,
         order_number: shipment.order?.orderNumber,
         order_code: shipment.order?.orderNumber,
         total_price: shipment.order?.finalAmount,
-        status:
-          shipment.shippingStatus === "PENDING"
-            ? "pending_shipment"
-            : "shipped",
+        status: mapShippingStatusToUiStatus(shipment.shippingStatus),
         buyer_name: shipment.recipient?.recipientName,
         orders_items: shipment.items,
         tracking_number: shipment.trackingNumber,
@@ -49,6 +75,41 @@ const page = () => {
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(
     new Set(),
   );
+  const [pendingShipmentOrder, setPendingShipmentOrder] =
+    useState<PendingShipmentOrder | null>(null);
+  const [isConfirmingLogistics, setIsConfirmingLogistics] = useState(false);
+
+  const openPendingShipmentModal = (order: any) => {
+    setPendingShipmentOrder({
+      shipmentId: Number(order.shipmentId),
+      orderId: Number(order.id),
+      buyerName: order.buyer_name || order.recipient?.name || "Khach mua",
+      recipient: order.recipient,
+      items: order.orders_items || [],
+    });
+  };
+
+  const closePendingShipmentModal = () => {
+    if (!isConfirmingLogistics) {
+      setPendingShipmentOrder(null);
+    }
+  };
+
+  const handleConfirmLogistics = async () => {
+    if (!pendingShipmentOrder) return;
+    try {
+      setIsConfirmingLogistics(true);
+      await OrderShipments.confirmPackaged(pendingShipmentOrder.shipmentId);
+      await refetchOrderShipments();
+      setPendingShipmentOrder(null);
+      alert("Logistics da xac nhan dong goi. Tracking code da duoc cap nhat.");
+    } catch (error) {
+      console.error("Confirm logistics failed", error);
+      alert("Khong the xac nhan logistics. Vui long thu lai.");
+    } finally {
+      setIsConfirmingLogistics(false);
+    }
+  };
 
   const toggleExpand = (orderId: string) => {
     setExpandedOrderIds((prev) => {
@@ -350,6 +411,7 @@ const page = () => {
                     <td>
                       <div className="fw-medium text-dark">
                         {order.status === "pending_shipment" && "Chờ xác nhận"}
+                        {order.status === "confirmed" && "Đã xác nhận"}
                         {order.status === "shipped" && "Đã gửi"}
                         {order.status === "in_transit" && "Đang vận chuyển"}
                         {order.status === "delivered" && "Đã giao"}
@@ -392,6 +454,25 @@ const page = () => {
                         >
                           Xem chi tiết
                         </a>
+                        {order._source === "api" &&
+                          order.status === "pending_shipment" &&
+                          !order.tracking_number && (
+                            <button
+                              type="button"
+                              className="btn btn-link p-0 text-primary text-decoration-none small text-start"
+                              onClick={() => {
+                                alert(
+                                  "Chờ lấy hàng " +
+                                    order.id +
+                                    " - " +
+                                    order.shipmentId,
+                                );
+                                openPendingShipmentModal(order);
+                              }}
+                            >
+                              Chờ lấy hàng
+                            </button>
+                          )}
                         <a
                           href="#"
                           className="text-primary text-decoration-none small"
@@ -476,6 +557,74 @@ const page = () => {
           </tbody>
         </table>
       </div>
+
+      {pendingShipmentOrder && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+          style={{ background: "rgba(0,0,0,0.45)", zIndex: 1050 }}
+          onClick={closePendingShipmentModal}
+        >
+          <div
+            className="bg-white rounded-3 shadow p-4"
+            style={{ width: "680px", maxWidth: "95vw" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h5 className="mb-3">Xác nhận đóng gói và gửi logistics</h5>
+            <p className="text-muted mb-2">
+              Đơn hàng: <strong>#{pendingShipmentOrder.orderId}</strong>
+            </p>
+            <p className="text-muted mb-2">
+              Người mua: <strong>{pendingShipmentOrder.buyerName}</strong>
+            </p>
+            <p className="text-muted mb-3">
+              Người nhận:{" "}
+              <strong>
+                {pendingShipmentOrder.recipient?.recipientName || "N/A"}
+              </strong>{" "}
+              - {pendingShipmentOrder.recipient?.recipientPhone || "N/A"}
+            </p>
+            <div
+              className="border rounded p-3 mb-3"
+              style={{ maxHeight: "220px", overflowY: "auto" }}
+            >
+              {pendingShipmentOrder.items.length === 0 && (
+                <small className="text-muted">
+                  Không có thông tin sản phẩm.
+                </small>
+              )}
+              {pendingShipmentOrder.items.map((item, idx) => (
+                <div
+                  key={`${item.id ?? idx}-${idx}`}
+                  className="d-flex justify-content-between align-items-center py-1 border-bottom"
+                >
+                  <span>{item.product_name || "Sản phẩm"}</span>
+                  <span>x{item.quantity ?? 1}</span>
+                </div>
+              ))}
+            </div>
+            <div className="d-flex justify-content-end gap-2">
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={closePendingShipmentModal}
+                disabled={isConfirmingLogistics}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleConfirmLogistics}
+                disabled={isConfirmingLogistics}
+              >
+                {isConfirmingLogistics
+                  ? "Đang xác nhận..."
+                  : "Xác nhận logistics"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -4,11 +4,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import docker_test.com.dto.ConfirmPackagedResponseDTO;
 import docker_test.com.dto.OrderShipmentByShopResponseDTO;
+import docker_test.com.model.Order;
+import docker_test.com.model.OrderShipment;
 import docker_test.com.model.OrderItem;
+import docker_test.com.repository.OrderRepository;
 import docker_test.com.repository.OrderItemRepository;
 import docker_test.com.repository.OrderShipmentRepository;
 import docker_test.com.repository.OrderShipmentWithOrderAndRecipientProjection;
@@ -18,11 +25,20 @@ public class OrderShipmentService {
 
     private final OrderShipmentRepository orderShipmentRepository;
     private final OrderItemRepository orderItemRepository;
+        private final OrderRepository orderRepository;
+        private final WebClient webClient;
+
+        @Value("${logistics.service.url:http://localhost:8007}")
+        private String logisticsServiceUrl;
 
     public OrderShipmentService(OrderShipmentRepository orderShipmentRepository,
-                                OrderItemRepository orderItemRepository) {
+                                                                OrderItemRepository orderItemRepository,
+                                                                OrderRepository orderRepository,
+                                                                WebClient webClient) {
         this.orderShipmentRepository = orderShipmentRepository;
-        this.orderItemRepository = orderItemRepository;
+        this.orderItemRepository = orderItemRepository;	
+                this.orderRepository = orderRepository;
+                this.webClient = webClient;
     }
 
         @Transactional(readOnly = true)
@@ -83,5 +99,50 @@ public class OrderShipmentService {
                         itemsByShipmentId.getOrDefault(row.getShipmentId(), List.of())
                 ))
                 .toList();
+    }
+
+    @Transactional
+    public ConfirmPackagedResponseDTO confirmPackagedAndRequestLogistics(Long shipmentId) {
+        OrderShipment shipment = orderShipmentRepository.findById(shipmentId)
+                .orElseThrow(() -> new RuntimeException("Shipment not found: " + shipmentId));
+
+        if (!"PENDING".equalsIgnoreCase(shipment.getShippingStatus())) {
+            throw new RuntimeException("Shipment is not in PENDING status");
+        }
+        System.out.println("Requesting logistics for shipment: " + shipment);
+
+        Map<String, Object> logisticsResponse = webClient.post()
+                .uri(logisticsServiceUrl + "/api/logistics/shipments")
+                .bodyValue(Map.of(
+                        "orderShipmentRefId", shipmentId,
+                        "status", "CONFIRMED"
+                ))
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                .block();
+
+        if (logisticsResponse == null || logisticsResponse.get("trackingCode") == null) {
+            throw new RuntimeException("Logistics did not return tracking code");
+        }
+
+        String trackingCode = String.valueOf(logisticsResponse.get("trackingCode"));
+        String shippingStatus = String.valueOf(logisticsResponse.get("status"));
+
+        shipment.setTrackingNumber(trackingCode);
+        shipment.setShippingStatus(shippingStatus);
+        orderShipmentRepository.save(shipment);
+
+        Order order = orderRepository.findById(shipment.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Order not found: " + shipment.getOrderId()));
+        order.setTrackingNumber(trackingCode);
+        orderRepository.save(order);
+
+        return new ConfirmPackagedResponseDTO(
+                shipment.getId(),
+                shipment.getOrderId(),
+                trackingCode,
+                shippingStatus,
+                "Logistics confirmed. Tracking code updated"
+        );
     }
 }

@@ -19,6 +19,15 @@ export class Cart extends Model {
   static addToCart(payload: ICart) {
     return this.api.post<ICart>({ url: this.path, data: payload });
   }
+  static updateCartItem(cartId: number, quantity: number) {
+    return this.api.put<void>({
+      url: `${this.path}/${cartId}`,
+      data: { quantity },
+    });
+  }
+  static deleteCartItem(cartId: number) {
+    return this.api.delete<void>({ url: `${this.path}/${cartId}` });
+  }
   static getByUserId(userId: number) {
     return {
       queryKey: ["CARTS_BY_USER_ID_QUERY", userId],
