@@ -26,7 +26,7 @@ export const getProductById = async (id: number): Promise<IProduct> => {
 
 export const getAllCategory = async (): Promise<DbCategory[]> => {
   return await http
-    .get("/category")
+    .get("/api/categories")
     .then((res) => res.data)
     .catch((error) => {
       throw error;

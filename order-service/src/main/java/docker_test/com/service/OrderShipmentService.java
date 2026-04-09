@@ -2,6 +2,7 @@ package docker_test.com.service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import docker_test.com.dto.ConfirmPackagedResponseDTO;
 import docker_test.com.dto.OrderShipmentByShopResponseDTO;
+import docker_test.com.dto.ShipmentStatusUpdatedEvent;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderShipment;
 import docker_test.com.model.OrderItem;
@@ -145,4 +147,43 @@ public class OrderShipmentService {
                 "Logistics confirmed. Tracking code updated"
         );
     }
+
+        @Transactional
+        public void applyShipmentStatusEvent(ShipmentStatusUpdatedEvent event) {
+                if (event == null || event.getTrackingCode() == null || event.getTrackingCode().isBlank()) {
+                        throw new IllegalArgumentException("tracking_code is required");
+                }
+                if (event.getStatus() == null || event.getStatus().isBlank()) {
+                        throw new IllegalArgumentException("status is required");
+                }
+
+                String normalizedStatus = event.getStatus().toUpperCase(Locale.ROOT);
+
+                OrderShipment shipment = orderShipmentRepository.findFirstByTrackingNumber(event.getTrackingCode())
+                                .orElseThrow(() -> new RuntimeException("Shipment not found by tracking code: " + event.getTrackingCode()));
+
+                shipment.setShippingStatus(normalizedStatus);
+                orderShipmentRepository.save(shipment);
+
+                Order order = orderRepository.findById(shipment.getOrderId())
+                                .orElseThrow(() -> new RuntimeException("Order not found: " + shipment.getOrderId()));
+                order.setTrackingNumber(event.getTrackingCode());
+
+                String mappedOrderStatus = mapShipmentStatusToOrderStatus(normalizedStatus);
+                if (mappedOrderStatus != null) {
+                        order.setOrderStatus(mappedOrderStatus);
+                }
+                orderRepository.save(order);
+        }
+
+        private String mapShipmentStatusToOrderStatus(String shipmentStatus) {
+                return switch (shipmentStatus) {
+                        case "PENDING" -> "PENDING";
+                        case "CONFIRMED" -> "CONFIRMED";
+                        case "PICKED_UP", "SHIPPING", "DELIVERING" -> "SHIPPED";
+                        case "DELIVERED" -> "COMPLETED";
+                        case "FAILED", "RETURNED" -> "CANCELED";
+                        default -> null;
+                };
+        }
 }

@@ -1,6 +1,7 @@
 package docker_test.com.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +12,8 @@ import docker_test.com.model.OrderShipment;
 
 @Repository
 public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Long> {
+
+	Optional<OrderShipment> findFirstByTrackingNumber(String trackingNumber);
 
 	@Query(value = """
 			SELECT
