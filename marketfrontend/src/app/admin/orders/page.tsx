@@ -3,6 +3,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useOrders } from "@/hooks/admin/useOrders";
+import { useOrderFilters } from "@/hooks/admin/useOrderFilters";
+import { getOrdersWithFilters } from "@/service/orders";
 import { useToast } from "@/context/ToastContext";
 import {
   Search,
@@ -111,15 +113,68 @@ const PaymentConfig: Record<
 
 export default function OrdersPage() {
   const router = useRouter();
-  const { orders, isLoading, isError, refetch } = useOrders();
   const toast = useToast();
+  const {
+    filters,
+    updateFilter,
+    updatePage,
+    clearFilters: clearAllFilters,
+    getApiParams,
+    isHydrated,
+  } = useOrderFilters();
 
-  const [activeTab, setActiveTab] = useState<"ALL" | OrderStatus>("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
+  // Fetch orders with current filters
+  const [orders, setOrders] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [pagination, setPagination] = useState({
+    totalPages: 1,
+    totalRecords: 0,
+  });
+
+  // Fetch orders whenever filters change
+  useEffect(() => {
+    if (!isHydrated) return; // Wait for URL hydration
+
+    const fetchOrders = async () => {
+      setIsLoading(true);
+      setIsError(false);
+      try {
+        const apiParams = getApiParams();
+        const result = await getOrdersWithFilters(apiParams);
+        setOrders(result.orders || []);
+        setPagination({
+          totalPages: result.totalPages || 1,
+          totalRecords: result.totalRecords || 0,
+        });
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+        setIsError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [filters, isHydrated, getApiParams]);
+
+  const refetch = () => {
+    if (isHydrated) {
+      const fetchOrders = async () => {
+        setIsLoading(true);
+        try {
+          const apiParams = getApiParams();
+          const result = await getOrdersWithFilters(apiParams);
+          setOrders(result.orders || []);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchOrders();
+    }
+  };
+
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
 
   // Modal State
   const [modalConfig, setModalConfig] = useState<{
@@ -137,10 +192,6 @@ export default function OrdersPage() {
     confirmLabel: "Confirm",
     onConfirm: () => {},
   });
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, searchQuery, startDate, endDate]);
 
   // Calculate Pending Stats for Banner
   const pendingOrders = useMemo(
@@ -161,44 +212,11 @@ export default function OrdersPage() {
     return s;
   }, [orders]);
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order: any) => {
-      const matchTab = activeTab === "ALL" || order.status === activeTab;
-      const matchSearch =
-        order.orderCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customerName.toLowerCase().includes(searchQuery.toLowerCase());
-
-      let matchDate = true;
-      if (startDate || endDate) {
-        const orderDate = new Date(order.createdAt).setHours(0, 0, 0, 0);
-        if (startDate) {
-          matchDate =
-            matchDate && orderDate >= new Date(startDate).setHours(0, 0, 0, 0);
-        }
-        if (endDate) {
-          matchDate =
-            matchDate && orderDate <= new Date(endDate).setHours(0, 0, 0, 0);
-        }
-      }
-
-      return matchTab && matchSearch && matchDate;
-    });
-  }, [orders, activeTab, searchQuery, startDate, endDate]);
-
-  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
-  const paginatedOrders = filteredOrders.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
-
   const toggleSelectAll = () => {
-    if (
-      selectedOrders.length === paginatedOrders.length &&
-      paginatedOrders.length > 0
-    ) {
+    if (selectedOrders.length === orders.length && orders.length > 0) {
       setSelectedOrders([]);
     } else {
-      setSelectedOrders(paginatedOrders.map((o: any) => o.id));
+      setSelectedOrders(orders.map((o: any) => o.id));
     }
   };
 
@@ -263,11 +281,17 @@ export default function OrdersPage() {
     );
   };
 
+  const handlePaymentStatusFilterClick = (status: string) => {
+    updateFilter("paymentStatus", status as any);
+  };
+
+  const handleSortChange = (sortBy: string, sortOrder: string) => {
+    updateFilter("sortBy", sortBy as any);
+    updateFilter("sortOrder", sortOrder as any);
+  };
+
   const clearFilters = () => {
-    setSearchQuery("");
-    setStartDate("");
-    setEndDate("");
-    setActiveTab("ALL");
+    clearAllFilters();
   };
 
   return (
@@ -287,7 +311,7 @@ export default function OrdersPage() {
       {/* --- URGENT PENDING BANNER --- */}
       {pendingCount > 0 && (
         <div
-          onClick={() => setActiveTab("PENDING")}
+          onClick={() => updateFilter("status", "PENDING")}
           className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-[24px] p-6 shadow-xl shadow-orange-500/20 text-white relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 group cursor-pointer"
         >
           {/* Decorative Background */}
@@ -340,11 +364,11 @@ export default function OrdersPage() {
         ).map((status) => (
           <button
             key={status}
-            onClick={() => setActiveTab(status)}
-            className={`flex flex-col p-3 lg:p-4 rounded-2xl border transition-all text-left group shadow-sm min-w-[120px] ${activeTab === status ? "bg-blue-600 border-blue-600 text-white shadow-blue-200 shadow-lg" : "bg-white border-slate-100 hover:border-blue-200"}`}
+            onClick={() => updateFilter("status", status)}
+            className={`flex flex-col p-3 lg:p-4 rounded-2xl border transition-all text-left group shadow-sm min-w-[120px] ${filters.status === status ? "bg-blue-600 border-blue-600 text-white shadow-blue-200 shadow-lg" : "bg-white border-slate-100 hover:border-blue-200"}`}
           >
             <p
-              className={`text-[10px] font-black uppercase tracking-widest mb-2 ${activeTab === status ? "text-blue-100" : "text-slate-400"}`}
+              className={`text-[10px] font-black uppercase tracking-widest mb-2 ${filters.status === status ? "text-blue-100" : "text-slate-400"}`}
             >
               {StatusConfig[status].label}
             </p>
@@ -353,11 +377,11 @@ export default function OrdersPage() {
                 {isLoading ? <Skeleton className="h-6 w-8" /> : stats[status]}
               </h4>
               <div
-                className={`p-1.5 rounded-lg ${activeTab === status ? "bg-white/20" : "bg-slate-50"}`}
+                className={`p-1.5 rounded-lg ${filters.status === status ? "bg-white/20" : "bg-slate-50"}`}
               >
                 {React.cloneElement(StatusConfig[status].icon, {
                   size: 14,
-                  className: activeTab === status ? "text-white" : "",
+                  className: filters.status === status ? "text-white" : "",
                 })}
               </div>
             </div>
@@ -375,7 +399,7 @@ export default function OrdersPage() {
                 🛒 Order Management
               </h3>
               <p className="text-xs text-slate-400 font-medium">
-                Hiển thị {filteredOrders.length} đơn hàng
+                Hiển thị {orders.length} đơn hàng
               </p>
             </div>
 
@@ -410,8 +434,8 @@ export default function OrdersPage() {
               />
               <input
                 type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={filters.search}
+                onChange={(e) => updateFilter("search", e.target.value)}
                 placeholder="Tìm mã đơn, tên khách hàng..."
                 className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/10 text-sm font-medium"
               />
@@ -421,8 +445,8 @@ export default function OrdersPage() {
               <div className="relative">
                 <input
                   type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  value={filters.startDate}
+                  onChange={(e) => updateFilter("startDate", e.target.value)}
                   className="pl-3 pr-2 py-2.5 bg-slate-50 border-0 rounded-xl text-sm font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10 h-full"
                 />
               </div>
@@ -430,11 +454,56 @@ export default function OrdersPage() {
               <div className="relative">
                 <input
                   type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  value={filters.endDate}
+                  onChange={(e) => updateFilter("endDate", e.target.value)}
                   className="pl-3 pr-2 py-2.5 bg-slate-50 border-0 rounded-xl text-sm font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10 h-full"
                 />
               </div>
+
+              <select
+                value={filters.paymentStatus}
+                onChange={(e) =>
+                  updateFilter("paymentStatus", e.target.value as any)
+                }
+                className="pl-3 pr-2 py-2.5 bg-slate-50 border-0 rounded-xl text-sm font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10"
+              >
+                <option value="all">Tất cả thanh toán</option>
+                <option value="PAID">Đã thanh toán</option>
+                <option value="UNPAID">Chưa thanh toán</option>
+                <option value="REFUNDED">Hoàn tiền</option>
+              </select>
+
+              <select
+                value={`${filters.sortBy}-${filters.sortOrder}`}
+                onChange={(e) => {
+                  const [sortBy, sortOrder] = e.target.value.split("-");
+                  handleSortChange(sortBy, sortOrder);
+                }}
+                className="pl-3 pr-2 py-2.5 bg-slate-50 border-0 rounded-xl text-sm font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10"
+              >
+                <option value="date-desc">Ngày mới nhất</option>
+                <option value="date-asc">Ngày cũ nhất</option>
+                <option value="amount-desc">Giá cao nhất</option>
+                <option value="amount-asc">Giá thấp nhất</option>
+                <option value="status-asc">Trạng thái A-Z</option>
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={filters.minAmount}
+                onChange={(e) => updateFilter("minAmount", e.target.value)}
+                placeholder="Min"
+                className="px-3 py-2.5 bg-slate-50 border-0 rounded-xl text-sm font-bold text-slate-600 w-20 focus:outline-none focus:ring-2 focus:ring-blue-500/10"
+              />
+              <input
+                type="number"
+                value={filters.maxAmount}
+                onChange={(e) => updateFilter("maxAmount", e.target.value)}
+                placeholder="Max"
+                className="px-3 py-2.5 bg-slate-50 border-0 rounded-xl text-sm font-bold text-slate-600 w-20 focus:outline-none focus:ring-2 focus:ring-blue-500/10"
+              />
             </div>
           </div>
         </div>
@@ -454,19 +523,19 @@ export default function OrdersPage() {
               onAction={() => refetch()}
             />
           </div>
-        ) : filteredOrders.length === 0 ? (
+        ) : orders.length === 0 ? (
           <EmptyState
             title="Không tìm thấy đơn hàng"
             description="Thử thay đổi bộ lọc, từ khóa hoặc kiểm tra khoảng thời gian."
             actionLabel="Xóa bộ lọc"
-            onAction={clearFilters}
+            onAction={() => clearFilters()}
             type="search"
           />
         ) : (
           <>
             {/* MOBILE CARD VIEW */}
             <div className="md:hidden flex flex-col divide-y divide-slate-100">
-              {paginatedOrders.map((order: any) => (
+              {orders.map((order: any) => (
                 <div
                   key={order.id}
                   className="p-4 bg-white hover:bg-slate-50 transition-colors"
@@ -549,9 +618,9 @@ export default function OrdersPage() {
                     <th className="px-4 py-4 w-12 text-center">
                       <div
                         onClick={toggleSelectAll}
-                        className={`w-5 h-5 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-all ${selectedOrders.length === paginatedOrders.length ? "bg-blue-600 text-white" : "bg-white border-2 border-slate-300"}`}
+                        className={`w-5 h-5 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-all ${selectedOrders.length === orders.length ? "bg-blue-600 text-white" : "bg-white border-2 border-slate-300"}`}
                       >
-                        {selectedOrders.length === paginatedOrders.length && (
+                        {selectedOrders.length === orders.length && (
                           <CheckSquare size={14} />
                         )}
                       </div>
@@ -580,7 +649,7 @@ export default function OrdersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {paginatedOrders.map((order: any) => (
+                  {orders.map((order: any) => (
                     <tr
                       key={order.id}
                       className={`hover:bg-slate-50/80 transition-all group ${selectedOrders.includes(order.id) ? "bg-blue-50/40" : ""}`}
@@ -684,11 +753,11 @@ export default function OrdersPage() {
             </div>
 
             <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              totalItems={filteredOrders.length}
-              itemsPerPage={ITEMS_PER_PAGE}
+              currentPage={filters.page}
+              totalPages={pagination.totalPages}
+              onPageChange={updatePage}
+              totalItems={pagination.totalRecords}
+              itemsPerPage={filters.pageSize}
             />
           </>
         )}

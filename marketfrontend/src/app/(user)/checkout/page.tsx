@@ -24,6 +24,7 @@ import { calculateFeeOfLOGS } from "@/service/calculateFeeAPI";
 import { CalculateFeePayload } from "@/types";
 import { set } from "zod";
 import { getAddressByShopId } from "@/service/addresses";
+import { AxiosError } from "axios";
 
 // Hàm fetch districts theo provinceId
 async function fetchDistrictsByProvince(provinceId: number) {
@@ -699,13 +700,22 @@ export default function CheckoutPage() {
       note: "",
       tracking_number: "",
       id: 0,
-    }).then((dt) => {
-      alert(`Đặt hàng thành công! Mã đơn hàng: ${dt.id}`);
-      setPaymentInfo((prev: any) => ({
-        ...prev,
-        orderId: dt.id,
-      }));
-    });
+      // Additional fields for testing rollback
+      // Uncomment the line below to simulate a rollback scenario
+      // cancel_reason: "SIMULATE_ROLLBACK",
+    })
+      .then((dt) => {
+        alert(`Đặt hàng thành công! Mã đơn hàng: ${dt.id}`);
+        setPaymentInfo((prev: any) => ({
+          ...prev,
+          orderId: dt.id,
+        }));
+      })
+      .catch((e: AxiosError) => {
+        const errorMessage =
+          (e.response?.data as any)?.status || "Lỗi không xác định";
+        message.error(`Đặt hàng thất bại: ${errorMessage}`);
+      });
     // setPaymentInfo((prev: any) => ({
     //   ...prev,
     //   orderId: dt.id,

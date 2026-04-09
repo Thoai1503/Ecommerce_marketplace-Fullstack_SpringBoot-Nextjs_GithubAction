@@ -9,10 +9,12 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import docker_test.com.dto.OrderDTO;
 import docker_test.com.dto.OrderItemDTO;
 import docker_test.com.dto.OrderShipmentDTO;
+import docker_test.com.exception.SimulatedRollbackException;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
 import docker_test.com.model.OrderShipment;
@@ -20,11 +22,12 @@ import docker_test.com.publisher.OrderEventPublisher;
 import docker_test.com.repository.OrderItemRepository;
 import docker_test.com.repository.OrderRepository;
 import docker_test.com.repository.OrderShipmentRepository;
-import jakarta.transaction.Transactional;
 
 
 @Service
 public class OrderService {
+
+    private static final String ROLLBACK_TEST_FLAG = "SIMULATE_ROLLBACK";
 	
 //	
 //	private final OrderRepository orderRepository;
@@ -77,7 +80,7 @@ public class OrderService {
 
     // All DB writes + event publish happen in one transaction.
     // If any save fails, the whole operation rolls back.
-  //  @Transactional
+        @Transactional
     public Order placeOrder(OrderDTO dto) {
         log.info("Placing order for user_id={}", dto.getUser_id());
         var itemsByShopIdMap = groupByShopId(dto.getOrders_items());
@@ -85,6 +88,8 @@ public class OrderService {
         Order order = buildOrder(dto);
         Order saved = orderRepository.save(order);
         log.info("Order persisted id={} number={}", saved.getId(), saved.getOrderNumber());
+
+        maybeThrowSimulatedRollback(dto, saved.getId());
 
      
         itemsByShopIdMap.entrySet().forEach(entry -> {
@@ -131,6 +136,14 @@ public class OrderService {
         eventPublisher.publish(dto);
 
         return saved;
+    }
+
+        // This method is for testing transaction rollback. If the cancel_reason is set to "SIMULATE_ROLLBACK", it throws a runtime exception after saving the order, which should trigger a rollback of the entire transaction.
+    private void maybeThrowSimulatedRollback(OrderDTO dto, Long orderId) {
+        if (ROLLBACK_TEST_FLAG.equalsIgnoreCase(dto.getCancel_reason())) {
+            throw new SimulatedRollbackException(
+                    "Rollback test triggered for orderId=" + orderId + ". Remove cancel_reason=SIMULATE_ROLLBACK to process normally.");
+        }
     }
 
     private Order buildOrder(OrderDTO dto) {

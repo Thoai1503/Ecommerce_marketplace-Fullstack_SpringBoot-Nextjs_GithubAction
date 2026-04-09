@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import docker_test.com.dto.OrderShipmentByShopResponseDTO;
 import docker_test.com.model.OrderItem;
@@ -24,6 +25,7 @@ public class OrderShipmentService {
         this.orderItemRepository = orderItemRepository;
     }
 
+        @Transactional(readOnly = true)
     public List<OrderShipmentByShopResponseDTO> getShipmentsByShopId(Long shopId) {
         List<OrderShipmentWithOrderAndRecipientProjection> rows = orderShipmentRepository.findShipmentDetailsByShopId(shopId);
 

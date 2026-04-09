@@ -347,10 +347,51 @@ export const mapOrder = (o: any): Order => {
 //   return orders.find(o => o.id === id) || orders[0];
 // };
 
-export const getOrders = async () => {
-  const res = await http2("/admin/orders");
+/**
+ * Fetch orders with optional filters and pagination
+ * @param filters Object containing status, search, paymentStatus, dates, amounts, sortBy, sortOrder, page, size
+ * @returns OrderResponse with mapped orders
+ */
+export const getOrdersWithFilters = async (
+  filters: {
+    status?: string;
+    search?: string;
+    paymentStatus?: string;
+    startDate?: string;
+    endDate?: string;
+    minAmount?: number;
+    maxAmount?: number;
+    sortBy?: string;
+    sortOrder?: string;
+    page?: number;
+    size?: number;
+  } = {},
+) => {
+  const params = new URLSearchParams();
 
-  console.log("Raw orders response:", res);
+  // Add non-empty filters to query params
+  if (filters.status && filters.status !== "ALL")
+    params.set("status", filters.status);
+  if (filters.search) params.set("search", filters.search);
+  if (filters.paymentStatus && filters.paymentStatus !== "all")
+    params.set("paymentStatus", filters.paymentStatus);
+  if (filters.startDate) params.set("startDate", filters.startDate);
+  if (filters.endDate) params.set("endDate", filters.endDate);
+  if (filters.minAmount !== undefined && filters.minAmount > 0)
+    params.set("minAmount", filters.minAmount.toString());
+  if (filters.maxAmount !== undefined && filters.maxAmount > 0)
+    params.set("maxAmount", filters.maxAmount.toString());
+  if (filters.sortBy) params.set("sortBy", filters.sortBy);
+  if (filters.sortOrder) params.set("sortOrder", filters.sortOrder);
+  if (filters.page) params.set("page", filters.page.toString());
+  if (filters.size) params.set("size", filters.size.toString());
+
+  const queryString = params.toString();
+  const url = `/api/admin/orders${queryString ? `?${queryString}` : ""}`;
+
+  const res = await http2(url);
+
+  console.log("Orders response with filters:", res);
 
   return {
     ...res,
@@ -358,8 +399,12 @@ export const getOrders = async () => {
   };
 };
 
+export const getOrders = async () => {
+  return getOrdersWithFilters();
+};
+
 export const getOrderById = async (id: string): Promise<Order> => {
-  const res = await http2(`/admin/orders/${id}`);
+  const res = await http2(`/api/admin/orders/${id}`);
   return mapOrder(res);
 };
 
@@ -372,7 +417,7 @@ export const updateOrderStatus = async (
   id: string,
   status: OrderStatus,
 ): Promise<boolean> => {
-  await http2(`/admin/orders/${id}/status`, {
+  await http2(`/api/admin/orders/${id}/status`, {
     method: "PUT",
     body: JSON.stringify({ status }),
   });
@@ -402,7 +447,7 @@ export const updateTrackingNumber = async (
   id: string,
   trackingNumber: string,
 ): Promise<boolean> => {
-  await http2(`/admin/orders/${id}/tracking`, {
+  await http2(`/api/admin/orders/${id}/tracking`, {
     method: "PUT",
     body: JSON.stringify({ trackingNumber }),
   });
@@ -427,7 +472,7 @@ export const fetchUserInfo = async (
   customerPhone: string;
 }> => {
   try {
-    const res = await http2(`/admin/users/${userId}`);
+    const res = await http2(`/api/admin/users/${userId}`);
     return {
       customerName: res.name || res.username || "Unknown Customer",
       customerEmail: res.email || "",
@@ -450,7 +495,7 @@ export const fetchUserInfo = async (
  */
 export const fetchAddressInfo = async (addressId: number) => {
   try {
-    const res = await http2(`/admin/addresses/${addressId}`);
+    const res = await http2(`/api/admin/addresses/${addressId}`);
     // Construct full address from components
     const address = [res.detailAddress, res.ward, res.district, res.city]
       .filter(Boolean)
@@ -472,7 +517,7 @@ export const fetchOrderItems = async (
   orderId: number,
 ): Promise<OrderItem[]> => {
   try {
-    const res = await http2(`/admin/orders/${orderId}/items`);
+    const res = await http2(`/api/admin/orders/${orderId}/items`);
     return res.items || [];
   } catch (error) {
     console.error(`Failed to fetch items for order ${orderId}:`, error);
@@ -532,7 +577,7 @@ export const mapOrderEnhanced = async (
  * @returns OrderResponse with mapped orders
  */
 export const getOrdersEnhanced = async (enrichData: boolean = false) => {
-  const res = await http2("/admin/orders");
+  const res = await http2("/api/admin/orders");
 
   console.log("Raw orders response:", res);
 
