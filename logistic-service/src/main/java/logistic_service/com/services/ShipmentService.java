@@ -83,7 +83,7 @@ public class ShipmentService {
 			String dbMessage = extractRootCauseMessage(ex);
 			throw new InvalidShipmentStatusTransitionException(dbMessage);
 		}
-	}
+	}		
 
 	private String extractRootCauseMessage(Throwable ex) {
 		Throwable current = ex;
