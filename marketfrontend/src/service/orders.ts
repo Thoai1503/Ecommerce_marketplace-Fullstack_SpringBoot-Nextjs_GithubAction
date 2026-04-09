@@ -4,7 +4,7 @@
 
 // import { mockGet } from '../lib/http';
 import { http2 } from "../lib/http";
-import { Order, OrderItem, OrderStatus } from "@/types/index";
+import { Order, OrderItem, OrderStatus, PaymentStatus } from "@/types/index";
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 export interface OrderResponse {
@@ -16,40 +16,123 @@ export interface OrderResponse {
   pendingAmount: number;
 }
 
-const mapOrder = (o: any): Order => {
+/**
+ * Chuyển đổi status thanh toán từ API sang Frontend
+ * API: PENDING, PAID, REFUNDED
+ * Frontend: UNPAID, PAID, REFUNDED
+ */
+export const normalizePaymentStatus = (
+  apiStatus: string | null,
+): PaymentStatus => {
+  if (!apiStatus) return "UNPAID";
+
+  const statusMap: Record<string, PaymentStatus> = {
+    PENDING: "UNPAID",
+    UNPAID: "UNPAID",
+    PAID: "PAID",
+    REFUNDED: "REFUNDED",
+  };
+
+  return statusMap[apiStatus.toUpperCase()] || "UNPAID";
+};
+
+/**
+ * Chuyển đổi trạng thái đơn hàng từ API sang Frontend
+ * Đảm bảo format uppercase
+ */
+export const normalizeOrderStatus = (apiStatus: string | null): OrderStatus => {
+  if (!apiStatus) return "PENDING";
+
+  const status = apiStatus.toUpperCase();
+  const validStatuses: OrderStatus[] = [
+    "PENDING",
+    "CONFIRMED",
+    "PROCESSING",
+    "SHIPPED",
+    "COMPLETED",
+    "CANCELED",
+    "REFUNDED",
+  ];
+
+  return validStatuses.includes(status as OrderStatus)
+    ? (status as OrderStatus)
+    : "PENDING";
+};
+
+/**
+ * Xác định mức độ ưu tiên dựa trên trạng thái thanh toán và đơn hàng
+ * - HIGH: PENDING order có giá trị cao (> 5,000,000)
+ * - NORMAL: others
+ */
+export const determinePriority = (
+  totalAmount: number,
+  orderStatus: string,
+): "NORMAL" | "HIGH" => {
+  // Nếu đơn hàng đang pending và có giá trị cao, ưu tiên cao
+  if (orderStatus === "PENDING" && totalAmount > 5000000) {
+    return "HIGH";
+  }
+  return "NORMAL";
+};
+
+/**
+ * Map API Order sang Frontend Order Interface
+ *
+ * Note on missing fields:
+ * - customerName, customerEmail, customerPhone: Needs to fetch from User service
+ * - shippingAddress: Needs to fetch from Address service
+ * - itemsCount, items: Needs to fetch from Order Items service
+ * - taxAmount: Should be calculated or provided by backend
+ * - transactionId: Should fetch from Payment service
+ */
+export const mapOrder = (o: any): Order => {
+  const totalAmount = o.finalAmount || 0;
+  const subtotalAmount = o.totalAmount || 0;
+  const orderStatus = normalizeOrderStatus(o.orderStatus);
+
   return {
+    // Basic identifiers
     id: (o.orderId || o.id)?.toString(),
+    orderCode: o.orderNumber || o.orderCode || "",
 
-    orderCode: o.orderNumber || "",
+    // Customer information (⚠️ Currently placeholder - needs service integration)
+    customerName: "Customer", // TODO: Fetch from User service using userId
+    customerEmail: "", // TODO: Fetch from User service using userId
+    customerPhone: "", // TODO: Fetch from User service using userId
 
-    customerName: "Customer",
-    customerEmail: "",
-    customerPhone: "",
+    // Address (⚠️ Currently empty - needs service integration)
+    shippingAddress: "", // TODO: Fetch from Address service using addressId
 
-    shippingAddress: "",
-
-    totalAmount: o.finalAmount || 0,
-    subtotalAmount: o.totalAmount || 0,
+    // Financial information
+    totalAmount, // finalAmount (total to pay)
+    subtotalAmount, // totalAmount (product total)
     discountAmount: o.discountAmount || 0,
-    shippingAmount: o.shippingFee || 0,
-    taxAmount: 0,
+    shippingAmount: o.shippingFee || 0, // shipping fee
+    taxAmount: 0, // TODO: Calculate or fetch tax amount
 
-    itemsCount: 0,
+    // Items
+    itemsCount: 0, // TODO: Fetch from Order Items service
 
-    paymentStatus: (o.paymentStatus || "pending").toUpperCase(),
+    // Payment
+    paymentStatus: normalizePaymentStatus(o.paymentStatus),
     paymentMethod: o.paymentMethod || "",
+    transactionId: "", // TODO: Fetch from Payment service
 
-    transactionId: "",
+    // Delivery
     deliveryNumber: o.trackingNumber || "",
+    trackingNumber: o.trackingNumber || "",
 
-    status: (o.orderStatus || "pending").toUpperCase(),
+    // Order status
+    status: orderStatus,
+    priority: determinePriority(totalAmount, orderStatus),
 
-    priority: "NORMAL",
-
+    // Timestamps
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
 
-    items: [],
+    // Additional fields
+    items: [], // TODO: Fetch from Order Items service
+    internalNote: o.note || undefined, // Map note to internalNote
   };
 };
 
@@ -325,6 +408,144 @@ export const updateTrackingNumber = async (
   });
 
   return true;
+};
+
+// ============================================================
+// HELPER FUNCTIONS FOR ENRICHING ORDER DATA
+// ============================================================
+
+/**
+ * Fetch user information to populate customerName, customerEmail, customerPhone
+ * @param userId User ID from order
+ * @returns User info or fallback object
+ */
+export const fetchUserInfo = async (userId: number) => {
+  try {
+    const res = await http2(`/admin/users/${userId}`);
+    return {
+      customerName: res.name || res.username || "Unknown Customer",
+      customerEmail: res.email || "",
+      customerPhone: res.phone || "",
+    };
+  } catch (error) {
+    console.error(`Failed to fetch user ${userId}:`, error);
+    return {
+      customerName: "Unknown Customer",
+      customerEmail: "",
+      customerPhone: "",
+    };
+  }
+};
+
+/**
+ * Fetch address information for shipping address
+ * @param addressId Address ID from order
+ * @returns Full address or fallback
+ */
+export const fetchAddressInfo = async (addressId: number) => {
+  try {
+    const res = await http2(`/admin/addresses/${addressId}`);
+    // Construct full address from components
+    const address = [res.detailAddress, res.ward, res.district, res.city]
+      .filter(Boolean)
+      .join(", ");
+
+    return address || "Unknown Address";
+  } catch (error) {
+    console.error(`Failed to fetch address ${addressId}:`, error);
+    return "Unknown Address";
+  }
+};
+
+/**
+ * Fetch order items to populate items and itemsCount
+ * @param orderId Order ID
+ * @returns Array of order items
+ */
+export const fetchOrderItems = async (
+  orderId: number,
+): Promise<OrderItem[]> => {
+  try {
+    const res = await http2(`/admin/orders/${orderId}/items`);
+    return res.items || [];
+  } catch (error) {
+    console.error(`Failed to fetch items for order ${orderId}:`, error);
+    return [];
+  }
+};
+
+/**
+ * Enhanced mapOrder that can fetch related data
+ * Use this when you need complete order information
+ * @param o Raw order from API
+ * @param fetchRelated If true, will fetch user, address, and items data (slower but complete)
+ * @returns Fully populated Order object
+ */
+export const mapOrderEnhanced = async (
+  o: any,
+  fetchRelated: boolean = false,
+): Promise<Order> => {
+  const baseOrder = mapOrder(o);
+
+  if (fetchRelated) {
+    try {
+      // Fetch all related data in parallel
+      const [userInfo, address, items] = await Promise.all([
+        o.userId ? fetchUserInfo(o.userId) : Promise.resolve({}),
+        o.addressId ? fetchAddressInfo(o.addressId) : Promise.resolve(""),
+        o.orderId ? fetchOrderItems(o.orderId) : Promise.resolve([]),
+      ]);
+
+      return {
+        ...baseOrder,
+        customerName: userInfo.customerName || baseOrder.customerName,
+        customerEmail: userInfo.customerEmail || baseOrder.customerEmail,
+        customerPhone: userInfo.customerPhone || baseOrder.customerPhone,
+        shippingAddress: address || baseOrder.shippingAddress,
+        items: items || [],
+        itemsCount: items?.length || 0,
+      };
+    } catch (error) {
+      console.error("Error enriching order data:", error);
+      return baseOrder;
+    }
+  }
+
+  return baseOrder;
+};
+
+/**
+ * Get orders with optional data enrichment
+ * @param enrichData If true, fetches related data for each order (slower)
+ * @returns OrderResponse with mapped orders
+ */
+export const getOrdersEnhanced = async (enrichData: boolean = false) => {
+  const res = await http2("/admin/orders");
+
+  console.log("Raw orders response:", res);
+
+  if (enrichData) {
+    // Fetch enhanced data for all orders (in parallel batches)
+    const enhancedOrders = await Promise.all(
+      (res.orders || []).map((order: any) =>
+        mapOrderEnhanced(order, true).catch((err) => {
+          console.error("Error enriching order:", err);
+          return mapOrder(order);
+        }),
+      ),
+    );
+
+    return {
+      ...res,
+      orders: enhancedOrders,
+    };
+  }
+
+  // Fast path: just basic mapping without fetching related data
+  return {
+    ...res,
+    orders: (res.orders || []).map(mapOrder),
+  };
 };
 
 // export const updateOrderItems = async (id: string, items: OrderItem[], totalAmount: number): Promise<boolean> => {
