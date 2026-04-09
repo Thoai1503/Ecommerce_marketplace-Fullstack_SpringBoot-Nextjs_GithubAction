@@ -19,7 +19,7 @@ public class OrderStatusPublisher {
 	   public void publish(Object object) {
 		   kafkaTemplate.send("update_order_status", object);
 	   }
-
+       
 	   public void publishShipmentStatusUpdated(ShipmentStatusUpdatedEvent event) {
 		   log.info("Publishing shipment status update: trackingCode={}, status={}", event.trackingCode(), event.status());
 		   kafkaTemplate.send("update_shipment_status", event.trackingCode(), event);
