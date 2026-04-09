@@ -48,13 +48,13 @@ export default async function Home() {
   const products = ((await res1.json()) as Partial<IProduct>[]) || [];
   // const { products } = useHomePage();
 
-  // if (products.length === 0 || !products) {
-  //   return (
-  //     <div>
-  //       <h1>Loading...</h1>
-  //     </div>
-  //   );
-  // }
+  if (products.length === 0 || !products) {
+    return (
+      <div>
+        <h1>Loading...</h1>
+      </div>
+    );
+  }
 
   return (
     <div className="container-fluid px-3 px-md-4">
@@ -101,33 +101,28 @@ export default async function Home() {
       <div className="row g-3 g-md-4">
         {parentCategories.map((cat: any, idx: number) => (
           <div key={idx} className="col-4 col-md-3 col-lg-2">
-            <Link
-              href={`/nganh-hang/${cat.category_slug}`}
-              className="text-decoration-none text-dark"
-            >
-              <div className="text-center category-item shadow-sm rounded p-3 bg-white hover-lift">
-                <div
-                  className="rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center"
-                  style={{
-                    width: "70px",
-                    height: "70px",
-                    backgroundColor: cat.color,
-                  }}
-                >
-                  {cat.category_icon && (
-                    <img
-                      src={cat.category_icon}
-                      style={{
-                        width: "100px",
-                        height: "100px",
-                        objectFit: "cover",
-                      }}
-                    />
-                  )}
-                </div>
-                <small className="d-block fw-medium">{cat.category_name}</small>
+            <div className="text-center category-item shadow-sm rounded p-3 bg-white hover-lift">
+              <div
+                className="rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center"
+                style={{
+                  width: "70px",
+                  height: "70px",
+                  backgroundColor: cat.color,
+                }}
+              >
+                {cat.category_icon && (
+                  <img
+                    src={cat.category_icon}
+                    style={{
+                      width: "100px",
+                      height: "100px",
+                      objectFit: "cover",
+                    }}
+                  />
+                )}
               </div>
-            </Link>
+              <small className="d-block fw-medium">{cat.category_name}</small>
+            </div>
           </div>
         ))}
       </div>
@@ -394,7 +389,7 @@ export default async function Home() {
             // </div>
             <></>
           ))}
-          {/* <AllProduct products={products} /> */}
+          <AllProduct products={products} />
         </div>
       </div>
     </div>
