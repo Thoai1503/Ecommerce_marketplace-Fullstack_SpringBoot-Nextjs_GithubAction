@@ -36,6 +36,7 @@ import ConfirmationModal, {
 import Pagination from "@/components/ui/Pagination";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
+import { Suspense } from "react";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -111,7 +112,7 @@ const PaymentConfig: Record<
   },
 };
 
-export default function OrdersPage() {
+function OrdersPageContent() {
   const router = useRouter();
   const toast = useToast();
   const {
@@ -763,5 +764,19 @@ export default function OrdersPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8">
+          <OrderTableSkeleton />
+        </div>
+      }
+    >
+      <OrdersPageContent />
+    </Suspense>
   );
 }
