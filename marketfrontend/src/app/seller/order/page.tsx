@@ -38,10 +38,12 @@ const mapShippingStatusToUiStatus = (shippingStatus?: string) => {
 };
 
 const page = () => {
+  const { shop: shopData } = useSellerAuth();
+  console.log("Shop Data in Order Page:", JSON.stringify(shopData, null, 2));
   OrderShipments.setup({ path: "/seller/order-shipment" });
   const { data: orderShipments, refetch: refetchOrderShipments } = useQuery<
     IOrderShipment[]
-  >(OrderShipments.getByShopId(2));
+  >(OrderShipments.getByShopId(shopData?.id || 0));
 
   console.log("Order Shipments Data:", JSON.stringify(orderShipments, null, 2));
   const { shop, orders: mockOrders } = useOrderPage();
