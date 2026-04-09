@@ -23,7 +23,9 @@ import logistic_service.com.entities.Shipment;
 import logistic_service.com.entities.ShipmentItem;
 import logistic_service.com.entities.ShipmentStatusHistory;
 import logistic_service.com.enums.ShipmentStatus;
+import logistic_service.com.dto.ShipmentStatusUpdatedEvent;
 import logistic_service.com.exception.InvalidShipmentStatusTransitionException;
+import logistic_service.com.publisher.OrderStatusPublisher;
 import logistic_service.com.repositories.RecipientRepository;
 import logistic_service.com.repositories.ShipmentItemRepository;
 import logistic_service.com.repositories.ShipmentRepository;
@@ -36,15 +38,18 @@ public class ShipmentService {
 	private final ShipmentStatusHistoryRepository shipmentStatusHistoryRepository;
 	private final RecipientRepository recipientRepository;
 	private final ShipmentItemRepository shipmentItemRepository;
-    	
+	private final OrderStatusPublisher orderStatusPublisher;
+
 	public ShipmentService(ShipmentRepository shipmentRepository,
 			ShipmentStatusHistoryRepository shipmentStatusHistoryRepository,
 			RecipientRepository recipientRepository,
-			ShipmentItemRepository shipmentItemRepository) {
+			ShipmentItemRepository shipmentItemRepository,
+			OrderStatusPublisher orderStatusPublisher) {
 		this.shipmentRepository = shipmentRepository;
 		this.shipmentStatusHistoryRepository = shipmentStatusHistoryRepository;
 		this.recipientRepository = recipientRepository;
 		this.shipmentItemRepository = shipmentItemRepository;
+		this.orderStatusPublisher = orderStatusPublisher;
 	}
     
 	public Shipment createShipment(Shipment shipment) {
@@ -70,7 +75,10 @@ public class ShipmentService {
 		}
         log.info("Updated shipment (orderShipmentRefId={}) to status: {}", orderShipmentRefId, newStatus);
 		try {
-			return shipmentRepository.save(shipment);
+			Shipment saved = shipmentRepository.save(shipment);
+			orderStatusPublisher.publishShipmentStatusUpdated(
+					new ShipmentStatusUpdatedEvent(saved.getTrackingCode(), saved.getStatus()));
+			return saved;
 		} catch (DataIntegrityViolationException | JpaSystemException ex) {
 			String dbMessage = extractRootCauseMessage(ex);
 			throw new InvalidShipmentStatusTransitionException(dbMessage);
