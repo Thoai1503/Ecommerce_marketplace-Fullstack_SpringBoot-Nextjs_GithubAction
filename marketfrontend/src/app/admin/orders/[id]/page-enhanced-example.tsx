@@ -79,7 +79,7 @@ export default function OrderDetailPageEnhancedExample({
     <div className="p-4 lg:p-8 space-y-6">
       <Breadcrumbs
         items={[
-          { label: "Orders", href: "/admin/orders" },
+          { label: "Orders", path: "/admin/orders" },
           { label: order.orderCode },
         ]}
       />
