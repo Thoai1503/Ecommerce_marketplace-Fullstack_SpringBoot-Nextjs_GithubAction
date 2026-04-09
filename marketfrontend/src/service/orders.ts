@@ -348,7 +348,7 @@ export const mapOrder = (o: any): Order => {
 // };
 
 export const getOrders = async () => {
-  const res = await http2("/admin/orders");
+  const res = await http2("/api/admin/orders");
 
   console.log("Raw orders response:", res);
 
@@ -359,7 +359,7 @@ export const getOrders = async () => {
 };
 
 export const getOrderById = async (id: string): Promise<Order> => {
-  const res = await http2(`/admin/orders/${id}`);
+  const res = await http2(`/api/admin/orders/${id}`);
   return mapOrder(res);
 };
 
@@ -372,7 +372,7 @@ export const updateOrderStatus = async (
   id: string,
   status: OrderStatus,
 ): Promise<boolean> => {
-  await http2(`/admin/orders/${id}/status`, {
+  await http2(`/api/admin/orders/${id}/status`, {
     method: "PUT",
     body: JSON.stringify({ status }),
   });
@@ -402,7 +402,7 @@ export const updateTrackingNumber = async (
   id: string,
   trackingNumber: string,
 ): Promise<boolean> => {
-  await http2(`/admin/orders/${id}/tracking`, {
+  await http2(`/api/admin/orders/${id}/tracking`, {
     method: "PUT",
     body: JSON.stringify({ trackingNumber }),
   });
@@ -427,7 +427,7 @@ export const fetchUserInfo = async (
   customerPhone: string;
 }> => {
   try {
-    const res = await http2(`/admin/users/${userId}`);
+    const res = await http2(`/api/admin/users/${userId}`);
     return {
       customerName: res.name || res.username || "Unknown Customer",
       customerEmail: res.email || "",
@@ -450,7 +450,7 @@ export const fetchUserInfo = async (
  */
 export const fetchAddressInfo = async (addressId: number) => {
   try {
-    const res = await http2(`/admin/addresses/${addressId}`);
+    const res = await http2(`/api/admin/addresses/${addressId}`);
     // Construct full address from components
     const address = [res.detailAddress, res.ward, res.district, res.city]
       .filter(Boolean)
@@ -472,7 +472,7 @@ export const fetchOrderItems = async (
   orderId: number,
 ): Promise<OrderItem[]> => {
   try {
-    const res = await http2(`/admin/orders/${orderId}/items`);
+    const res = await http2(`/api/admin/orders/${orderId}/items`);
     return res.items || [];
   } catch (error) {
     console.error(`Failed to fetch items for order ${orderId}:`, error);
@@ -532,7 +532,7 @@ export const mapOrderEnhanced = async (
  * @returns OrderResponse with mapped orders
  */
 export const getOrdersEnhanced = async (enrichData: boolean = false) => {
-  const res = await http2("/admin/orders");
+  const res = await http2("/api/admin/orders");
 
   console.log("Raw orders response:", res);
 

@@ -80,10 +80,22 @@ public class OrderController {
     public ResponseEntity<OrderResponseDTO> placeOrder(@Valid @RequestBody OrderDTO dto) {
     	RecipientDTO recipient = dto.getRecipient();
     	System.out.println("Received order for recipient: " + recipient.getName() + ", Phone: " + recipient.getPhone());
-        Order saved = orderService.placeOrder(dto);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(new OrderResponseDTO(saved.getId(), saved.getOrderNumber(), "PENDING"));
+        
+    	try {
+    	Order saved = orderService.placeOrder(dto);
+    	return ResponseEntity
+    			.status(HttpStatus.CREATED)
+    			.body(new OrderResponseDTO(saved.getId(), saved.getOrderNumber(), "PENDING"));
+    	}
+        catch (Exception e) {
+			System.err.println("Error placing order: " + e.getMessage());
+			
+			//return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+			//giúp tôi trả về cả message lỗi trong response body
+			return ResponseEntity
+					.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(new OrderResponseDTO(null, null, "ERROR: " + e.getMessage()));
+		}
     }
 	
 	
