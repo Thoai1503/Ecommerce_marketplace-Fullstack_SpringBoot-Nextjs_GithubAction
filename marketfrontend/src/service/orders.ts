@@ -419,7 +419,13 @@ export const updateTrackingNumber = async (
  * @param userId User ID from order
  * @returns User info or fallback object
  */
-export const fetchUserInfo = async (userId: number) => {
+export const fetchUserInfo = async (
+  userId: number,
+): Promise<{
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+}> => {
   try {
     const res = await http2(`/admin/users/${userId}`);
     return {
@@ -491,7 +497,13 @@ export const mapOrderEnhanced = async (
     try {
       // Fetch all related data in parallel
       const [userInfo, address, items] = await Promise.all([
-        o.userId ? fetchUserInfo(o.userId) : Promise.resolve({}),
+        o.userId
+          ? fetchUserInfo(o.userId)
+          : Promise.resolve({
+              customerName: "",
+              customerEmail: "",
+              customerPhone: "",
+            }),
         o.addressId ? fetchAddressInfo(o.addressId) : Promise.resolve(""),
         o.orderId ? fetchOrderItems(o.orderId) : Promise.resolve([]),
       ]);
