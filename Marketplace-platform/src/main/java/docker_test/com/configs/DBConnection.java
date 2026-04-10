@@ -57,12 +57,13 @@ public final class DBConnection {
 
             // HikariCP configuration
             HikariConfig config = new HikariConfig();
-            config.setJdbcUrl("jdbc:mysql://" + getEnvOrProp("DB_HOST", "mysql.host") + ":" + getEnvOrProp("DB_PORT", "mysql.port") + "/" + getEnvOrProp("DB_NAME", "mysql.database") + "?useSSL=true&requireSSL=true");
+            config.setJdbcUrl("jdbc:mysql://" + getEnvOrProp("DB_HOST", "mysql.host") + ":" + getEnvOrProp("DB_PORT", "mysql.port") + "/" + getEnvOrProp("DB_NAME", "mysql.database") + "?useSSL=true&requireSSL=true&serverTimezone=Asia/Ho_Chi_Minh");
             config.setUsername(getEnvOrProp("DB_USER", "mysql.username"));
             config.setPassword(getEnvOrProp("DB_PASSWORD", "mysql.password"));
             config.addDataSourceProperty("cachePrepStmts", "true");
             config.addDataSourceProperty("prepStmtCacheSize", "250");
             config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+            config.addDataSourceProperty("serverTimezone", "Asia/Ho_Chi_Minh");
             // Keep pool very small because this app also uses Spring's own datasource pool.
             int maxPoolSize = getEnvInt("DB_POOL_SIZE", 2);
             int minIdle = Math.min(getEnvInt("DB_MIN_IDLE", 1), maxPoolSize);
