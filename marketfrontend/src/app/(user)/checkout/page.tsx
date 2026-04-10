@@ -677,6 +677,36 @@ export default function CheckoutPage() {
       return;
     }
 
+    var cartConverted = cartItems.map(async (item) => {
+      const user_id = item?.product?.shop?.userId || 0;
+
+      let userInfo: any = null;
+      await getUserInfoById(user_id).then((res) => {
+        console.log("Fetched user info for shop owner:", res);
+        userInfo = res;
+      });
+      return {
+        id: 1,
+        product_id: item?.product?.id || 0,
+        shop_id: item?.product?.shop?.id || 0,
+        order_id: 1,
+        shop: {
+          id: item?.product?.shop?.id || 0,
+          shop_name: item?.product?.shop?.shopName || "",
+          api_key: item?.product?.shop?.shopName.toUpperCase() + "_API_KEY",
+          contact_email: userInfo?.email || "",
+          phone: userInfo?.phone || "",
+        },
+        variant_id: item?.productVariant?.id || 0,
+        product_name: item?.product?.name || "",
+        variant_name: item?.productVariant?.variantName || "",
+        quantity: item?.quantity || 0,
+        price:
+          (item?.productVariant?.price || 0) +
+          (shippingFees[item?.product?.shop?.id || 0] || 0),
+      };
+    }) as unknown as IOrderItem[];
+
     createOrder({
       user_id: paymentInfo.user_id || 0,
       shop_id: cartItems[0]?.product?.shop?.id || 0,

@@ -1,0 +1,16 @@
+name: Deploy marketplace-platform
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "Marketplace-platform/**"
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      context_path: ./Marketplace-platform
+      image_name: ecommerce-backend
+      service_name: marketplace-platform
+    secrets: inherit
