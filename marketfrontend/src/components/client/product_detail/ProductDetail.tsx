@@ -30,6 +30,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
   const displayImage = hoveredImage || mainImage;
 
   const handleAddToCart = (cart: ICart) => {
+    alert(`Thêm vào giỏ hàng: ${JSON.stringify(cart, null, 2)}`);
     if (!userId) {
       message.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
       return;

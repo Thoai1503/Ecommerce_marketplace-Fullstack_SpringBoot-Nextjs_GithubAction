@@ -77,6 +77,12 @@ public class ShipmentController {
 		return ResponseEntity.ok(response);
 	}
 
+	@GetMapping("/shipments/{shipmentId}")
+	public ResponseEntity<?> getShipmentById(@PathVariable Long shipmentId) {
+		ShipmentTrackingDetailResponse response = shipmentService.getShipmentById(shipmentId);
+		return ResponseEntity.ok(response);
+	}
+
 	@GetMapping("/shipments/{shipmentId}/timeline")
 	public ResponseEntity<?> getShipmentTimeline(@PathVariable Long shipmentId) {
 		List<ShipmentTimelineResponse> response = shipmentService.getTimelineByShipmentId(shipmentId);

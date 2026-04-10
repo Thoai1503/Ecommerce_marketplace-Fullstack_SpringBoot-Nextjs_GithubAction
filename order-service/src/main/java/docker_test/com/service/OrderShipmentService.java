@@ -125,7 +125,7 @@ public class OrderShipmentService {
 
         if (logisticsResponse == null || logisticsResponse.get("trackingCode") == null) {
             throw new RuntimeException("Logistics did not return tracking code");
-        }
+        }    
 
         String trackingCode = String.valueOf(logisticsResponse.get("trackingCode"));
         String shippingStatus = String.valueOf(logisticsResponse.get("status"));
@@ -144,7 +144,7 @@ public class OrderShipmentService {
                 shipment.getOrderId(),
                 trackingCode,
                 shippingStatus,
-                "Logistics confirmed. Tracking code updated"
+                "Logistics confirmed. Tracking code updated"				
         );
     }
 

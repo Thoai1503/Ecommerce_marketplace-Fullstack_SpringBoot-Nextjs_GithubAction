@@ -44,11 +44,14 @@ public class CartService {
       cartRepository.deleteById(cartId);
   }
   public Cart addToCart(CartDTO cartDto) {
+	    System.out.println("Adding to cart: " + cartDto.toString());
 		Cart existedCartItem = cartRepository.findByProductVariant_IdAndUserId(cartDto.getVariantId(),cartDto.getUserId());
 		Cart cart = new Cart();
 		System.out.println("Quantity from DTO: " + cartDto.getQuantity());
 		int qty = cartDto.getQuantity() != null ? cartDto.getQuantity() : 1;
+		
 		if (existedCartItem != null) {
+			System.out.println("Existing cart item found: " + existedCartItem.toString());
 			
 			var pro = new Product();
 			var productVariant = new ProductVariant();
@@ -65,7 +68,9 @@ public class CartService {
 						.quantity(existingQty + qty)
 						.build();
 		} else {
+			System.out.println("No existing cart item found, creating new one");
 			var pro = new Product();
+	
 			var productVariant = new ProductVariant();
 			pro.setId(cartDto.getProductId());
 			productVariant.setId(cartDto.getVariantId());
@@ -73,12 +78,18 @@ public class CartService {
 								.userId(cartDto.getUserId())
 								.product(pro)
 								.productVariant(productVariant)
-								//.productId(cartDto.getProductId())
+					//	.productId(cartDto.getProductId())
 							//	.variantId(cartDto.getVariantId())
 								
 								.quantity(qty)
 								.build();
 		}
+		System.out.println("Cart to save: " + cart.toString());
+		System.out.println("Cart userId: " + cart.getUserId());
+		System.out.println("Cart productId: " + cart.getProduct().getId());
+		System.out.println("Cart variantId: " + cart.getProductVariant().getId());
+		System.out.println("Cart quantity: " + cart.getQuantity());
+		System.out.println("Cart product id: "+cart.getProduct().getId());
 
 	var en = cartRepository.save(cart);
 
