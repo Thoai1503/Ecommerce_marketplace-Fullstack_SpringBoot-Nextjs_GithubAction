@@ -110,6 +110,10 @@ export function getTracking(trackingCode: string) {
   return api.get<Shipment>(`/api/logistics/shipments/tracking/${trackingCode}`);
 }
 
+export function getShipmentById(shipmentId: number) {
+  return api.get<Shipment>(`/api/logistics/shipments/${shipmentId}`);
+}
+
 export function getShipmentTimeline(shipmentId: number) {
   if (shipmentId === FIRST_MOCK_TIMELINE_SHIPMENT_ID) {
     return Promise.resolve({ data: firstShipmentMockTimeline });

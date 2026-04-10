@@ -23,17 +23,54 @@ const mapShippingStatusToUiStatus = (shippingStatus?: string) => {
       return "pending_shipment";
     case "CONFIRMED":
       return "confirmed";
-    case "SHIPPED":
-      return "shipped";
+    case "PICKED_UP":
+      return "picked_up";
     case "IN_TRANSIT":
       return "in_transit";
+    case "OUT_FOR_DELIVERY":
+      return "out_for_delivery";
     case "DELIVERED":
       return "delivered";
+    case "FAILED":
+      return "failed";
+    case "RETURNED":
+      return "returned";
+    case "SHIPPED":
+      return "shipped";
     case "CANCELED":
     case "CANCELLED":
       return "cancelled";
     default:
       return "pending_shipment";
+  }
+};
+
+const getStatusLabel = (status?: string): string => {
+  switch (status) {
+    case "pending_shipment":
+      return "Chờ xác nhận";
+    case "confirmed":
+      return "Chờ lấy hàng";
+    case "picked_up":
+      return "Đã giao cho ĐVVC";
+    case "in_transit":
+      return "Đang vận chuyển";
+    case "out_for_delivery":
+      return "Đang giao";
+    case "delivered":
+      return "Đã giao";
+    case "failed":
+      return "Thất bại";
+    case "returned":
+      return "Trả hàng";
+    case "shipped":
+      return "Đã gửi";
+    case "pending_payment":
+      return "Chờ thanh toán";
+    case "cancelled":
+      return "Đã hủy";
+    default:
+      return "Chờ xác nhận";
   }
 };
 
@@ -412,13 +449,7 @@ const page = () => {
                     </td>
                     <td>
                       <div className="fw-medium text-dark">
-                        {order.status === "pending_shipment" && "Chờ xác nhận"}
-                        {order.status === "confirmed" && "Đã xác nhận"}
-                        {order.status === "shipped" && "Đã gửi"}
-                        {order.status === "in_transit" && "Đang vận chuyển"}
-                        {order.status === "delivered" && "Đã giao"}
-                        {order.status === "pending_payment" && "Chờ thanh toán"}
-                        {order.status === "cancelled" && "Đã hủy"}
+                        {getStatusLabel(order.status)}
                       </div>
                       <small className="text-muted d-block mt-1">
                         {order.status_change_reason}

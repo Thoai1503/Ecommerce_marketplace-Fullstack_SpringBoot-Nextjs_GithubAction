@@ -25,6 +25,7 @@ import { CalculateFeePayload } from "@/types";
 import { set } from "zod";
 import { getAddressByShopId } from "@/service/addresses";
 import { AxiosError } from "axios";
+import { getUserInfoById, getUsersInfoByIds } from "@/service/userInfo";
 
 // Hàm fetch districts theo provinceId
 async function fetchDistrictsByProvince(provinceId: number) {
@@ -618,13 +619,14 @@ export default function CheckoutPage() {
           from_district_id: shopAddress?.district || 0, // giả sử lấy từ địa chỉ đầu tiên (cần điều chỉnh nếu có nhiều địa chỉ)
           from_ward_code: shopAddress?.ward ? String(shopAddress.ward) : "", // giả sử lấy từ địa chỉ đầu tiên
           // service_id: 53320,
+          //service_type_id: 5,
           service_type_id: 2,
           to_district_id: defaultAddress?.district || 0,
           to_ward_code: defaultAddress?.ward ? String(defaultAddress.ward) : "",
-          height: 10,
-          length: 10,
-          weight: 100,
-          width: 200,
+          height: logisticsItems[0]?.height || 0,
+          length: logisticsItems[0]?.length || 0,
+          weight: logisticsItems[0]?.weight || 0,
+          width: logisticsItems[0]?.width || 0,
           insurance_value: 1000,
           cod_failed_amount: 0,
           coupon: null,
@@ -686,19 +688,35 @@ export default function CheckoutPage() {
       shipping_fee: 9000,
       discount_amount: 0,
       final_amount: paymentInfo.amount - 9000 || 0,
-      orders_items: cartItems.map((item) => ({
-        id: 1,
-        product_id: item?.product?.id || 0,
-        shop_id: item?.product?.shop?.id || 0,
-        order_id: 1,
-        variant_id: item?.productVariant?.id || 0,
-        product_name: item?.product?.name || "",
-        variant_name: item?.productVariant?.variantName || "",
-        quantity: item?.quantity || 0,
-        price:
-          (item?.productVariant?.price || 0) +
-          (shippingFees[item?.product?.shop?.id || 0] || 0),
-      })) as IOrderItem[],
+      orders_items: cartItems.map((item) => {
+        const user_id = item?.product?.shop?.userId || 0;
+
+        let userInfo: any = null;
+        getUserInfoById(user_id).then((res) => {
+          console.log("Fetched user info for shop owner:", res);
+          userInfo = res;
+        });
+        return {
+          id: 1,
+          product_id: item?.product?.id || 0,
+          shop_id: item?.product?.shop?.id || 0,
+          order_id: 1,
+          shop: {
+            id: item?.product?.shop?.id || 0,
+            shop_name: item?.product?.shop?.shopName || "",
+            api_key: item?.product?.shop?.shopName.toUpperCase() + "_API_KEY",
+            contact_email: userInfo?.email || "",
+            phone: userInfo?.phone || "",
+          },
+          variant_id: item?.productVariant?.id || 0,
+          product_name: item?.product?.name || "",
+          variant_name: item?.productVariant?.variantName || "",
+          quantity: item?.quantity || 0,
+          price:
+            (item?.productVariant?.price || 0) +
+            (shippingFees[item?.product?.shop?.id || 0] || 0),
+        };
+      }) as IOrderItem[],
       note: "",
       tracking_number: "",
       id: 0,

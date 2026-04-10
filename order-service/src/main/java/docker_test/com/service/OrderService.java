@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,39 +28,12 @@ import docker_test.com.repository.OrderShipmentRepository;
 
 @Service
 public class OrderService {
+	private final RedisTemplate redisTemplate;
 
     private static final String ROLLBACK_TEST_FLAG = "SIMULATE_ROLLBACK";
+    private final int STOCK = 10;
 	
-//	
-//	private final OrderRepository orderRepository;
-//	
-//      public OrderService(OrderRepository orderRepository) {
-//		super();
-//		this.orderRepository = orderRepository;
-//	}
-//
-//	  private OrderDTO createOrder(OrderDTO orderDTO) {
-//           
-//		  Order order = new Order();
-//		  
-//		  order.setOrderNumber(orderDTO.getOrder_number());
-//		  order.setTotalAmount(orderDTO.getTotal_price());;
-//		  order.setDiscountAmount(orderDTO.getAddress_id());
-//		  order.setOrderNumber(orderDTO.getOrder_number());
-//		  order.setPaymentMethod(orderDTO.getPayment_method());
-//		  order.setOrderStatus(orderDTO.getOrder_status());
-//		  order.setShippingFee(orderDTO.getShipping_fee());
-//		  
-//		  
-//	orderDTO.setId(	orderRepository.save(order).getId());
-//		  
-//	
-//	return orderDTO;
-//		  
-//    	  
-//    	  
-//    	  
-//      }  
+
 	
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
@@ -70,12 +45,15 @@ public class OrderService {
     public OrderService(OrderRepository orderRepository,
                         OrderItemRepository orderItemRepository,
                         OrderEventPublisher eventPublisher,
-                        OrderShipmentRepository orderShipmentRepository            
+                        OrderShipmentRepository orderShipmentRepository     ,
+                        RedisTemplate redisTemplate
     		) {
         this.orderRepository   = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.eventPublisher     = eventPublisher;
         this.orderShipmentRepository = orderShipmentRepository;
+        
+        this.redisTemplate = redisTemplate;
     }
 
     // All DB writes + event publish happen in one transaction.
@@ -138,6 +116,60 @@ public class OrderService {
         return saved;
     }
 
+        
+        public ResponseEntity<?> processOrder(String productKey, int slMua) {
+            long startTime = System.currentTimeMillis();
+            String keyName = "sold:" + productKey; // ví dụ: sold:iPhone
+
+            try {
+                // Khởi tạo key nếu chưa tồn tại
+                Boolean exists = redisTemplate.hasKey(keyName);
+                if (Boolean.FALSE.equals(exists)) {
+                    redisTemplate.opsForValue().setIfAbsent(keyName, "0");
+                }
+
+                // === PHẦN QUAN TRỌNG: INCR TRƯỚC - CHECK - ROLLBACK ===
+                Long slBanRa = redisTemplate.opsForValue().increment(keyName, slMua);
+
+                System.out.println("Trước khi user thành công thì số lượng bán ra: " + (slBanRa - slMua));
+                System.out.println("Sau khi incrby thì số lượng bán ra: " + slBanRa);
+
+                if (slBanRa > STOCK) {
+                    // Rollback
+                    redisTemplate.opsForValue().decrement(keyName, slMua);
+                    System.out.println("Hết hàng tại thời điểm " + System.currentTimeMillis() + " - Đã rollback");
+
+                    return ResponseEntity.ok(Map.of(
+                        "msg", "Hết hàng",
+                        "time", startTime,
+                        "currentStockSold", slBanRa - slMua
+                    ));
+                }
+
+                // === Thành công ===
+                long endTime = System.currentTimeMillis();
+
+                return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "msg", "Đặt hàng thành công",
+                    "time", startTime,
+                    "sold", slBanRa,
+                    "remaining", STOCK - slBanRa,
+                    "processingTimeMs", endTime - startTime
+                ));
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                return ResponseEntity.status(500).body(Map.of(
+                    "msg", "Lỗi server",
+                    "error", e.getMessage()
+                ));
+            }
+        }
+        
+        
+        
+        
         // This method is for testing transaction rollback. If the cancel_reason is set to "SIMULATE_ROLLBACK", it throws a runtime exception after saving the order, which should trigger a rollback of the entire transaction.
     private void maybeThrowSimulatedRollback(OrderDTO dto, Long orderId) {
         if (ROLLBACK_TEST_FLAG.equalsIgnoreCase(dto.getCancel_reason())) {

@@ -174,6 +174,33 @@ public class ShipmentService {
 				items);
 	}
 
+	public ShipmentTrackingDetailResponse getShipmentById(Long shipmentId) {
+		Shipment shipment = shipmentRepository.findById(shipmentId)
+				.orElseThrow(() -> new IllegalArgumentException("Shipment not found with id: " + shipmentId));
+
+		Recipient recipient = recipientRepository.findById(shipment.getRecipientId())
+				.orElseThrow(() -> new IllegalArgumentException("Recipient not found with id: " + shipment.getRecipientId()));
+
+		List<ShipmentItemResponse> items = shipmentItemRepository.findByShipmentId(shipment.getId()).stream()
+				.map(this::toShipmentItemResponse)
+				.toList();
+
+		return new ShipmentTrackingDetailResponse(
+				shipment.getId(),
+				shipment.getTrackingCode(),
+				shipment.getOrderShipmentRefId(),
+				shipment.getShopRefId(),
+				shipment.getPartnerId(),
+				shipment.getRecipientId(),
+				shipment.getStatus(),
+				shipment.getCreatedAt(),
+				shipment.getUpdatedAt(),
+				shipment.getEstimatedDeliveryAt(),
+				shipment.getDeliveredAt(),
+				toRecipientDto(recipient),
+				items);
+	}
+
 	public List<ShipmentTimelineResponse> getTimelineByShipmentId(Long shipmentId) {
 		if (!shipmentRepository.existsById(shipmentId)) {
 			throw new IllegalArgumentException("Shipment not found with id: " + shipmentId);
