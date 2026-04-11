@@ -57,7 +57,7 @@ public class UserController {
     /* ================= REGISTER ================= */
     // POST http://localhost:8000/users/register
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest req) {
+    public ResponseEntity<?> register(@RequestBody RegisterRequest req,HttpServletResponse response) {
 
         // ✅ validate
         if (req.getEmail() == null || req.getEmail().isBlank()
@@ -85,10 +85,30 @@ public class UserController {
             );
 
             User created = userRepository.Create(user);
+            
+            System.out.println("Created user: " + created.toString());
 
             // ❌ không trả password
             created.setPasswordHash(null);
-
+            
+            ResponseCookie roleCookie = ResponseCookie.from("role", created.getUserType())
+        		    .httpOnly(true)
+        		    .secure(false)          // requires HTTPS
+        		    .path("/")
+        		    .maxAge(7 * 24 * 60 * 60)
+        		    .sameSite("Lax")
+        		    .build();
+        		response.addHeader("Set-Cookie", roleCookie.toString());
+                ResponseCookie userCookie = ResponseCookie.from("user", String.valueOf(created.getId()))
+            		    .httpOnly(true)
+            		    .secure(false)          // requires HTTPS
+            		    .path("/")
+            		    .maxAge(7 * 24 * 60 * 60)
+            		    .sameSite("Lax")
+            		    .build();
+            		response.addHeader("Set-Cookie", userCookie.toString());
+            
+            System.out.println("User registered successfully: " + created.toString());
             return ResponseEntity
                     .status(HttpStatus.CREATED)
                     .body(created);

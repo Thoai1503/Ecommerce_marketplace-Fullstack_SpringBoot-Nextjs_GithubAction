@@ -5,6 +5,7 @@ import Script from "next/script";
 import HeaderAuth from "@/components/HeaderAuth";
 import { cookies } from "next/headers";
 import { UserAuthProvider } from "@/context/UserAuthContext";
+import { ShoppingBag, Search, ShoppingCart, Share2 } from "lucide-react";
 
 import CustomProgressBar from "@/components/common/CustomProgressBar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -51,13 +52,7 @@ export default async function UserLayout({
                       <a href="/seller/createshop">Kênh Người Bán</a>
                       <a href="#">Tải ứng dụng</a>
                       <span>
-                        Kết nối{" "}
-                        <span
-                          className="material-symbols-outlined"
-                          style={{ fontSize: "14px" }}
-                        >
-                          share
-                        </span>
+                        Kết nối <Share2 size={14} className="d-inline" />
                       </span>
                     </div>
                   </div>
@@ -88,9 +83,7 @@ export default async function UserLayout({
                         borderRadius: "0.5rem",
                       }}
                     >
-                      <span className="material-symbols-outlined text-white">
-                        shopping_bag
-                      </span>
+                      <ShoppingBag size={22} className="text-white" />
                     </div>
                     <h1 className="fs-4 fw-bold mb-0 d-none d-md-block">
                       Sàn TMĐT
@@ -107,19 +100,17 @@ export default async function UserLayout({
                       placeholder="Tìm sản phẩm, thương hiệu và shop yêu thích..."
                     />
                     <button className="btn btn-search m-1 px-3">
-                      <span className="material-symbols-outlined">search</span>
+                      <Search size={20} />
                     </button>
                   </div>
                 </div>
 
                 {/* Cart */}
                 <div className="col-auto">
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: "28px" }}
-                  >
-                    shopping_cart
-                  </span>
+                  <a href="/cart">
+                    {" "}
+                    <ShoppingCart size={28} />
+                  </a>
                 </div>
               </div>
             </div>

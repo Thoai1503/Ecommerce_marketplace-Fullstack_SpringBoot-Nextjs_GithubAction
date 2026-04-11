@@ -550,7 +550,7 @@ export default function CheckoutPage() {
   };
 
   const [showAddressPanel, setShowAddressPanel] = useState(false);
-  const [selectedAddressId, setSelectedAddressId] = useState(1);
+  const [selectedAddressId, setSelectedAddressId] = useState(0);
 
   const [recipient, setRecipient] = useState<any>(null);
 
@@ -558,6 +558,8 @@ export default function CheckoutPage() {
     addresses.find((a) => a.id === selectedAddressId) ||
     addresses.find((a) => a.isDefault === 1) ||
     addresses[0];
+
+  const hasAddress = Boolean(defaultAddress) && addresses.length > 0;
 
   useEffect(() => {
     if (defaultAddress) {
@@ -581,6 +583,14 @@ export default function CheckoutPage() {
     shopId: number,
     optionId: string,
   ) => {
+    if (!hasAddress || !defaultAddress) {
+      message.warning(
+        "Vui lòng thêm địa chỉ nhận hàng trước khi chọn vận chuyển.",
+      );
+      setShowAddressPanel(true);
+      return;
+    }
+
     // alert(
     //   `Địa chỉ măc định: ${defaultAddress?.address}\nĐang chọn phương thức vận chuyển...`,
     // );
@@ -672,8 +682,9 @@ export default function CheckoutPage() {
       `Thông tin thanh toán:\nSố tiền: ${paymentInfo.amount}\nPhương thức: ${paymentInfo.method}\nMã đơn hàng: ${paymentInfo.orderId}`,
     );
 
-    if (!recipient) {
+    if (!hasAddress || !recipient) {
       message.warning("Vui lòng chọn địa chỉ nhận hàng trước khi đặt hàng.");
+      setShowAddressPanel(true);
       return;
     }
 

@@ -2,6 +2,8 @@
 
 import { logoutAction } from "@/app/actions/auth";
 import { useUserAuth } from "@/context/UserAuthContext";
+import { findUserById } from "@/feature/client/service";
+import { Alegreya } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -14,7 +16,20 @@ type User = {
 
 export default function HeaderAuth() {
   const [user, setUser] = useState<User | null>(null);
-  const { roles } = useUserAuth();
+  const { roles, userId } = useUserAuth();
+  // alert("User data : " + JSON.stringify(user) + ", Roles: " + roles);
+  //alert("User ID from context: " + userId + ", Roles: " + roles);
+
+  useEffect(() => {
+    if (userId && roles) {
+      // alert("Fetching user data for ID: " + userId);
+      findUserById(userId).then((userData) => {
+        // alert("User data fetched: " + JSON.stringify(userData));
+        setUser(userData);
+      });
+    }
+  }, [userId, roles]);
+  // alert("Current user: " + JSON.stringify(user) + ", Roles: " + roles);
 
   const router = useRouter();
 
@@ -36,6 +51,10 @@ export default function HeaderAuth() {
 
   const logout = () => {
     localStorage.removeItem("user");
+    //xoá cookie
+    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     window.location.href = "/";
   };
 
