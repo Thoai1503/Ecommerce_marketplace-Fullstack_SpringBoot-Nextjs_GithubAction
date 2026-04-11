@@ -1,5 +1,4 @@
-package docker_test.com.repository;
-
+ package docker_test.com.repository;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -18,6 +17,7 @@ import docker_test.com.factory.RepoFactoryImpl;
 //import docker_test.com.jdbc.JDBC;
 import docker_test.com.mappers.product.ProductMapper;
 import docker_test.com.models.Category;
+import docker_test.com.models.Shop;
 import docker_test.com.models.product.Product;
 import docker_test.com.models.product.ProductImage;
 import docker_test.com.models.product.ProductVariant;
@@ -391,5 +391,81 @@ WHERE p.id = ?;
 	        
 	        return products;
 	    }
+	 
+	 //get product by id with shop info
+	 public Product GetByIdWithShopInfo(int id) {
+		 String sql = """
+		 		SELECT
+		 			p.id,
+		 			p.product_name,
+		 			p.price,
+		 			s.id AS shop_id,
+		 			s.shop_name,
+		 			(
+		 				SELECT JSON_ARRAYAGG(
+		 					JSON_OBJECT(
+		 						'id', pi.id,
+		 						'image_url', pi.image_url,
+		 						'display_order', pi.display_order,
+		 						'is_thumbnail', pi.is_thumbnail
+		 					)
+		 				)
+		 				FROM product_image pi
+		 				WHERE pi.product_id = p.id
+		 				ORDER BY pi.display_order ASC
+		 			) AS images
+		 			FROM product p
+		 			LEFT JOIN shop s ON p.shop_id = s.id
+		 			WHERE p.id = ?;
+		 			
+		 							""";
+		
+		 System.out.print("Get by id with shop info..");
+		 try (Connection con = dbConnection.getConn();
+					PreparedStatement ps = con.prepareStatement(sql)){
+	
+			  ps.setInt(1, id);
+			  ResultSet rs =	ps.executeQuery();
+			  ObjectMapper mapper = new ObjectMapper();
+	            
+	            while (rs.next()) {
+	                Product product = new Product();
+	                product.setId(rs.getInt("id"));
+	                product.setProduct_name(rs.getString("product_name"));	
+	                product.setPrice(rs.getDouble("price"));
+	                
+	                Shop shop = new Shop();
+	                shop.setId(rs.getInt("shop_id"));
+	                shop.setShop_name(rs.getString("shop_name"));
+	                product.setShop(shop);
+	                
+	                // Lấy JSON dưới dạng String
+	                String imagesJson = rs.getString("images");
+	                
+	                // Parse JSON String thành List<ProductImage>
+	                if (imagesJson != null && !imagesJson.equals("[]")) {
+	                    List<ProductImage> images = mapper.readValue(
+	                        imagesJson, 
+	                        mapper.getTypeFactory().constructCollectionType(
+	                            List.class, ProductImage.class
+	                        )
+	                    );
+	                    product.setImages(images);
+	                } else {
+	                    product.setImages(new ArrayList<>());
+	                }
+	                
+	                System.out.println("Product: " + product.toString());
+	                return product;
+	            }
+		 }
+	 			catch (Exception ex) {
+				ex.printStackTrace();;
+			}
+		 return null;
+		 			
+		 					
+		 				
+	 }
 
 }

@@ -3,13 +3,24 @@ package docker_test.com.models.product;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import docker_test.com.models.Shop;
+
 public final class Product {
     
 	private Integer id ;  // instead of int
 	private Integer shop_id ;  // instead of long
 	private Integer category_id ;
     private String product_name;
-    private String product_slug;
+    private Shop shop; 
+    public Shop getShop() {
+		return shop;
+	}
+
+	public void setShop(Shop shop) {
+		this.shop = shop;
+	}
+
+	private String product_slug;
     public Integer getId() {
 		return id;
 	}
