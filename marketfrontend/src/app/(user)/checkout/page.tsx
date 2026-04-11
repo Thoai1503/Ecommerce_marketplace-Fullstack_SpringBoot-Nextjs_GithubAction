@@ -11,6 +11,7 @@ import { useCheckoutPage } from "@/feature/client/hook";
 import { CartItem, GroupedCartByShop } from "@/validators/cart";
 import { createOrder } from "@/feature/client/service";
 import { IOrderItem } from "@/validators/orderItem";
+import { IOrderShipment } from "@/validators/orderShipment";
 import { useUserAuth } from "@/context/UserAuthContext";
 import { useAddresses } from "@/hooks/useAddresses";
 
@@ -677,6 +678,7 @@ export default function CheckoutPage() {
   };
 
   const handleOrder = async () => {
+    // alert("Address id: " + selectedAddressId);
     //alert("Đặt hàng thành công!")
     alert(
       `Thông tin thanh toán:\nSố tiền: ${paymentInfo.amount}\nPhương thức: ${paymentInfo.method}\nMã đơn hàng: ${paymentInfo.orderId}`,
@@ -688,14 +690,32 @@ export default function CheckoutPage() {
       return;
     }
 
-    var cartConverted = cartItems.map(async (item) => {
+    const uniqueShopIds: number[] = [
+      ...new Set(cartItems.map((item) => item?.product?.shop?.id || 0)),
+    ].filter((shopId): shopId is number => Number(shopId) > 0);
+
+    const baseTrackingSeed = Date.now();
+    const ordersShipment: IOrderShipment[] = uniqueShopIds.map(
+      (shopId, index) => ({
+        id: 0,
+        order_id: 0,
+        shop_id: shopId,
+        shipment_code: `SHIP-${baseTrackingSeed}-${index + 1}`,
+        carrier_name: "LOG",
+        tracking_number: `TRK-${baseTrackingSeed}-${shopId}`,
+        shipping_status: "PENDING",
+      }),
+    );
+
+    const orderItems = cartItems.map((item) => {
       const user_id = item?.product?.shop?.userId || 0;
 
       let userInfo: any = null;
-      await getUserInfoById(user_id).then((res) => {
+      getUserInfoById(user_id).then((res) => {
         console.log("Fetched user info for shop owner:", res);
         userInfo = res;
       });
+
       return {
         id: 1,
         product_id: item?.product?.id || 0,
@@ -716,7 +736,7 @@ export default function CheckoutPage() {
           (item?.productVariant?.price || 0) +
           (shippingFees[item?.product?.shop?.id || 0] || 0),
       };
-    }) as unknown as IOrderItem[];
+    }) as IOrderItem[];
 
     createOrder({
       user_id: paymentInfo.user_id || 0,
@@ -729,35 +749,8 @@ export default function CheckoutPage() {
       shipping_fee: 9000,
       discount_amount: 0,
       final_amount: paymentInfo.amount - 9000 || 0,
-      orders_items: cartItems.map((item) => {
-        const user_id = item?.product?.shop?.userId || 0;
-
-        let userInfo: any = null;
-        getUserInfoById(user_id).then((res) => {
-          console.log("Fetched user info for shop owner:", res);
-          userInfo = res;
-        });
-        return {
-          id: 1,
-          product_id: item?.product?.id || 0,
-          shop_id: item?.product?.shop?.id || 0,
-          order_id: 1,
-          shop: {
-            id: item?.product?.shop?.id || 0,
-            shop_name: item?.product?.shop?.shopName || "",
-            api_key: item?.product?.shop?.shopName.toUpperCase() + "_API_KEY",
-            contact_email: userInfo?.email || "",
-            phone: userInfo?.phone || "",
-          },
-          variant_id: item?.productVariant?.id || 0,
-          product_name: item?.product?.name || "",
-          variant_name: item?.productVariant?.variantName || "",
-          quantity: item?.quantity || 0,
-          price:
-            (item?.productVariant?.price || 0) +
-            (shippingFees[item?.product?.shop?.id || 0] || 0),
-        };
-      }) as IOrderItem[],
+      orders_items: orderItems,
+      orders_shipment: ordersShipment,
       note: "",
       tracking_number: "",
       id: 0,

@@ -2,7 +2,7 @@
 --
 -- Host: 103.90.225.130    Database: logistic_service
 -- ------------------------------------------------------
--- Server version	9.6.0
+-- Server version	8.4.8
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -14,18 +14,10 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-SET @MYSQLDUMP_TEMP_LOG_BIN = @@SESSION.SQL_LOG_BIN;
-SET @@SESSION.SQL_LOG_BIN= 0;
 
---
--- GTID state at the beginning of the backup 
---
-
-SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '2c59c582-18f2-11f1-bd8d-5aa896c9ebaa:1-1806,
-623d5015-006c-11f1-9997-862ccfb0601c:1-55,
-81ef4829-2dbc-11f1-ad1f-82b74a1b389c:1-141,
-c092d620-3959-11f0-ab88-862ccfb006c1:1-123,
-c2164987-7c01-11f0-abd1-862ccfb03b82:1-293';
+-- Safety cleanup for legacy trigger chains
+DROP TRIGGER IF EXISTS `trg_shipment_after_insert_status_history`;
+DROP TRIGGER IF EXISTS `trg_shipment_after_update_status_history`;
 
 --
 -- Table structure for table `logistics_partner`
@@ -79,7 +71,7 @@ CREATE TABLE `recipient` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_recipient_phone` (`phone`)
-) ENGINE=InnoDB AUTO_INCREMENT=134 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Thông tin người nhận hàng (snapshot tại thời điểm tạo shipment)';
+) ENGINE=InnoDB AUTO_INCREMENT=136 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Thông tin người nhận hàng (snapshot tại thời điểm tạo shipment)';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -88,7 +80,7 @@ CREATE TABLE `recipient` (
 
 LOCK TABLES `recipient` WRITE;
 /*!40000 ALTER TABLE `recipient` DISABLE KEYS */;
-INSERT INTO `recipient` VALUES (128,'Vo Giang Thoai','0862830787','vpthpo@gmail.com','341 Cao Thang',2,4,5,'2026-03-27 06:17:02'),(129,'Vo Quang Teo','0869990787',NULL,'341 Cao Thang',2,4,5,'2026-03-28 12:31:36'),(131,'Vo Quang Teo Em','0860000787',NULL,'341 Cao Thang',2,4,5,'2026-03-28 12:45:43'),(132,'dvzsx','0987654243',NULL,'dvsvsv',1,1,1,'2026-03-29 22:25:44'),(133,'thoai','0867677888',NULL,'456 vnnvn, Phường 1, Quận 1, Hà Nội',NULL,NULL,NULL,'2026-04-01 19:14:20');
+INSERT INTO `recipient` VALUES (128,'Vo Giang Thoai','0862830787','vpthpo@gmail.com','341 Cao Thang',2,4,5,'2026-03-27 06:17:02'),(129,'Vo Quang Teo','0869990787',NULL,'341 Cao Thang',2,4,5,'2026-03-28 12:31:36'),(131,'Vo Quang Teo Em','0860000787',NULL,'341 Cao Thang',2,4,5,'2026-03-28 12:45:43'),(132,'dvzsx','0987654243',NULL,'dvsvsv',1,1,1,'2026-03-29 22:25:44'),(133,'thoai','0867677888',NULL,'456 vnnvn, Phường 1, Quận 1, Hà Nội',NULL,NULL,NULL,'2026-04-01 19:14:20'),(134,'Thoại Chó điên','0976499267',NULL,'51 Hiệp Bình, Phường Hiệp Bình Chánh, Thành Phố Thủ Đức, TP. Hồ Chí Minh',NULL,NULL,NULL,'2026-04-09 22:18:58'),(135,'Cu Tí','0968561302',NULL,'Ấp Cá Tra, Xã Tam Ngãi, Huyện Cầu Kè, TP 214',NULL,NULL,NULL,'2026-04-11 13:06:40');
 /*!40000 ALTER TABLE `recipient` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -124,7 +116,7 @@ CREATE TABLE `shipment` (
   KEY `idx_shipment_status` (`status`),
   CONSTRAINT `fk_shipment_partner` FOREIGN KEY (`partner_id`) REFERENCES `logistics_partner` (`id`),
   CONSTRAINT `fk_shipment_recipient` FOREIGN KEY (`recipient_id`) REFERENCES `recipient` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=251 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Vận đơn - đơn vị trung tâm của logistics service';
+) ENGINE=InnoDB AUTO_INCREMENT=332 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Vận đơn - đơn vị trung tâm của logistics service';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -133,9 +125,111 @@ CREATE TABLE `shipment` (
 
 LOCK TABLES `shipment` WRITE;
 /*!40000 ALTER TABLE `shipment` DISABLE KEYS */;
-INSERT INTO `shipment` VALUES (211,'LOGD6F9AACC',228,1,1,131,'PENDING',9000,29000,NULL,NULL,NULL,NULL,'2026-03-29 19:06:18','2026-03-29 19:06:18'),(212,'LOGD6BCEEBF',229,2,1,131,'PENDING',9000,29000,NULL,NULL,NULL,NULL,'2026-03-29 19:06:18','2026-03-29 19:06:18'),(213,'LOGE0ABB021',230,1,1,131,'PENDING',9000,29000,NULL,NULL,NULL,NULL,'2026-03-29 19:23:05','2026-03-29 19:23:05'),(214,'LOGD0D7AF45',231,2,1,131,'PENDING',9000,29000,NULL,NULL,NULL,NULL,'2026-03-29 19:23:05','2026-03-29 19:23:05'),(215,'LOG4676E9CC',232,1,1,131,'PENDING',9000,29000,NULL,NULL,NULL,NULL,'2026-03-29 19:27:31','2026-03-29 19:27:31'),(216,'LOG457098BF',233,2,1,131,'PENDING',9000,29000,NULL,NULL,NULL,NULL,'2026-03-29 19:27:31','2026-03-29 19:27:31'),(217,'LOG195BCC4F',240,1,1,132,'PENDING',9000,109000,NULL,NULL,NULL,NULL,'2026-03-29 22:25:44','2026-03-29 22:25:44'),(218,'LOG9F55C697',241,2,1,132,'PENDING',9000,109000,NULL,NULL,NULL,NULL,'2026-03-29 22:25:44','2026-03-29 22:25:44'),(239,'LOGDB29A1F3',251,1,1,133,'PENDING',9000,109000,NULL,NULL,NULL,NULL,'2026-04-01 19:14:20','2026-04-01 19:14:20'),(240,'LOG4EF5EF9A',252,1,1,133,'PENDING',9000,109000,NULL,NULL,NULL,NULL,'2026-04-01 19:15:01','2026-04-01 19:15:01'),(241,'LOG9B9E3729',253,1,1,133,'PENDING',9000,109000,NULL,NULL,NULL,NULL,'2026-04-01 22:42:27','2026-04-01 22:42:27'),(242,'LOG38F12469',254,2,1,133,'PENDING',9000,109000,NULL,NULL,NULL,NULL,'2026-04-01 22:42:27','2026-04-01 22:42:27'),(243,'LOG0E129F6C',256,2,1,131,'PENDING',9000,29000,NULL,NULL,NULL,NULL,'2026-04-02 22:28:02','2026-04-02 22:28:02'),(244,'LOG4404FD15',255,1,1,131,'PENDING',9000,29000,NULL,NULL,NULL,NULL,'2026-04-02 22:28:02','2026-04-02 22:28:02'),(245,'LOG059E73DD',257,1,1,131,'PENDING',9000,29000,NULL,NULL,NULL,NULL,'2026-04-03 18:52:46','2026-04-03 18:52:46'),(246,'LOG12C96F8A',258,2,1,131,'PENDING',9000,29000,NULL,NULL,NULL,NULL,'2026-04-03 18:52:46','2026-04-03 18:52:46'),(247,'LOGF5BEC92E',259,1,1,131,'PENDING',9000,29000,NULL,NULL,NULL,NULL,'2026-04-03 18:53:23','2026-04-03 18:53:23'),(248,'LOG6C18A5CE',260,2,1,131,'PENDING',9000,29000,NULL,NULL,NULL,NULL,'2026-04-03 18:53:23','2026-04-03 18:53:23'),(249,'LOG69FE94AF',261,1,1,131,'CONFIRMED',9000,29000,NULL,NULL,NULL,NULL,'2026-04-03 18:56:51','2026-04-04 06:40:42'),(250,'LOGB516749E',262,2,1,131,'CONFIRMED',9000,29000,NULL,NULL,NULL,NULL,'2026-04-03 18:56:51','2026-04-04 07:10:52');
 /*!40000 ALTER TABLE `shipment` ENABLE KEYS */;
 UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+-- Removed trigger trg_shipment_after_insert_status_history
+-- Reason: INSERT shipment -> trigger inserts shipment_status_history ->
+-- status_history trigger can update shipment, which causes MySQL recursive
+-- table update error on shipment.
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `trg_shipment_before_update_status` BEFORE UPDATE ON `shipment` FOR EACH ROW BEGIN
+	DECLARE v_old_step INT DEFAULT 0;
+	DECLARE v_new_step INT DEFAULT 0;
+	DECLARE v_toggle_count INT DEFAULT 0;
+
+	IF NOT (OLD.status <=> NEW.status) THEN
+		IF NEW.status IS NULL OR TRIM(NEW.status) = '' THEN
+			SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = 'Shipment status is required.';
+		END IF;
+
+		SET v_old_step = fn_shipment_status_step(OLD.status);
+		SET v_new_step = fn_shipment_status_step(NEW.status);
+
+		IF v_old_step = 0 OR v_new_step = 0 THEN
+			SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = 'Shipment status is not supported by workflow rule.';
+		END IF;
+
+		IF OLD.status IN ('PENDING', 'CONFIRMED', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY') THEN
+			IF v_new_step <> v_old_step + 1 THEN
+				SIGNAL SQLSTATE '45000'
+				SET MESSAGE_TEXT = 'Shipment must move forward one step at a time from PENDING to DELIVERED.';
+			END IF;
+		ELSEIF OLD.status = 'DELIVERED' THEN
+			SET v_toggle_count = fn_shipment_delivery_failed_toggle_count(OLD.id);
+
+			IF NEW.status <> 'FAILED' THEN
+				SIGNAL SQLSTATE '45000'
+				SET MESSAGE_TEXT = 'From DELIVERED the shipment can only move to FAILED.';
+			END IF;
+
+			IF v_toggle_count >= 3 THEN
+				SIGNAL SQLSTATE '45000'
+				SET MESSAGE_TEXT = 'DELIVERED and FAILED can only toggle 3 times. Move shipment to RETURNED.';
+			END IF;
+		ELSEIF OLD.status = 'FAILED' THEN
+			SET v_toggle_count = fn_shipment_delivery_failed_toggle_count(OLD.id);
+
+			IF v_toggle_count >= 3 THEN
+				IF NEW.status <> 'RETURNED' THEN
+					SIGNAL SQLSTATE '45000'
+					SET MESSAGE_TEXT = 'After the third DELIVERED to FAILED toggle, shipment must move to RETURNED.';
+				END IF;
+			ELSEIF NEW.status <> 'DELIVERED' THEN
+				SIGNAL SQLSTATE '45000'
+				SET MESSAGE_TEXT = 'From FAILED the shipment can only move back to DELIVERED before the toggle limit is reached.';
+			END IF;
+		ELSEIF OLD.status = 'RETURNED' THEN
+			SIGNAL SQLSTATE '45000'
+			SET MESSAGE_TEXT = 'RETURNED is terminal and cannot move to another status.';
+		END IF;
+
+		IF NEW.status = 'DELIVERED' THEN
+			SET NEW.delivered_at = CURRENT_TIMESTAMP;
+		END IF;
+	END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+-- Removed trigger trg_shipment_after_update_status_history
+-- Reason: UPDATE shipment -> trigger inserts shipment_status_history ->
+-- status_history trigger can update shipment, causing recursive update path.
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `shipment_item`
@@ -154,7 +248,7 @@ CREATE TABLE `shipment_item` (
   PRIMARY KEY (`id`),
   KEY `idx_shipment_item_shipment` (`shipment_id`),
   CONSTRAINT `fk_item_shipment` FOREIGN KEY (`shipment_id`) REFERENCES `shipment` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=216 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Sản phẩm trong vận đơn (snapshot, không join về ecommerce DB)';
+) ENGINE=InnoDB AUTO_INCREMENT=274 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Sản phẩm trong vận đơn (snapshot, không join về ecommerce DB)';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -163,7 +257,6 @@ CREATE TABLE `shipment_item` (
 
 LOCK TABLES `shipment_item` WRITE;
 /*!40000 ALTER TABLE `shipment_item` DISABLE KEYS */;
-INSERT INTO `shipment_item` VALUES (165,211,'Động cơ 555 Kieu 2',NULL,6,1999000.00),(166,212,'Động cơ 775',NULL,2,10000000.00),(167,212,'Động cơ 775',NULL,13,90000.00),(168,213,'Động cơ 555 Kieu 2',NULL,6,1999000.00),(169,214,'Động cơ 775',NULL,2,10000000.00),(170,214,'Động cơ 775',NULL,13,90000.00),(171,215,'Động cơ 555 Kieu 2',NULL,6,1999000.00),(172,216,'Động cơ 775',NULL,2,10000000.00),(173,216,'Động cơ 775',NULL,13,90000.00),(174,217,'Động Cơ Motor Giảm Tốc 36GP - 555 Răng kim loại 12V/24 , Trục 8mm Device siêu khỏe Tốc Độ Nhiều chọn Lựa',NULL,7,219000.00),(175,217,'Động Cơ Motor Giảm Tốc 36GP - 555 Răng kim loại 12V/24 , Trục 8mm Device siêu khỏe Tốc Độ Nhiều chọn Lựa',NULL,20,189000.00),(176,218,'Sách lập trình hướng đối tượng JAVA core dành cho người mới bắt đầu học lập trình',NULL,3,289000.00),(197,239,'Động Cơ Motor Giảm Tốc 36GP - 555 Răng kim loại 12V/24 , Trục 8mm Device siêu khỏe Tốc Độ Nhiều chọn Lựa',NULL,7,219000.00),(198,239,'Động Cơ Motor Giảm Tốc 36GP - 555 Răng kim loại 12V/24 , Trục 8mm Device siêu khỏe Tốc Độ Nhiều chọn Lựa',NULL,20,189000.00),(199,240,'Động Cơ Motor Giảm Tốc 36GP - 555 Răng kim loại 12V/24 , Trục 8mm Device siêu khỏe Tốc Độ Nhiều chọn Lựa',NULL,7,219000.00),(200,240,'Động Cơ Motor Giảm Tốc 36GP - 555 Răng kim loại 12V/24 , Trục 8mm Device siêu khỏe Tốc Độ Nhiều chọn Lựa',NULL,20,189000.00),(201,241,'Động Cơ Motor Giảm Tốc 36GP - 555 Răng kim loại 12V/24 , Trục 8mm Device siêu khỏe Tốc Độ Nhiều chọn Lựa',NULL,20,189000.00),(202,242,'Đầu Chuyển Đổi Máy Siết Bulong Sang Khoan 13mm - Chuyển đổi từ Bulong 1/2 sang khoan hàng cao cấp,bền bỉ',NULL,2,7000.00),(203,242,'Sách lập trình hướng đối tượng JAVA core dành cho người mới bắt đầu học lập trình',NULL,3,289000.00),(204,243,'Động cơ 775',NULL,2,10000000.00),(205,243,'Động cơ 775',NULL,13,90000.00),(206,244,'Động cơ 555 Kieu 2',NULL,6,1999000.00),(207,245,'Động cơ 555 Kieu 2',NULL,6,1999000.00),(208,246,'Động cơ 775',NULL,2,10000000.00),(209,246,'Động cơ 775',NULL,13,90000.00),(210,247,'Động cơ 555 Kieu 2',NULL,6,1999000.00),(211,248,'Động cơ 775',NULL,2,10000000.00),(212,248,'Động cơ 775',NULL,13,90000.00),(213,249,'Động cơ 555 Kieu 2',NULL,6,1999000.00),(214,250,'Động cơ 775',NULL,2,10000000.00),(215,250,'Động cơ 775',NULL,13,90000.00);
 /*!40000 ALTER TABLE `shipment_item` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -186,7 +279,7 @@ CREATE TABLE `shipment_status_history` (
   KEY `idx_status_history_shipment` (`shipment_id`),
   KEY `idx_status_history_time` (`updated_at`),
   CONSTRAINT `fk_history_shipment` FOREIGN KEY (`shipment_id`) REFERENCES `shipment` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=219 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Lịch sử trạng thái vận đơn - nguồn dữ liệu tracking page';
+) ENGINE=InnoDB AUTO_INCREMENT=359 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Lịch sử trạng thái vận đơn - nguồn dữ liệu tracking page';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -195,10 +288,169 @@ CREATE TABLE `shipment_status_history` (
 
 LOCK TABLES `shipment_status_history` WRITE;
 /*!40000 ALTER TABLE `shipment_status_history` DISABLE KEYS */;
-INSERT INTO `shipment_status_history` VALUES (191,211,'PENDING','Vận đơn được tạo',NULL,'system','2026-03-29 12:06:17'),(192,212,'PENDING','Vận đơn được tạo',NULL,'system','2026-03-29 12:06:17'),(193,213,'PENDING','Vận đơn được tạo',NULL,'system','2026-03-29 12:23:04'),(194,214,'PENDING','Vận đơn được tạo',NULL,'system','2026-03-29 12:23:04'),(195,215,'PENDING','Vận đơn được tạo',NULL,'system','2026-03-29 12:27:30'),(196,216,'PENDING','Vận đơn được tạo',NULL,'system','2026-03-29 12:27:30'),(197,217,'PENDING','Vận đơn được tạo',NULL,'system','2026-03-29 15:25:45'),(198,218,'PENDING','Vận đơn được tạo',NULL,'system','2026-03-29 15:25:45');
 /*!40000 ALTER TABLE `shipment_status_history` ENABLE KEYS */;
 UNLOCK TABLES;
-SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `trg_shipment_status_history_insert` BEFORE INSERT ON `shipment_status_history` FOR EACH ROW BEGIN
+    -- Auto-set timestamp if not provided
+    IF NEW.updated_at IS NULL THEN
+        SET NEW.updated_at = CURRENT_TIMESTAMP;
+    END IF;
+    
+    -- Validate shipment exists
+    IF NEW.shipment_id NOT IN (SELECT id FROM shipment) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Invalid shipment_id - shipment does not exist';
+    END IF;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `trg_shipment_auto_sync_updated_at` AFTER INSERT ON `shipment_status_history` FOR EACH ROW BEGIN
+    -- Sync shipment.updated_at with the latest status history entry
+    UPDATE shipment s
+    SET s.updated_at = NEW.updated_at
+    WHERE s.id = NEW.shipment_id;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`%`*/ /*!50003 TRIGGER `trg_shipment_status_history_update` BEFORE UPDATE ON `shipment_status_history` FOR EACH ROW BEGIN
+    SET NEW.updated_at = OLD.updated_at;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Dumping events for database 'logistic_service'
+--
+
+--
+-- Dumping routines for database 'logistic_service'
+--
+/*!50003 DROP FUNCTION IF EXISTS `fn_shipment_delivery_failed_toggle_count` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`%` FUNCTION `fn_shipment_delivery_failed_toggle_count`(p_shipment_id BIGINT) RETURNS int
+    READS SQL DATA
+BEGIN
+	DECLARE v_toggle_count INT DEFAULT 0;
+
+	SELECT GREATEST(COUNT(*) - 1, 0)
+	INTO v_toggle_count
+	FROM shipment_status_history
+	WHERE shipment_id = p_shipment_id
+	  AND status IN ('DELIVERED', 'FAILED');
+
+	RETURN v_toggle_count;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP FUNCTION IF EXISTS `fn_shipment_status_step` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`%` FUNCTION `fn_shipment_status_step`(p_status VARCHAR(50)) RETURNS int
+    DETERMINISTIC
+BEGIN
+	RETURN CASE p_status
+		WHEN 'PENDING' THEN 1
+		WHEN 'CONFIRMED' THEN 2
+		WHEN 'PICKED_UP' THEN 3
+		WHEN 'IN_TRANSIT' THEN 4
+		WHEN 'OUT_FOR_DELIVERY' THEN 5
+		WHEN 'DELIVERED' THEN 6
+		WHEN 'FAILED' THEN 7
+		WHEN 'RETURNED' THEN 8
+		ELSE 0
+	END;
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 DROP PROCEDURE IF EXISTS `sync_shipment_updated_at_timestamps` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+CREATE DEFINER=`root`@`%` PROCEDURE `sync_shipment_updated_at_timestamps`()
+BEGIN
+    -- Safely sync shipment.updated_at with latest status history
+    -- WITHOUT any trigger interference or deadlock risk
+    
+    UPDATE shipment s
+    SET s.updated_at = (
+        SELECT MAX(h.updated_at)
+        FROM shipment_status_history h
+        WHERE h.shipment_id = s.id
+    )
+    WHERE s.id IN (
+        SELECT DISTINCT shipment_id
+        FROM shipment_status_history
+        WHERE updated_at > DATE_SUB(NOW(), INTERVAL 1 MINUTE)
+    );
+END ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -209,4 +461,4 @@ SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-04-04  7:27:44
+-- Dump completed on 2026-04-11 17:49:36

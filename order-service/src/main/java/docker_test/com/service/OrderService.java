@@ -111,7 +111,16 @@ public class OrderService {
         dto.setRecipient(dto.getRecipient());
         dto.setOrder_number(saved.getOrderNumber());
         
-        eventPublisher.publish(dto);
+        // Publish event with error handling and automatic rollback on failure
+        try {
+            eventPublisher.publish(dto);
+            log.info("Order event published successfully for orderId={}", saved.getId());
+        } catch (Exception e) {
+            log.error("Failed to publish order event for orderId={}. Transaction will be rolled back. Error: {}", 
+                    saved.getId(), e.getMessage(), e);
+            // Throwing exception will trigger @Transactional rollback
+            throw new RuntimeException("Failed to publish order event: " + e.getMessage(), e);
+        }
 
         return saved;
     }
