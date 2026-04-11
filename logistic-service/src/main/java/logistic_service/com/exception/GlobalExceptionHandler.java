@@ -38,11 +38,22 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException ex,
             WebRequest request) {
         String message = "Invalid request body.";
-        if (ex.getMessage() != null && ex.getMessage().contains("ShipmentStatus")) {
-            String allowedStatuses = Arrays.stream(ShipmentStatus.values())
-                    .map(Enum::name)
-                    .collect(Collectors.joining(", "));
-            message = "Invalid status value. Allowed values: " + allowedStatuses;
+        
+        // Provide helpful error message for common JSON format issues
+        if (ex.getMessage() != null) {
+            if (ex.getMessage().contains("Unexpected character") && 
+                ex.getMessage().contains("code 39")) {
+                // Code 39 is single quote (')
+                message = "JSON Format Error: Use double quotes (\") not single quotes ('). " +
+                         "Example: {\"status\": \"IN_TRANSIT\"} not {'status': 'IN_TRANSIT'}";
+            } else if (ex.getMessage().contains("ShipmentStatus")) {
+                String allowedStatuses = Arrays.stream(ShipmentStatus.values())
+                        .map(Enum::name)
+                        .collect(Collectors.joining(", "));
+                message = "Invalid status value. Allowed values: " + allowedStatuses;
+            } else if (ex.getMessage().contains("Required request body")) {
+                message = "Missing Request Body: Please provide JSON with status and description fields.";
+            }
         }
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "INVALID_REQUEST_BODY", message, request);
     }

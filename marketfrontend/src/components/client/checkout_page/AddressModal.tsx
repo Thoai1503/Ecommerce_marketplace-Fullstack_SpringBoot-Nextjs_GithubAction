@@ -466,7 +466,10 @@ const AddressModal = ({
                     ? styles.addressItemSelected
                     : styles.addressItem
                 }
-                onClick={() => setSelectedAddressId(addr.id)}
+                onClick={() => {
+                  //  alert("Selected address id: " + addr.id);
+                  setSelectedAddressId(addr.id);
+                }}
               >
                 <div className="d-flex align-items-start gap-3">
                   {/* Radio circle */}
