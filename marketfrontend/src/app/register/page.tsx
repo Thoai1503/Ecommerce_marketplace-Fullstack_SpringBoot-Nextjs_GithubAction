@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 
 import { API_URL } from "@/helper/api";
-import { useSearchParams } from "next/dist/client/components/navigation";
+import { useSearchParams } from "next/navigation";
 import { addBatchCartItems } from "@/feature/client/service";
 type Errors = {
   fullName?: string;
@@ -13,7 +13,7 @@ type Errors = {
   general?: string;
 };
 
-const Page: React.FC = () => {
+const RegisterContent: React.FC = () => {
   const preLogggedInCart =
     typeof window !== "undefined"
       ? ((localStorage.getItem("preLoginCart")
@@ -317,6 +317,14 @@ const Page: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const Page: React.FC = () => {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <RegisterContent />
+    </Suspense>
   );
 };
 
