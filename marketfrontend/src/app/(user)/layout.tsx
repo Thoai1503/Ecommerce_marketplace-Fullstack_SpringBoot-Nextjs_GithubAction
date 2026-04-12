@@ -9,6 +9,7 @@ import { UserAuthProvider } from "@/context/UserAuthContext";
 import CustomProgressBar from "@/components/common/CustomProgressBar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RootPrivider } from "@/components/context/RootProvider";
+import Link from "next/link";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,10 +49,10 @@ export default async function UserLayout({
                 <div className="row">
                   <div className="col-6">
                     <div className="d-flex gap-3">
-                      <a href="/seller/createshop">Kênh Người Bán</a>
-                      <a href="#">Tải ứng dụng</a>
+                      <a href="/seller/createshop">Human Sales Channel</a>
+                      <a href="#">Download the application</a>
                       <span>
-                        Kết nối{" "}
+                        Connect{" "}
                         <span
                           className="material-symbols-outlined"
                           style={{ fontSize: "14px" }}
@@ -93,7 +94,7 @@ export default async function UserLayout({
                       </span>
                     </div>
                     <h1 className="fs-4 fw-bold mb-0 d-none d-md-block">
-                      Sàn TMĐT
+                      E-commerce platform
                     </h1>
                   </a>
                 </div>
@@ -104,7 +105,7 @@ export default async function UserLayout({
                     <input
                       type="text"
                       className="form-control border-0"
-                      placeholder="Tìm sản phẩm, thương hiệu và shop yêu thích..."
+                      placeholder="Find your favorite products, brands, and shops..."
                     />
                     <button className="btn btn-search m-1 px-3">
                       <span className="material-symbols-outlined">search</span>
@@ -113,14 +114,14 @@ export default async function UserLayout({
                 </div>
 
                 {/* Cart */}
-                <div className="col-auto">
+                <Link href="/cart" className="col-auto">
                   <span
                     className="material-symbols-outlined"
-                    style={{ fontSize: "28px" }}
+                    style={{ fontSize: "28px", cursor: "pointer" }}
                   >
                     shopping_cart
                   </span>
-                </div>
+                </Link>
               </div>
             </div>
           </header>
@@ -135,7 +136,7 @@ export default async function UserLayout({
                 {/* CSKH */}
                 <div className="col-6 col-md-3 col-lg-2">
                   <h6 className="fw-bold text-uppercase mb-3 small">
-                    Chăm sóc khách hàng
+                    Customer care
                   </h6>
                   <ul className="list-unstyled small text-secondary">
                     <li>
@@ -143,7 +144,7 @@ export default async function UserLayout({
                         href="#"
                         className="text-decoration-none text-secondary"
                       >
-                        Trung tâm trợ giúp
+                        Help Center
                       </a>
                     </li>
                     <li>
@@ -151,7 +152,7 @@ export default async function UserLayout({
                         href="#"
                         className="text-decoration-none text-secondary"
                       >
-                        Hướng dẫn mua hàng
+                        Buying guide
                       </a>
                     </li>
                     <li>
@@ -159,7 +160,7 @@ export default async function UserLayout({
                         href="#"
                         className="text-decoration-none text-secondary"
                       >
-                        Thanh toán
+                        Pay
                       </a>
                     </li>
                     <li>
@@ -167,7 +168,7 @@ export default async function UserLayout({
                         href="#"
                         className="text-decoration-none text-secondary"
                       >
-                        Vận chuyển
+                        Transport
                       </a>
                     </li>
                     <li>
@@ -175,7 +176,7 @@ export default async function UserLayout({
                         href="#"
                         className="text-decoration-none text-secondary"
                       >
-                        Trả hàng & hoàn tiền
+                        Returns & Refunds
                       </a>
                     </li>
                   </ul>
@@ -184,7 +185,7 @@ export default async function UserLayout({
                 {/* VỀ CHÚNG TÔI */}
                 <div className="col-6 col-md-3 col-lg-2">
                   <h6 className="fw-bold text-uppercase mb-3 small">
-                    Về chúng tôi
+                    About us
                   </h6>
                   <ul className="list-unstyled small text-secondary">
                     <li>
@@ -192,7 +193,7 @@ export default async function UserLayout({
                         href="#"
                         className="text-decoration-none text-secondary"
                       >
-                        Giới thiệu
+                        Introduce
                       </a>
                     </li>
                     <li>
@@ -200,7 +201,7 @@ export default async function UserLayout({
                         href="#"
                         className="text-decoration-none text-secondary"
                       >
-                        Tuyển dụng
+                        Recruitment
                       </a>
                     </li>
                     <li>
@@ -208,7 +209,7 @@ export default async function UserLayout({
                         href="#"
                         className="text-decoration-none text-secondary"
                       >
-                        Điều khoản
+                        Clause
                       </a>
                     </li>
                     <li>
@@ -216,7 +217,7 @@ export default async function UserLayout({
                         href="#"
                         className="text-decoration-none text-secondary"
                       >
-                        Chính sách bảo mật
+                        Privacy policy
                       </a>
                     </li>
                   </ul>
@@ -224,9 +225,7 @@ export default async function UserLayout({
 
                 {/* THANH TOÁN */}
                 <div className="col-6 col-md-3 col-lg-2">
-                  <h6 className="fw-bold text-uppercase mb-3 small">
-                    Thanh toán
-                  </h6>
+                  <h6 className="fw-bold text-uppercase mb-3 small">Pay</h6>
                   <div className="d-flex flex-wrap gap-2">
                     {["VISA", "MC", "JCB"].map((x) => (
                       <div
@@ -242,7 +241,7 @@ export default async function UserLayout({
                 {/* THEO DÕI */}
                 <div className="col-6 col-md-3 col-lg-2">
                   <h6 className="fw-bold text-uppercase mb-3 small">
-                    Theo dõi chúng tôi
+                    Follow us
                   </h6>
                   <ul className="list-unstyled small text-secondary">
                     <li className="d-flex align-items-center gap-2">
@@ -269,7 +268,7 @@ export default async function UserLayout({
                 {/* APP */}
                 <div className="col-12 col-md-6 col-lg-3">
                   <h6 className="fw-bold text-uppercase mb-3 small">
-                    Tải ứng dụng
+                    Download the application
                   </h6>
                   <div className="d-flex gap-3">
                     <div

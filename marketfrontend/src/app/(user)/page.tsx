@@ -57,28 +57,26 @@ export default async function Home() {
   }
 
   return (
-    <div className="container-fluid px-3 px-md-4">
+    <div
+      className="container-fluid px-3 px-md-4"
+      style={{ backgroundColor: "#f8f9fa" }}
+    >
       {/* Category Icons - Horizontal Scrollable */}
-      <div className="my-4">
+      <div className="my-4" style={{ maxWidth: "100%", overflowX: "auto" }}>
         <div
           className="d-flex overflow-auto gap-3 pb-2 scrollbar-thin"
-          style={{ scrollbarWidth: "thin" }}
+          style={{
+            scrollbarWidth: "thin",
+            backgroundColor: "#f8f9fa",
+            paddingBottom: "10px",
+          }}
         >
           {[
-            { icon: "truck", text: "Freeship", color: "primary" },
-            { icon: "lightning-fill", text: "Flash Sale", color: "warning" },
-            { icon: "shop", text: "Mall", color: "danger" },
-            {
-              icon: "ticket-perforated",
-              text: "Mã Giảm Giá",
-              color: "success",
-            },
-            { icon: "phone", text: "Nạp Thẻ", color: "info" },
-            { icon: "coin", text: "Hoàn Xu", color: "warning" },
-            { icon: "airplane", text: "Khởi Trang", color: "primary" },
-            { icon: "globe", text: "Hàng Quốc Tế", color: "secondary" },
-            { icon: "heart", text: "Biết Trend", color: "danger" },
-            { icon: "grid-3x3", text: "Tất Cả", color: "dark" },
+            { image: "/image/freeship.jpg", text: "Freeship" },
+            { image: "/image/flashsale.png", text: "Flash Sale" },
+            { image: "/image/mal.png", text: "Mall" },
+            { image: "/image/voucher.png", text: "Mã Giảm Giá" },
+            { image: "/image/all.png", text: "Tất Cả" },
           ].map((item, idx) => (
             <div
               key={idx}
@@ -86,10 +84,19 @@ export default async function Home() {
               style={{ width: "80px" }}
             >
               <div
-                className={`rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto mb-2 shadow-sm`}
-                style={{ width: "60px", height: "60px" }}
+                className="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto mb-2 shadow-sm"
+                style={{ width: "65px", height: "65px" }}
               >
-                <i className={`bi bi-${item.icon} fs-3 text-${item.color}`}></i>
+                <img
+                  src={item.image}
+                  alt={item.text}
+                  style={{
+                    backgroundColor: "white",
+                    width: "70%",
+                    height: "70%",
+                    objectFit: "contain",
+                  }}
+                />
               </div>
               <small className="d-block text-muted">{item.text}</small>
             </div>
@@ -101,28 +108,34 @@ export default async function Home() {
       <div className="row g-3 g-md-4">
         {parentCategories.map((cat: any, idx: number) => (
           <div key={idx} className="col-4 col-md-3 col-lg-2">
-            <div className="text-center category-item shadow-sm rounded p-3 bg-white hover-lift">
-              <div
-                className="rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center"
-                style={{
-                  width: "70px",
-                  height: "70px",
-                  backgroundColor: cat.color,
-                }}
-              >
-                {cat.category_icon && (
-                  <img
-                    src={cat.category_icon}
-                    style={{
-                      width: "100px",
-                      height: "100px",
-                      objectFit: "cover",
-                    }}
-                  />
-                )}
+            <Link
+              href={`/category/${cat.id}`}
+              className="text-decoration-none text-dark"
+            >
+              <div className="text-center category-item shadow-sm rounded p-3 bg-white hover-lift">
+                <div
+                  className="rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center"
+                  style={{
+                    width: "70px",
+                    height: "70px",
+                    backgroundColor: cat.color,
+                  }}
+                >
+                  {cat.category_icon && (
+                    <img
+                      src={cat.category_icon}
+                      style={{
+                        width: "100px",
+                        height: "100px",
+                        objectFit: "cover",
+                      }}
+                    />
+                  )}
+                </div>
+
+                <small className="d-block fw-medium">{cat.category_name}</small>
               </div>
-              <small className="d-block fw-medium">{cat.category_name}</small>
-            </div>
+            </Link>
           </div>
         ))}
       </div>
