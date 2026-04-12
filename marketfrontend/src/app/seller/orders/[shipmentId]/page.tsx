@@ -84,12 +84,12 @@ const DEV_USE_MOCK = true;
 const MOCK_SHIPMENT: IOrderShipment = {
   shipmentId: 1001,
   orderId: 5023,
-  shopId: 2,
-  shippingFee: 35_000,
-  totalAmount: 1_250_000,
-  carrierName: "Giao Hàng Nhanh (GHN)",
-  trackingNumber: "SGHN1234567890VN",
-  shippingStatus: "DELIVERING",
+  shop_id: 2,
+  shipping_fee: 35_000,
+  total_amount: 1_250_000,
+  carrier_name: "Giao Hàng Nhanh (GHN)",
+  tracking_number: "SGHN1234567890VN",
+  shipping_status: "DELIVERING",
   order: {
     orderNumber: "ORD-20260412-5023",
     userId: 77,
@@ -199,7 +199,7 @@ export default function ShipmentDetailPage() {
 
   // Guard: seller can only view their own shipments
   React.useEffect(() => {
-    if (shipment && shop && shipment.shopId !== shop.id) {
+    if (shipment && shop && shipment.shop_id !== shop.id) {
       router.replace("/seller/orders");
     }
   }, [shipment, shop, router]);
@@ -228,11 +228,11 @@ export default function ShipmentDetailPage() {
   const {
     shipmentId: id,
     orderId,
-    carrierName,
-    trackingNumber,
-    shippingStatus,
-    shippingFee,
-    totalAmount,
+    carrier_name,
+    tracking_number,
+    shipping_status,
+    shipping_fee,
+    total_amount,
     order,
     recipient,
     items,
@@ -307,7 +307,7 @@ export default function ShipmentDetailPage() {
                           Đơn vị vận chuyển
                         </span>
                       </td>
-                      <td>{carrierName}</td>
+                      <td>{carrier_name}</td>
                     </tr>
                     <tr>
                       <td className="text-muted">
@@ -317,9 +317,9 @@ export default function ShipmentDetailPage() {
                         </span>
                       </td>
                       <td>
-                        {trackingNumber ? (
+                        {tracking_number ? (
                           <span className="font-monospace">
-                            {trackingNumber}
+                            {tracking_number}
                           </span>
                         ) : (
                           <span className="text-secondary fst-italic">
@@ -335,7 +335,7 @@ export default function ShipmentDetailPage() {
                           Trạng thái
                         </span>
                       </td>
-                      <td>{getStatusBadge(shippingStatus)}</td>
+                      <td>{getStatusBadge(shipping_status)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -612,7 +612,7 @@ export default function ShipmentDetailPage() {
                   <Box size={13} />
                   Tổng tiền hàng
                 </span>
-                <span>{formatCurrency(totalAmount)}</span>
+                <span>{formatCurrency(total_amount)}</span>
               </div>
               <div
                 className="d-flex justify-content-between"
@@ -622,7 +622,7 @@ export default function ShipmentDetailPage() {
                   <Truck size={13} />
                   Phí vận chuyển (shipment)
                 </span>
-                <span>{formatCurrency(shippingFee)}</span>
+                <span>{formatCurrency(shipping_fee)}</span>
               </div>
               <div
                 className="d-flex justify-content-between fw-bold fs-6 pt-1 border-top"
@@ -633,7 +633,7 @@ export default function ShipmentDetailPage() {
                   Tổng shipment
                 </span>
                 <span className="text-danger">
-                  {formatCurrency(totalAmount + shippingFee)}
+                  {formatCurrency(total_amount + shipping_fee)}
                 </span>
               </div>
             </div>

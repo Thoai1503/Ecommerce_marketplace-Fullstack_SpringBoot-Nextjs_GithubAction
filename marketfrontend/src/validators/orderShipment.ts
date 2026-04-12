@@ -44,12 +44,12 @@ export interface IShipmentStatusLog {
 export interface IOrderShipment {
   shipmentId: number;
   orderId: number;
-  shopId: number;
-  shippingFee: number;
-  totalAmount: number;
-  carrierName: string;
-  trackingNumber: string | null;
-  shippingStatus: string;
+  shop_id: number;
+  shipping_fee: number;
+  total_amount: number;
+  carrier_name: string;
+  tracking_number: string | null;
+  shipping_status: string;
   order: IOrderInfo;
   recipient: IRecipientInfo;
   items: IOrderItemInfo[];
