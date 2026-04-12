@@ -135,6 +135,16 @@ public class OrderDTO {
 	private Long discount_amount;
 	private String payment_method;
 	private Long final_amount;
+	public List<OrderShipmentDTO> getOrder_shipment() {
+		return order_shipment;
+	}
+
+	public void setOrder_shipment(List<OrderShipmentDTO> order_shipment) {
+		this.order_shipment = order_shipment;
+	}
+
+	private List<OrderShipmentDTO> order_shipment;
+
 	private String order_status;
 	private String tracking_number;
 	private String cancel_reason;

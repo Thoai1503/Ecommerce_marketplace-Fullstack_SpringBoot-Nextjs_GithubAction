@@ -58,56 +58,45 @@ public class OrderService {
 
     // All DB writes + event publish happen in one transaction.
     // If any save fails, the whole operation rolls back.
-        @Transactional
+    @Transactional
     public Order placeOrder(OrderDTO dto) {
         log.info("Placing order for user_id={}", dto.getUser_id());
         var itemsByShopIdMap = groupByShopId(dto.getOrders_items());
         
         Order order = buildOrder(dto);
         Order saved = orderRepository.save(order);
+        maybeThrowSimulatedRollback(dto, saved.getId());
+        List<OrderShipmentDTO> orderShipments = dto.getOrder_shipment();
+        orderShipments.forEach(os -> {
+
+        	var orderShipmetDto= new OrderShipment();
+			orderShipmetDto.setOrderId(saved.getId());
+			orderShipmetDto.setCarrierName("LOG");
+			orderShipmetDto.setShippingStatus("PENDING");
+			orderShipmetDto.setShopId(os.getShop_id());
+			orderShipmetDto.setTrackingNumber(null);
+			orderShipmetDto.setShippingFee(Double.valueOf(os.getShipping_fee()));
+		    orderShipmetDto.setTotalAmount(os.getTotal_amount());
+						var orderShipment =
+			orderShipmentRepository.save(orderShipmetDto);
+		    dto.getOrders_items().stream().filter(item->item.getShop_id()==os.getShop_id()).forEach(item->{
+		    	System.out.println("Shipment id = {}"+ orderShipment.getId());
+		    		     		item.setShipment_id(orderShipment.getId());
+		    		     		
+		    	orderItemRepository.save(buildItem(item, saved.getId()));
+		    });
+						
+        	System.out.println("Order shipment = {}"+ os.toString());
+		});
+        
         log.info("Order persisted id={} number={}", saved.getId(), saved.getOrderNumber());
 
-        maybeThrowSimulatedRollback(dto, saved.getId());
-
-     
-        itemsByShopIdMap.entrySet().forEach(entry -> {
-        	Long shopId = entry.getKey();
-        	System.out.println("Shop ID: " + shopId);
-        	
-        	var orderShipmetDto= new OrderShipment();
-        	orderShipmetDto.setOrderId(saved.getId());
-        	orderShipmetDto.setCarrierName("LOG");
-        	orderShipmetDto.setShippingStatus("PENDING");
-        	orderShipmetDto.setShopId(shopId);
-        	orderShipmetDto.setTrackingNumber(null);
-        	
-        	
-        	
-        	var orderShipment = orderShipmentRepository.save(orderShipmetDto);
-        	
-	     	dto.getOrders_items().stream().filter(item->item.getShop_id()==shopId).forEach(item->{
-	     		item.setShipment_id(orderShipment.getId());
-	     	});
-        	
-            log.info("Saved order shipmment -> {}", orderShipment.toString());
-        	
-            entry.getValue().forEach(item -> {
-            	item.setShipmentId(orderShipment.getId());
-            	item.setOrderId(saved.getId());
-        		System.out.println("  Product ID: " + item.getProductId() +  ", Quantity: " + item.getQuantity() + ", Price: " + item.getPrice() + ", Product Name: " + item.getProductName() + ", Variant Name: " + item.getVariantName());
-        		orderItemRepository.save(item);
-        	});
-        });
-        
-        
 
         
         dto.getOrders_items().stream().forEach(item ->{
         	item.setOrder_id(saved.getId());
         });
-
         dto.setId(saved.getId());
-        
         dto.setRecipient(dto.getRecipient());
         dto.setOrder_number(saved.getOrderNumber());
         
@@ -193,7 +182,7 @@ public class OrderService {
                 .addressId(dto.getAddress_id())
                 .orderNumber(dto.getOrder_number() + UUID.randomUUID().toString().toUpperCase().substring(0, 8))
                 .totalAmount(dto.getTotal_price())
-                .shippingFee(dto.getShipping_fee())
+                .shippingFee(Long.valueOf(dto.getShipping_fee().toString()))
                 .discountAmount(dto.getDiscount_amount())
                 .finalAmount(dto.getFinal_amount())
                 .paymentMethod(dto.getPayment_method())
@@ -233,8 +222,10 @@ public class OrderService {
                 .productId(dto.getProduct_id())
                 .shopId(dto.getShop_id())
                 .variantId(dto.getVariant_id())
+                .shipmentId(dto.getShipment_id())
                 .productName(dto.getProduct_name())
                 .variantName(dto.getVariant_name())
+                .image(dto.getImage_url())
                 .quantity(dto.getQuantity())
                 .price(dto.getPrice())
                 .totalPrice(dto.getPrice() * dto.getQuantity())

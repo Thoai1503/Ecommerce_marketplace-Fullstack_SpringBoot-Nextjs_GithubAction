@@ -80,7 +80,9 @@ public class OrderController {
     public ResponseEntity<OrderResponseDTO> placeOrder(@Valid @RequestBody OrderDTO dto) {
     	RecipientDTO recipient = dto.getRecipient();
     	System.out.println("Received order for recipient: " + recipient.getName() + ", Phone: " + recipient.getPhone());
-        
+        dto.getOrder_shipment().forEach(shipment -> {
+			System.out.println("Shipment :" + shipment.toString());
+		});
     	try {
     	Order saved = orderService.placeOrder(dto);
     	return ResponseEntity

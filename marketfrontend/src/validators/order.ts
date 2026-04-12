@@ -19,7 +19,7 @@ export interface IOrder {
   created_at?: Date;
   updated_at?: Date;
   orders_items: IOrderItem[];
-  orders_shipment?: IOrderShipment[];
+  order_shipment?: IOrderShipment[];
   note?: string;
   // Deprecated: use orders_shipment[].tracking_number instead.
   tracking_number?: string;
