@@ -2,7 +2,7 @@ name: CI/CD Push to production
 
 on:
   push:
-    branches: [ "production" ]
+    branches: ["production"]
 
 jobs:
   build-and-deploy:
@@ -62,5 +62,5 @@ jobs:
           script: |
             cd /root
             docker compose pull
-            docker compose up -d
+            docker compose up -d --remove-orphans
             docker image prune -f
