@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -63,7 +64,7 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 	public ProductVariant Create(ProductVariant item) throws SQLException {
 		String sql = "insert into product_variant (product_id, variant_name, sku, price, stock_quantity, image_url) values (?,?,?,?,?,?)";
 		try(Connection con = dbConnection.getConn();
-				PreparedStatement ps = con.prepareStatement(sql)){
+				PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
 			  ps.setLong(1, item.getProduct_id());
 			  ps.setString(2, item.getVariant_name());
 			  ps.setString(3, item.getSku());
@@ -72,6 +73,12 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 			  ps.setString(6, item.getImage_url());
 			  int affectedRows = ps.executeUpdate();
 			  if (affectedRows > 0) {
+				  try (ResultSet keys = ps.getGeneratedKeys()) {
+					  if (keys.next()) {
+						  item.setId(keys.getInt(1));
+						  System.out.println("ID của bản ghi mới: " + item.getId());
+					  }
+				  }
 				  return item;
 			  }
 		}
@@ -123,6 +130,23 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 			ex.printStackTrace();
 		}
 		
+		return null;
+	}
+	
+	public ProductVariant updateImage(int id, String imageUrl) {
+		String sql = "update product_variant set image_url = ? where id = ?";
+		try(Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)){
+			  ps.setString(1, imageUrl);
+			  ps.setInt(2, id);
+			  int affectedRows = ps.executeUpdate();
+			  if (affectedRows > 0) {
+				  return GetById(id);
+			  }
+		}
+		catch(Exception ex) {
+			ex.printStackTrace();
+		}
 		return null;
 	}
 
