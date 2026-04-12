@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import docker_test.com.dto.ConfirmPackagedResponseDTO;
 import docker_test.com.dto.OrderShipmentByShopResponseDTO;
+import docker_test.com.dto.OrderShipmentResponeDTO;
 import docker_test.com.service.OrderShipmentService;
 
 @RestController
@@ -27,6 +28,10 @@ public class OrderShipmentController {
 	public ResponseEntity<List<OrderShipmentByShopResponseDTO>> getShipmentsByShopId(@PathVariable Long shopId) {
 		return ResponseEntity.ok(orderShipmentService.getShipmentsByShopId(shopId));
 	}
+	@GetMapping("/{shipmentId}")
+	public ResponseEntity<OrderShipmentResponeDTO> getShipmentById(@PathVariable Long shipmentId) {
+		return ResponseEntity.ok(orderShipmentService.getShipmentById(shipmentId));
+		}
 
 	@PostMapping("/{shipmentId}/confirm-packaged")
 	public ResponseEntity<ConfirmPackagedResponseDTO> confirmPackaged(@PathVariable Long shipmentId) {

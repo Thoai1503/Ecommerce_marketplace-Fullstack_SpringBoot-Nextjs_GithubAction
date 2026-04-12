@@ -485,7 +485,7 @@ const page = () => {
                     <td>
                       <div className="d-flex flex-column gap-1">
                         <a
-                          href={`/seller/order/${order.id}`}
+                          href={`/seller/orders/${order.shipmentId}`}
                           className="text-primary text-decoration-none small"
                         >
                           Xem chi tiết
