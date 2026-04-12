@@ -13,6 +13,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import docker_test.com.dto.ConfirmPackagedResponseDTO;
 import docker_test.com.dto.OrderShipmentByShopResponseDTO;
+import docker_test.com.dto.OrderShipmentResponeDTO;
 import docker_test.com.dto.ShipmentStatusUpdatedEvent;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderShipment;
@@ -42,6 +43,61 @@ public class OrderShipmentService {
                 this.orderRepository = orderRepository;
                 this.webClient = webClient;
     }
+    
+    public OrderShipmentResponeDTO getShipmentById(Long shipmentId) {
+        OrderShipmentWithOrderAndRecipientProjection row = orderShipmentRepository.findShipmentDetailsById(shipmentId)
+				.orElseThrow(() -> new RuntimeException("Shipment not found: " + shipmentId));
+
+		List<OrderItem> items = orderItemRepository.findByShipmentId(shipmentId);
+
+                List<OrderShipmentResponeDTO.OrderItemInfoDTO> itemDTOs = items.stream()
+                                .map(item -> new OrderShipmentResponeDTO.OrderItemInfoDTO(
+						item.getId(),
+						item.getProductId(),
+						item.getVariantId(),
+						item.getProductName(),
+						item.getVariantName(),
+						item.getImage(),
+						item.getQuantity(),
+						item.getPrice(),
+						item.getTotalPrice()
+				))
+				.toList();
+
+		return new OrderShipmentResponeDTO(
+                row.getShipmentId(),
+                row.getOrderId(),
+                row.getShopId(),
+                row.getShippingFee(),
+                Long.valueOf(row.getTotalAmount().longValue()),
+                row.getCarrierName(),
+                row.getTrackingNumber(), 
+                row.getShippingStatus(),
+                new OrderShipmentResponeDTO.OrderInfoDTO(
+                        row.getOrderNumber(),
+                        row.getUserId(),
+                        row.getAddressId(),
+                        row.getTotalAmount(),
+                        row.getShippingFee(),
+                        row.getDiscountAmount(),
+                        row.getFinalAmount(),
+                        row.getPaymentMethod(),
+                        row.getPaymentStatus(),
+                        row.getOrderStatus()
+                ),
+                new OrderShipmentResponeDTO.RecipientInfoDTO(
+                        row.getRecipientName(),
+                        row.getRecipientPhone(),
+                        row.getAddressLine(),
+                        row.getWard(),
+                        row.getDistrict(),
+                        row.getCity(),
+                        row.getPostalCode()
+                ),
+                itemDTOs
+        );
+    }
+    
 
         @Transactional(readOnly = true)
     public List<OrderShipmentByShopResponseDTO> getShipmentsByShopId(Long shopId) {

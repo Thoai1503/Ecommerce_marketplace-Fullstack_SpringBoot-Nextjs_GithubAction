@@ -705,25 +705,44 @@ export default function CheckoutPage() {
 
     const baseTrackingSeed = Date.now();
     const ordersShipment: IOrderShipment[] = uniqueShopIds.map(
-      (shopId, index) => ({
-        id: 0,
-        order_id: 0,
-        shop_id: shopId,
-        shipment_code: `SHIP-${baseTrackingSeed}-${index + 1}`,
-        shipping_fee:
-          getShippingFeeForShop(shopId, shippingSelections[shopId]) || 0,
-        total_amount:
-          cartItems
-            .filter((item) => item?.product?.shop?.id === shopId)
-            .reduce(
+      (shopId, index) => {
+        const shopCartItems = cartItems.filter(
+          (item) => item?.product?.shop?.id === shopId,
+        );
+        return {
+          id: 0,
+          orderId: 0,
+          shop_id: shopId,
+          shipmentId: 0,
+          shipmentCode: `SHIP-${baseTrackingSeed}-${index + 1}`,
+          shipping_fee:
+            getShippingFeeForShop(shopId, shippingSelections[shopId]) || 0,
+          total_amount:
+            shopCartItems.reduce(
               (sum, item) =>
                 sum + (item.productVariant?.price || 0) * item.quantity,
               0,
             ) + getShippingFeeForShop(shopId, shippingSelections[shopId]),
-        carrier_name: "LOG",
-        tracking_number: `TRK-${baseTrackingSeed}-${shopId}`,
-        shipping_status: "PENDING",
-      }),
+          carrier_name: "LOG",
+          tracking_number: `TRK-${baseTrackingSeed}-${shopId}`,
+          shipping_status: "PENDING",
+          order: {} as any,
+          recipient: recipient || null,
+          items: shopCartItems.map((item) => ({
+            id: 0,
+            productId: item?.product?.id || 0,
+            variantId: item?.productVariant?.id || 0,
+            productName: item?.product?.name || "",
+            variantName: item?.productVariant?.variantName || "",
+            quantity: item?.quantity || 0,
+            price: item?.productVariant?.price || 0,
+            imageUrl: item?.productVariant?.imageUrl || "",
+            image: item?.productVariant?.imageUrl || "",
+            totalPrice:
+              (item?.productVariant?.price || 0) * (item?.quantity || 0),
+          })),
+        };
+      },
     );
 
     alert(
@@ -732,7 +751,7 @@ export default function CheckoutPage() {
           (s) =>
             `Shop ${s.shop_id}: Phí ${formatCurrency(s.shipping_fee)}, Tổng ${formatCurrency(
               s.total_amount,
-            )}, Mã vận đơn ${s.shipment_code}`,
+            )}, Mã vận đơn ${s.tracking_number}`,
         )
         .join("\n")}`,
     );
