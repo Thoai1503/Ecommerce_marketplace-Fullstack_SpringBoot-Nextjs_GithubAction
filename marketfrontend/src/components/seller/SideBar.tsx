@@ -51,12 +51,12 @@ export default function Sidebar() {
         </svg>
       ),
       submenu: [
-        { label: "Tất cả", href: "/admin/orders" },
-        { label: "Giao Hàng Loạt", href: "/admin/orders/bulk" },
-        { label: "Bán Giao Đơn Hàng", href: "/admin/orders/handover" },
+        { label: "Tất cả", href: "/seller/orders" },
+        { label: "Giao Hàng Loạt", href: "/seller/orders/bulk" },
+        { label: "Bán Giao Đơn Hàng", href: "/seller/orders/handover" },
         {
           label: "Đơn Trả hàng/Hoàn tiền hoặc Đơn hủy",
-          href: "/admin/orders/returns",
+          href: "/seller/orders/returns",
         },
         { label: "Cài Đặt Vận Chuyển", href: "/admin/orders/shipping" },
       ],

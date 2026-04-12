@@ -46,7 +46,8 @@ public class OrderShipmentService {
         @Transactional(readOnly = true)
     public List<OrderShipmentByShopResponseDTO> getShipmentsByShopId(Long shopId) {
         List<OrderShipmentWithOrderAndRecipientProjection> rows = orderShipmentRepository.findShipmentDetailsByShopId(shopId);
-
+        System.out.println("Fetched " + rows.size() + " shipments for shopId: " + shopId);
+        System.out.println("Total amount of first shipment: " + (rows.isEmpty() ? "N/A" : rows.get(0).getTotalAmount()));
         List<Long> shipmentIds = rows.stream()
                 .map(OrderShipmentWithOrderAndRecipientProjection::getShipmentId)
                 .toList();
@@ -62,6 +63,7 @@ public class OrderShipmentService {
                                         item.getVariantId(),
                                         item.getProductName(),
                                         item.getVariantName(),
+                                        item.getImage(),
                                         item.getQuantity(),
                                         item.getPrice(),
                                         item.getTotalPrice()
@@ -74,6 +76,8 @@ public class OrderShipmentService {
                         row.getShipmentId(),
                         row.getOrderId(),
                         row.getShopId(),
+                        row.getShippingFee(),
+                  Long.valueOf(row.getTotalAmount().longValue()),
                         row.getCarrierName(),
                         row.getTrackingNumber(), 
                         row.getShippingStatus(),

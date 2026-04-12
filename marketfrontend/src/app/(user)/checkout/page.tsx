@@ -257,6 +257,15 @@ export default function CheckoutPage() {
   const isAnyShippingFeeLoading =
     Object.values(shippingFeeLoading).some(Boolean);
 
+  // Đồng bộ paymentInfo.amount mỗi khi phí ship thay đổi
+  useEffect(() => {
+    setPaymentInfo((prev: any) => ({
+      ...prev,
+      amount: calculateSubtotal() + calculateTotalShippingFee(),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shippingFees, shippingSelections]);
+
   // Tính tổng tiền sản phẩm
   const calculateSubtotal = () => {
     return cartItems.reduce(
@@ -631,7 +640,7 @@ export default function CheckoutPage() {
           from_ward_code: shopAddress?.ward ? String(shopAddress.ward) : "", // giả sử lấy từ địa chỉ đầu tiên
           // service_id: 53320,
           //service_type_id: 5,
-          service_type_id: 2,
+          service_type_id: 5,
           to_district_id: defaultAddress?.district || 0,
           to_ward_code: defaultAddress?.ward ? String(defaultAddress.ward) : "",
           height: logisticsItems[0]?.height || 0,
@@ -701,62 +710,85 @@ export default function CheckoutPage() {
         order_id: 0,
         shop_id: shopId,
         shipment_code: `SHIP-${baseTrackingSeed}-${index + 1}`,
+        shipping_fee:
+          getShippingFeeForShop(shopId, shippingSelections[shopId]) || 0,
+        total_amount:
+          cartItems
+            .filter((item) => item?.product?.shop?.id === shopId)
+            .reduce(
+              (sum, item) =>
+                sum + (item.productVariant?.price || 0) * item.quantity,
+              0,
+            ) + getShippingFeeForShop(shopId, shippingSelections[shopId]),
         carrier_name: "LOG",
         tracking_number: `TRK-${baseTrackingSeed}-${shopId}`,
         shipping_status: "PENDING",
       }),
     );
 
-    const orderItems = cartItems.map((item) => {
-      const user_id = item?.product?.shop?.userId || 0;
+    alert(
+      `Thông tin vận chuyển:\n${ordersShipment
+        .map(
+          (s) =>
+            `Shop ${s.shop_id}: Phí ${formatCurrency(s.shipping_fee)}, Tổng ${formatCurrency(
+              s.total_amount,
+            )}, Mã vận đơn ${s.shipment_code}`,
+        )
+        .join("\n")}`,
+    );
+    //return;
 
-      let userInfo: any = null;
-      getUserInfoById(user_id).then((res) => {
-        console.log("Fetched user info for shop owner:", res);
-        userInfo = res;
-      });
+    const orderItems: IOrderItem[] = await Promise.all(
+      cartItems.map(async (item) => {
+        const user_id = item?.product?.shop?.userId || 0;
+        let userInfo: any = null;
+        try {
+          userInfo = await getUserInfoById(user_id);
+        } catch {
+          // ignore, fallback to empty strings
+        }
+        return {
+          id: 1,
+          product_id: item?.product?.id || 0,
+          shop_id: item?.product?.shop?.id || 0,
+          order_id: 1,
+          shop: {
+            id: item?.product?.shop?.id || 0,
+            shop_name: item?.product?.shop?.shopName || "",
+            api_key: item?.product?.shop?.shopName.toUpperCase() + "_API_KEY",
+            contact_email: userInfo?.email || "",
+            phone: userInfo?.phone || "",
+          },
+          variant_id: item?.productVariant?.id || 0,
+          product_name: item?.product?.name || "",
+          variant_name: item?.productVariant?.variantName || "",
+          quantity: item?.quantity || 0,
 
-      return {
-        id: 1,
-        product_id: item?.product?.id || 0,
-        shop_id: item?.product?.shop?.id || 0,
-        order_id: 1,
-        shop: {
-          id: item?.product?.shop?.id || 0,
-          shop_name: item?.product?.shop?.shopName || "",
-          api_key: item?.product?.shop?.shopName.toUpperCase() + "_API_KEY",
-          contact_email: userInfo?.email || "",
-          phone: userInfo?.phone || "",
-        },
-        variant_id: item?.productVariant?.id || 0,
-        product_name: item?.product?.name || "",
-        variant_name: item?.productVariant?.variantName || "",
-        quantity: item?.quantity || 0,
-        price:
-          (item?.productVariant?.price || 0) +
-          (shippingFees[item?.product?.shop?.id || 0] || 0),
-      };
-    }) as IOrderItem[];
+          price: item?.productVariant?.price || 0,
+          image_url: item?.productVariant?.imageUrl || "",
+        };
+      }),
+    );
 
     createOrder({
       user_id: paymentInfo.user_id || 0,
       shop_id: cartItems[0]?.product?.shop?.id || 0,
       recipient: recipient || {},
       order_number: "ORD20250318001",
-      total_price: paymentInfo.amount || 0,
+      total_price: calculateSubtotal(),
       payment_method: paymentInfo.method || "unknown",
       address_id: selectedAddressId || 0,
-      shipping_fee: 9000,
+      shipping_fee: calculateTotalShippingFee(),
       discount_amount: 0,
-      final_amount: paymentInfo.amount - 9000 || 0,
+      final_amount: calculateSubtotal() + calculateTotalShippingFee(),
       orders_items: orderItems,
-      orders_shipment: ordersShipment,
+      order_shipment: ordersShipment,
       note: "",
       tracking_number: "",
       id: 0,
       // Additional fields for testing rollback
       // Uncomment the line below to simulate a rollback scenario
-      // cancel_reason: "SIMULATE_ROLLBACK",
+      //cancel_reason: "SIMULATE_ROLLBACK",
     })
       .then((dt) => {
         alert(`Đặt hàng thành công! Mã đơn hàng: ${dt.id}`);
@@ -764,17 +796,17 @@ export default function CheckoutPage() {
           ...prev,
           orderId: dt.id,
         }));
+        if (paymentInfo.method === "vnpay") {
+          checkOut({ ...paymentInfo, orderId: dt.id });
+        } else {
+          window.location.href = `/order/${dt.id}`; // Chuyển hướng đến trang thành công sau khi đặt hàng với phương thức khác
+        }
       })
       .catch((e: AxiosError) => {
         const errorMessage =
           (e.response?.data as any)?.status || "Lỗi không xác định";
         message.error(`Đặt hàng thất bại: ${errorMessage}`);
       });
-    // setPaymentInfo((prev: any) => ({
-    //   ...prev,
-    //   orderId: dt.id,
-    // }));
-    //   checkOut(paymentInfo);
   };
 
   return (

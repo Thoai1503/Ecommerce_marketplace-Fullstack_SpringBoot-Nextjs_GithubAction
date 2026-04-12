@@ -1,13 +1,14 @@
 package docker_test.com.dto;
 
 public class OrderShipmentDTO {
-           public OrderShipmentDTO(Long order_id, Long shop_id, String carrier_name, Double shipping_fee,
+           public OrderShipmentDTO(Long order_id, Long shop_id, Double total_amount, String carrier_name, Double shipping_fee,
 			String tracking_number, String shipping_status) {
 		super();
 		this.order_id = order_id;
 		this.shop_id = shop_id;
 		this.carrier_name = carrier_name;
 		this.shipping_fee = shipping_fee;
+		this.total_amount = total_amount;
 		this.tracking_number = tracking_number;
 		this.shipping_status = shipping_status;
 	}
@@ -51,7 +52,27 @@ public class OrderShipmentDTO {
            private Long shop_id;
            private String carrier_name;
            private Double shipping_fee;
+           public Double getTotal_amount() {
+			return total_amount;
+		}
+		   public void setTotal_amount(Double total_amount) {
+			   this.total_amount = total_amount;
+		   }
+		   private Double total_amount;																			
            private String tracking_number;
            private String shipping_status;
+           
+           @Override
+           public String toString() {
+			   return "OrderShipmentDTO{" +
+					   "order_id=" + order_id +
+					   ", shop_id=" + shop_id +
+					   ", carrier_name='" + carrier_name + '\'' +
+					   ", shipping_fee=" + shipping_fee +
+					   ", total_amount=" + total_amount +
+					   ", tracking_number='" + tracking_number + '\'' +
+					   ", shipping_status='" + shipping_status + '\'' +
+					   '}';
+		   }
            
 }

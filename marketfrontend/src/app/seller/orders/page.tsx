@@ -93,7 +93,7 @@ const page = () => {
         id: shipment.orderId,
         order_number: shipment.order?.orderNumber,
         order_code: shipment.order?.orderNumber,
-        total_price: shipment.order?.finalAmount,
+        total_price: shipment.totalAmount,
         status: mapShippingStatusToUiStatus(shipment.shippingStatus),
         buyer_name: shipment.recipient?.recipientName,
         orders_items: shipment.items,
@@ -108,7 +108,10 @@ const page = () => {
       _source: "mock",
     }));
 
-    return [...apiOrders, ...mockOrders_];
+    return [
+      ...apiOrders,
+      //, ...mockOrders_
+    ];
   }, [orderShipments, mockOrders]);
   const [activeTab, setActiveTab] = useState("all");
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(
@@ -528,9 +531,9 @@ const page = () => {
                       <td></td> {/* để trống cột checkbox + expand */}
                       <td>
                         <div className="d-flex align-items-start ps-5">
-                          {item.image_url && (
+                          {item.image && (
                             <img
-                              src={item.image_url}
+                              src={item.image}
                               alt={item.product_name}
                               className="rounded me-3"
                               width="60"
@@ -542,9 +545,9 @@ const page = () => {
                             <div className="fw-medium text-muted">
                               {item.product_name}
                             </div>
-                            {item.variant_name && (
+                            {item.variantName && (
                               <small className="text-muted">
-                                Phiên bản: {item.variant_name}
+                                Phiên bản: {item.variantName}
                               </small>
                             )}
                             <br />
