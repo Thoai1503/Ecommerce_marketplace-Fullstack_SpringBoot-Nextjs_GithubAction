@@ -16,11 +16,13 @@ import docker_test.com.dto.OrderShipmentByShopResponseDTO;
 import docker_test.com.dto.OrderShipmentResponeDTO;
 import docker_test.com.dto.ShipmentStatusUpdatedEvent;
 import docker_test.com.model.Order;
-import docker_test.com.model.OrderShipment;
 import docker_test.com.model.OrderItem;
+import docker_test.com.model.OrderShipment;
+import docker_test.com.model.OrderShipmentStatusHistory;
 import docker_test.com.repository.OrderRepository;
 import docker_test.com.repository.OrderItemRepository;
 import docker_test.com.repository.OrderShipmentRepository;
+import docker_test.com.repository.OrderShipmentStatusHistoryRepository;
 import docker_test.com.repository.OrderShipmentWithOrderAndRecipientProjection;
 
 @Service
@@ -28,6 +30,7 @@ public class OrderShipmentService {
 
     private final OrderShipmentRepository orderShipmentRepository;
     private final OrderItemRepository orderItemRepository;
+        private final OrderShipmentStatusHistoryRepository orderShipmentStatusHistoryRepository;
         private final OrderRepository orderRepository;
         private final WebClient webClient;
 
@@ -36,10 +39,12 @@ public class OrderShipmentService {
 
     public OrderShipmentService(OrderShipmentRepository orderShipmentRepository,
                                                                 OrderItemRepository orderItemRepository,
+                                                                OrderShipmentStatusHistoryRepository orderShipmentStatusHistoryRepository,
                                                                 OrderRepository orderRepository,
                                                                 WebClient webClient) {
         this.orderShipmentRepository = orderShipmentRepository;
         this.orderItemRepository = orderItemRepository;	
+                this.orderShipmentStatusHistoryRepository = orderShipmentStatusHistoryRepository;
                 this.orderRepository = orderRepository;
                 this.webClient = webClient;
     }
@@ -49,6 +54,8 @@ public class OrderShipmentService {
 				.orElseThrow(() -> new RuntimeException("Shipment not found: " + shipmentId));
 
 		List<OrderItem> items = orderItemRepository.findByShipmentId(shipmentId);
+                List<OrderShipmentStatusHistory> histories = orderShipmentStatusHistoryRepository
+                                .findByOrderShipmentIdOrderByChangedAtAscIdAsc(shipmentId);
 
                 List<OrderShipmentResponeDTO.OrderItemInfoDTO> itemDTOs = items.stream()
                                 .map(item -> new OrderShipmentResponeDTO.OrderItemInfoDTO(
@@ -63,6 +70,15 @@ public class OrderShipmentService {
 						item.getTotalPrice()
 				))
 				.toList();
+
+                List<OrderShipmentResponeDTO.ShipmentStatusLogDTO> historyDTOs = histories.stream()
+                                .map(history -> new OrderShipmentResponeDTO.ShipmentStatusLogDTO(
+                                                history.getId(),
+                                                history.getNewStatus(),
+                                                history.getNote(),
+                                                history.getChangedAt(),
+                                                history.getChangedBy()))
+                                .toList();
 
 		return new OrderShipmentResponeDTO(
                 row.getShipmentId(),
@@ -94,7 +110,8 @@ public class OrderShipmentService {
                         row.getCity(),
                         row.getPostalCode()
                 ),
-                itemDTOs
+				itemDTOs,
+				historyDTOs
         );
     }
     

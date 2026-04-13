@@ -9,6 +9,7 @@ import docker_test.com.model.OrderItem;
 
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long>{
 
+	List<OrderItem> findByOrderId(Long orderId);
 	List<OrderItem> findByShipmentIdIn(Collection<Long> shipmentIds);
 	List<OrderItem> findByShipmentId(Long shipmentId);
 }

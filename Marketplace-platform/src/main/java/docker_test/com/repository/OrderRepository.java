@@ -283,6 +283,25 @@ public class OrderRepository implements IRepositories<Order>{
 	    return 0;
 	}
 
+	public Order findById(Long id) {
+	    String sql = "SELECT o.* FROM `orders` o WHERE o.id = ? LIMIT 1";
+
+	    try (Connection con = dbConnection.getConn();
+	         PreparedStatement ps = con.prepareStatement(sql)) {
+
+	        ps.setLong(1, id);
+	        ResultSet rs = ps.executeQuery();
+
+	        if (rs.next()) {
+	            return mapResultSetToOrder(rs);
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+
+	    return null;
+	}
+
 
 	@Override
 	public Order Update(Order item) {

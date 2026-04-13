@@ -14,6 +14,7 @@ import docker_test.com.model.OrderShipment;
 public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Long> {
 
 	Optional<OrderShipment> findFirstByTrackingNumber(String trackingNumber);
+	List<OrderShipment> findByOrderIdOrderByIdDesc(Long orderId);
 
 	@Query(value = """
 			SELECT

@@ -1,6 +1,7 @@
 "use client";
 
 import { useSellerAuth } from "@/context/SellerAuthContext";
+import { API_URL } from "@/helper/api";
 import { OrderShipments } from "@/types/data/OrderShipment";
 import {
   IOrderItemInfo,
@@ -50,6 +51,8 @@ const getStatusBadge = (status: string) => {
     PENDING: { label: "Chờ xác nhận", cls: "bg-secondary text-white" },
     CONFIRMED: { label: "Chờ lấy hàng", cls: "bg-warning text-dark" },
     PICKED_UP: { label: "Đã giao cho ĐVVC", cls: "bg-warning text-dark" },
+    IN_TRANSIT: { label: "Đang vận chuyển", cls: "bg-warning text-dark" },
+    OUT_FOR_DELIVERY: { label: "Đang giao", cls: "bg-warning text-dark" },
     SHIPPING: { label: "Đang vận chuyển", cls: "bg-warning text-dark" },
     DELIVERING: { label: "Đang giao", cls: "bg-warning text-dark" },
     DELIVERED: { label: "Đã giao", cls: "bg-success text-white" },
@@ -78,104 +81,85 @@ const getPaymentStatusBadge = (status: string) => {
   return <span className={`badge ${s.cls}`}>{s.label}</span>;
 };
 
-// ─── mock data (DEV_USE_MOCK = false để dùng API thật) ────────────────────────
-const DEV_USE_MOCK = true;
+type ILogisticsTrackingDetail = {
+  id: number;
+};
 
-const MOCK_SHIPMENT: IOrderShipment = {
-  shipmentId: 1001,
-  orderId: 5023,
-  shop_id: 2,
-  shipping_fee: 35_000,
-  total_amount: 1_250_000,
-  carrier_name: "Giao Hàng Nhanh (GHN)",
-  tracking_number: "SGHN1234567890VN",
-  shipping_status: "DELIVERING",
-  order: {
-    orderNumber: "ORD-20260412-5023",
-    userId: 77,
-    addressId: 33,
-    totalAmount: 1_250_000,
-    shippingFee: 35_000,
-    discountAmount: 50_000,
-    finalAmount: 1_235_000,
-    paymentMethod: "COD",
-    paymentStatus: "UNPAID",
-    orderStatus: "SHIPPING",
-  },
-  recipient: {
-    recipientName: "Nguyễn Văn Thoại",
-    recipientPhone: "0901 234 567",
-    addressLine: "123 Đường Lê Lợi",
-    ward: "Phường Bến Nghé",
-    district: "Quận 1",
-    city: "TP. Hồ Chí Minh",
-    postalCode: "70000",
-  },
-  items: [
-    {
-      id: 1,
-      productId: 201,
-      variantId: 501,
-      productName: "Áo thun nam basic",
-      variantName: "Trắng / XL",
-      image: null,
-      quantity: 2,
-      price: 250_000,
-      totalPrice: 500_000,
+type ILogisticsTimelineItem = {
+  id: number;
+  status: string;
+  description?: string | null;
+  updatedBy?: string | null;
+  updatedAt: string;
+};
+
+const normalizeShipment = (raw: any): IOrderShipment => {
+  const order = raw?.order ?? {};
+  const recipient = raw?.recipient ?? {};
+  const items = Array.isArray(raw?.items) ? raw.items : [];
+
+  return {
+    shipmentId: Number(raw?.shipmentId ?? raw?.id ?? 0),
+    orderId: Number(raw?.orderId ?? raw?.order_id ?? 0),
+    shop_id: Number(raw?.shop_id ?? raw?.shopId ?? 0),
+    shipping_fee: Number(raw?.shipping_fee ?? raw?.shippingFee ?? 0),
+    total_amount: Number(raw?.total_amount ?? raw?.totalAmount ?? 0),
+    carrier_name: String(raw?.carrier_name ?? raw?.carrierName ?? ""),
+    tracking_number: raw?.tracking_number ?? raw?.trackingNumber ?? null,
+    shipping_status: String(raw?.shipping_status ?? raw?.shippingStatus ?? ""),
+    order: {
+      orderNumber: String(order?.orderNumber ?? order?.order_number ?? ""),
+      userId: Number(order?.userId ?? order?.user_id ?? 0),
+      addressId: Number(order?.addressId ?? order?.address_id ?? 0),
+      totalAmount: Number(order?.totalAmount ?? order?.total_amount ?? 0),
+      shippingFee: Number(order?.shippingFee ?? order?.shipping_fee ?? 0),
+      discountAmount: Number(
+        order?.discountAmount ?? order?.discount_amount ?? 0,
+      ),
+      finalAmount: Number(order?.finalAmount ?? order?.final_amount ?? 0),
+      paymentMethod: String(
+        order?.paymentMethod ?? order?.payment_method ?? "-",
+      ),
+      paymentStatus: String(
+        order?.paymentStatus ?? order?.payment_status ?? "PENDING",
+      ),
+      orderStatus: String(
+        order?.orderStatus ?? order?.order_status ?? "PENDING",
+      ),
     },
-    {
-      id: 2,
-      productId: 202,
-      variantId: null,
-      productName: "Quần jeans slim fit",
-      variantName: null,
-      image: null,
-      quantity: 1,
-      price: 450_000,
-      totalPrice: 450_000,
+    recipient: {
+      recipientName: String(
+        recipient?.recipientName ?? recipient?.recipient_name ?? "-",
+      ),
+      recipientPhone: String(
+        recipient?.recipientPhone ?? recipient?.recipient_phone ?? "-",
+      ),
+      addressLine: String(
+        recipient?.addressLine ?? recipient?.address_line ?? "",
+      ),
+      ward: String(recipient?.ward ?? ""),
+      district: String(recipient?.district ?? ""),
+      city: String(recipient?.city ?? ""),
+      postalCode: recipient?.postalCode ?? recipient?.postal_code ?? null,
     },
-    {
-      id: 3,
-      productId: 203,
-      variantId: 502,
-      productName: "Giày thể thao nam Air Max",
-      variantName: "Đen / 42",
-      image: null,
-      quantity: 1,
-      price: 300_000,
-      totalPrice: 300_000,
-    },
-  ],
-  statusHistory: [
-    {
-      id: 1,
-      status: "PENDING",
-      note: "Đơn hàng được tạo, chờ người bán xác nhận",
-      changedAt: "2026-04-10T08:12:00",
-      changedBy: "SYSTEM",
-    },
-    {
-      id: 2,
-      status: "CONFIRMED",
-      note: "Người bán đã xác nhận và chuẩn bị đóng gói",
-      changedAt: "2026-04-10T10:45:00",
-      changedBy: "SELLER",
-    },
-    {
-      id: 3,
-      status: "PICKED_UP",
-      note: "GHN đã lấy hàng thành công tại kho người bán",
-      changedAt: "2026-04-11T09:20:00",
-      changedBy: "GHN",
-    },
-    {
-      id: 4,
-      status: "DELIVERING",
-      note: "Đang trên đường giao đến địa chỉ người nhận",
-      changedAt: "2026-04-12T07:55:00",
-      changedBy: "GHN",
-    },
-  ],
+    items: items.map((item: any) => ({
+      id: Number(item?.id ?? 0),
+      productId: Number(item?.productId ?? item?.product_id ?? 0),
+      variantId:
+        item?.variantId === null || item?.variant_id === null
+          ? null
+          : Number(item?.variantId ?? item?.variant_id ?? 0),
+      productName: String(item?.productName ?? item?.product_name ?? "-"),
+      variantName: item?.variantName ?? item?.variant_name ?? null,
+      image: item?.image ?? item?.image_url ?? null,
+      quantity: Number(item?.quantity ?? 0),
+      price: Number(item?.price ?? 0),
+      totalPrice: Number(item?.totalPrice ?? item?.total_price ?? 0),
+    })),
+    statusHistory: Array.isArray(raw?.statusHistory)
+      ? raw.statusHistory
+      : undefined,
+  };
 };
 
 // ─── page ────────────────────────────────────────────────────────────────────
@@ -183,19 +167,102 @@ const MOCK_SHIPMENT: IOrderShipment = {
 export default function ShipmentDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const shipmentId = Number(params?.shipmentId);
+  const rawShipmentId = Array.isArray(params?.shipmentId)
+    ? params.shipmentId[0]
+    : params?.shipmentId;
+  const shipmentId = Number(rawShipmentId);
+  const isValidShipmentId = Number.isFinite(shipmentId) && shipmentId > 0;
   const { shop } = useSellerAuth();
+
+  OrderShipments.setup({ path: "/seller/order-shipment", baseUrl: API_URL });
 
   const queryOpts = OrderShipments.getById(shipmentId);
   const {
     data: fetchedShipment,
     isLoading,
     isError,
-  } = useQuery<IOrderShipment>({
+  } = useQuery<any>({
     ...queryOpts,
-    enabled: !DEV_USE_MOCK && !!shipmentId,
+    enabled: !!queryOpts.enabled && isValidShipmentId,
   });
-  const shipment = DEV_USE_MOCK ? MOCK_SHIPMENT : fetchedShipment;
+
+  const shipment = React.useMemo(
+    () => (fetchedShipment ? normalizeShipment(fetchedShipment) : undefined),
+    [fetchedShipment],
+  );
+
+  const { data: timelineHistory = [] } = useQuery<IShipmentStatusLog[]>({
+    queryKey: ["SHIPMENT_TIMELINE_QUERY", shipment?.tracking_number],
+    enabled: !!shipment?.tracking_number,
+    queryFn: async () => {
+      const trackingCode = shipment?.tracking_number;
+      if (!trackingCode) return [];
+
+      const trackingRes =
+        await OrderShipments.api.get<ILogisticsTrackingDetail>({
+          url: `/api/logistics/shipments/tracking/${encodeURIComponent(trackingCode)}`,
+        });
+      const logisticsShipmentId = trackingRes?.data?.id;
+      if (!logisticsShipmentId) return [];
+
+      const timelineRes = await OrderShipments.api.get<
+        ILogisticsTimelineItem[]
+      >({
+        url: `/api/logistics/shipments/${logisticsShipmentId}/timeline`,
+      });
+
+      return (timelineRes?.data ?? []).map((item: ILogisticsTimelineItem) => ({
+        id: Number(item.id),
+        status: String(item.status ?? ""),
+        note: item.description ?? null,
+        changedAt: item.updatedAt,
+        changedBy: item.updatedBy ?? null,
+      }));
+    },
+  });
+
+  const statusHistory = React.useMemo(() => {
+    const baseHistory =
+      timelineHistory.length > 0
+        ? timelineHistory
+        : (shipment?.statusHistory ?? []);
+
+    const pendingFromApi = baseHistory.find(
+      (log) => String(log.status).toUpperCase() === "PENDING",
+    );
+
+    const defaultPending: IShipmentStatusLog = pendingFromApi
+      ? {
+          ...pendingFromApi,
+          note: pendingFromApi.note || "Chờ xác nhận từ shop",
+        }
+      : {
+          id: 0,
+          status: "PENDING",
+          note: "Chờ xác nhận từ shop",
+          changedAt: baseHistory[0]?.changedAt || new Date().toISOString(),
+          changedBy: null,
+        };
+
+    if (baseHistory.length === 0) {
+      return [defaultPending];
+    }
+
+    if (String(baseHistory[0]?.status).toUpperCase() === "PENDING") {
+      return [
+        {
+          ...baseHistory[0],
+          note: baseHistory[0].note || "Chờ xác nhận từ shop",
+        },
+        ...baseHistory.slice(1),
+      ];
+    }
+
+    return [
+      defaultPending,
+      ...baseHistory.filter((log) => log.id !== pendingFromApi?.id),
+    ];
+  }, [timelineHistory, shipment?.statusHistory]);
 
   // Guard: seller can only view their own shipments
   React.useEffect(() => {
@@ -204,7 +271,13 @@ export default function ShipmentDetailPage() {
     }
   }, [shipment, shop, router]);
 
-  if (isLoading && !DEV_USE_MOCK) {
+  if (!isValidShipmentId) {
+    return (
+      <div className="alert alert-danger m-4">Shipment ID không hợp lệ.</div>
+    );
+  }
+
+  if (isLoading) {
     return (
       <div
         className="d-flex justify-content-center align-items-center"
@@ -215,7 +288,7 @@ export default function ShipmentDetailPage() {
     );
   }
 
-  if (!DEV_USE_MOCK && (isError || !shipment)) {
+  if (isError || !shipment) {
     return (
       <div className="alert alert-danger m-4">
         Không tìm thấy thông tin đơn vận chuyển.
@@ -236,7 +309,6 @@ export default function ShipmentDetailPage() {
     order,
     recipient,
     items,
-    statusHistory,
   } = shipment;
 
   return (
@@ -296,7 +368,9 @@ export default function ShipmentDetailPage() {
                         </span>
                       </td>
                       <td>
-                        <span className="fw-semibold">{order.orderNumber}</span>
+                        <span className="fw-semibold">
+                          {order.orderNumber || `#${orderId}`}
+                        </span>
                         <span className="text-muted ms-1">(#{orderId})</span>
                       </td>
                     </tr>
@@ -307,7 +381,7 @@ export default function ShipmentDetailPage() {
                           Đơn vị vận chuyển
                         </span>
                       </td>
-                      <td>{carrier_name}</td>
+                      <td>{carrier_name || "-"}</td>
                     </tr>
                     <tr>
                       <td className="text-muted">
@@ -432,16 +506,16 @@ export default function ShipmentDetailPage() {
             </span>
             <span className="text-muted fw-normal small d-flex align-items-center gap-1">
               <Clock size={13} />
-              {(statusHistory ?? []).length} cập nhật
+              {statusHistory.length} cập nhật
             </span>
           </div>
           <div className="card-body py-3 px-4">
-            {(statusHistory ?? []).length === 0 ? (
+            {statusHistory.length === 0 ? (
               <p className="text-muted small fst-italic text-center mb-0 py-2">
                 Chưa có lịch sử trạng thái.
               </p>
             ) : (
-              (statusHistory ?? []).map(
+              statusHistory.map(
                 (
                   log: IShipmentStatusLog,
                   idx: number,
@@ -522,14 +596,16 @@ export default function ShipmentDetailPage() {
                   <User size={13} />
                   Tên người nhận
                 </span>
-                <span className="fw-semibold">{recipient.recipientName}</span>
+                <span className="fw-semibold">
+                  {recipient.recipientName || "-"}
+                </span>
               </div>
               <div className="col-sm-4">
                 <span className="text-muted d-block d-flex align-items-center gap-1">
                   <Phone size={13} />
                   Số điện thoại
                 </span>
-                <span>{recipient.recipientPhone}</span>
+                <span>{recipient.recipientPhone || "-"}</span>
               </div>
               <div className="col-sm-4">
                 <span className="text-muted d-block d-flex align-items-center gap-1">

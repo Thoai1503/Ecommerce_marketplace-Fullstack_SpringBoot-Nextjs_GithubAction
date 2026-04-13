@@ -1,5 +1,6 @@
 package docker_test.com.dto;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record OrderShipmentResponeDTO(
@@ -13,7 +14,8 @@ public record OrderShipmentResponeDTO(
 	        String shippingStatus,
 	        OrderInfoDTO order,
 	        RecipientInfoDTO recipient,
-	        List<OrderItemInfoDTO> items
+	        List<OrderItemInfoDTO> items,
+	        List<ShipmentStatusLogDTO> statusHistory
 		) {
 	 public record OrderInfoDTO(
 	            String orderNumber,
@@ -51,6 +53,15 @@ public record OrderShipmentResponeDTO(
 	            Double price,
 	            Double totalPrice
 	    ) {
-	    }	
+	    }
+
+	    public record ShipmentStatusLogDTO(
+	            Long id,
+	            String status,
+	            String note,
+	            LocalDateTime changedAt,
+	            String changedBy
+	    ) {
+	    }
 
 }
