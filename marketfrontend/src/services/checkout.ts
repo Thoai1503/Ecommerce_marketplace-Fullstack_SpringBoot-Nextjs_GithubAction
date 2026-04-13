@@ -8,7 +8,7 @@ export const checkOutAPI = async (
     `Gửi yêu cầu thanh toán với thông tin:\nSố tiền: ${paymentInfo.amount}\nPhương thức: ${paymentInfo.method}\nMã đơn hàng: ${paymentInfo.orderId}\nThông tin đơn hàng: ${paymentInfo.orderInfo}\nBank code: ${paymentInfo.bankCode}`,
   );
   return await http.post(
-    `/payment?orderInfo=${encodeURIComponent(paymentInfo.orderInfo)}&ordertype=other&amount=${paymentInfo.amount}&bankCode=${paymentInfo.bankCode}`,
+    `/payment?orderInfo=${encodeURIComponent(paymentInfo.orderId)}&ordertype=other&amount=${paymentInfo.amount}&bankCode=${paymentInfo.bankCode}&orderId=${paymentInfo.orderId}&payType=${paymentInfo.method}`,
 
     // {
     //   headers: {
