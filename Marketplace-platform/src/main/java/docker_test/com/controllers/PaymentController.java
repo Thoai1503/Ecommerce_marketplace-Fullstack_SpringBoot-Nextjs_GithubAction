@@ -46,9 +46,10 @@ public class PaymentController {
  	    System.out.println("Response code: " + responseCode);
  	    System.out.println("Secure hash: " + vnp_SecureHash);
  	    System.out.println("Fields: " + fields);
- 	    
+ 	    String orderId = fields.get("vnp_OrderInfo");
  	    if(responseCode.equals("00")) {
  	    	System.out.println("Payment successful");
+ 	    	return new RedirectView("http://103.90.225.130:3000/orders/"  + orderId + "?status=success");
  	    }
  	    
  	    

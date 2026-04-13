@@ -1,30 +1,45 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 
 import { API_URL } from "@/helper/api";
 import { useUserAuth } from "@/context/UserAuthContext";
-
-type User = {
-  id: number;
-  email: string;
-  phone?: string | null;
-  fullName: string;
-  avatarUrl?: string | null;
-  dateOfBirth?: string | null;
-  gender?: string | null;
-  userType: string;
-  isVerified: number;
-  isActive: number;
-  createdAt: string;
-  updatedAt: string;
-  lastLogin?: string | null;
-};
+import { uploadUserAvatar, User } from "@/services/userService";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const { setRoles } = useUserAuth();
   const [loading, setLoading] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  /* ================= UPLOAD AVATAR MUTATION ================= */
+  const { mutate: uploadAvatar, isPending: isUploadingAvatar } = useMutation({
+    mutationFn: async (file: File) => {
+      if (!user) throw new Error("User not found");
+      return uploadUserAvatar(user.id, file);
+    },
+    onSuccess: (updatedUser: User) => {
+      console.log("Avatar updated successfully:", updatedUser);
+
+      // Update local state
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      // Clear file inputs
+      setAvatarFile(null);
+      setAvatarPreview(null);
+
+      alert("Cập nhật ảnh đại diện thành công");
+    },
+    onError: (error: any) => {
+      console.error("Avatar upload error:", error);
+      const errorMsg =
+        error?.response?.data || error.message || "Lỗi cập nhật ảnh";
+      alert(`Lỗi: ${errorMsg}`);
+    },
+  });
 
   /* ================= LOAD USER ================= */
   useEffect(() => {
@@ -39,9 +54,10 @@ export default function ProfilePage() {
   if (!user) return null;
 
   const avatar =
-    user.avatarUrl && user.avatarUrl.trim() !== ""
+    avatarPreview ||
+    (user.avatarUrl && user.avatarUrl.trim() !== ""
       ? user.avatarUrl
-      : "/image/user/avatar_default.jpg";
+      : "/image/user/avatar_default.jpg");
 
   // 🔒 khóa nếu đã set
   const isGenderLocked = user.gender !== null;
@@ -52,6 +68,43 @@ export default function ProfilePage() {
   ) => {
     const { name, value } = e.target;
     setUser((prev) => (prev ? { ...prev, [name]: value } : prev));
+  };
+
+  /* ================= HANDLE AVATAR FILE CHANGE ================= */
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Vui lòng chọn tệp hình ảnh");
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Kích thước tệp không được vượt quá 2MB");
+      return;
+    }
+
+    setAvatarFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  /* ================= HANDLE AVATAR UPLOAD ================= */
+  const handleAvatarUpload = () => {
+    if (!avatarFile) {
+      alert("Vui lòng chọn ảnh");
+      return;
+    }
+
+    uploadAvatar(avatarFile);
   };
 
   /* ================= SUBMIT ================= */
@@ -112,9 +165,25 @@ export default function ProfilePage() {
                 style={{ width: 120, height: 120, objectFit: "cover" }}
               />
               <p className="text-muted small mt-2">JPG, PNG. Tối đa 2MB</p>
-              <button className="btn btn-outline-secondary btn-sm" disabled>
-                Thay ảnh (sắp có)
-              </button>
+              <label className="btn btn-outline-secondary btn-sm">
+                {isUploadingAvatar ? "Đang tải lên..." : "Thay ảnh"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  style={{ display: "none" }}
+                  disabled={isUploadingAvatar}
+                />
+              </label>
+              {avatarFile && (
+                <button
+                  className="btn btn-primary btn-sm ms-2"
+                  onClick={handleAvatarUpload}
+                  disabled={isUploadingAvatar}
+                >
+                  {isUploadingAvatar ? "Đang lưu..." : "Lưu ảnh"}
+                </button>
+              )}
             </div>
 
             {/* FORM */}
