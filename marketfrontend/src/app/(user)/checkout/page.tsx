@@ -818,7 +818,7 @@ export default function CheckoutPage() {
         if (paymentInfo.method === "vnpay") {
           checkOut({ ...paymentInfo, orderId: dt.id });
         } else {
-          window.location.href = `/order/${dt.id}`; // Chuyển hướng đến trang thành công sau khi đặt hàng với phương thức khác
+          window.location.href = `/orders/${dt.id}`; // Chuyển hướng đến trang thành công sau khi đặt hàng với phương thức khác
         }
       })
       .catch((e: AxiosError) => {
