@@ -57,4 +57,11 @@ public class OrderService {
                 pendingAmount
         );
     }
+
+        public Order getAdminOrderById(Long id) {
+                if (id == null) {
+                        return null;
+                }
+                return orderRepository.findById(id);
+        }
 }

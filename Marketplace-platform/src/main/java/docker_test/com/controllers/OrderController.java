@@ -3,10 +3,12 @@ package docker_test.com.controllers;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -81,6 +83,16 @@ public class OrderController {
                page,
                size
        );
+   }
+
+   @GetMapping("/{id}")
+   public ResponseEntity<?> getOrderById(@PathVariable Long id) {
+           Order order = orderService.getAdminOrderById(id);
+           if (order == null) {
+                   return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                   .body(java.util.Map.of("message", "Order not found", "id", id));
+           }
+           return ResponseEntity.ok(order);
    }
    
 }

@@ -16,8 +16,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { Order, ShipmentStatus } from "@/types";
-import { getMockUserOrderById } from "@/mock/userOrderDetail";
+import { Order, OrderItem, ShipmentStatus } from "@/types";
+import { API_URL } from "@/helper/api";
 
 const orderStatusLabel: Record<Order["status"], string> = {
   PENDING: "Cho xac nhan",
@@ -47,6 +47,151 @@ const shipmentStepLabel: Record<ShipmentStatus, string> = {
   DELIVERED: "Giao thanh cong",
   FAILED: "Giao that bai",
   RETURNED: "Hoan ve",
+};
+
+const normalizePaymentStatus = (
+  value: string | null | undefined,
+): Order["paymentStatus"] => {
+  const status = String(value || "").toUpperCase();
+  if (status === "PAID") return "PAID";
+  if (status === "REFUNDED") return "REFUNDED";
+  return "UNPAID";
+};
+
+const normalizeOrderStatus = (
+  value: string | null | undefined,
+): Order["status"] => {
+  const status = String(value || "").toUpperCase();
+  const valid: Order["status"][] = [
+    "PENDING",
+    "CONFIRMED",
+    "PROCESSING",
+    "SHIPPED",
+    "COMPLETED",
+    "CANCELED",
+    "REFUNDED",
+  ];
+  return valid.includes(status as Order["status"])
+    ? (status as Order["status"])
+    : "PENDING";
+};
+
+const normalizeShipmentStatus = (
+  value: string | null | undefined,
+): ShipmentStatus => {
+  const status = String(value || "").toUpperCase();
+  const map: Record<string, ShipmentStatus> = {
+    PENDING: "PENDING",
+    CONFIRMED: "CONFIRMED",
+    PICKED_UP: "PICKED_UP",
+    SHIPPING: "SHIPPING",
+    IN_TRANSIT: "SHIPPING",
+    DELIVERING: "DELIVERING",
+    OUT_FOR_DELIVERY: "DELIVERING",
+    DELIVERED: "DELIVERED",
+    FAILED: "FAILED",
+    RETURNED: "RETURNED",
+  };
+  return map[status] || "PENDING";
+};
+
+const asNumber = (value: unknown, fallback = 0) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const pickText = (...values: unknown[]) => {
+  const found = values.find((v) => String(v ?? "").trim() !== "");
+  return found == null ? "" : String(found);
+};
+
+const toOrderItem = (raw: any): OrderItem => ({
+  id: String(raw?.id ?? raw?.itemId ?? ""),
+  productName: pickText(raw?.productName, raw?.product_name, "San pham"),
+  productImage: pickText(
+    raw?.image,
+    raw?.productImage,
+    raw?.image_url,
+    "/placeholder-product.png",
+  ),
+  sku: pickText(
+    raw?.sku,
+    raw?.variantSku,
+    raw?.variant_name,
+    raw?.productId,
+    "N/A",
+  ),
+  variant:
+    pickText(raw?.variant, raw?.variantName, raw?.variant_name) || undefined,
+  quantity: asNumber(raw?.quantity, 0),
+  price: asNumber(raw?.price, 0),
+  status: "Ready" as const,
+});
+
+const ensurePendingFirst = (history: any[] = []) => {
+  const normalized = history
+    .map((h) => ({
+      status: normalizeShipmentStatus(h?.status ?? h?.newStatus),
+      description:
+        pickText(h?.description, h?.note, "Cap nhat trang thai") ||
+        "Cap nhat trang thai",
+      updatedAt: pickText(h?.updatedAt, h?.changedAt, new Date().toISOString()),
+    }))
+    .filter((h) => !!h.updatedAt);
+
+  const pending = normalized.find((h) => h.status === "PENDING");
+  const defaultPending = {
+    status: "PENDING" as ShipmentStatus,
+    description: pending?.description || "Cho xac nhan tu shop",
+    updatedAt:
+      pending?.updatedAt ||
+      normalized[0]?.updatedAt ||
+      new Date().toISOString(),
+  };
+
+  if (!normalized.length) return [defaultPending];
+  if (normalized[0].status === "PENDING") {
+    return [
+      {
+        ...normalized[0],
+        description: normalized[0].description || "Cho xac nhan tu shop",
+      },
+      ...normalized.slice(1),
+    ];
+  }
+  return [defaultPending, ...normalized.filter((h) => h !== pending)];
+};
+
+const buildAddress = (recipient: any) =>
+  [
+    recipient?.addressLine,
+    recipient?.ward,
+    recipient?.district,
+    recipient?.city,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+const fetchJson = async <T,>(path: string): Promise<T> => {
+  const res = await fetch(`${API_URL}${path}`, {
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    throw new Error(`Request failed: ${path}`);
+  }
+  return res.json();
+};
+
+const getFirstSuccess = async <T,>(paths: string[]): Promise<T | null> => {
+  for (const path of paths) {
+    try {
+      return await fetchJson<T>(path);
+    } catch {
+      // try next path
+    }
+  }
+  return null;
 };
 
 const formatMoney = (amount: number) => `${amount.toLocaleString("vi-VN")}d`;
@@ -215,10 +360,192 @@ export default function UserOrderDetailPage() {
 
     async function loadOrder() {
       setLoading(true);
-      const detail = await getMockUserOrderById(id);
-      if (!mounted) return;
-      setOrder(detail);
-      setLoading(false);
+      try {
+        const baseOrder = await getFirstSuccess<any>([`/api/orders/${id}`]);
+
+        if (!baseOrder) {
+          if (!mounted) return;
+          setOrder(null);
+          setLoading(false);
+          return;
+        }
+
+        const orderData = baseOrder?.order ?? baseOrder;
+
+        const rawItems =
+          (await getFirstSuccess<any[]>([`/api/orders/${id}/items`])) ||
+          orderData?.items ||
+          [];
+
+        const seedShipments: any[] = Array.isArray(orderData?.shipments)
+          ? orderData.shipments
+          : Array.isArray(orderData?.order_shipment)
+            ? orderData.order_shipment
+            : Array.isArray(orderData?.orderShipments)
+              ? orderData.orderShipments
+              : [];
+
+        const shipmentIds = new Set<number>();
+        seedShipments.forEach((s) => {
+          const sid = asNumber(s?.shipmentId ?? s?.id ?? s?.shipment_id, 0);
+          if (sid > 0) shipmentIds.add(sid);
+        });
+        rawItems.forEach((item: any) => {
+          const sid = asNumber(item?.shipmentId ?? item?.shipment_id, 0);
+          if (sid > 0) shipmentIds.add(sid);
+        });
+
+        const shipmentDetails = await Promise.all(
+          Array.from(shipmentIds).map(async (shipmentId) => {
+            const detail = await getFirstSuccess<any>([
+              `/api/orders/shipments/${shipmentId}`,
+            ]);
+            return detail;
+          }),
+        );
+
+        const shipments = shipmentDetails.filter(Boolean).map((raw) => {
+          const shipment = raw || {};
+          const recipient = shipment?.recipient || {};
+          const items = Array.isArray(shipment?.items) ? shipment.items : [];
+
+          return {
+            id: String(shipment?.shipmentId ?? shipment?.id ?? ""),
+            order_id: String(shipment?.orderId ?? shipment?.order_id ?? id),
+            shop_id: String(shipment?.shopId ?? shipment?.shop_id ?? ""),
+            shopName: pickText(
+              shipment?.shopName,
+              `Shop #${shipment?.shopId ?? shipment?.shop_id ?? "-"}`,
+            ),
+            tracking_number: pickText(
+              shipment?.trackingNumber,
+              shipment?.tracking_number,
+            ),
+            carrier_name:
+              pickText(shipment?.carrierName, shipment?.carrier_name) ||
+              undefined,
+            shipping_status: normalizeShipmentStatus(
+              shipment?.shippingStatus ?? shipment?.shipping_status,
+            ),
+            estimated_delivery_at:
+              pickText(
+                shipment?.estimatedDeliveryAt,
+                shipment?.estimated_delivery_at,
+              ) || undefined,
+            created_at: pickText(
+              shipment?.createdAt,
+              shipment?.created_at,
+              orderData?.createdAt,
+              new Date().toISOString(),
+            ),
+            updated_at: pickText(
+              shipment?.updatedAt,
+              shipment?.updated_at,
+              orderData?.updatedAt,
+              new Date().toISOString(),
+            ),
+            shipping_fee: asNumber(
+              shipment?.shippingFee ?? shipment?.shipping_fee,
+              0,
+            ),
+            items: items.map(toOrderItem),
+            statusHistory: ensurePendingFirst(shipment?.statusHistory),
+            recipient,
+          };
+        });
+
+        const fallbackItems = rawItems.map(toOrderItem);
+        const orderItems: OrderItem[] =
+          shipments.flatMap((s: any) => s.items || []).length > 0
+            ? shipments.flatMap((s: any) => s.items || [])
+            : fallbackItems;
+
+        const uniqueItems: OrderItem[] = Array.from(
+          new Map(
+            orderItems.map((item: OrderItem) => [item.id, item]),
+          ).values(),
+        );
+
+        const firstRecipient = shipments[0]?.recipient;
+        const shippingAddress =
+          buildAddress(firstRecipient) ||
+          pickText(
+            orderData?.shippingAddress,
+            orderData?.address,
+            orderData?.addressLine,
+          );
+
+        const logs = shipments
+          .flatMap((s: any) =>
+            (s.statusHistory || []).map((h: any, idx: number) => ({
+              id: `${s.id}-${idx}`,
+              action: `SHIPMENT_${h.status}`,
+              note: `${s.shopName}: ${h.description || "Cap nhat trang thai"}`,
+              createdAt: h.updatedAt,
+            })),
+          )
+          .sort(
+            (a: any, b: any) =>
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+          );
+
+        const mappedOrder: Order = {
+          id: String(orderData?.orderId ?? orderData?.id ?? id),
+          orderCode: pickText(
+            orderData?.orderNumber,
+            orderData?.orderCode,
+            `ORD-${id}`,
+          ),
+          customerName: pickText(
+            firstRecipient?.recipientName,
+            orderData?.customerName,
+            "Khach hang",
+          ),
+          customerEmail: pickText(orderData?.customerEmail),
+          customerPhone: pickText(
+            firstRecipient?.recipientPhone,
+            orderData?.customerPhone,
+            "-",
+          ),
+          shippingAddress: shippingAddress || "-",
+          totalAmount: asNumber(
+            orderData?.finalAmount ?? orderData?.totalAmount,
+            0,
+          ),
+          subtotalAmount: asNumber(orderData?.totalAmount, 0),
+          discountAmount: asNumber(orderData?.discountAmount, 0),
+          shippingAmount:
+            asNumber(orderData?.shippingFee, NaN) ||
+            shipments.reduce(
+              (sum: number, s: any) => sum + asNumber(s.shipping_fee, 0),
+              0,
+            ),
+          taxAmount: asNumber(orderData?.taxAmount, 0),
+          itemsCount: uniqueItems.length,
+          paymentStatus: normalizePaymentStatus(orderData?.paymentStatus),
+          paymentMethod: pickText(orderData?.paymentMethod, "cod"),
+          transactionId: pickText(orderData?.transactionId),
+          deliveryNumber: pickText(orderData?.trackingNumber),
+          trackingNumber: pickText(orderData?.trackingNumber),
+          status: normalizeOrderStatus(orderData?.orderStatus),
+          priority: "NORMAL",
+          createdAt: pickText(orderData?.createdAt, new Date().toISOString()),
+          updatedAt: pickText(orderData?.updatedAt, new Date().toISOString()),
+          items: uniqueItems,
+          shipments: shipments.map(({ recipient, ...s }: any) => s),
+          logs,
+          internalNote: pickText(orderData?.note) || undefined,
+        };
+
+        if (!mounted) return;
+        setOrder(mappedOrder);
+      } catch {
+        if (!mounted) return;
+        setOrder(null);
+      } finally {
+        if (!mounted) return;
+        setLoading(false);
+      }
     }
 
     loadOrder();
@@ -445,6 +772,90 @@ export default function UserOrderDetailPage() {
                                     </span>
                                   );
                                 })}
+                              </div>
+
+                              <div className="mb-3">
+                                <p
+                                  className="mb-2 fw-bold text-uppercase"
+                                  style={{
+                                    fontSize: 11,
+                                    letterSpacing: "0.04em",
+                                  }}
+                                >
+                                  San pham trong kien hang
+                                </p>
+
+                                {shipment.items && shipment.items.length > 0 ? (
+                                  <div className="d-flex flex-column gap-2">
+                                    {shipment.items.map((item) => (
+                                      <div
+                                        key={`${shipment.id}-item-${item.id}`}
+                                        className="d-flex gap-3 align-items-start rounded-3 border p-2"
+                                        style={{
+                                          borderColor: "#f1f5f9",
+                                          background: "#fff",
+                                        }}
+                                      >
+                                        <img
+                                          src={item.productImage}
+                                          alt={item.productName}
+                                          style={{
+                                            ...styles.productImg,
+                                            width: 56,
+                                            height: 56,
+                                          }}
+                                        />
+                                        <div className="flex-grow-1">
+                                          <p
+                                            className="mb-1 fw-semibold"
+                                            style={{
+                                              fontSize: 12,
+                                              lineHeight: 1.4,
+                                              color: "#1e293b",
+                                            }}
+                                          >
+                                            {item.productName}
+                                          </p>
+                                          <p
+                                            className="mb-1 text-muted"
+                                            style={{ fontSize: 11 }}
+                                          >
+                                            {item.variant
+                                              ? `${item.variant} | `
+                                              : ""}
+                                            SKU: {item.sku}
+                                          </p>
+                                          <div className="d-flex align-items-center justify-content-between gap-2">
+                                            <span
+                                              style={{
+                                                fontSize: 12,
+                                                fontWeight: 800,
+                                                color: "#137fec",
+                                              }}
+                                            >
+                                              {formatMoney(item.price)}
+                                            </span>
+                                            <span style={styles.qtyBadge}>
+                                              So luong:{" "}
+                                              {String(item.quantity).padStart(
+                                                2,
+                                                "0",
+                                              )}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p
+                                    className="mb-0 text-muted"
+                                    style={{ fontSize: 11 }}
+                                  >
+                                    Chua co thong tin san pham cho kien hang
+                                    nay.
+                                  </p>
+                                )}
                               </div>
 
                               {shipment.statusHistory &&
@@ -717,9 +1128,9 @@ export default function UserOrderDetailPage() {
                   className="text-muted mb-0"
                   style={{ fontSize: 11, lineHeight: 1.7 }}
                 >
-                  Giao dien nay dang su dung du lieu gia lap de kiem thu UI. Khi
-                  ket noi API that, thong tin trang thai va lich su van chuyen
-                  se cap nhat theo du lieu thoi gian thuc.
+                  Du lieu trang nay duoc lay tu API thuc te. Thong tin nhan
+                  hang, san pham, kien hang va lich su trang thai cua tung kien
+                  duoc cap nhat theo he thong don hang.
                 </p>
               </div>
             </div>
