@@ -3,6 +3,7 @@ package docker_test.com.repository;
 import java.sql.*;
 import java.util.List;
 
+import docker_test.com.configs.DBConnection;
 import docker_test.com.models.PageResult;
 import docker_test.com.models.User;
 
@@ -12,6 +13,7 @@ import docker_test.com.models.User;
  * Quản lý Khách hàng (Customers screen).
  */
 public class BuyerRepository extends UserRepository {
+    private DBConnection dbConnection;
 
     private static BuyerRepository instance;
 

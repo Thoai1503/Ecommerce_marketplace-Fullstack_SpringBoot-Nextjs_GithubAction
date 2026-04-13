@@ -48,7 +48,7 @@ public class OrderRepository implements IRepositories<Order>{
 	) {
 
 	    StringBuilder sql = new StringBuilder(
-	            "SELECT o.* FROM `order` o WHERE 1=1 "
+	            "SELECT o.* FROM `orders` o WHERE 1=1 "
 	    );
 
 	    List<Object> params = new ArrayList<>();
@@ -78,10 +78,10 @@ public class OrderRepository implements IRepositories<Order>{
 	        params.add(maxAmount);
 	    }
 
-	    if (status != null && !status.equalsIgnoreCase("all")) {
-	        sql.append("AND o.order_status = ? ");
-	        params.add(status);
-	    }
+//	    if (status != null && !status.equalsIgnoreCase("all")) {
+//	        sql.append("AND o.order_status = ? ");
+//	        params.add(status);
+//	    }
 
 	    String sortColumn = "o.created_at";
 	    if ("amount".equalsIgnoreCase(sortBy)) {
@@ -96,6 +96,7 @@ public class OrderRepository implements IRepositories<Order>{
 	    sql.append("ORDER BY ").append(sortColumn).append(" ").append(direction);
 
 	    // Pagination
+	    if (page < 1) page = 1;
 	    int offset = (page - 1) * size;
 	    sql.append(" LIMIT ? OFFSET ? ");
 	    params.add(size);
@@ -127,7 +128,7 @@ public class OrderRepository implements IRepositories<Order>{
 
 	    String sql = """
 	            SELECT order_status, COUNT(*) total
-	            FROM `order`
+	            FROM `orders`
 	            GROUP BY order_status
 	            """;
 
@@ -155,7 +156,7 @@ public class OrderRepository implements IRepositories<Order>{
 
 	    String sql = """
 	            SELECT SUM(final_amount)
-	            FROM `order`
+	            FROM `orders`
 	            WHERE order_status = 'pending'
 	            """;
 
@@ -178,7 +179,7 @@ public class OrderRepository implements IRepositories<Order>{
 	public Order Create(Order item) throws SQLException {
 		 String sql = """
 	                INSERT INTO orders (
-	                    order_number, user_id, shop_id, address_id,
+	                    order_number, user_id, address_id,
 	                    total_amount, shipping_fee, discount_amount, final_amount,
 	                    payment_method, payment_status, order_status, note,
 	                    voucher_id, tracking_number,
@@ -227,7 +228,7 @@ public class OrderRepository implements IRepositories<Order>{
 	) {
 
 	    StringBuilder sql = new StringBuilder(
-	            "SELECT COUNT(*) FROM `order` o WHERE 1=1 "
+	            "SELECT COUNT(*) FROM `orders` o WHERE 1=1 "
 	    );
 
 	    List<Object> params = new ArrayList<>();
@@ -294,7 +295,7 @@ public class OrderRepository implements IRepositories<Order>{
                     cancelled_at = ?,
                     delivered_at = ?,
                     updated_at = ?
-                WHERE order_id = ?
+                WHERE id = ?
                 """;
 
         try (Connection conn = dbConnection.getConn();
@@ -330,10 +331,10 @@ public class OrderRepository implements IRepositories<Order>{
 	private Order mapResultSetToOrder(ResultSet rs) throws SQLException {
         Order order = new Order();
 
-        order.setOrderId(rs.getLong("order_id"));
+        order.setOrderId(rs.getLong("id"));
         order.setOrderNumber(rs.getString("order_number"));
         order.setUserId(rs.getLong("user_id"));
-        order.setShopId(rs.getLong("shop_id"));
+//        order.setShopId(rs.getLong("shop_id"));
         order.setAddressId(rs.getLong("address_id"));
         order.setTotalAmount(rs.getDouble("total_amount"));
         order.setShippingFee(rs.getDouble("shipping_fee"));

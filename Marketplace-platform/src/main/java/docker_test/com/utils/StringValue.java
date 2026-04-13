@@ -313,6 +313,13 @@ public final class StringValue {
     public static final String SEARCH_QUERY_COL = "search_query";
     public static final String SEARCH_RESULT_COUNT_COL = "result_count";
     public static final String SEARCH_SEARCHED_AT_COL = "searched_at";
+    
+    //Brand table
+    public static final String BRAND_ID_COL = "id";
+    public static final String BRAND_NAME_COL = "name";
+    public static final String BRAND_SLUG_COL = "slug";
+    public static final String BRAND_LOGO_COL = "logo";
+    public static final String BRAND_STATUS_COL = "status";
 
     private StringValue() {}
 }

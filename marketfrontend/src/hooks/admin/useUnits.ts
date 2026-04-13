@@ -1,8 +1,7 @@
-
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { unitsQuery } from '@/query/units';
-import { createUnit, updateUnit, deleteUnit } from '@/service/units';
-import { Unit } from '@/types/index';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { unitsQuery } from "@/query/units";
+import { createUnit, updateUnit, deleteUnit } from "@/service/units";
+import { Unit } from "@/types/index";
 
 export const useUnits = () => {
   const queryClient = useQueryClient();
@@ -11,17 +10,21 @@ export const useUnits = () => {
 
   const createMutation = useMutation({
     mutationFn: createUnit,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'units'] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["admin", "units"] }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: Partial<Unit> }) => updateUnit(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'units'] }),
+    mutationFn: ({ id, data }: { id: string; data: Partial<Unit> }) =>
+      updateUnit(id, data),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["admin", "units"] }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteUnit,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'units'] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["admin", "units"] }),
   });
 
   return {
@@ -44,14 +47,15 @@ export const useUnitDetail = (id: string) => {
 
   const createMutation = useMutation({
     mutationFn: createUnit,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'units'] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["admin", "units"] }),
   });
 
   const updateMutation = useMutation({
     mutationFn: (data: any) => updateUnit(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'units'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'units', id] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "units"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "units", id] });
     },
   });
 

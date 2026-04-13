@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useShipmentList, useUpdateShipmentStatus } from "@/lib/hooks";
 import { ShipmentStatus } from "@/lib/api";
 
@@ -8,7 +9,7 @@ const statusOptions: Array<{ label: string; value: ShipmentStatus | "" }> = [
   { label: "Tất cả", value: "" },
   { label: "Đang chờ xử lý", value: "PENDING" },
   { label: "Đơn hàng đã xác nhận", value: "CONFIRMED" },
-  { label: "Đã nhận hàng", value: "RECEIVED" },
+  { label: "Đã lấy hàng", value: "PICKED_UP" },
   { label: "Đang vận chuyển", value: "IN_TRANSIT" },
   { label: "Đang giao hàng", value: "OUT_FOR_DELIVERY" },
   { label: "Đã giao hàng", value: "DELIVERED" },
@@ -19,7 +20,7 @@ const statusOptions: Array<{ label: string; value: ShipmentStatus | "" }> = [
 const statusLabel: Record<ShipmentStatus, string> = {
   PENDING: "Đang chờ xử lý",
   CONFIRMED: "Đơn hàng đã xác nhận",
-  RECEIVED: "Đã nhận hàng",
+  PICKED_UP: "Đã lấy hàng",
   IN_TRANSIT: "Đang vận chuyển",
   OUT_FOR_DELIVERY: "Đang giao hàng",
   DELIVERED: "Đã giao hàng",
@@ -31,23 +32,40 @@ export default function AdminPage() {
   const [trackingSearch, setTrackingSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | "">("");
   const [shopFilter, setShopFilter] = useState("");
+  const [page, setPage] = useState(0);
+  const [size] = useState(10);
 
   const { data, isFetching, refetch } = useShipmentList({
     trackingCode: trackingSearch || undefined,
     status: statusFilter || undefined,
-    shopId: shopFilter || undefined,
+    shopRefId:
+      shopFilter && !Number.isNaN(Number(shopFilter))
+        ? Number(shopFilter)
+        : undefined,
+    page,
+    size,
   });
+
+  useEffect(() => {
+    setPage(0);
+  }, [trackingSearch, statusFilter, shopFilter]);
 
   const updateStatus = useUpdateShipmentStatus();
 
-  const shipments = data ?? [];
+  const shipments = data?.content ?? [];
 
-  const onUpdateStatus = (id: string, status: ShipmentStatus) => {
+  const onUpdateStatus = (
+    orderShipmentRefId: number,
+    status: ShipmentStatus,
+  ) => {
     updateStatus.mutate(
-      { id, status },
+      { orderShipmentRefId, status },
       {
         onSuccess: () => {
           refetch();
+        },
+        onError: (error) => {
+          alert(`Cập nhật trạng thái thất bại: ${String(error)}`);
         },
       },
     );
@@ -150,7 +168,7 @@ export default function AdminPage() {
                   Shop ID
                 </th>
                 <th className="px-4 py-3 text-left font-semibold text-zinc-600">
-                  Khách hàng
+                  Order Ref ID
                 </th>
                 <th className="px-4 py-3 text-left font-semibold text-zinc-600">
                   Trạng thái
@@ -171,10 +189,10 @@ export default function AdminPage() {
                       {shipment.trackingCode}
                     </td>
                     <td className="px-4 py-3 text-zinc-700">
-                      {shipment.shopId}
+                      {shipment.shopRefId}
                     </td>
                     <td className="px-4 py-3 text-zinc-700">
-                      {shipment.customer?.name}
+                      {shipment.orderShipmentRefId}
                     </td>
                     <td className="px-4 py-3 text-zinc-700">
                       {statusLabel[shipment.status]}
@@ -183,24 +201,14 @@ export default function AdminPage() {
                       {new Date(shipment.createdAt).toLocaleString()}
                     </td>
                     <td className="px-4 py-3">
-                      <select
-                        value={shipment.status}
-                        onChange={(event) =>
-                          onUpdateStatus(
-                            shipment.id,
-                            event.target.value as ShipmentStatus,
-                          )
-                        }
-                        className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-200"
-                      >
-                        {statusOptions
-                          .filter((option) => option.value !== "")
-                          .map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                      </select>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/admin/shipments/${shipment.id}`}
+                          className="inline-flex items-center justify-center rounded-md text-sm font-medium text-white bg-zinc-900 px-3 py-1.5 shadow-sm hover:bg-zinc-800"
+                        >
+                          Xem chi tiết
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -218,6 +226,31 @@ export default function AdminPage() {
               )}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <section className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <p className="text-sm text-zinc-600">
+          Trang {data ? data.page + 1 : 1} / {data?.totalPages ?? 1} - Tổng{" "}
+          {data?.totalElements ?? 0} vận đơn
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={!data || data.first || isFetching}
+            onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
+            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            disabled={!data || data.last || isFetching}
+            onClick={() => setPage((prev) => prev + 1)}
+            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Next
+          </button>
         </div>
       </section>
     </div>

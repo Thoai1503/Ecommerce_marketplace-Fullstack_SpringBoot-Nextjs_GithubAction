@@ -2,43 +2,17 @@ package docker_test.com.mappers.attribute;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-
-import docker_test.com.mappers.IMapper;
 import docker_test.com.models.attribute.AttributeUnit;
 import docker_test.com.utils.StringValue;
 
-public final class AttributeUnitMapper implements IMapper<AttributeUnit> {
+public final class AttributeUnitMapper {
 
-    @Override
-    public AttributeUnit RowMap(ResultSet rs) {
-        AttributeUnit unit = new AttributeUnit();
-        try {
-            unit.setId(rs.getInt(StringValue.ATTR_UNIT_ID_COL));
-            unit.setAttributeId(rs.getInt(StringValue.ATTR_UNIT_ATTRIBUTE_ID_COL));
-            unit.setUnitId(rs.getInt(StringValue.ATTR_UNIT_UNIT_ID_COL));
-            unit.setStatus(rs.getInt(StringValue.ATTR_UNIT_STATUS_COL));
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return unit;
+    public static AttributeUnit map(ResultSet rs) throws SQLException {
+        return new AttributeUnit(
+            rs.getObject(StringValue.ATTR_UNIT_ID_COL, Integer.class), // ✅ tránh null = 0
+            rs.getInt(StringValue.ATTR_UNIT_ATTRIBUTE_ID_COL),
+            rs.getInt(StringValue.ATTR_UNIT_UNIT_ID_COL),
+            rs.getInt(StringValue.ATTR_UNIT_STATUS_COL)
+        );
     }
-
-    @Override
-    public List<AttributeUnit> RowsMap(ResultSet rs) {
-        List<AttributeUnit> list = new ArrayList<>();
-        try {
-            while (rs.next()) list.add(RowMap(rs));
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return list;
-    }
-
-	@Override
-	public AttributeUnit mapRow(ResultSet rs, int rowNum) throws SQLException {
-		// TODO Auto-generated method stub
-		return null;
-	}
 }

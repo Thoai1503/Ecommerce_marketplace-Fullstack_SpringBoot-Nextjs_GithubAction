@@ -1,0 +1,16 @@
+name: Deploy cart-service
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "cart-service/**"
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      context_path: ./cart-service
+      image_name: cart-service
+      service_name: cart-service
+    secrets: inherit

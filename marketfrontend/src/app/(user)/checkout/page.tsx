@@ -1,62 +1,154 @@
 "use client";
-<<<<<<< HEAD
-import { useState } from "react";
-=======
-import { useState, useMemo } from "react";
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+import { useEffect, useMemo, useState } from "react";
+import CheckoutLeftSteps from "@/components/client/checkout_page/CheckoutLeftSteps";
+import CheckoutOrderSummary from "@/components/client/checkout_page/CheckoutOrderSummary";
 import {
-  Check,
-  Wallet,
-  CheckCircle,
-  Lock,
-  ShieldCheck,
-  Truck,
-  Info,
-  Plus,
-  MapPin,
-  X,
-  Star,
-  Phone,
-  User,
-  Home,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
-import AddressModal from "@/components/client/checkout_page/AddressModal";
-<<<<<<< HEAD
-=======
+  Address,
+  ShippingOption,
+  ShippingSelection,
+} from "@/components/client/checkout_page/types";
 import { useCheckoutPage } from "@/feature/client/hook";
-import { Cart } from "@/types/data/Cart";
 import { CartItem, GroupedCartByShop } from "@/validators/cart";
 import { createOrder } from "@/feature/client/service";
-import { id } from "zod/v4/locales";
 import { IOrderItem } from "@/validators/orderItem";
-import { Recipient } from "@/validators/order";
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+import { useUserAuth } from "@/context/UserAuthContext";
+import { useAddresses } from "@/hooks/useAddresses";
 
-interface Address {
-  id: number;
-  name: string;
-  phone: string;
-  address: string;
-  isDefault: boolean;
+// Dữ liệu mẫu cho city, district, ward (city vẫn dùng map tĩnh, district/ward lấy động)
+const cityMap = { 202: "TP. Hồ Chí Minh", 1: "Hà Nội" };
+
+import { useQuery } from "@tanstack/react-query";
+import { message } from "antd";
+import { ADDRESS_KEY } from "@/helper/api";
+import { calculateFeeOfLOGS } from "@/service/calculateFeeAPI";
+import { CalculateFeePayload } from "@/types";
+import { set } from "zod";
+import { getAddressByShopId } from "@/service/addresses";
+import { AxiosError } from "axios";
+import { getUserInfoById, getUsersInfoByIds } from "@/service/userInfo";
+
+// Hàm fetch districts theo provinceId
+async function fetchDistrictsByProvince(provinceId: number) {
+  const res = await fetch(
+    "https://dev-online-gateway.ghn.vn/shiip/public-api/master-data/district",
+    {
+      method: "POST",
+      headers: {
+        token: ADDRESS_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ province_id: provinceId }),
+    },
+  );
+  const data = await res.json();
+  return data?.data || [];
 }
 
-<<<<<<< HEAD
+// Hàm fetch wards theo districtId
+async function fetchWardsByDistrict(districtId: number) {
+  const res = await fetch(
+    "https://dev-online-gateway.ghn.vn/shiip/public-api/master-data/ward?district_id",
+    {
+      method: "POST",
+      headers: {
+        token: ADDRESS_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ district_id: districtId }),
+    },
+  );
+  const data = await res.json();
+  return data?.data || [];
+}
+
+// Custom hook lấy district name có caching
+export function useDistrictName(provinceId: number, districtId: number) {
+  return useQuery({
+    queryKey: ["districts", provinceId],
+    queryFn: () => fetchDistrictsByProvince(provinceId),
+    select: (districts: any[]) => {
+      const found = districts.find((d) => d.DistrictID === districtId);
+      return found ? found.DistrictName : `Quận ${districtId}`;
+    },
+    enabled: !!provinceId && !!districtId,
+    staleTime: 1000 * 60 * 60, // 1h
+  });
+}
+
+// Custom hook lấy ward name có caching
+export function useWardName(districtId: number, wardCode: number) {
+  return useQuery({
+    queryKey: ["wards", districtId],
+    queryFn: () => fetchWardsByDistrict(districtId),
+    select: (wards: any[]) => {
+      const found = wards.find((w) => Number(w.WardCode) === Number(wardCode));
+      return found ? found.WardName : `Phường ${wardCode}`;
+    },
+    enabled: !!districtId && !!wardCode,
+    staleTime: 1000 * 60 * 60, // 1h
+  });
+}
+
 export default function CheckoutPage() {
-=======
-interface ShippingOption {
-  id: string;
-  name: string;
-  estimatedDays: string;
-  fee: number;
-}
+  const { userId } = useUserAuth();
+  const { data: addressesQuery } = useAddresses(userId || 0);
+  const [addresses, setAddresses] = useState<Address[]>([]);
 
-interface ShippingSelection {
-  [shopId: number]: string; // shopId -> shippingOptionId
-}
-
-export default function CheckoutPage() {
+  useEffect(() => {
+    async function mapAddresses() {
+      if (addressesQuery && Array.isArray(addressesQuery)) {
+        const mapped = await Promise.all(
+          addressesQuery.map(async (addr: any) => {
+            // Lấy tên district và ward qua hooks caching
+            let districtName = "";
+            let wardName = "";
+            try {
+              // Lấy danh sách district
+              const districts = await fetchDistrictsByProvince(addr.city);
+              const districtObj = districts.find(
+                (d: any) => d.DistrictID === addr.district,
+              );
+              districtName = districtObj
+                ? districtObj.DistrictName
+                : `Quận ${addr.district}`;
+            } catch {
+              districtName = `Quận ${addr.district}`;
+            }
+            try {
+              const wards = await fetchWardsByDistrict(addr.district);
+              const wardObj = wards.find(
+                (w: any) => Number(w.WardCode) === Number(addr.ward),
+              );
+              wardName = wardObj ? wardObj.WardName : `Phường ${addr.ward}`;
+            } catch {
+              wardName = `Phường ${addr.ward}`;
+            }
+            return {
+              id: addr.addressId,
+              name: addr.recipientName,
+              phone: addr.recipientPhone,
+              address:
+                addr.addressLine +
+                ", " +
+                wardName +
+                ", " +
+                districtName +
+                ", " +
+                (cityMap[
+                  String(addr.city) as unknown as keyof typeof cityMap
+                ] || `TP ${addr.city}`),
+              ward: addr.ward,
+              district: addr.district,
+              city: addr.city,
+              isDefault: addr.isDefault, // giữ đúng giá trị từ API (1 là mặc định)
+            };
+          }),
+        );
+        setAddresses(mapped);
+      }
+    }
+    mapAddresses();
+  }, [addressesQuery]);
   const { checkOut } = useCheckoutPage();
   const cartItems = localStorage.getItem("selectedCartItems")
     ? (JSON.parse(localStorage.getItem("selectedCartItems")!) as CartItem[])
@@ -102,6 +194,14 @@ export default function CheckoutPage() {
       estimatedDays: "Cùng ngày",
       fee: 50000,
     },
+    {
+      id: "normal",
+      name: "Giao hàng LOGS",
+      estimatedDays: "3-5 ngày làm việc",
+      fee: 0,
+      calculateFeeAPI: async (params: CalculateFeePayload) =>
+        calculateFeeOfLOGS(params),
+    },
   ];
 
   // State để lưu lựa chọn vận chuyển cho mỗi shop
@@ -112,6 +212,11 @@ export default function CheckoutPage() {
         return acc;
       }, {} as ShippingSelection),
     );
+
+  const [shippingFees, setShippingFees] = useState<Record<number, number>>({});
+  const [shippingFeeLoading, setShippingFeeLoading] = useState<
+    Record<number, boolean>
+  >({});
 
   // Hàm format currency
   const formatCurrency = (amount: number) => {
@@ -129,16 +234,27 @@ export default function CheckoutPage() {
     return shippingOptions.find((opt) => opt.id === shippingOptionId);
   };
 
+  const getShippingFeeForShop = (shopId: number, shippingOptionId: string) => {
+    const option = getSelectedShippingOption(shopId, shippingOptionId);
+    if (!option) return 0;
+    if (option.calculateFeeAPI) {
+      return shippingFees[shopId] ?? 0;
+    }
+    return option.fee || 0;
+  };
+
   // Tính tổng phí vận chuyển
   const calculateTotalShippingFee = () => {
     return Object.entries(shippingSelections).reduce(
       (total, [shopId, optionId]) => {
-        const option = getSelectedShippingOption(Number(shopId), optionId);
-        return total + (option?.fee || 0);
+        return total + getShippingFeeForShop(Number(shopId), optionId);
       },
       0,
     );
   };
+
+  const isAnyShippingFeeLoading =
+    Object.values(shippingFeeLoading).some(Boolean);
 
   // Tính tổng tiền sản phẩm
   const calculateSubtotal = () => {
@@ -148,7 +264,7 @@ export default function CheckoutPage() {
     );
   };
   const [paymentInfo, setPaymentInfo] = useState<any>({
-    amount: 100000,
+    amount: calculateSubtotal() + calculateTotalShippingFee(),
     orderId: Date.now(),
 
     user_id: 1,
@@ -156,7 +272,6 @@ export default function CheckoutPage() {
     bankCode: "NCB",
     orderInfo: "Thanh toán đơn hàng #123456" + Date.now(),
   });
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   const stepNumberBase: React.CSSProperties = {
     width: 24,
     height: 24,
@@ -434,76 +549,168 @@ export default function CheckoutPage() {
     },
   };
 
-<<<<<<< HEAD
-  const [coupon, setCoupon] = useState("");
-=======
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   const [showAddressPanel, setShowAddressPanel] = useState(false);
-
   const [selectedAddressId, setSelectedAddressId] = useState(1);
 
-<<<<<<< HEAD
-=======
-  const [recipient, setRecipient] = useState<Recipient | null>(null);
-
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-  const [addresses, setAddresses] = useState<Address[]>([
-    {
-      id: 1,
-      name: "Nguyễn Văn A",
-      phone: "0901 234 567",
-      address: "123 Đường Lê Lợi, P. Bến Thành, Quận 1, TP. HCM",
-      isDefault: true,
-    },
-    {
-      id: 2,
-      name: "Nguyễn Văn A",
-      phone: "0912 345 678",
-      address: "456 Đường Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. HCM",
-      isDefault: false,
-    },
-    {
-      id: 3,
-      name: "Nguyễn Văn A",
-      phone: "0912 345 678",
-      address: "456 Đường Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. HCM",
-      isDefault: false,
-    },
-    {
-      id: 4,
-      name: "Nguyễn Văn A",
-      phone: "0912 345 678",
-      address: "456 Đường Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. HCM",
-      isDefault: false,
-    },
-  ]);
+  const [recipient, setRecipient] = useState<any>(null);
 
   const defaultAddress =
-    addresses.find((a) => a.id === selectedAddressId) || addresses[0];
+    addresses.find((a) => a.id === selectedAddressId) ||
+    addresses.find((a) => a.isDefault === 1) ||
+    addresses[0];
 
-  const handleConfirmPayment = () =>
-    alert("Đã xác nhận phương thức thanh toán!");
-  const handleChangeMethod = () =>
-    alert("Chuyển sang chọn phương thức khác...");
-<<<<<<< HEAD
-  const handleOrder = () => alert("Đặt hàng thành công!");
-=======
-  const handleOrder = () => {
+  useEffect(() => {
+    if (defaultAddress) {
+      setRecipient({
+        name: defaultAddress.name,
+        phone: defaultAddress.phone,
+        address: defaultAddress.address,
+      });
+    }
+  }, [selectedAddressId, addresses]);
+
+  const handleConfirmPayment = (method: string) => {
+    setPaymentInfo((prev: any) => ({ ...prev, method }));
+    alert(`Xac nhan thanh toan bang: ${method.toUpperCase()}`);
+  };
+  const handlePaymentMethodChange = (method: string) => {
+    setPaymentInfo((prev: any) => ({ ...prev, method }));
+  };
+
+  const handleShippingOptionChange = async (
+    shopId: number,
+    optionId: string,
+  ) => {
+    // alert(
+    //   `Địa chỉ măc định: ${defaultAddress?.address}\nĐang chọn phương thức vận chuyển...`,
+    // );
+    const shopAddress = await getAddressByShopId(shopId);
+    // alert(
+    //   `Địa chỉ shop: ${shopAddress.addressLine}, Địa chỉ nhận hàng: ${defaultAddress?.address}\nĐang chọn phương thức vận chuyển...`,
+    // );
+    setShippingSelections((prev) => ({
+      ...prev,
+      [shopId]: optionId,
+    }));
+
+    const selectedOption = shippingOptions.find((opt) => opt.id === optionId);
+
+    if (selectedOption?.calculateFeeAPI) {
+      setShippingFeeLoading((prev) => ({
+        ...prev,
+        [shopId]: true,
+      }));
+
+      const logisticsItems = cartItems
+        .filter((item) => item?.product?.shop?.id === shopId)
+        .map((item) => ({
+          name: item.productVariant?.variantName || item.product?.name || "",
+          quantity: item.quantity,
+          height: item.height || 0,
+          width: item.width || 0,
+          weight: item.weight || 0,
+          length: item.length || 0,
+        }));
+
+      console.log("Calculating fee with logistics items:", logisticsItems);
+
+      selectedOption
+        .calculateFeeAPI({
+          from_district_id: shopAddress?.district || 0, // giả sử lấy từ địa chỉ đầu tiên (cần điều chỉnh nếu có nhiều địa chỉ)
+          from_ward_code: shopAddress?.ward ? String(shopAddress.ward) : "", // giả sử lấy từ địa chỉ đầu tiên
+          // service_id: 53320,
+          //service_type_id: 5,
+          service_type_id: 2,
+          to_district_id: defaultAddress?.district || 0,
+          to_ward_code: defaultAddress?.ward ? String(defaultAddress.ward) : "",
+          height: logisticsItems[0]?.height || 0,
+          length: logisticsItems[0]?.length || 0,
+          weight: logisticsItems[0]?.weight || 0,
+          width: logisticsItems[0]?.width || 0,
+          insurance_value: 1000,
+          cod_failed_amount: 0,
+          coupon: null,
+          items: logisticsItems,
+        })
+        .then((fee) => {
+          setShippingFees((prev) => ({
+            ...prev,
+            [shopId]: fee,
+          }));
+          message.info(
+            `Đã chọn: ${selectedOption.name} (${selectedOption.estimatedDays}) - ${formatCurrency(fee || 0)}`,
+          );
+        })
+        .catch(() => {
+          message.error("Khong the tinh phi van chuyen. Vui long thu lai.");
+        })
+        .finally(() => {
+          setShippingFeeLoading((prev) => ({
+            ...prev,
+            [shopId]: false,
+          }));
+        });
+      return;
+    }
+
+    setShippingFeeLoading((prev) => ({
+      ...prev,
+      [shopId]: false,
+    }));
+    message.info(
+      `Đã chọn: ${selectedOption?.name} (${selectedOption?.estimatedDays}) - ${
+        selectedOption?.fee === 0
+          ? "Miễn phí"
+          : formatCurrency(selectedOption?.fee || 0)
+      }`,
+    );
+  };
+
+  const handleOrder = async () => {
     //alert("Đặt hàng thành công!")
     alert(
       `Thông tin thanh toán:\nSố tiền: ${paymentInfo.amount}\nPhương thức: ${paymentInfo.method}\nMã đơn hàng: ${paymentInfo.orderId}`,
     );
+
+    if (!recipient) {
+      message.warning("Vui lòng chọn địa chỉ nhận hàng trước khi đặt hàng.");
+      return;
+    }
+
+    var cartConverted = cartItems.map(async (item) => {
+      const user_id = item?.product?.shop?.userId || 0;
+
+      let userInfo: any = null;
+      await getUserInfoById(user_id).then((res) => {
+        console.log("Fetched user info for shop owner:", res);
+        userInfo = res;
+      });
+      return {
+        id: 1,
+        product_id: item?.product?.id || 0,
+        shop_id: item?.product?.shop?.id || 0,
+        order_id: 1,
+        shop: {
+          id: item?.product?.shop?.id || 0,
+          shop_name: item?.product?.shop?.shopName || "",
+          api_key: item?.product?.shop?.shopName.toUpperCase() + "_API_KEY",
+          contact_email: userInfo?.email || "",
+          phone: userInfo?.phone || "",
+        },
+        variant_id: item?.productVariant?.id || 0,
+        product_name: item?.product?.name || "",
+        variant_name: item?.productVariant?.variantName || "",
+        quantity: item?.quantity || 0,
+        price:
+          (item?.productVariant?.price || 0) +
+          (shippingFees[item?.product?.shop?.id || 0] || 0),
+      };
+    }) as unknown as IOrderItem[];
+
     createOrder({
       user_id: paymentInfo.user_id || 0,
       shop_id: cartItems[0]?.product?.shop?.id || 0,
-      recipient: {
-        name: "Ly Tieu Long",
-        phone: "0879454694",
-        address: "Phat Son",
-        district: 1,
-        province: 1,
-        ward: 1,
-      },
+      recipient: recipient || {},
       order_number: "ORD20250318001",
       total_price: paymentInfo.amount || 0,
       payment_method: paymentInfo.method || "unknown",
@@ -511,801 +718,107 @@ export default function CheckoutPage() {
       shipping_fee: 9000,
       discount_amount: 0,
       final_amount: paymentInfo.amount - 9000 || 0,
-      orders_items: cartItems.map((item) => ({
-        id: 1,
-        product_id: item?.product?.id || 0,
-        shop_id: item?.product?.shop?.id || 0,
-        order_id: 1,
-        variant_id: item?.productVariant?.id || 0,
-        product_name: item?.product?.name || "",
-        variant_name: item?.productVariant?.variantName || "",
-        quantity: item?.quantity || 0,
-        price: item?.productVariant?.price || 0,
-      })) as IOrderItem[],
+      orders_items: cartItems.map((item) => {
+        const user_id = item?.product?.shop?.userId || 0;
+
+        let userInfo: any = null;
+        getUserInfoById(user_id).then((res) => {
+          console.log("Fetched user info for shop owner:", res);
+          userInfo = res;
+        });
+        return {
+          id: 1,
+          product_id: item?.product?.id || 0,
+          shop_id: item?.product?.shop?.id || 0,
+          order_id: 1,
+          shop: {
+            id: item?.product?.shop?.id || 0,
+            shop_name: item?.product?.shop?.shopName || "",
+            api_key: item?.product?.shop?.shopName.toUpperCase() + "_API_KEY",
+            contact_email: userInfo?.email || "",
+            phone: userInfo?.phone || "",
+          },
+          variant_id: item?.productVariant?.id || 0,
+          product_name: item?.product?.name || "",
+          variant_name: item?.productVariant?.variantName || "",
+          quantity: item?.quantity || 0,
+          price:
+            (item?.productVariant?.price || 0) +
+            (shippingFees[item?.product?.shop?.id || 0] || 0),
+        };
+      }) as IOrderItem[],
       note: "",
       tracking_number: "",
       id: 0,
-    });
+      // Additional fields for testing rollback
+      // Uncomment the line below to simulate a rollback scenario
+      // cancel_reason: "SIMULATE_ROLLBACK",
+    })
+      .then((dt) => {
+        alert(`Đặt hàng thành công! Mã đơn hàng: ${dt.id}`);
+        setPaymentInfo((prev: any) => ({
+          ...prev,
+          orderId: dt.id,
+        }));
+      })
+      .catch((e: AxiosError) => {
+        const errorMessage =
+          (e.response?.data as any)?.status || "Lỗi không xác định";
+        message.error(`Đặt hàng thất bại: ${errorMessage}`);
+      });
+    // setPaymentInfo((prev: any) => ({
+    //   ...prev,
+    //   orderId: dt.id,
+    // }));
     //   checkOut(paymentInfo);
   };
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
   return (
-    <>
-      <main className="flex-grow-1 py-4 py-md-5">
-        <div className="container-xl px-3 px-md-4">
-          {/* Page title */}
-          <div className="mb-4">
-            <h2
-              style={{ fontWeight: 800, fontSize: "1.4rem" }}
-              className="mb-1"
-            >
-              Xác nhận nhanh
-            </h2>
-            <p className="text-muted mb-0" style={{ fontSize: 13 }}>
-              Chào mừng trở lại, A. Kiểm tra nhanh và hoàn tất đơn hàng.
-            </p>
-          </div>
-
-          <div className="row g-4 align-items-start">
-            {/* ── LEFT: Steps ─────────────────────────────────────────── */}
-            <div className="col-12 col-lg-7">
-              <div className="d-flex flex-column gap-3">
-                {/* Step 1 — Address */}
-                <section style={styles.cardCompleted}>
-                  <div className="d-flex align-items-start justify-content-between">
-                    <div className="d-flex gap-3 flex-grow-1">
-                      <div style={styles.stepDone}>
-                        <Check size={12} strokeWidth={3} />
-                      </div>
-                      <div className="flex-grow-1">
-                        <h3 style={styles.stepTitle}>Địa chỉ nhận hàng</h3>
-                        <p
-                          className="fw-bold mb-1"
-                          style={{ fontSize: 12, color: "#1e293b" }}
-                        >
-                          {defaultAddress.name} • {defaultAddress.phone}
-                        </p>
-                        <p className="text-muted mb-0" style={{ fontSize: 12 }}>
-                          {defaultAddress.address}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      style={styles.linkPrimary}
-                      onClick={() => setShowAddressPanel(true)}
-                    >
-                      Thay đổi
-                    </button>
-                  </div>
-                </section>
-
-<<<<<<< HEAD
-                {/* Step 2 — Shipping (completed) */}
-=======
-                {/* Step 2 — Shipping Summary (read-only) */}
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-                <section style={styles.cardCompleted}>
-                  <div className="d-flex align-items-start justify-content-between">
-                    <div className="d-flex gap-3 flex-grow-1">
-                      <div style={styles.stepDone}>
-                        <Check size={12} strokeWidth={3} />
-                      </div>
-                      <div className="flex-grow-1">
-                        <h3 style={styles.stepTitle}>Phương thức vận chuyển</h3>
-<<<<<<< HEAD
-                        <div
-                          style={styles.shippingBox}
-                          className="d-flex justify-content-between align-items-center"
-                        >
-                          <div>
-                            <p
-                              className="fw-bold mb-0"
-                              style={{ fontSize: 12 }}
-                            >
-                              Giao hàng Tiêu chuẩn
-                            </p>
-                            <p
-                              className="text-muted fst-italic mb-0"
-                              style={{ fontSize: 10 }}
-                            >
-                              Dự kiến nhận: 2-3 ngày làm việc
-                            </p>
-                          </div>
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 800,
-                              color: "#22c55e",
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            Miễn phí
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <a href="#" style={styles.linkPrimary}>
-                      Thay đổi
-                    </a>
-=======
-                        <p
-                          className="text-muted"
-                          style={{ fontSize: 11, marginBottom: 12 }}
-                        >
-                          Chọn phương thức vận chuyển cho từng cửa hàng ở bước
-                          kiểm tra sản phẩm
-                        </p>
-                        {/* Summary of shipping selections */}
-                        <div className="d-flex flex-column gap-2">
-                          {Object.entries(groupedByShop).map(
-                            ([shopIdStr, group]) => {
-                              const shopId = Number(shopIdStr);
-                              const selectedOptionId =
-                                shippingSelections[shopId] || "standard";
-                              const selectedOption = getSelectedShippingOption(
-                                shopId,
-                                selectedOptionId,
-                              );
-
-                              return (
-                                <div
-                                  key={shopId}
-                                  style={{
-                                    background: "#f8fafc",
-                                    borderRadius: 6,
-                                    padding: "8px 12px",
-                                    fontSize: 11,
-                                  }}
-                                >
-                                  <div className="d-flex justify-content-between align-items-center">
-                                    <div>
-                                      <span className="fw-bold">
-                                        {group.shop?.shopName}
-                                      </span>
-                                      <span
-                                        className="text-muted ms-2"
-                                        style={{ fontSize: 10 }}
-                                      >
-                                        {selectedOption?.name}
-                                      </span>
-                                    </div>
-                                    <span
-                                      style={{
-                                        fontSize: 10,
-                                        fontWeight: 800,
-                                        color:
-                                          selectedOption?.fee === 0
-                                            ? "#22c55e"
-                                            : "#137fec",
-                                        textTransform: "uppercase",
-                                      }}
-                                    >
-                                      {selectedOption?.fee === 0
-                                        ? "Miễn phí"
-                                        : formatCurrency(
-                                            selectedOption?.fee || 0,
-                                          )}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            },
-                          )}
-                        </div>
-                      </div>
-                    </div>
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-                  </div>
-                </section>
-
-                {/* Step 3 — Payment (active) */}
-                <section style={styles.cardActive}>
-                  <div className="d-flex gap-3">
-                    <div style={styles.stepActive}>3</div>
-                    <div className="flex-grow-1">
-                      <h3
-                        style={{
-                          ...styles.stepTitle,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.03em",
-                        }}
-                      >
-                        Phương thức thanh toán
-                      </h3>
-                      <p className="text-muted mb-4" style={{ fontSize: 12 }}>
-                        Xác nhận phương thức thanh toán ưu tiên của bạn.
-                      </p>
-                      <div style={styles.paymentBox} className="mb-4">
-                        <div className="d-flex align-items-center gap-3">
-                          <div style={styles.paymentIconBox}>
-                            <Wallet
-                              size={28}
-                              color="#137fec"
-                              strokeWidth={1.5}
-                            />
-                          </div>
-                          <div>
-                            <p
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 800,
-                                textTransform: "uppercase",
-                                letterSpacing: "0.07em",
-                                color: "#64748b",
-                              }}
-                              className="mb-0"
-                            >
-                              Thanh toán qua
-                            </p>
-                            <p
-                              style={{ fontSize: 18, fontWeight: 800 }}
-                              className="mb-0"
-                            >
-                              Ví Momo (•••• 567)
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <p
-                          className="fw-semibold mb-3"
-                          style={{ fontSize: 13 }}
-                        >
-                          Đây có phải là phương thức thanh toán bạn muốn sử
-                          dụng?
-                        </p>
-                        <div className="d-flex flex-column flex-sm-row gap-2">
-                          <button
-                            style={styles.btnPrimary}
-                            className="flex-fill d-flex align-items-center justify-content-center gap-2"
-                            onClick={handleConfirmPayment}
-                          >
-                            XÁC NHẬN &amp; TIẾP TỤC
-                            <CheckCircle size={16} strokeWidth={2} />
-                          </button>
-                          <button
-                            style={styles.btnSecondary}
-                            className="flex-fill"
-                            onClick={handleChangeMethod}
-                          >
-                            CHỌN PHƯƠNG THỨC KHÁC
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-<<<<<<< HEAD
-                {/* Step 4 — Products */}
-=======
-                {/* Step 4 — Products (from CartItem) */}
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-                <section style={styles.cardDefault}>
-                  <div className="d-flex gap-3">
-                    <div style={styles.stepPending}>4</div>
-                    <div className="flex-grow-1">
-                      <h3 style={styles.stepTitle} className="mb-3">
-<<<<<<< HEAD
-                        Kiểm tra sản phẩm (2)
-                      </h3>
-                      <div className="d-flex gap-3 py-3">
-                        <img
-                          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDdTfP81RNzA2xOfXNZRhTI3hN6m-cfiwYGJupyiW4wFDyTxRr7Wxupjy5hO_dGf_4FF8SR_pZkfO7YiMaxAyfR5M2JTQLkQ4mgWUQU0UgKuR2It8zmQx4kGekwzSSpVquZ5v_tNKq-b0-qjurpbCdROuuB9gz39eDsZeoZNnpyC1wZGsg4MM2pUlKVBNhFvLaPwNK-CyFrF15r0K8rhdhOHTjLTwhtAzEtOeKhhlQmdnvLerxcQK7fF0YZqBlOndhH2bcUkKy6Q"
-                          alt="Product 1"
-                          style={styles.productImg}
-                        />
-                        <div className="flex-grow-1 d-flex flex-column justify-content-center">
-                          <h4
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              lineHeight: 1.4,
-                              color: "#1e293b",
-                            }}
-                            className="mb-1"
-                          >
-                            Tai nghe Wireless Noise Cancelling Pro 2024
-                          </h4>
-                          <p
-                            className="text-muted mb-2"
-                            style={{ fontSize: 11 }}
-                          >
-                            Màu sắc: Space Grey | Bảo hành 12 tháng
-                          </p>
-                          <div className="d-flex align-items-center justify-content-between">
-                            <span
-                              style={{
-                                fontSize: 12,
-                                fontWeight: 800,
-                                color: "#137fec",
-                              }}
-                            >
-                              12.490.000₫
-                            </span>
-                            <span style={styles.qtyBadge}>Số lượng: 01</span>
-                          </div>
-                        </div>
-                      </div>
-                      <hr className="my-0" style={{ borderColor: "#f1f5f9" }} />
-                      <div className="d-flex gap-3 py-3">
-                        <img
-                          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQnmwV1eY0epLt7bbwCtHbY1cdY8srSYbx2ZpGYHRVFcFeZz49CYG06FNCmqgiDrmYUG7KWHuxV4W_hM9X9Y3rtXRh2ieERvsf21Lzyac1IsVO61Tk-A61nqZ14nYynDSaQ0kYV2eubKY1HSph44GnqxJ6c-OskgZarjJWY-kA0vB-HdUtq-HoJ3x6ccF1iRHokpe5-8Rv82ph0NumRTP0arqD61cJH2lDA1p7AzOtwAHSb2AveiyYN0wa94uH1w7CDPsrIl18Hg"
-                          alt="Product 2"
-                          style={styles.productImg}
-                        />
-                        <div className="flex-grow-1 d-flex flex-column justify-content-center">
-                          <h4
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              lineHeight: 1.4,
-                              color: "#1e293b",
-                            }}
-                            className="mb-1"
-                          >
-                            Smartphone flagship Ultra HD Display v2
-                          </h4>
-                          <p
-                            className="text-muted mb-2"
-                            style={{ fontSize: 11 }}
-                          >
-                            Dung lượng: 256GB | RAM: 12GB
-                          </p>
-                          <div className="d-flex align-items-center justify-content-between">
-                            <span
-                              style={{
-                                fontSize: 12,
-                                fontWeight: 800,
-                                color: "#137fec",
-                              }}
-                            >
-                              23.990.000₫
-                            </span>
-                            <span style={styles.qtyBadge}>Số lượng: 01</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div style={styles.reviewNote} className="mt-4">
-=======
-                        Kiểm tra sản phẩm ({cartItems.length})
-                      </h3>
-
-                      {/* Group products by shop */}
-                      {Object.entries(groupedByShop).map(
-                        ([shopIdStr, group], groupIndex) => {
-                          const shopId = Number(shopIdStr);
-                          const selectedOptionId =
-                            shippingSelections[shopId] || "standard";
-                          const selectedOption = getSelectedShippingOption(
-                            shopId,
-                            selectedOptionId,
-                          );
-
-                          return (
-                            <div
-                              key={shopId}
-                              className="mb-4"
-                              style={{
-                                borderRadius: 8,
-                                border: "1px solid #f1f5f9",
-                                overflow: "hidden",
-                              }}
-                            >
-                              {/* Shop header */}
-                              <div
-                                style={{
-                                  background: "#f8fafc",
-                                  padding: "12px 16px",
-                                  borderBottom: "1px solid #f1f5f9",
-                                }}
-                              >
-                                <p
-                                  style={{
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    color: "#1e293b",
-                                    marginBottom: 0,
-                                  }}
-                                >
-                                  <i className="bi bi-shop text-primary me-2"></i>
-                                  {group.shop?.shopName}
-                                </p>
-                              </div>
-
-                              {/* Products */}
-                              <div style={{ padding: "16px" }}>
-                                {/* Products from this shop */}
-                                {group.items.map((item, index) => (
-                                  <div key={item.id}>
-                                    <div className="d-flex gap-3 py-2">
-                                      <img
-                                        src={
-                                          item.productVariant?.imageUrl ||
-                                          "/placeholder.png"
-                                        }
-                                        alt={item.product?.name}
-                                        style={styles.productImg}
-                                      />
-                                      <div className="flex-grow-1 d-flex flex-column justify-content-center">
-                                        <h4
-                                          style={{
-                                            fontSize: 13,
-                                            fontWeight: 700,
-                                            lineHeight: 1.4,
-                                            color: "#1e293b",
-                                          }}
-                                          className="mb-1"
-                                        >
-                                          {item.product?.name}
-                                        </h4>
-                                        <p
-                                          className="text-muted mb-2"
-                                          style={{ fontSize: 11 }}
-                                        >
-                                          {item.productVariant?.variantName &&
-                                            `Phân loại: ${item.productVariant.variantName}`}
-                                          {item.productVariant?.sku &&
-                                            ` | SKU: ${item.productVariant.sku}`}
-                                        </p>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                          <span
-                                            style={{
-                                              fontSize: 12,
-                                              fontWeight: 800,
-                                              color: "#137fec",
-                                            }}
-                                          >
-                                            {formatCurrency(
-                                              item.productVariant?.price || 0,
-                                            )}
-                                          </span>
-                                          <span style={styles.qtyBadge}>
-                                            Số lượng:{" "}
-                                            {String(item.quantity).padStart(
-                                              2,
-                                              "0",
-                                            )}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    {index < group.items.length - 1 && (
-                                      <hr
-                                        className="my-3"
-                                        style={{ borderColor: "#f1f5f9" }}
-                                      />
-                                    )}
-                                  </div>
-                                ))}
-
-                                {/* Shipping option selector */}
-                                <div
-                                  style={{
-                                    borderTop: "1px solid #f1f5f9",
-                                    marginTop: 16,
-                                    paddingTop: 16,
-                                  }}
-                                >
-                                  <p
-                                    style={{
-                                      fontSize: 12,
-                                      fontWeight: 700,
-                                      color: "#475569",
-                                      marginBottom: 10,
-                                    }}
-                                  >
-                                    <Truck
-                                      size={14}
-                                      className="me-2"
-                                      style={{ display: "inline" }}
-                                    />
-                                    Chọn phương thức vận chuyển
-                                  </p>
-                                  <div
-                                    style={{
-                                      background: "#f8fafc",
-                                      borderRadius: 8,
-                                      padding: 12,
-                                      border: "1px solid #e2e8f0",
-                                    }}
-                                  >
-                                    <div className="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-                                      <div className="flex-grow-1">
-                                        <select
-                                          style={{
-                                            fontSize: 12,
-                                            fontWeight: 600,
-                                            padding: "8px 12px",
-                                            borderRadius: 6,
-                                            border: "1.5px solid #e2e8f0",
-                                            background: "white",
-                                            cursor: "pointer",
-                                            width: "100%",
-                                          }}
-                                          value={selectedOptionId}
-                                          onChange={(e) => {
-                                            setShippingSelections((prev) => ({
-                                              ...prev,
-                                              [shopId]: e.target.value,
-                                            }));
-                                          }}
-                                        >
-                                          {shippingOptions.map((option) => (
-                                            <option
-                                              key={option.id}
-                                              value={option.id}
-                                            >
-                                              {option.name} -{" "}
-                                              {option.estimatedDays}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                      <div className="text-end">
-                                        <div
-                                          style={{
-                                            fontSize: 12,
-                                            fontWeight: 800,
-                                            color:
-                                              selectedOption?.fee === 0
-                                                ? "#22c55e"
-                                                : "#137fec",
-                                            textTransform: "uppercase",
-                                          }}
-                                        >
-                                          {selectedOption?.fee === 0
-                                            ? "Miễn phí"
-                                            : formatCurrency(
-                                                selectedOption?.fee || 0,
-                                              )}
-                                        </div>
-                                        <div
-                                          className="text-muted"
-                                          style={{ fontSize: 10 }}
-                                        >
-                                          {selectedOption?.estimatedDays}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        },
-                      )}
-
-                      <div style={styles.reviewNote} className="mt-2">
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 800,
-                            color: "#94a3b8",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.1em",
-                          }}
-                        >
-                          Vui lòng rà soát kỹ các mặt hàng trước khi thanh toán
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            </div>
-
-            {/* ── RIGHT: Order Summary ─────────────────────────────────── */}
-            <div className="col-12 col-lg-5">
-              <div style={{ position: "sticky", top: 72 }}>
-                <div style={styles.summaryCard}>
-                  <div
-                    style={styles.summaryHeader}
-                    className="d-flex justify-content-between align-items-center"
-                  >
-                    <h3
-                      style={{ fontWeight: 700, fontSize: 15 }}
-                      className="mb-0"
-                    >
-                      Tổng kết đơn hàng
-                    </h3>
-<<<<<<< HEAD
-                    <span style={styles.itemsBadge}>2 sản phẩm</span>
-=======
-                    <span style={styles.itemsBadge}>
-                      {cartItems.length} sản phẩm
-                    </span>
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-                  </div>
-                  <div className="p-4 d-flex flex-column gap-4">
-                    <div className="d-flex flex-column gap-2">
-                      <div
-                        className="d-flex justify-content-between align-items-center"
-                        style={{ fontSize: 12 }}
-                      >
-                        <span className="text-muted">Tạm tính</span>
-<<<<<<< HEAD
-                        <span className="fw-semibold">36.480.000₫</span>
-=======
-                        <span className="fw-semibold">
-                          {formatCurrency(calculateSubtotal())}
-                        </span>
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-                      </div>
-                      <div
-                        className="d-flex justify-content-between align-items-center"
-                        style={{ fontSize: 12 }}
-                      >
-                        <span className="text-muted">Phí vận chuyển</span>
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 800,
-<<<<<<< HEAD
-                            color: "#22c55e",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          Miễn phí
-=======
-                            color:
-                              calculateTotalShippingFee() === 0
-                                ? "#22c55e"
-                                : "#137fec",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          {calculateTotalShippingFee() === 0
-                            ? "Miễn phí"
-                            : formatCurrency(calculateTotalShippingFee())}
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-                        </span>
-                      </div>
-                    </div>
-                    <div style={{ position: "relative" }}>
-                      <input
-                        type="text"
-                        style={styles.couponInput}
-                        placeholder="Nhập mã giảm giá (nếu có)"
-<<<<<<< HEAD
-                        value={coupon}
-                        onChange={(e) => setCoupon(e.target.value)}
-                      />
-                      <button
-                        style={styles.couponApply}
-                        onClick={() => alert(`Áp dụng mã: ${coupon}`)}
-=======
-                      />
-                      <button
-                        style={styles.couponApply}
-                        onClick={() =>
-                          alert("Chức năng áp dụng mã đang phát triển")
-                        }
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-                      >
-                        Áp dụng
-                      </button>
-                    </div>
-                    <div
-                      style={{
-                        borderTop: "1px dashed #e2e8f0",
-                        paddingTop: 20,
-                      }}
-                    >
-                      <div className="d-flex justify-content-between align-items-end mb-3">
-                        <span
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: "#475569",
-                          }}
-                        >
-                          Tổng thanh toán
-                        </span>
-                        <div className="text-end">
-                          <p
-                            style={{
-                              fontSize: 24,
-                              fontWeight: 800,
-                              color: "#137fec",
-                              lineHeight: 1,
-                            }}
-                            className="mb-0"
-                          >
-<<<<<<< HEAD
-                            36.480.000₫
-=======
-                            {formatCurrency(
-                              calculateSubtotal() + calculateTotalShippingFee(),
-                            )}
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-                          </p>
-                          <p
-                            className="text-muted fst-italic mb-0"
-                            style={{ fontSize: 10 }}
-                          >
-                            Đã bao gồm VAT
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        style={styles.btnOrder}
-                        className="mb-3"
-                        onClick={handleOrder}
-                      >
-                        <span className="d-flex align-items-center gap-2">
-                          <Lock size={16} strokeWidth={2} />
-                          ĐẶT HÀNG NGAY
-                        </span>
-                        <span
-                          style={{
-                            fontSize: 9,
-                            fontWeight: 500,
-                            opacity: 0.8,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.08em",
-                          }}
-                        >
-                          Xác nhận &amp; Thanh toán
-                        </span>
-                      </button>
-                      <div
-                        className="d-flex align-items-center justify-content-center gap-4"
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "#94a3b8",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.07em",
-                        }}
-                      >
-                        <div className="d-flex align-items-center gap-1">
-                          <ShieldCheck
-                            size={12}
-                            color="#22c55e"
-                            strokeWidth={2.5}
-                          />
-                          Bảo mật
-                        </div>
-                        <div className="d-flex align-items-center gap-1">
-                          <Truck size={12} color="#22c55e" strokeWidth={2.5} />
-<<<<<<< HEAD
-                          2-3 ngày
-=======
-                          Giao nhanh
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div style={styles.infoNote} className="mt-3 d-flex gap-3">
-                  <Info
-                    size={18}
-                    className="text-muted flex-shrink-0"
-                    strokeWidth={1.8}
-                  />
-                  <p
-                    className="text-muted mb-0"
-                    style={{ fontSize: 11, lineHeight: 1.7 }}
-                  >
-                    Bạn đang ở chế độ <strong>Express Checkout</strong>. Các
-                    thông tin của bạn đã được tải sẵn dựa trên lần mua hàng
-                    trước đó. Nhấn xác nhận để hoàn tất.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+    <main className="flex-grow-1 py-4 py-md-5">
+      <div className="container-xl px-3 px-md-4">
+        <div className="mb-4">
+          <h2 style={{ fontWeight: 800, fontSize: "1.4rem" }} className="mb-1">
+            Xác nhận nhanh
+          </h2>
+          <p className="text-muted mb-0" style={{ fontSize: 13 }}>
+            Chào mừng trở lại, A. Kiểm tra nhanh và hoàn tất đơn hàng.
+          </p>
         </div>
-      </main>
 
-      {/* ── ADDRESS MODAL ─────────────────────────────────────────────── */}
-      {showAddressPanel && (
-        <AddressModal setShowAddressPanel={setShowAddressPanel} />
-      )}
-    </>
+        <div className="row g-4 align-items-start">
+          <CheckoutLeftSteps
+            styles={styles}
+            defaultAddress={defaultAddress}
+            showAddressPanel={showAddressPanel}
+            setShowAddressPanel={setShowAddressPanel}
+            addresses={addresses}
+            setAddresses={setAddresses}
+            selectedAddressId={selectedAddressId}
+            setSelectedAddressId={setSelectedAddressId}
+            groupedByShop={groupedByShop}
+            shippingSelections={shippingSelections}
+            getSelectedShippingOption={getSelectedShippingOption}
+            getShippingFeeForShop={getShippingFeeForShop}
+            shippingFeeLoading={shippingFeeLoading}
+            shippingOptions={shippingOptions}
+            formatCurrency={formatCurrency}
+            onShippingOptionChange={handleShippingOptionChange}
+            onConfirmPayment={handleConfirmPayment}
+            onPaymentMethodChange={handlePaymentMethodChange}
+          />
+
+          <CheckoutOrderSummary
+            styles={styles}
+            cartItemsLength={cartItems.length}
+            subtotal={calculateSubtotal()}
+            shippingFee={calculateTotalShippingFee()}
+            isShippingFeeLoading={isAnyShippingFeeLoading}
+            total={calculateSubtotal() + calculateTotalShippingFee()}
+            formatCurrency={formatCurrency}
+            onOrder={handleOrder}
+          />
+        </div>
+      </div>
+    </main>
   );
 }

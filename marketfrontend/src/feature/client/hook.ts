@@ -1,18 +1,12 @@
-<<<<<<< HEAD
-import { useQuery } from "@tanstack/react-query";
-import { productQuery } from "./query";
-=======
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { productQuery } from "./query";
 import { checkOutAPI } from "@/services/checkout";
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+import { calculateFeeOfLOGS } from "@/service/calculateFeeAPI";
 
 export const useHomePage = () => {
   const { data: products } = useQuery(productQuery.list);
   return { products };
 };
-<<<<<<< HEAD
-=======
 
 export const useCheckoutPage = () => {
   const { data: products } = useQuery(productQuery.list);
@@ -30,7 +24,15 @@ export const useCheckoutPage = () => {
       alert("Lỗi khi thanh toán: " + error);
     },
   });
+  const {} = useMutation({
+    mutationFn: (param: any) => calculateFeeOfLOGS(param),
+    onSuccess: (data) => {
+      console.log("Fee LOGS:", data);
+    },
+    onError: (error) => {
+      console.error("Lỗi khi tính phí LOGS:", error);
+    },
+  });
 
   return { products, checkOut };
 };
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5

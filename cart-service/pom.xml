@@ -64,6 +64,7 @@
 		</dependency>
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 		<dependency>
     <groupId>org.springframework.data</groupId>
     <artifactId>spring-data-jpa</artifactId>
@@ -76,6 +77,8 @@
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-data-jpa</artifactId>

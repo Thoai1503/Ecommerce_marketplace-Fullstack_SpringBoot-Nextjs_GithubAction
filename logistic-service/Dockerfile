@@ -17,6 +17,8 @@ RUN mvn -B -DskipTests package -DskipTests
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
+ENV TZ=Asia/Ho_Chi_Minh
+ENV JAVA_TOOL_OPTIONS="-Duser.timezone=Asia/Ho_Chi_Minh"
 ENV JAVA_OPTS=""
 
 # Copy JAR from builder

@@ -67,6 +67,17 @@ function getStatusColor(status: number): string {
 
 // Middleware function
 export async function middleware(request: NextRequest) {
+  console.log("=== RUNTIME ENV ===");
+  console.log("NEXT_PUBLIC_API_URL:", process.env.NEXT_PUBLIC_API_URL);
+  console.log("NEXT_PUBLIC_ADDRESS_KEY:", process.env.NEXT_PUBLIC_ADDRESS_KEY);
+  console.log(
+    "NEXT_PUBLIC_PROVINCE_API:",
+    process.env.NEXT_PUBLIC_PROVINCE_API,
+  );
+  console.log("INTERNAL_API:", process.env.INTERNAL_API);
+  console.log("PATH:", request.nextUrl.pathname);
+  console.log("===================");
+
   const role = request.cookies.get("role")?.value;
   console.log("Auth: " + role);
 

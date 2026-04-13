@@ -13,18 +13,26 @@ File này dùng để hướng dẫn AI (LLM / codegen) **tạo mới file, thư
 
 **3 khu vực chính trong App Router:**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 - `src/app/(user)/...` – trang phía user / khách.
 - `src/app/admin/...` – trang admin (có sidebar admin).
 - `src/app/seller/...` – trang seller (có sidebar seller).
 
 **Quy ước:**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 - Mỗi route là **một thư mục** có `page.tsx`.
 - Mỗi khu vực (admin, seller, (user)) có `layout.tsx` riêng, dùng để wrap sidebar / header.
 
@@ -48,9 +56,13 @@ src/
 
 Khi tạo **tính năng admin mới**, AI phải:
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 1. Thêm route trong `src/app/admin/<module>/page.tsx`.
 2. Nếu cần sub-route (new/edit/detail), tạo thêm thư mục con (`new/page.tsx`, `[id]/page.tsx`, `[id]/edit/page.tsx`).
 3. Viết hooks / service / query **trong các layer sẵn có** (xem tiếp bên dưới), **không tự tạo layer mới** trừ khi thật cần thiết.
@@ -74,9 +86,13 @@ Hiện tại (có thể đã thay đổi một chút theo tiến độ), `src/ap
 
 **Khi AI tạo module admin mới** (ví dụ: coupons, finance, settings), hãy:
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 - Tạo thư mục: `src/app/admin/coupons`, `src/app/admin/finance`, `src/app/admin/settings`.
 - Trong đó tạo:
   - `page.tsx` – list page.
@@ -105,9 +121,13 @@ src/components/
 
 **Quy ước cho AI:**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 - Các component **dùng lại giữa nhiều admin pages** → để trong `src/components/admin/`.
   - Ví dụ: table generic, filter bar, modal chung cho admin.
 - Components **chung toàn app** (toast, button, modal generic) → `src/components/common/`.
@@ -115,9 +135,13 @@ src/components/
 
 Khi tạo component mới:
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 - Nếu gắn chặt với **1 page cụ thể** → có thể đặt thẳng trong `src/app/admin/...` cùng `page.tsx`.
 - Nếu có khả năng dùng lại **nhiều page admin** → đặt trong `src/components/admin/`.
 
@@ -146,18 +170,26 @@ src/feature/
 
 **Quy ước cho AI:**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 - Các logic **tập trung cho admin** (không gắn với 1 domain nhỏ như category/unit) nhưng mang tính “toàn admin” → để trong `src/feature/admin/*`.
 - Các logic **client (user)** → `src/feature/client/*`.
 - Logic **seller-side** → `src/feature/seller/*`.
 
 **Ưu tiên:**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 - Domain đơn lẻ (category, unit, coupons, finance) → dùng `src/service/<domain>.ts` + `src/query/<domain>.ts`.
 - Nếu về sau domain quá lớn, có thể chuyển sang `src/feature/<domain>/...` nhưng **chỉ làm khi thật sự cần**.
 
@@ -169,9 +201,13 @@ src/feature/
 
 Hiện có:
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 ```text
 src/service/
   category.ts
@@ -181,9 +217,13 @@ src/service/
 
 **Quy ước cho AI khi thêm domain mới (vd: coupons, finance, users,...):**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 - Tạo file: `src/service/<domain>.ts`.
 - Mỗi file export các hàm gọi API **thuần túy**, dùng `http` từ `src/lib/http.ts`, ví dụ:
 
@@ -202,9 +242,13 @@ export async function getCoupons(params: GetCouponsParams): Promise<Coupon[]> {
 
 Hiện có:
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 ```text
 src/query/
   category.ts
@@ -214,9 +258,13 @@ src/query/
 
 **Quy ước:**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 - Mỗi domain có file query riêng, ví dụ: `src/query/coupons.ts`, `src/query/orders.ts`.
 - File query **chỉ** chứa:
   - `queryKey` constants.
@@ -226,9 +274,13 @@ src/query/
 
 Hiện có:
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 ```text
 src/validators/
   attribute.ts
@@ -239,9 +291,13 @@ src/validators/
 
 **Quy ước:**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 - Khi có model mới (Coupon, FinanceReport, UserAdminView, ...) → tạo file tương ứng:
   - `src/validators/coupon.ts`
   - `src/validators/finance.ts`
@@ -263,9 +319,13 @@ src/hooks/
 
 **Quy ước:**
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 - Hooks **gắn với 1 page cụ thể** (vd: Category List) → có thể vào `src/hooks/admin/category_page/useCategoryPage.ts`.
 - Hooks **dùng toàn app** (auth, theme, layout) → vào `src/hooks/auth`, `src/hooks/ui`, ...
 
@@ -305,6 +365,9 @@ Tương tự cho các module khác (finance, settings, v.v.) – **luôn đi the
 - Không tạo route ngoài `src/app/...`.
 - Không thay đổi cấu trúc hiện tại (vd: không chuyển App Router sang Pages Router).
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9

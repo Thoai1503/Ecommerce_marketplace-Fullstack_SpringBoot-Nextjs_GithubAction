@@ -1,0 +1,16 @@
+name: Deploy order-service
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "order-service/**"
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      context_path: ./order-service
+      image_name: order-service
+      service_name: order-service
+    secrets: inherit

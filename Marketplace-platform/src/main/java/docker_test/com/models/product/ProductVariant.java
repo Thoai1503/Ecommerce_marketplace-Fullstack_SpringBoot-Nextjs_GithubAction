@@ -3,15 +3,71 @@ package docker_test.com.models.product;
 import java.time.LocalDateTime;
 
 public final class ProductVariant {
-    private Integer id;
-<<<<<<< HEAD
-    private Integer product_id=0;
-=======
+    public void setId(Integer id) {
+		this.id = id;
+	}
+
+	private Integer id;
     private Integer product_id;
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
     private String variant_name;
     private String sku;
     private Double price;
+    public ProductVariant(Integer id, Integer product_id, String variant_name, String sku, Double price, Long width,
+			Long height, Long weight, int stock_quantity, String image_url, Integer is_active, LocalDateTime created_at,
+			LocalDateTime updated_at) {
+		super();
+		this.id = id;
+		this.product_id = product_id;
+		this.variant_name = variant_name;
+		this.sku = sku;
+		this.price = price;
+		this.width = width;
+		this.height = height;
+		this.weight = weight;
+		this.stock_quantity = stock_quantity;
+		this.image_url = image_url;
+		this.is_active = is_active;
+		this.created_at = created_at;
+		this.updated_at = updated_at;
+	}
+
+	public Long getWidth() {
+		return width;
+	}
+
+
+
+	public void setWidth(Long width) {
+		this.width = width;
+	}
+
+
+
+	public Long getHeight() {
+		return height;
+	}
+
+
+
+	public void setHeight(Long height) {
+		this.height = height;
+	}
+
+
+
+	public Long getWeight() {
+		return weight;
+	}
+
+
+
+	public void setWeight(Long weight) {
+		this.weight = weight;
+	}
+
+	private Long width;
+    private Long height;
+    private Long weight;
     private int stock_quantity;
     private String image_url;
     private Integer is_active;
@@ -26,24 +82,7 @@ public final class ProductVariant {
         this.updated_at = LocalDateTime.now();
     }
 
-    public ProductVariant(Integer id, Integer product_id, String variant_name, String sku, 
-                         Double price, int stock_quantity, String image_url, Integer is_active,
-                         LocalDateTime created_at, LocalDateTime updated_at) {
-        this.id = id;
-<<<<<<< HEAD
-        this.product_id = 0;
-=======
-        this.product_id = product_id;
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-        this.variant_name = variant_name;
-        this.sku = sku;
-        this.price = price;
-        this.stock_quantity = stock_quantity;
-        this.image_url = image_url;
-        this.is_active = is_active;
-        this.created_at = created_at;
-        this.updated_at = updated_at;
-    }
+ 
 
     public Integer getId() {
         return id;

@@ -20,12 +20,15 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 <<<<<<< HEAD
+<<<<<<< HEAD
 @Builder
 <<<<<<< HEAD
 =======
 @ToString
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
 =======
+=======
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 
 @Builder
 @ToString

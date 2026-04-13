@@ -31,6 +31,10 @@ export interface CartItem {
   userId: number;
   product: Product;
   quantity: number;
+  width?: number;
+  length?: number;
+  height?: number;
+  weight?: number;
   addedAt: string;
   updatedAt: string;
   productVariant: ProductVariant | null;

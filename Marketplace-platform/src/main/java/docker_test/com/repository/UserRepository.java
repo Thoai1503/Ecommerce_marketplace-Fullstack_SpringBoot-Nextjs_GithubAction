@@ -2,10 +2,7 @@ package docker_test.com.repository;
 
 import java.sql.*;
 import java.time.LocalDateTime;
-<<<<<<< HEAD
 import java.util.ArrayList;
-=======
->>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
 import java.util.List;
 
 import docker_test.com.configs.DBConnection;
@@ -85,6 +82,7 @@ public class UserRepository implements IRepositories<User> {
                 }
             }
             return item;
+
         }
     }
 
@@ -266,7 +264,26 @@ public class UserRepository implements IRepositories<User> {
         }
         return 0;
     }
+    public User updateAvatar(int id, String avatarUrl) {
 
+        String sql = "UPDATE user SET avatar_url = ?, updated_at = ? WHERE id = ?";
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, avatarUrl);
+            ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setLong(3, id);
+
+            if (ps.executeUpdate() > 0) {
+                return GetById(id);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
     /* ================= SHARED FILTER (dùng bởi các repo con) ================= */
 
     /**

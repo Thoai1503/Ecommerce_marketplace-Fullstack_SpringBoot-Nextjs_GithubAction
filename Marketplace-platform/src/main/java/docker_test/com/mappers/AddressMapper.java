@@ -16,14 +16,14 @@ public final class AddressMapper implements org.springframework.jdbc.core.RowMap
     public Address RowMap(ResultSet rs) {
         Address address = new Address();
         try {
-            address.setAddressId(rs.getInt(StringValue.ADDRESS_ID_COL));
-            address.setUserId(rs.getInt(StringValue.ADDRESS_USER_ID_COL));
+            address.setAddressId(rs.getLong(StringValue.ADDRESS_ID_COL));
+            address.setUserId(rs.getLong(StringValue.ADDRESS_USER_ID_COL));
             address.setRecipientName(rs.getString(StringValue.ADDRESS_RECIPIENT_NAME_COL));
             address.setRecipientPhone(rs.getString(StringValue.ADDRESS_RECIPIENT_PHONE_COL));
             address.setAddressLine(rs.getString(StringValue.ADDRESS_LINE_COL));
-            address.setWard(rs.getString(StringValue.ADDRESS_WARD_COL));	
-            address.setDistrict(rs.getString(StringValue.ADDRESS_DISTRICT_COL));
-            address.setCity(rs.getString(StringValue.ADDRESS_CITY_COL));
+//            address.setWard(rs.getString(StringValue.ADDRESS_WARD_COL));	
+//            address.setDistrict(rs.getString(StringValue.ADDRESS_DISTRICT_COL));
+//            address.setCity(rs.getString(StringValue.ADDRESS_CITY_COL));
             address.setPostalCode(rs.getString(StringValue.ADDRESS_POSTAL_CODE_COL));
             address.setDefault(rs.getInt(StringValue.ADDRESS_IS_DEFAULT_COL));
 
@@ -58,9 +58,9 @@ public final class AddressMapper implements org.springframework.jdbc.core.RowMap
 	            address.setRecipientName(rs.getString(StringValue.ADDRESS_RECIPIENT_NAME_COL));
 	            address.setRecipientPhone(rs.getString(StringValue.ADDRESS_RECIPIENT_PHONE_COL));
 	            address.setAddressLine(rs.getString(StringValue.ADDRESS_LINE_COL));
-	            address.setWard(rs.getString(StringValue.ADDRESS_WARD_COL));	
-	            address.setDistrict(rs.getString(StringValue.ADDRESS_DISTRICT_COL));
-	            address.setCity(rs.getString(StringValue.ADDRESS_CITY_COL));
+//	            address.setWard(rs.getString(StringValue.ADDRESS_WARD_COL));	
+//	            address.setDistrict(rs.getString(StringValue.ADDRESS_DISTRICT_COL));
+//	            address.setCity(rs.getString(StringValue.ADDRESS_CITY_COL));
 	            address.setPostalCode(rs.getString(StringValue.ADDRESS_POSTAL_CODE_COL));
 	            address.setDefault(rs.getInt(StringValue.ADDRESS_IS_DEFAULT_COL));
 

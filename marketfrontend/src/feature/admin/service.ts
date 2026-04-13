@@ -1,9 +1,6 @@
 import http from "@/lib/http";
 import { IProduct } from "@/validators/product";
-<<<<<<< HEAD
-=======
 import { IOrder } from "@/validators/order";
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 
 export const getProductByShopId = async (
   shop_id: number,
@@ -15,8 +12,6 @@ export const getProductByShopId = async (
       throw error;
     });
 };
-<<<<<<< HEAD
-=======
 
 export const getOrderByShopId = async (
   shop_id: number,
@@ -28,4 +23,3 @@ export const getOrderByShopId = async (
       throw error;
     });
 };
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5

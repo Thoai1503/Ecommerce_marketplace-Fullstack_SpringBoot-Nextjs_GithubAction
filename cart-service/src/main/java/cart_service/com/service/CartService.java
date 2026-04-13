@@ -53,11 +53,26 @@ public class CartService {
   public void removeProduct(Long userId, Long productId) {
       cartRepository.deleteByUserIdAndProductId(userId, productId);
   }
+
+  public void updateQuantity(Long cartId, int quantity) {
+      Cart cart = cartRepository.findById(cartId)
+          .orElseThrow(() -> new RuntimeException("Cart item not found: " + cartId));
+      cart.setQuantity(quantity);
+      cartRepository.save(cart);
+  }
+
+  public void deleteById(Long cartId) {
+      cartRepository.deleteById(cartId);
+  }
   public Cart addToCart(CartDTO cartDto) {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 		Cart existedCartItem = cartRepository.findByVariantIdAndUserId(cartDto.getVariantId(),cartDto.getUserId());
 =======
+=======
+	    System.out.println("Adding to cart: " + cartDto.toString());
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 		Cart existedCartItem = cartRepository.findByProductVariant_IdAndUserId(cartDto.getVariantId(),cartDto.getUserId());
 >>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
 =======
@@ -66,12 +81,17 @@ public class CartService {
 		Cart cart = new Cart();
 		System.out.println("Quantity from DTO: " + cartDto.getQuantity());
 		int qty = cartDto.getQuantity() != null ? cartDto.getQuantity() : 1;
+		
 		if (existedCartItem != null) {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
 =======
 >>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+=======
+			System.out.println("Existing cart item found: " + existedCartItem.toString());
+>>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 			
 			var pro = new Product();
 			var productVariant = new ProductVariant();
@@ -113,7 +133,9 @@ public class CartService {
 						.quantity(existingQty + qty)
 						.build();
 		} else {
+			System.out.println("No existing cart item found, creating new one");
 			var pro = new Product();
+	
 			var productVariant = new ProductVariant();
 			pro.setId(cartDto.getProductId());
 			productVariant.setId(cartDto.getVariantId());
@@ -121,12 +143,18 @@ public class CartService {
 								.userId(cartDto.getUserId())
 								.product(pro)
 								.productVariant(productVariant)
-								//.productId(cartDto.getProductId())
+					//	.productId(cartDto.getProductId())
 							//	.variantId(cartDto.getVariantId())
 								
 								.quantity(qty)
 								.build();
 		}
+		System.out.println("Cart to save: " + cart.toString());
+		System.out.println("Cart userId: " + cart.getUserId());
+		System.out.println("Cart productId: " + cart.getProduct().getId());
+		System.out.println("Cart variantId: " + cart.getProductVariant().getId());
+		System.out.println("Cart quantity: " + cart.getQuantity());
+		System.out.println("Cart product id: "+cart.getProduct().getId());
 
 	var en = cartRepository.save(cart);
 

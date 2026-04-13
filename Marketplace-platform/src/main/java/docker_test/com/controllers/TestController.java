@@ -54,20 +54,14 @@ private DBConnection dbConnect;
   }
     @GetMapping("/dbconnect")
   public String testSingletons() throws SQLException {
-//           var re = serverDataSource.getConnection();
-//           boolean valid = re.isValid(2); // timeout 2s
-  //   	  System.out.println("Connect: " + re);
-    	var re = dbConnect.getConn();
-    var ps=	re.prepareStatement("select * from category");
-    	ResultSet rs = ps.executeQuery();
-    	
-    	while(rs.next()) {
-			
-    		System.out.println(rs.getInt("id") +" "+rs.getString("category_name"));
-			
-		}
-    	
-	  return "Connect: "+ re.isValid(2);
+    	var returnString = "";
+		jdbcTemplate.query("select id, category_name from category", rs -> {
+			System.out.println(rs.getInt("id") + " " + rs.getString("category_name"));
+	//		 returnString += rs.getInt("id") + " " + rs.getString("category_name") + "\n";
+		});
+
+		// JdbcTemplate uses Spring-managed DataSource and returns connections to pool automatically.
+		return "Connect: true";
   }
     
 //    @GetMapping("/factory_test")

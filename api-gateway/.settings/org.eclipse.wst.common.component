@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?><project-modules id="moduleCoreId" project-version="1.5.0">
+<<<<<<< HEAD
+<<<<<<< HEAD
             
     
     <wb-module deploy-name="api-gateway-0.0.1-SNAPSHOT">
                         
         
+=======
+<<<<<<< HEAD
+    <wb-module deploy-name="api-gateway-0.0.1">
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
         <wb-resource deploy-path="/" source-path="/target/m2e-wtp/web-resources"/>
                         
         
@@ -25,6 +31,30 @@
                     
     
     </wb-module>
+<<<<<<< HEAD
         
 
+=======
+=======
+            
+    
+=======
+>>>>>>> 34b7cded3cfabcb6ca72c99c60e1febe5f5520e9
+    <wb-module deploy-name="api-gateway-0.0.1-SNAPSHOT">
+        <wb-resource deploy-path="/" source-path="/target/m2e-wtp/web-resources"/>
+        <wb-resource deploy-path="/" source-path="/src/main/webapp" tag="defaultRootSource"/>
+        <wb-resource deploy-path="/WEB-INF/classes" source-path="/src/main/java"/>
+        <wb-resource deploy-path="/WEB-INF/classes" source-path="/src/main/resources"/>
+        <wb-resource deploy-path="/WEB-INF/classes" source-path="/target/generated-sources/annotations"/>
+        <wb-resource deploy-path="/WEB-INF/classes" source-path="/target/generated-test-sources/test-annotations"/>
+        <property name="context-root" value="api-gateway"/>
+        <property name="java-output-path" value="/api-gateway/target/classes"/>
+    </wb-module>
+<<<<<<< HEAD
+        
+
+>>>>>>> b1e61f071ca45b7aa5c116f8b8285a226bed233e
+>>>>>>> 2303dbea4457761743ead14c44865db12e8d57c3
+=======
+>>>>>>> 34b7cded3cfabcb6ca72c99c60e1febe5f5520e9
 </project-modules>

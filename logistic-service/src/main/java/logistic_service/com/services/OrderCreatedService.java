@@ -35,6 +35,7 @@ public class OrderCreatedService {
 	
 	
 	public void createShipment(OrderDTO orderDTO) {
+		LOGGER.info("Creating shipment for Order ID: "+orderDTO.getId());
 		LOGGER.info("Recipient Id: "+orderDTO.getRecipient().getId());
 		var packageByShop = groupByShipment(orderDTO.getOrders_items());
 		
@@ -48,10 +49,11 @@ public class OrderCreatedService {
 	        entry.getValue().forEach(item -> {
 	                   System.out.print("Item: "+item.toString());
 	                   item.setShipmentId(shipment.getId());
-	                   itemRepository.save(item);
+	                   var en=     itemRepository.save(item);
+	                  LOGGER.info("Saved Shipment Item: " + en.toString());
+	              
 	                   
-	                   
-	                   orderStatusPublisher.publish(new OrderPackageEvent(shipment.getId(), "PENDING"));    
+	                  orderStatusPublisher.publish(new OrderPackageEvent(shipment.getId(), "PENDING"));    
 	    	});
 		});
 	

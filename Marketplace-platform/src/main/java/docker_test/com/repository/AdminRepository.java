@@ -4,6 +4,7 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import docker_test.com.configs.DBConnection;
 import docker_test.com.models.PageResult;
 import docker_test.com.models.User;
 
@@ -16,6 +17,7 @@ import docker_test.com.models.User;
 public class AdminRepository extends UserRepository {
 
     private static AdminRepository instance;
+    private DBConnection dbConnection;
 
     private AdminRepository() {
         super();

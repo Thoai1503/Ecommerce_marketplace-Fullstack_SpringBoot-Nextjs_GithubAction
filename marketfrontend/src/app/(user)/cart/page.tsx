@@ -1,16 +1,24 @@
 "use client";
-<<<<<<< HEAD
-import React, { useEffect, useState } from "react";
-=======
 import React, { useEffect, useMemo, useState } from "react";
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import { useUserAuth } from "@/context/UserAuthContext";
 import { Cart } from "@/types/data/Cart";
 import { API_URL } from "@/helper/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { CartItem, GroupedCartByShop } from "@/validators/cart";
+import { productVariantQuery } from "@/query/productVariant";
+
+type CartStateItem = CartItem & {
+  selected: boolean;
+};
+
+type EnrichedCartItem = CartStateItem & {
+  width?: number;
+  height?: number;
+  weight?: number;
+  stockQuantity?: number;
+};
 
 const ShoppingCart: React.FC = () => {
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
@@ -18,38 +26,67 @@ const ShoppingCart: React.FC = () => {
   const { data, isError, status } = useQuery(Cart.getByUserId(userId || 0));
 
   // State lưu danh sách cartItems từ API + selected flag
-  const [cartItems, setCartItems] = useState<
-    (CartItem & { selected: boolean })[]
-  >([]);
+  const [cartItems, setCartItems] = useState<CartStateItem[]>([]);
+  // Track items đang được update/delete để disable tương tác
+  const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
+  const [stockWarning, setStockWarning] = useState<Record<number, string>>({});
 
   // Sync dữ liệu từ API vào state khi data thay đổi
   useEffect(() => {
     if (data) {
-      setCartItems(data.map((item) => ({ ...item, selected: false })));
+      setCartItems((prev) =>
+        data.map((item) => ({
+          ...item,
+          selected:
+            prev.find((prevItem) => prevItem.id === item.id)?.selected ?? false,
+        })),
+      );
     }
-<<<<<<< HEAD
   }, [data]);
 
-=======
-    console.log("Fetched cart data:", data);
-  }, [data]);
+  const variantQueries = useQueries({
+    queries: cartItems.map((item) => {
+      const variantId = item.productVariant?.id;
+
+      return {
+        ...productVariantQuery.detail(variantId ?? 0),
+        enabled: Boolean(variantId),
+      };
+    }),
+  });
+  console.log("Variant Queries:", variantQueries);
+
+  const enrichedCartItems = useMemo<EnrichedCartItem[]>(() => {
+    return cartItems.map((item, index) => {
+      const variantData = variantQueries[index]?.data;
+
+      return {
+        ...item,
+        width: variantData?.width ?? 0,
+        height: variantData?.height ?? 0,
+        weight: variantData?.weight ?? 0,
+        // Ưu tiên data fresh từ variantQuery, fallback về data gốc trong cartItem
+        stockQuantity:
+          variantData?.stockQuantity ?? item.productVariant?.stockQuantity ?? 0,
+      };
+    });
+  }, [cartItems, variantQueries]);
 
   // Lưu các item được chọn vào localStorage
   useEffect(() => {
-    const selectedItems = cartItems.filter((item) => item.selected);
+    const selectedItems = enrichedCartItems.filter((item) => item.selected);
     localStorage.setItem("selectedCartItems", JSON.stringify(selectedItems));
-  }, [cartItems]);
+  }, [enrichedCartItems]);
 
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
   useEffect(() => {
     if (isError) {
       alert(
         "Đã xảy ra lỗi khi tải dữ liệu giỏ hàng. Vui lòng thử lại sau. " +
           status,
-      );
+      ); //
       console.error("Error fetching cart data");
     }
-  }, [isError]);
+  }, [isError, status]);
 
   const [voucher, setVoucher] = useState("");
   const discount = 50000;
@@ -63,24 +100,8 @@ const ShoppingCart: React.FC = () => {
   };
 
   // Group items theo shop
-<<<<<<< HEAD
-  const groupedByShop: Record<number, GroupedCartByShop> = cartItems.reduce(
-    (acc, item) => {
-      const shopId = item.product.shop.id;
-      if (!acc[shopId]) {
-        acc[shopId] = { shop: item.product.shop, items: [] };
-      }
-      acc[shopId].items.push(item);
-      return acc;
-    },
-    {} as Record<
-      number,
-      GroupedCartByShop & { items: (CartItem & { selected: boolean })[] }
-    >,
-  );
-=======
   const groupedByShop: Record<number, GroupedCartByShop> = useMemo(() => {
-    return cartItems.reduce(
+    return enrichedCartItems.reduce(
       (acc, item) => {
         const shopId = item?.product?.shop?.id;
         if (!acc[shopId]) {
@@ -94,12 +115,11 @@ const ShoppingCart: React.FC = () => {
         GroupedCartByShop & { items: (CartItem & { selected: boolean })[] }
       >,
     );
-  }, [cartItems]);
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+  }, [enrichedCartItems]);
 
   // ===== Tính toán =====
   const calculateSubtotal = () => {
-    return cartItems
+    return enrichedCartItems
       .filter((item) => item.selected)
       .reduce(
         (sum, item) => sum + (item.productVariant?.price ?? 0) * item.quantity,
@@ -111,12 +131,16 @@ const ShoppingCart: React.FC = () => {
     return calculateSubtotal() - discount + shippingFee;
   };
 
-  const selectedCount = cartItems.filter((item) => item.selected).length;
+  const selectedCount = enrichedCartItems.filter(
+    (item) => item.selected,
+  ).length;
 
   // ===== Checkbox logic =====
   const isAllSelected =
-    cartItems.length > 0 && cartItems.every((item) => item.selected);
-  const isIndeterminate = cartItems.some((i) => i.selected) && !isAllSelected;
+    enrichedCartItems.length > 0 &&
+    enrichedCartItems.every((item) => item.selected);
+  const isIndeterminate =
+    enrichedCartItems.some((item) => item.selected) && !isAllSelected;
 
   const toggleSelectAll = () => {
     setCartItems((prev) =>
@@ -159,18 +183,82 @@ const ShoppingCart: React.FC = () => {
   };
 
   // ===== CRUD =====
-  const updateQuantity = (itemId: number, delta: number) => {
+  const updateQuantity = async (itemId: number, delta: number) => {
+    const currentItem = enrichedCartItems.find((i) => i.id === itemId);
+    if (!currentItem) return;
+    if (updatingItems.has(itemId)) return;
+
+    const stock = currentItem.stockQuantity ?? Infinity;
+    const rawQty = Math.max(1, currentItem.quantity + delta);
+    const newQty = delta > 0 ? Math.min(rawQty, stock) : rawQty;
+
+    if (delta > 0 && rawQty > stock) {
+      setStockWarning((prev) => ({
+        ...prev,
+        [itemId]: `Chi con ${stock} san pham trong kho`,
+      }));
+    } else {
+      setStockWarning((prev) => {
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
+      });
+    }
+
+    if (newQty === currentItem.quantity) return;
+
+    // Optimistic update
     setCartItems((prev) =>
       prev.map((item) =>
-        item.id === itemId
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item,
+        item.id === itemId ? { ...item, quantity: newQty } : item,
       ),
     );
+    setUpdatingItems((prev) => new Set(prev).add(itemId));
+    try {
+      await Cart.updateCartItem(itemId, newQty);
+    } catch {
+      // Rollback on error
+      setCartItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId
+            ? { ...item, quantity: currentItem.quantity }
+            : item,
+        ),
+      );
+    } finally {
+      setUpdatingItems((prev) => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+    }
   };
 
-  const removeItem = (itemId: number) => {
+  const removeItem = async (itemId: number) => {
+    if (updatingItems.has(itemId)) return;
+    setUpdatingItems((prev) => new Set(prev).add(itemId));
+    // Optimistic remove
+    const snapshot = cartItems.find((i) => i.id === itemId);
     setCartItems((prev) => prev.filter((item) => item.id !== itemId));
+    setStockWarning((prev) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
+    try {
+      await Cart.deleteCartItem(itemId);
+    } catch {
+      // Restore item on error
+      if (snapshot) {
+        setCartItems((prev) => [...prev, snapshot]);
+      }
+    } finally {
+      setUpdatingItems((prev) => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+    }
   };
 
   // ===== Suggestions (giữ mock data) =====
@@ -309,15 +397,9 @@ const ShoppingCart: React.FC = () => {
           )}
 
           {/* Shop Groups */}
-<<<<<<< HEAD
-          {Object.entries(groupedByShop).map(([shopIdStr, group]) => {
-=======
           {Object.entries(groupedByShop)?.map(([shopIdStr, group]) => {
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
             const shopId = Number(shopIdStr);
-            const typedItems = group.items as (CartItem & {
-              selected: boolean;
-            })[];
+            const typedItems = group.items as EnrichedCartItem[];
 
             return (
               <div key={shopId} className="card shadow-sm mb-3">
@@ -335,11 +417,7 @@ const ShoppingCart: React.FC = () => {
                   />
                   <i className="bi bi-shop text-primary"></i>
                   <span className="fw-bold text-uppercase small">
-<<<<<<< HEAD
-                    {group.shop.shopName}
-=======
                     {group?.shop?.shopName}
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                   </span>
                   <i className="bi bi-chevron-right text-muted"></i>
                 </div>
@@ -370,25 +448,12 @@ const ShoppingCart: React.FC = () => {
                                 item.productVariant?.imageUrl ??
                                 "/placeholder.png"
                               }
-<<<<<<< HEAD
-                              alt={item.product.name}
-=======
                               alt={item?.product?.name}
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                               className="w-100 h-100 object-fit-cover"
                             />
                           </div>
                           <div className="flex-grow-1 min-w-0">
                             <h6 className="fw-bold mb-1 text-truncate">
-<<<<<<< HEAD
-                              {item.product.name}
-                            </h6>
-                            {item.productVariant && (
-                              <div className="small text-muted d-flex align-items-center gap-1">
-                                Phân loại:{" "}
-                                <span className="text-dark fw-medium">
-                                  {item.productVariant.variantName}
-=======
                               {item?.product?.name}
                             </h6>
                             {item?.productVariant && (
@@ -396,7 +461,6 @@ const ShoppingCart: React.FC = () => {
                                 Phân loại:{" "}
                                 <span className="text-dark fw-medium">
                                   {item?.productVariant?.variantName}
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                                 </span>
                                 <i className="bi bi-chevron-down"></i>
                               </div>
@@ -423,27 +487,65 @@ const ShoppingCart: React.FC = () => {
                             <div className="d-md-none small text-muted mb-1">
                               Số lượng
                             </div>
-                            <div className="btn-group" role="group">
+                            <div
+                              className="btn-group"
+                              role="group"
+                              style={{
+                                opacity: updatingItems.has(item.id) ? 0.6 : 1,
+                              }}
+                            >
                               <button
                                 className="btn btn-outline-secondary btn-sm"
                                 onClick={() => updateQuantity(item.id, -1)}
+                                disabled={
+                                  updatingItems.has(item.id) ||
+                                  item.quantity <= 1
+                                }
                               >
                                 <i className="bi bi-dash"></i>
                               </button>
                               <input
                                 type="text"
                                 className="form-control form-control-sm text-center"
-                                value={item.quantity}
+                                value={
+                                  updatingItems.has(item.id)
+                                    ? "..."
+                                    : item.quantity
+                                }
                                 readOnly
                                 style={{ width: "50px" }}
                               />
                               <button
                                 className="btn btn-outline-secondary btn-sm"
                                 onClick={() => updateQuantity(item.id, 1)}
+                                disabled={
+                                  updatingItems.has(item.id) ||
+                                  item.quantity >=
+                                    (item.stockQuantity ?? Infinity)
+                                }
                               >
                                 <i className="bi bi-plus"></i>
                               </button>
                             </div>
+                            {stockWarning[item.id] && (
+                              <div
+                                className="text-danger mt-1"
+                                style={{ fontSize: "11px" }}
+                              >
+                                <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                                {stockWarning[item.id]}
+                              </div>
+                            )}
+                            {(item.stockQuantity ?? 0) > 0 &&
+                              (item.stockQuantity ?? 0) <= 5 && (
+                                <div
+                                  className="text-warning mt-1"
+                                  style={{ fontSize: "11px" }}
+                                >
+                                  <i className="bi bi-clock-history me-1"></i>
+                                  Con {item.stockQuantity} san pham
+                                </div>
+                              )}
                           </div>
 
                           {/* Subtotal */}
@@ -462,10 +564,19 @@ const ShoppingCart: React.FC = () => {
                           {/* Delete */}
                           <div className="col-6 col-md-3">
                             <button
-                              className="btn btn-link text-muted p-2"
+                              className="btn btn-link text-danger p-2"
                               onClick={() => removeItem(item.id)}
+                              disabled={updatingItems.has(item.id)}
+                              title="Xoa san pham"
                             >
-                              <i className="bi bi-trash"></i>
+                              {updatingItems.has(item.id) ? (
+                                <span
+                                  className="spinner-border spinner-border-sm"
+                                  role="status"
+                                />
+                              ) : (
+                                <i className="bi bi-trash"></i>
+                              )}
                             </button>
                           </div>
                         </div>
@@ -571,10 +682,7 @@ const ShoppingCart: React.FC = () => {
                 <button
                   className="btn btn-primary w-100 py-3 fw-bold d-flex align-items-center justify-content-center gap-2"
                   disabled={selectedCount === 0}
-<<<<<<< HEAD
-=======
                   onClick={() => (window.location.href = "/checkout")}
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
                 >
                   MUA HÀNG ({selectedCount})
                   <i className="bi bi-arrow-right"></i>

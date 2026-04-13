@@ -1,0 +1,16 @@
+name: Deploy logistic-service
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "logistic-service/**"
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      context_path: ./logistic-service
+      image_name: logistic-service
+      service_name: logistic-service
+    secrets: inherit

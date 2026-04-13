@@ -8,10 +8,14 @@ import {
   UseQueryResult,
 } from "@tanstack/react-query";
 import {
+  getShipmentTimeline,
   getTracking,
+  getShipmentById,
   listShipments,
   updateShipmentStatus,
+  PageResponse,
   Shipment,
+  ShipmentStatusHistory,
   ShipmentStatus,
 } from "./api";
 
@@ -28,25 +32,62 @@ export function useTracking(
   });
 }
 
+export function useShipmentDetail(
+  shipmentId?: number,
+): UseQueryResult<Shipment, Error> {
+  return useQuery<Shipment, Error>({
+    queryKey: ["shipment-detail", shipmentId],
+    queryFn: async (): Promise<Shipment> => {
+      if (!shipmentId) {
+        throw new Error("Shipment ID is required");
+      }
+      const res = await getShipmentById(shipmentId);
+      return res.data;
+    },
+    enabled: Boolean(shipmentId),
+  });
+}
+
+export function useShipmentTimeline(
+  shipmentId?: number,
+): UseQueryResult<ShipmentStatusHistory[], Error> {
+  return useQuery<ShipmentStatusHistory[], Error>({
+    queryKey: ["shipment-timeline", shipmentId],
+    queryFn: async (): Promise<ShipmentStatusHistory[]> => {
+      if (!shipmentId) {
+        return [];
+      }
+      const res = await getShipmentTimeline(shipmentId);
+      return res.data;
+    },
+    enabled: Boolean(shipmentId),
+  });
+}
+
 export function useShipmentList(params?: {
-  status?: string;
+  status?: ShipmentStatus;
   trackingCode?: string;
-  shopId?: string;
-}): UseQueryResult<Shipment[], Error> {
-  return useQuery<Shipment[], Error>({
+  shopRefId?: number;
+  page?: number;
+  size?: number;
+}): UseQueryResult<PageResponse<Shipment>, Error> {
+  return useQuery<PageResponse<Shipment>, Error>({
     queryKey: ["shipments", params],
-    queryFn: async (): Promise<Shipment[]> => {
+    queryFn: async (): Promise<PageResponse<Shipment>> => {
       const res = await listShipments(params);
       return res.data;
     },
     placeholderData: keepPreviousData, // ✅ v5 replacement for keepPreviousData: true
   });
 }
-type UpdateStatusVariables = { id: string; status: ShipmentStatus };
+type UpdateStatusVariables = {
+  orderShipmentRefId: number;
+  status: ShipmentStatus;
+};
 
 export function useUpdateShipmentStatus() {
   return useMutation({
-    mutationFn: ({ id, status }: UpdateStatusVariables) =>
-      updateShipmentStatus(id, status),
+    mutationFn: ({ orderShipmentRefId, status }: UpdateStatusVariables) =>
+      updateShipmentStatus(orderShipmentRefId, status),
   });
 }

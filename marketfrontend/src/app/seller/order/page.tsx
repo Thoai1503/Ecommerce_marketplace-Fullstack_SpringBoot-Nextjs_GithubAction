@@ -4,22 +4,151 @@ import { useOrderPage } from "@/feature/admin/hooks/useOrderPage";
 import { OrderShipments } from "@/types/data/OrderShipment";
 import { IOrder } from "@/validators/order";
 import { IOrderShipment } from "@/validators/orderShipment";
+import { convertAddressToNames } from "@/services/addressService";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+
+type PendingShipmentOrder = {
+  shipmentId: number;
+  orderId: number;
+  buyerName: string;
+  recipient: any;
+  items: any[];
+};
+
+const mapShippingStatusToUiStatus = (shippingStatus?: string) => {
+  switch ((shippingStatus || "").toUpperCase()) {
+    case "PENDING":
+      return "pending_shipment";
+    case "CONFIRMED":
+      return "confirmed";
+    case "PICKED_UP":
+      return "picked_up";
+    case "IN_TRANSIT":
+      return "in_transit";
+    case "OUT_FOR_DELIVERY":
+      return "out_for_delivery";
+    case "DELIVERED":
+      return "delivered";
+    case "FAILED":
+      return "failed";
+    case "RETURNED":
+      return "returned";
+    case "SHIPPED":
+      return "shipped";
+    case "CANCELED":
+    case "CANCELLED":
+      return "cancelled";
+    default:
+      return "pending_shipment";
+  }
+};
+
+const getStatusLabel = (status?: string): string => {
+  switch (status) {
+    case "pending_shipment":
+      return "Chờ xác nhận";
+    case "confirmed":
+      return "Chờ lấy hàng";
+    case "picked_up":
+      return "Đã giao cho ĐVVC";
+    case "in_transit":
+      return "Đang vận chuyển";
+    case "out_for_delivery":
+      return "Đang giao";
+    case "delivered":
+      return "Đã giao";
+    case "failed":
+      return "Thất bại";
+    case "returned":
+      return "Trả hàng";
+    case "shipped":
+      return "Đã gửi";
+    case "pending_payment":
+      return "Chờ thanh toán";
+    case "cancelled":
+      return "Đã hủy";
+    default:
+      return "Chờ xác nhận";
+  }
+};
 
 const page = () => {
+  const { shop: shopData } = useSellerAuth();
+  console.log("Shop Data in Order Page:", JSON.stringify(shopData, null, 2));
   OrderShipments.setup({ path: "/seller/order-shipment" });
-  const { data: orderShipments } = useQuery<IOrderShipment[]>(
-    OrderShipments.getByShopId(2),
-  );
+  const { data: orderShipments, refetch: refetchOrderShipments } = useQuery<
+    IOrderShipment[]
+  >(OrderShipments.getByShopId(shopData?.id || 0));
 
   console.log("Order Shipments Data:", JSON.stringify(orderShipments, null, 2));
-  const { shop, orders } = useOrderPage();
+  const { shop, orders: mockOrders } = useOrderPage();
+
+  // Combine API data (top) + Mock data (bottom)
+  const combinedOrders = useMemo(() => {
+    const apiOrders =
+      orderShipments?.map((shipment: any) => ({
+        shipmentId: shipment.shipmentId,
+        id: shipment.orderId,
+        order_number: shipment.order?.orderNumber,
+        order_code: shipment.order?.orderNumber,
+        total_price: shipment.order?.finalAmount,
+        status: mapShippingStatusToUiStatus(shipment.shippingStatus),
+        buyer_name: shipment.recipient?.recipientName,
+        orders_items: shipment.items,
+        tracking_number: shipment.trackingNumber,
+        tracking_carrier: shipment.carrierName,
+        recipient: shipment.recipient,
+        _source: "api",
+      })) ?? [];
+
+    const mockOrders_ = mockOrders.map((order: any) => ({
+      ...order,
+      _source: "mock",
+    }));
+
+    return [...apiOrders, ...mockOrders_];
+  }, [orderShipments, mockOrders]);
   const [activeTab, setActiveTab] = useState("all");
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(
     new Set(),
   );
+  const [pendingShipmentOrder, setPendingShipmentOrder] =
+    useState<PendingShipmentOrder | null>(null);
+  const [isConfirmingLogistics, setIsConfirmingLogistics] = useState(false);
+
+  const openPendingShipmentModal = (order: any) => {
+    setPendingShipmentOrder({
+      shipmentId: Number(order.shipmentId),
+      orderId: Number(order.id),
+      buyerName: order.buyer_name || order.recipient?.name || "Khach mua",
+      recipient: order.recipient,
+      items: order.orders_items || [],
+    });
+  };
+
+  const closePendingShipmentModal = () => {
+    if (!isConfirmingLogistics) {
+      setPendingShipmentOrder(null);
+    }
+  };
+
+  const handleConfirmLogistics = async () => {
+    if (!pendingShipmentOrder) return;
+    try {
+      setIsConfirmingLogistics(true);
+      await OrderShipments.confirmPackaged(pendingShipmentOrder.shipmentId);
+      await refetchOrderShipments();
+      setPendingShipmentOrder(null);
+      alert("Logistics da xac nhan dong goi. Tracking code da duoc cap nhat.");
+    } catch (error) {
+      console.error("Confirm logistics failed", error);
+      alert("Khong the xac nhan logistics. Vui long thu lai.");
+    } finally {
+      setIsConfirmingLogistics(false);
+    }
+  };
 
   const toggleExpand = (orderId: string) => {
     setExpandedOrderIds((prev) => {
@@ -185,7 +314,7 @@ const page = () => {
       {/* Order Count */}
       <div className="bg-white mx-3 p-3 border-bottom d-flex justify-content-between align-items-center">
         <div>
-          <span className="fw-bold">{orders.length} Đơn hàng</span>
+          <span className="fw-bold">{combinedOrders.length} Đơn hàng</span>
         </div>
         <div className="d-flex gap-2">
           <button className="btn btn-sm btn-outline-secondary">
@@ -216,16 +345,35 @@ const page = () => {
             </tr>
           </thead>
           <tbody>
-            {orders
-              //   .filter((order): order is IOrder => order.id !== undefined)
+            {combinedOrders
               .filter((order) => order.id !== undefined)
               .map((order: any) => {
                 const hasItems = (order.orders_items?.length ?? 0) > 0;
-                const isExpanded = expandedOrderIds.has(order.id.toString());
+                const orderKey = `${order.id}-${order._source}`;
+                const isExpanded = expandedOrderIds.has(orderKey);
+                const buyerName =
+                  order.buyer_name || order.recipient?.name || "Khach mua";
+                const buyerAvatar =
+                  order.buyer_avatar ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    buyerName,
+                  )}&background=0D8ABC&color=fff`;
+                const orderCode =
+                  order.order_code || order.order_number || "N/A";
+
+                // Get address info from recipient if available
+                const addressInfo = order.recipient
+                  ? convertAddressToNames(
+                      order.recipient.city,
+                      order.recipient.district,
+                      order.recipient.ward,
+                      order.recipient.addressLine,
+                    )
+                  : null;
 
                 // Hàng chính (parent)
                 const renderMainRow = () => (
-                  <tr key={order.id} className={isExpanded ? "bg-light" : ""}>
+                  <tr key={orderKey} className={isExpanded ? "bg-light" : ""}>
                     <td>
                       <div className="d-flex align-items-center">
                         <input
@@ -235,7 +383,7 @@ const page = () => {
                         {hasItems && (
                           <button
                             className="btn btn-sm btn-link p-0 text-muted"
-                            onClick={() => toggleExpand(order.id.toString())}
+                            onClick={() => toggleExpand(orderKey)}
                             style={{ lineHeight: 1 }}
                           >
                             {isExpanded ? (
@@ -249,8 +397,34 @@ const page = () => {
                     </td>
                     <td>
                       <div className="flex-grow-1">
-                        <div className="fw-normal mb-1">
-                          <strong>{order.order_code}</strong>
+                        <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
+                          <div className="d-flex align-items-center gap-2">
+                            <img
+                              src={buyerAvatar}
+                              alt={buyerName}
+                              width="32"
+                              height="32"
+                              className="rounded-circle border"
+                              style={{ objectFit: "cover" }}
+                            />
+                            <div className="d-flex flex-column">
+                              <strong className="mb-0">{buyerName}</strong>
+                              <small className="text-muted">
+                                Mã đơn hàng:{" "}
+                                <span className="fw-semibold">{orderCode}</span>
+                              </small>
+                              {addressInfo && (
+                                <small className="text-muted">
+                                  Địa chỉ: {addressInfo.fullAddress}
+                                </small>
+                              )}
+                              {order._source === "api" && (
+                                <span className="badge bg-success ms-auto">
+                                  API
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                         <small className="text-muted d-block">
                           {order.orders_items && order.orders_items.length > 0
@@ -275,12 +449,7 @@ const page = () => {
                     </td>
                     <td>
                       <div className="fw-medium text-dark">
-                        {order.status === "pending_shipment" && "Chờ xác nhận"}
-                        {order.status === "shipped" && "Đã gửi"}
-                        {order.status === "in_transit" && "Đang vận chuyển"}
-                        {order.status === "delivered" && "Đã giao"}
-                        {order.status === "pending_payment" && "Chờ thanh toán"}
-                        {order.status === "cancelled" && "Đã hủy"}
+                        {getStatusLabel(order.status)}
                       </div>
                       <small className="text-muted d-block mt-1">
                         {order.status_change_reason}
@@ -318,6 +487,25 @@ const page = () => {
                         >
                           Xem chi tiết
                         </a>
+                        {order._source === "api" &&
+                          order.status === "pending_shipment" &&
+                          !order.tracking_number && (
+                            <button
+                              type="button"
+                              className="btn btn-link p-0 text-primary text-decoration-none small text-start"
+                              onClick={() => {
+                                alert(
+                                  "Chờ lấy hàng " +
+                                    order.id +
+                                    " - " +
+                                    order.shipmentId,
+                                );
+                                openPendingShipmentModal(order);
+                              }}
+                            >
+                              Chờ lấy hàng
+                            </button>
+                          )}
                         <a
                           href="#"
                           className="text-primary text-decoration-none small"
@@ -334,7 +522,7 @@ const page = () => {
                   isExpanded &&
                   order.orders_items?.map((item: any, index: number) => (
                     <tr
-                      key={`${order.id}-${item.id}`}
+                      key={`${orderKey}-${item.id}`}
                       className="item-row bg-light-subtle"
                     >
                       <td></td> {/* để trống cột checkbox + expand */}
@@ -384,20 +572,92 @@ const page = () => {
                   ));
 
                 return (
-                  <React.Fragment key={order.id}>
+                  <React.Fragment key={orderKey}>
                     {renderMainRow()}
                     {renderItemRows()}
                   </React.Fragment>
                 );
               })}
           </tbody>
+          <tbody>
+            {combinedOrders.length === 0 && (
+              <tr>
+                <td colSpan={6} className="p-5 text-center text-muted">
+                  <p>Không có đơn hàng nào</p>
+                </td>
+              </tr>
+            )}
+          </tbody>
         </table>
-        {orders.length === 0 && (
-          <div className="p-5 text-center text-muted">
-            <p>Không có đơn hàng nào</p>
-          </div>
-        )}
       </div>
+
+      {pendingShipmentOrder && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+          style={{ background: "rgba(0,0,0,0.45)", zIndex: 1050 }}
+          onClick={closePendingShipmentModal}
+        >
+          <div
+            className="bg-white rounded-3 shadow p-4"
+            style={{ width: "680px", maxWidth: "95vw" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h5 className="mb-3">Xác nhận đóng gói và gửi logistics</h5>
+            <p className="text-muted mb-2">
+              Đơn hàng: <strong>#{pendingShipmentOrder.orderId}</strong>
+            </p>
+            <p className="text-muted mb-2">
+              Người mua: <strong>{pendingShipmentOrder.buyerName}</strong>
+            </p>
+            <p className="text-muted mb-3">
+              Người nhận:{" "}
+              <strong>
+                {pendingShipmentOrder.recipient?.recipientName || "N/A"}
+              </strong>{" "}
+              - {pendingShipmentOrder.recipient?.recipientPhone || "N/A"}
+            </p>
+            <div
+              className="border rounded p-3 mb-3"
+              style={{ maxHeight: "220px", overflowY: "auto" }}
+            >
+              {pendingShipmentOrder.items.length === 0 && (
+                <small className="text-muted">
+                  Không có thông tin sản phẩm.
+                </small>
+              )}
+              {pendingShipmentOrder.items.map((item, idx) => (
+                <div
+                  key={`${item.id ?? idx}-${idx}`}
+                  className="d-flex justify-content-between align-items-center py-1 border-bottom"
+                >
+                  <span>{item.product_name || "Sản phẩm"}</span>
+                  <span>x{item.quantity ?? 1}</span>
+                </div>
+              ))}
+            </div>
+            <div className="d-flex justify-content-end gap-2">
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={closePendingShipmentModal}
+                disabled={isConfirmingLogistics}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleConfirmLogistics}
+                disabled={isConfirmingLogistics}
+              >
+                {isConfirmingLogistics
+                  ? "Đang xác nhận..."
+                  : "Xác nhận logistics"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

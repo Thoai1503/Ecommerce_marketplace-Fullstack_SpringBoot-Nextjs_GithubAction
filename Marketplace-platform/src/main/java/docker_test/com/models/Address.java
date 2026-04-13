@@ -3,16 +3,33 @@ package docker_test.com.models;
 import java.time.LocalDateTime;
 
 public final class Address {
-    private long address_id;
-    private long user_id;
+    private Long address_id;
+    private Long user_id;
+    public Long getShop_id() {
+		return shop_id;
+	}
+
+	public void setShop_id(Long shop_id) {
+		this.shop_id = shop_id;
+	}
+
+	private Long shop_id;
     private String recipient_name;
     private String recipient_phone;
     private String address_line;
-    private String ward;
-    private String district;
-    private String city;
+    private Long ward;
+    private Long district;
+    private Long city;
     private String postal_code;
-    private int is_default;
+    public int getIsDefault() {
+		return is_default;
+	}
+
+	public void setIsDefault(Integer is_default) {
+		this.is_default = is_default;
+	}
+
+	private Integer is_default;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
 
@@ -22,11 +39,12 @@ public final class Address {
         this.updated_at = LocalDateTime.now();
     }
 
-    public Address(long address_id, long user_id, String recipient_name, String recipient_phone,
-                   String address_line, String ward, String district, String city,
-                   String postal_code, int is_default, LocalDateTime created_at,
+    public Address(Long address_id, Long user_id, Long shop_id, String recipient_name, String recipient_phone,
+                   String address_line, Long ward, Long district, Long city,
+                   String postal_code, Integer is_default, LocalDateTime created_at,
                    LocalDateTime updated_at) {
         this.address_id = address_id;
+        this.shop_id = shop_id;
         this.user_id = user_id;
         this.recipient_name = recipient_name;
         this.recipient_phone = recipient_phone;
@@ -40,19 +58,19 @@ public final class Address {
         this.updated_at = updated_at;
     }
 
-    public long getAddressId() {
+    public Long getAddressId() {
         return address_id;
     }
 
-    public void setAddressId(long address_id) {
+    public void setAddressId(Long address_id) {
         this.address_id = address_id;
     }
 
-    public long getUserId() {
+    public Long getUserId() {
         return user_id;
     }
 
-    public void setUserId(long user_id) {
+    public void setUserId(Long user_id) {
         this.user_id = user_id;
     }
 
@@ -80,27 +98,27 @@ public final class Address {
         this.address_line = address_line;
     }
 
-    public String getWard() {
+    public Long getWard() {
         return ward;
     }
 
-    public void setWard(String ward) {
+    public void setWard(Long ward) {
         this.ward = ward;
     }
 
-    public String getDistrict() {
+    public Long getDistrict() {
         return district;
     }
 
-    public void setDistrict(String district) {
+    public void setDistrict(Long district) {
         this.district = district;
     }
 
-    public String getCity() {
+    public Long getCity() {
         return city;
     }
 
-    public void setCity(String city) {
+    public void setCity(Long city) {
         this.city = city;
     }
 
@@ -116,7 +134,7 @@ public final class Address {
         return is_default;
     }
 
-    public void setDefault(int is_default) {
+    public void setDefault(Integer is_default) {
         this.is_default = is_default;
     }
 

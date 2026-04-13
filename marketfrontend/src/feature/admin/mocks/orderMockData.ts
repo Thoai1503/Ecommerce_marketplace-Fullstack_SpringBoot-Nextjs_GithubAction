@@ -5,6 +5,9 @@ export const mockOrdersData: any[] = [
     id: 1,
     user_id: 101,
     order_code: "ORD20250318001",
+    buyer_name: "Nguyen Minh Anh",
+    buyer_avatar:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop",
     total_price: 549000,
     status: "pending_shipment",
     status_change_reason: "Chờ xác nhận từ người bán",
@@ -43,6 +46,9 @@ export const mockOrdersData: any[] = [
     id: 2,
     user_id: 102,
     order_code: "ORD20250318002",
+    buyer_name: "Tran Quoc Bao",
+    buyer_avatar:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop",
     total_price: 2890000,
     status: "shipped",
     status_change_reason: "Đã được LOG tiếp nhận",
@@ -70,6 +76,9 @@ export const mockOrdersData: any[] = [
     id: 3,
     user_id: 103,
     order_code: "ORD20250318003",
+    buyer_name: "Le Thu Ha",
+    buyer_avatar:
+      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=80&h=80&fit=crop",
     total_price: 1245000,
     status: "in_transit",
     status_change_reason: "Đang vận chuyển đến khách hàng",
@@ -108,6 +117,9 @@ export const mockOrdersData: any[] = [
     id: 4,
     user_id: 104,
     order_code: "ORD20250315001",
+    buyer_name: "Pham Gia Huy",
+    buyer_avatar:
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=80&h=80&fit=crop",
     total_price: 3490000,
     status: "delivered",
     status_change_reason: "Khách hàng đã nhận hàng",
@@ -135,6 +147,9 @@ export const mockOrdersData: any[] = [
     id: 5,
     user_id: 105,
     order_code: "ORD20250315002",
+    buyer_name: "Do Khanh Linh",
+    buyer_avatar:
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&h=80&fit=crop",
     total_price: 1895000,
     status: "pending_payment",
     status_change_reason: "Chờ khách hàng thanh toán",
@@ -173,6 +188,9 @@ export const mockOrdersData: any[] = [
     id: 6,
     user_id: 106,
     order_code: "ORD20250314001",
+    buyer_name: "Hoang Duc Anh",
+    buyer_avatar:
+      "https://images.unsplash.com/photo-1542206395-9feb3edaa68d?w=80&h=80&fit=crop",
     total_price: 745000,
     status: "cancelled",
     status_change_reason: "Khách hàng yêu cầu hủy đơn",

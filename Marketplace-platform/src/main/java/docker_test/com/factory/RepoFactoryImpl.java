@@ -4,13 +4,18 @@ package docker_test.com.factory;
 import org.springframework.stereotype.Component;
 
 import docker_test.com.models.product.ProductVariant;
+import docker_test.com.repository.AdminRepository;
+import docker_test.com.repository.BrandRepository;
+import docker_test.com.repository.BuyerRepository;
 import docker_test.com.repository.CategoryAttributeRepository;
+import docker_test.com.repository.CategoryBrandRepository;
 import docker_test.com.repository.CategoryRepository;
 import docker_test.com.repository.IRepositories;
 import docker_test.com.repository.OrderRepository;
 import docker_test.com.repository.ProductImageRepository;
 import docker_test.com.repository.ProductRepository;
 import docker_test.com.repository.ProductVariantRepository;
+import docker_test.com.repository.SellerRepository;
 import docker_test.com.repository.ShopRepository;
 import docker_test.com.repository.UnitRepository;
 import docker_test.com.repository.UserRepository;
@@ -25,23 +30,16 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	private final UnitRepository unitRepository;
 	private final CategoryAttributeRepository categoryAttributeRepository;
 	private final ProductRepository productRepository;
-<<<<<<< HEAD
-	
-	private final UserRepository userRepository;
-	private final AdminRepository adminRepository;
-	private final SellerRepository sellerRepository;
-	private final BuyerRepository buyerRepository;
-
-	private final ProductImageRepository productImageRepository;
-	private final ShopRepository shopRepository;
-	private final ProductVariantRepository productVariantRepository;
-=======
 	private final UserRepository userRepository;
 	private final ProductImageRepository productImageRepository;
 	private final ShopRepository shopRepository;
 	private final ProductVariantRepository productVariantRepository;
+	private final BrandRepository brandRepository;
+	private final CategoryBrandRepository categoryBrandRepisitory;
 	private final OrderRepository orderRepository;
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+	private final AdminRepository adminRepository;
+	private final BuyerRepository buyerRepository;
+	private final SellerRepository sellerRepository;
 
 	public static RepoFactoryImpl Instance() {
 	
@@ -59,23 +57,16 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		this.unitRepository =UnitRepository.Instance();
 		this.categoryAttributeRepository = CategoryAttributeRepository.Instance();
 		this.productRepository =ProductRepository.Instance();
-<<<<<<< HEAD
-		
-		this.userRepository = UserRepository.Instance();
-		this.adminRepository = AdminRepository.Instance();
-		this.sellerRepository = SellerRepository.Instance();
-		this.buyerRepository = BuyerRepository.Instance();
-
-		this.productImageRepository = ProductImageRepository.Instance();
-		this.shopRepository = ShopRepository.Instance();
-		this.productVariantRepository = ProductVariantRepository.Instance();
-=======
 		this.userRepository = UserRepository.Instance();
 		this.productImageRepository = ProductImageRepository.Instance();
 		this.shopRepository = ShopRepository.Instance();
 		this.productVariantRepository = ProductVariantRepository.Instance();
+		this.brandRepository = BrandRepository.Instance();
+		this.categoryBrandRepisitory = CategoryBrandRepository.Instance();
 		this.orderRepository = OrderRepository.Instance();
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
+		this.adminRepository = AdminRepository.Instance();
+		this.buyerRepository = BuyerRepository.Instance();
+		this.sellerRepository = SellerRepository.Instance();
 	}
 
 	@Override
@@ -86,18 +77,17 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		case "unit" -> (IRepositories) unitRepository;
 		case "category_attribute" -> (IRepositories) categoryAttributeRepository;
 		case "product" -> (IRepositories)  productRepository;
-		
 		case "user" -> (IRepositories) userRepository;
-		case "admin" -> (IRepositories) adminRepository;
-		case "seller" -> (IRepositories) sellerRepository;
-		case "buyer" -> (IRepositories) buyerRepository;
-
 		case "product_image" -> (IRepositories) productImageRepository;
 		case "shop" -> (IRepositories) shopRepository;
 		case "product_variant" -> (IRepositories<ProductVariant>) productVariantRepository;
-		
-		//...ae thêm các định nghĩa Repository do ae tạo ở đây (Repository phải implement IRepositories)
-		   default -> throw new IllegalArgumentException("Unknown entity type: " + entityType);
+		case "brand" -> (IRepositories) brandRepository;
+		case "category_brand" -> (IRepositories) categoryBrandRepisitory; 
+		case "order" -> (IRepositories) orderRepository;
+		case "admin" -> (IRepositories) adminRepository; 
+		case "buyer" -> (IRepositories) buyerRepository;
+		case "seller" -> (IRepositories) sellerRepository;
+		default -> throw new IllegalArgumentException("Unknown entity type: " + entityType);
 		};
 	}
 
