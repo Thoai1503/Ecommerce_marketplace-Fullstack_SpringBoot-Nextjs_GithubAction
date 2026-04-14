@@ -35,6 +35,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	private final BrandRepository brandRepository;
 	private final CategoryBrandRepository categoryBrandRepisitory;
 	private final OrderRepository orderRepository;
+//	private final ProductRepository productRepository;
 	private final AttributeRepository attributeRepository;
 	private final AttributeValueRepository attributeValueRepository;
 	
@@ -82,6 +83,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		case "order" -> (IRepositories) orderRepository;
 		case "attribute" -> (IRepositories) attributeRepository;
 		case "attribute_value" -> (IRepositories) attributeValueRepository;
+	
 		default -> throw new IllegalArgumentException("Unknown entity type: " + entityType);
 		};
 	}

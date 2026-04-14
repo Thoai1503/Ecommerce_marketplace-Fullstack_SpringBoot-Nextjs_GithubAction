@@ -381,13 +381,17 @@ public class ProductRepository implements IRepositories<Product> {
 	            }
 
 	            list.add(row);
+	            
 	        }
+	        return   list;
 
 	    } catch (Exception e) {
 	        e.printStackTrace();
 	    }
-	 
+	 return list;
 	 //get product by id with shop info
+	}
+	
 	 public Product GetByIdWithShopInfo(int id) {
 		 String sql = """
 		 		SELECT
@@ -462,8 +466,5 @@ public class ProductRepository implements IRepositories<Product> {
 		 					
 		 				
 	 }
-
-	    return list;
-	}
-
+	
 }
