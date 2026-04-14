@@ -128,6 +128,7 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 		}
 		catch(Exception ex) {
 			ex.printStackTrace();
+			
 		}
 		
 		return null;
