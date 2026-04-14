@@ -13,6 +13,7 @@ import React, { useEffect, useState } from "react";
 
 const ProductDetail = ({ data }: { data: IProduct }) => {
   const { userId } = useUserAuth();
+  console.log("Product Detail User ID:", userId);
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { mutate: addToCart } = useAddToCartMutation();
   const pathname = usePathname();
@@ -35,8 +36,53 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
   const displayImage = hoveredImage || mainImage;
 
   const handleAddToCart = (cart: ICart) => {
+    // alert(`Thêm vào giỏ hàng: ${JSON.stringify(cart, null, 2)}`);
+
     if (!userId) {
-      message.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
+      if (selectedVariant === null) {
+        message.warning("Vui lòng chọn phân loại sản phẩm");
+        return;
+      }
+      const preLoginCart = localStorage.getItem("preLoginCart")
+        ? JSON.parse(localStorage.getItem("preLoginCart") || "[]")
+        : [];
+      if (preLoginCart.length >= 1) {
+        const existingItemIndex = preLoginCart.findIndex((item: ICart) => {
+          return (
+            item.product_id === cart.product_id &&
+            item.variant_id === cart.variant_id
+          );
+        });
+        if (existingItemIndex !== -1) {
+          preLoginCart[existingItemIndex].quantity += cart.quantity;
+          localStorage.setItem("preLoginCart", JSON.stringify(preLoginCart));
+          message.success(
+            "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
+          );
+          return;
+        } else {
+          // alert(
+          //   "Sản phẩm đã tồn tại trong giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
+          // );
+          const pushedItem = [...preLoginCart, cart];
+          localStorage.setItem("preLoginCart", JSON.stringify(pushedItem));
+          message.success(
+            "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
+          );
+          return;
+        }
+      }
+      // else {
+      //   preLoginCart.push(cart);
+      // }
+      preLoginCart.push(cart);
+
+      localStorage.setItem("preLoginCart", JSON.stringify(preLoginCart));
+
+      message.success(
+        "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
+      );
+      //      message.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
       return;
     }
     if (selectedVariant === null) {

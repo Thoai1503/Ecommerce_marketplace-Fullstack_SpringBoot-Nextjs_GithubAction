@@ -30,4 +30,29 @@ export class OrderShipments extends Model {
           .then((r) => r.data),
     };
   }
+
+  static getById(shipmentId: number) {
+    return {
+      queryKey: [this.queryKeys.findOne, shipmentId],
+      queryFn: (): Promise<IOrderShipment> =>
+        this.api
+          .get<IOrderShipment>({
+            url: `${API_URL}/api/orders/shipments/${shipmentId}`,
+          })
+          .then((r) => r.data),
+      enabled: !!shipmentId,
+    };
+  }
+
+  static confirmPackaged(shipmentId: number) {
+    return this.api.post<{
+      shipmentId: number;
+      orderId: number;
+      trackingCode: string;
+      shippingStatus: string;
+      message: string;
+    }>({
+      url: `${API_URL}/api/orders/shipments/${shipmentId}/confirm-packaged`,
+    });
+  }
 }

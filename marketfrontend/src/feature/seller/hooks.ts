@@ -4,7 +4,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { categoryQuery, productImageQuery } from "./query";
 import { slugify, generateUniqueSlug, isValidSlug } from "@/helper/utils";
-import { addProduct, createProductVariant, uploadToProduct } from "./service";
+import {
+  addProduct,
+  createProductVariant,
+  updateVariantImage,
+  uploadToProduct,
+} from "./service";
 import { message, UploadFile, UploadProps } from "antd";
 import { useSellerAuth } from "@/context/SellerAuthContext";
 import { ProductVariant } from "@/validators/productVariant";
@@ -12,6 +17,7 @@ import { ProductVariant } from "@/validators/productVariant";
 export const useAddProductSeller = (
   onSuccessCallback: (id: number) => void,
   id?: number,
+  variantImageFile?: UploadFile,
 ) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const { roles, userId, shop } = useSellerAuth();
@@ -43,15 +49,46 @@ export const useAddProductSeller = (
     }
   };
 
+  // const { mutate: createVariant } = useMutation({
+  //   mutationFn: (en: ProductVariant) => createProductVariant(en),
+  //   onSuccess: (data) => {
+  //     console.log("Variant created:", data);
+  //     message.success(`Tạo biến thể sản phẩm thành công`);
+  //   },
+  //   onError: (error) => {
+  //     console.error("Error creating variant:", error);
+  //     message.error(`Lỗi khi tạo biến thể sản phẩm: ${error.message}`);
+  //   },
+  // });
+
   const { mutate: createVariant } = useMutation({
     mutationFn: (en: ProductVariant) => createProductVariant(en),
     onSuccess: (data) => {
       console.log("Variant created:", data);
       message.success(`Tạo biến thể sản phẩm thành công`);
+      if (variantImageFile?.originFileObj) {
+        const formData = new FormData();
+
+        formData.append("image", variantImageFile.originFileObj as Blob); // Upload ảnh được chọn cho biến thể
+        updateVariantImageMutate({ id: data.id, formData });
+      }
     },
     onError: (error) => {
       console.error("Error creating variant:", error);
       message.error(`Lỗi khi tạo biến thể sản phẩm: ${error.message}`);
+    },
+  });
+
+  const { mutate: updateVariantImageMutate } = useMutation({
+    mutationFn: ({ id, formData }: { id: number; formData: FormData }) =>
+      updateVariantImage(id, formData),
+    onSuccess: (data) => {
+      console.log("Variant image updated:", data);
+      message.success(`Cập nhật ảnh biến thể sản phẩm thành công`);
+    },
+    onError: (error) => {
+      console.error("Error updating variant image:", error);
+      message.error(`Lỗi khi cập nhật ảnh biến thể sản phẩm: ${error.message}`);
     },
   });
 
@@ -229,6 +266,7 @@ export const useAddImageSeller = (id?: number) => {
     const uploadImage = updatedList.filter((item) =>
       item.thumbUrl?.startsWith("data:image"),
     );
+    alert("uploadImage: " + JSON.stringify(updatedList));
     console.log("uploadImage: " + uploadImage.length);
   };
 

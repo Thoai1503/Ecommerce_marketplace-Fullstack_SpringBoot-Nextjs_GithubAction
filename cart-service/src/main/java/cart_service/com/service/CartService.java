@@ -1,8 +1,11 @@
 package cart_service.com.service;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import cart_service.com.dto.CartDTO;
 import cart_service.com.models.Cart;
@@ -32,46 +35,84 @@ public class CartService {
   public void removeProduct(Long userId, Long productId) {
       cartRepository.deleteByUserIdAndProductId(userId, productId);
   }
+
+  public void updateQuantity(Long cartId, int quantity) {
+      Cart cart = cartRepository.findById(cartId)
+          .orElseThrow(() -> new RuntimeException("Cart item not found: " + cartId));
+      cart.setQuantity(quantity);
+      cartRepository.save(cart);
+  }
+
+  public void deleteById(Long cartId) {
+      cartRepository.deleteById(cartId);
+  }
+
+  @Transactional
   public Cart addToCart(CartDTO cartDto) {
-		Cart existedCartItem = cartRepository.findByProductVariant_IdAndUserId(cartDto.getVariantId(),cartDto.getUserId());
-		Cart cart = new Cart();
-		System.out.println("Quantity from DTO: " + cartDto.getQuantity());
-		int qty = cartDto.getQuantity() != null ? cartDto.getQuantity() : 1;
-		if (existedCartItem != null) {
-			
-			var pro = new Product();
-			var productVariant = new ProductVariant();
-			pro.setId(cartDto.getProductId());
-			productVariant.setId(cartDto.getVariantId());
-			int existingQty = existedCartItem.getQuantity() != null ? existedCartItem.getQuantity() : 0;
-			cart = Cart.builder()
-					    .id(existedCartItem.getId())
-						.userId(cartDto.getUserId())
-						.product(pro)
-						.productVariant(productVariant)
-					//	.productId(cartDto.getProductId())
-			//			.variantId(cartDto.getVariantId())
-						.quantity(existingQty + qty)
-						.build();
-		} else {
-			var pro = new Product();
-			var productVariant = new ProductVariant();
-			pro.setId(cartDto.getProductId());
-			productVariant.setId(cartDto.getVariantId());
-			cart = Cart.builder()
-								.userId(cartDto.getUserId())
-								.product(pro)
-								.productVariant(productVariant)
-								//.productId(cartDto.getProductId())
-							//	.variantId(cartDto.getVariantId())
-								
-								.quantity(qty)
-								.build();
-		}
+	  return upsertCartItem(cartDto);
+  }
 
-	var en = cartRepository.save(cart);
+  @Transactional
+  public List<Cart> addBatchToCart(List<CartDTO> cartDtoList) {
+	  if (cartDtoList == null || cartDtoList.isEmpty()) {
+		  throw new IllegalArgumentException("Cart batch must not be empty");
+	  }
 
-	    return en;
+	  return cartDtoList.stream()
+		  .filter(Objects::nonNull)
+		  .map(this::upsertCartItem)
+		  .collect(Collectors.toList());
+  }
+
+  private Cart upsertCartItem(CartDTO cartDto) {
+	  if (cartDto.getUserId() == null) {
+		  throw new IllegalArgumentException("user_id is required");
+	  }
+
+	  if (cartDto.getProductId() == null) {
+		  throw new IllegalArgumentException("product_id is required");
+	  }
+
+	  if (cartDto.getVariantId() == null) {
+		  throw new IllegalArgumentException("variant_id is required");
+	  }
+
+	  int qty = cartDto.getQuantity() != null ? cartDto.getQuantity() : 1;
+	  if (qty < 1) {
+		  throw new IllegalArgumentException("quantity must be >= 1");
+	  }
+
+	  Cart existedCartItem = cartRepository.findByProductVariant_IdAndUserId(
+		  cartDto.getVariantId(),
+		  cartDto.getUserId()
+	  );
+
+	  Product product = new Product();
+	  product.setId(cartDto.getProductId());
+
+	  ProductVariant productVariant = new ProductVariant();
+	  productVariant.setId(cartDto.getVariantId());
+
+	  Cart cart;
+	  if (existedCartItem != null) {
+		  int existingQty = existedCartItem.getQuantity() != null ? existedCartItem.getQuantity() : 0;
+		  cart = Cart.builder()
+			  .id(existedCartItem.getId())
+			  .userId(cartDto.getUserId())
+			  .product(product)
+			  .productVariant(productVariant)
+			  .quantity(existingQty + qty)
+			  .build();
+	  } else {
+		  cart = Cart.builder()
+			  .userId(cartDto.getUserId())
+			  .product(product)
+			  .productVariant(productVariant)
+			  .quantity(qty)
+			  .build();
+	  }
+
+	  return cartRepository.save(cart);
   }
   
    

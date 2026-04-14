@@ -1,0 +1,67 @@
+package docker_test.com.dto;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+public record OrderShipmentResponeDTO(
+		    Long shipmentId,
+	        Long orderId,
+	        Long shopId,
+	        Long shippingFee,
+	        Long totalAmount,
+	        String carrierName,
+	        String trackingNumber,
+	        String shippingStatus,
+	        OrderInfoDTO order,
+	        RecipientInfoDTO recipient,
+	        List<OrderItemInfoDTO> items,
+	        List<ShipmentStatusLogDTO> statusHistory
+		) {
+	 public record OrderInfoDTO(
+	            String orderNumber,
+	            Long userId,
+	            Long addressId,
+	            Double totalAmount,
+	            Long shippingFee,
+	            Long discountAmount,
+	            Long finalAmount,
+	            String paymentMethod,
+	            String paymentStatus,
+	            String orderStatus
+	    ) {
+	    }
+	 
+	 public record RecipientInfoDTO(
+	            String recipientName,
+	            String recipientPhone,
+	            String addressLine,
+	            String ward,
+	            String district,
+	            String city,
+	            String postalCode
+	    ) {
+	    }
+
+	    public record OrderItemInfoDTO(
+	            Long id,
+	            Long productId,
+	            Long variantId,
+	            String productName,
+	            String variantName,
+	            String image,
+	            Integer quantity,
+	            Double price,
+	            Double totalPrice
+	    ) {
+	    }
+
+	    public record ShipmentStatusLogDTO(
+	            Long id,
+	            String status,
+	            String note,
+	            LocalDateTime changedAt,
+	            String changedBy
+	    ) {
+	    }
+
+}

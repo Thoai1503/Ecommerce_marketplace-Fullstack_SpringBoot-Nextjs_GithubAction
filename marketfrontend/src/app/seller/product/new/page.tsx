@@ -67,9 +67,13 @@ const AddProductForm: React.FC = () => {
     categories,
     setProduct,
     shop,
-  } = useAddProductSeller((id: number) => {
-    handleSaveImageAfterProduct(id);
-  });
+  } = useAddProductSeller(
+    (id: number) => {
+      handleSaveImageAfterProduct(id);
+    },
+    undefined,
+    fileList[0],
+  );
   const showModal = () => {
     setIsModalOpen(true);
   };

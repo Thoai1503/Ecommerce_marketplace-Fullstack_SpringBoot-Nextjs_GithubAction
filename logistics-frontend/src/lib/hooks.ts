@@ -10,6 +10,7 @@ import {
 import {
   getShipmentTimeline,
   getTracking,
+  getShipmentById,
   listShipments,
   updateShipmentStatus,
   PageResponse,
@@ -28,6 +29,22 @@ export function useTracking(
       return res.data;
     },
     enabled: Boolean(trackingCode),
+  });
+}
+
+export function useShipmentDetail(
+  shipmentId?: number,
+): UseQueryResult<Shipment, Error> {
+  return useQuery<Shipment, Error>({
+    queryKey: ["shipment-detail", shipmentId],
+    queryFn: async (): Promise<Shipment> => {
+      if (!shipmentId) {
+        throw new Error("Shipment ID is required");
+      }
+      const res = await getShipmentById(shipmentId);
+      return res.data;
+    },
+    enabled: Boolean(shipmentId),
   });
 }
 

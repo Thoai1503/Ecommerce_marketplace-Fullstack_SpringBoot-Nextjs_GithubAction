@@ -1,0 +1,16 @@
+name: Deploy api-gateway
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "api-gateway/**"
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      context_path: ./api-gateway
+      image_name: api-gateway
+      service_name: api-gateway
+    secrets: inherit

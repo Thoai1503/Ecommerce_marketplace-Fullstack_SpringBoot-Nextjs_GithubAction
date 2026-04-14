@@ -1,0 +1,81 @@
+name: Reusable Deploy By Context
+
+on:
+  workflow_call:
+    inputs:
+      context_path:
+        description: Build context path
+        required: true
+        type: string
+      image_name:
+        description: Docker image name (without owner)
+        required: true
+        type: string
+      service_name:
+        description: Docker compose service name on VPS
+        required: true
+        type: string
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Login Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.context_path }}
+          push: true
+          tags: |
+            thoaimanhlong/${{ inputs.image_name }}:latest
+            thoaimanhlong/${{ inputs.image_name }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy changed service to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+
+            cd ${{ secrets.VPS_APP_DIR }}
+
+            SERVICE="${{ inputs.service_name }}"
+            echo "Deploy service: ${SERVICE}"
+
+            if docker compose config --services | grep -x "${SERVICE}" >/dev/null 2>&1; then
+              docker compose pull "${SERVICE}"
+              # Stop and remove old container to prevent name conflict on recreate
+              docker compose stop "${SERVICE}" 2>/dev/null || true
+              docker compose rm -f "${SERVICE}" 2>/dev/null || true
+              # Also hard-remove any stale container matching the service name
+              docker rm -f "${SERVICE}" 2>/dev/null || true
+              docker compose up -d "${SERVICE}"
+              FAILED=$(docker compose ps "${SERVICE}" --status exited -q)
+              if [ ! -z "${FAILED}" ]; then
+                echo "Service exited: ${SERVICE}"
+                docker compose ps "${SERVICE}"
+                docker compose logs "${SERVICE}" --tail=200
+                exit 1
+              fi
+            else
+              echo "Service ${SERVICE} not found in compose; fallback to full deploy"
+              docker compose pull
+              docker compose up -d --remove-orphans
+            fi
+
+            docker image prune -f

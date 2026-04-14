@@ -14,6 +14,7 @@ import docker_test.com.factory.IRepoFactory;
 import docker_test.com.factory.RepoFactoryImpl;
 import docker_test.com.models.product.Product;
 import docker_test.com.repository.IRepositories;
+import docker_test.com.repository.ProductRepository;
 
 @RestController("clientProductController")
 @RequestMapping("/product")
@@ -26,6 +27,7 @@ public class ProductController {
 		 this.repositories = iRepoFactory.createRepo("product");
 	 }
         
+	 
 	 
 	 
 	 @GetMapping("")
@@ -45,7 +47,16 @@ public class ProductController {
 		 
 		 return ResponseEntity.ok(product);
 	 }
-	
+	@GetMapping("/with-shop/{id}")
+	public ResponseEntity getByIdWithShop(@PathVariable Integer id) {
+		var product = ((ProductRepository)repositories).GetByIdWithShopInfo(id);
+		
+		if(product == null) {
+			return ResponseEntity.notFound().build();
+		}
+		
+		return ResponseEntity.ok(product);
+	}
 	
 }
   

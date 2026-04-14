@@ -9,6 +9,7 @@ find /app/.next/static /app/.next/server -type f -name "*.js" | while read file;
     -e "s|RUNTIME_NEXT_PUBLIC_API_URL|${NEXT_PUBLIC_API_URL}|g" \
     -e "s|RUNTIME_NEXT_PUBLIC_ADDRESS_KEY|${NEXT_PUBLIC_ADDRESS_KEY}|g" \
     -e "s|RUNTIME_NEXT_PUBLIC_PROVINCE_API|${NEXT_PUBLIC_PROVINCE_API}|g" \
+    -e "s|RUNTIME_NEXT_PUBLIC_LOGISTICS_FEE_API|${NEXT_PUBLIC_LOGISTICS_FEE_API}|g" \
     "$file"
 done
 

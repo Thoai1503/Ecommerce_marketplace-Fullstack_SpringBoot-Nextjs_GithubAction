@@ -30,9 +30,9 @@ export const UserAuthProvider = ({
   const [userId, setUserId] = useState<number | null>(null);
   useEffect(() => {
     // Validate and set role when prop changes
-    if (role === "buyer") {
+    if (role === "buyer" || role === "both") {
       setUserId(user_id);
-      setRoles("buyer");
+      setRoles(role.toString() as "buyer" | "seller");
     } else if (role === "seller") {
       setRoles("seller");
       setUserId(user_id);

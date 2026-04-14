@@ -26,7 +26,7 @@ export const getProductById = async (id: number): Promise<IProduct> => {
 
 export const getAllCategory = async (): Promise<DbCategory[]> => {
   return await http
-    .get("/category")
+    .get("/api/categories")
     .then((res) => res.data)
     .catch((error) => {
       throw error;
@@ -39,7 +39,10 @@ export const uploadToProduct = async (
 ): Promise<any> => {
   return await http
     .post(`/seller/product-image/product/${id}`, formData)
-    .then((res) => res.data)
+    .then((res) => {
+      alert("Upload successful: " + JSON.stringify(res.data));
+      return res.data;
+    })
     .catch((error) => {
       throw error;
     });
@@ -71,6 +74,21 @@ export const createProductVariant = async (
   return await http
     .post("/seller/product-variant", productVariant)
     .then((res) => res.data)
+    .catch((error) => {
+      throw error;
+    });
+};
+
+export const updateVariantImage = async (
+  variantId: number,
+  formData: FormData,
+): Promise<any> => {
+  return await http
+    .post(`/seller/product-variant/${variantId}/image`, formData)
+    .then((res) => {
+      alert("Upload successful: " + JSON.stringify(res.data));
+      return res.data;
+    })
     .catch((error) => {
       throw error;
     });

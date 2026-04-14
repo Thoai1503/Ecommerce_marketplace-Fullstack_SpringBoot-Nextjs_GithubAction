@@ -5,46 +5,315 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import { useUserAuth } from "@/context/UserAuthContext";
 import { Cart } from "@/types/data/Cart";
 import { API_URL } from "@/helper/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { CartItem, GroupedCartByShop } from "@/validators/cart";
+import { productVariantQuery } from "@/query/productVariant";
+import { productQuery } from "@/feature/client/query";
+
+type CartStateItem = CartItem & {
+  selected: boolean;
+  isGuest?: boolean;
+  guestProductId?: number;
+  guestVariantId?: number;
+};
+
+type EnrichedCartItem = CartStateItem & {
+  width?: number;
+  height?: number;
+  weight?: number;
+  stockQuantity?: number;
+};
+
+type PreLoginCartItem = {
+  user_id: null;
+  product_id: number;
+  variant_id: number;
+  quantity: number;
+};
+
+const resolveProductId = (item: any): number | null => {
+  return (
+    item?.guestProductId ??
+    item?.product?.id ??
+    item?.product?.product_id ??
+    item?.productId ??
+    item?.product_id ??
+    null
+  );
+};
+
+const resolveVariantId = (item: any): number | null => {
+  return (
+    item?.guestVariantId ??
+    item?.productVariant?.id ??
+    item?.productVariant?.variant_id ??
+    item?.variantId ??
+    item?.variant_id ??
+    null
+  );
+};
 
 const ShoppingCart: React.FC = () => {
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { userId } = useUserAuth();
-  const { data, isError, status } = useQuery(Cart.getByUserId(userId || 0));
+  const isLoggedIn = Boolean(userId);
+  const { data, isError, status } = useQuery({
+    ...Cart.getByUserId(userId || 0),
+    enabled: isLoggedIn,
+  });
 
+  const [preLoginCart, setPreLoginCart] = useState<PreLoginCartItem[]>([]);
   // State lưu danh sách cartItems từ API + selected flag
-  const [cartItems, setCartItems] = useState<
-    (CartItem & { selected: boolean })[]
-  >([]);
+  const [cartItems, setCartItems] = useState<CartStateItem[]>([]);
+  // Track items đang được update/delete để disable tương tác
+  const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
+  const [stockWarning, setStockWarning] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem("preLoginCart");
+      setPreLoginCart(raw ? JSON.parse(raw) : []);
+    } catch {
+      setPreLoginCart([]);
+    }
+  }, []);
 
   // Sync dữ liệu từ API vào state khi data thay đổi
   useEffect(() => {
+    if (!isLoggedIn) return;
     if (data) {
-      setCartItems(data.map((item) => ({ ...item, selected: false })));
+      setCartItems((prev) =>
+        data.map((item) => ({
+          ...item,
+          guestProductId: resolveProductId(item) ?? undefined,
+          guestVariantId: resolveVariantId(item) ?? undefined,
+          selected:
+            prev.find((prevItem) => prevItem.id === item.id)?.selected ?? false,
+        })),
+      );
     }
-    console.log("Fetched cart data:", data);
-  }, [data]);
+  }, [data, isLoggedIn]);
+
+  const productQueries = useQueries({
+    queries: preLoginCart.map((item) => {
+      const productId = item.product_id;
+      return {
+        ...productQuery.detail_with_shop(productId),
+        enabled: !isLoggedIn && Boolean(productId),
+      };
+    }),
+  });
+  const guestVariantQueries = useQueries({
+    queries: preLoginCart.map((item) => {
+      const variantId = item.variant_id;
+      return {
+        ...productVariantQuery.detail(variantId ?? 0),
+        enabled: !isLoggedIn && Boolean(variantId),
+      };
+    }),
+  });
+
+  useEffect(() => {
+    if (isLoggedIn) return;
+
+    if (preLoginCart.length === 0) {
+      setCartItems([]);
+      return;
+    }
+
+    const hasPendingQueries =
+      productQueries.some((q) => q.isLoading) ||
+      guestVariantQueries.some((q) => q.isLoading);
+
+    if (hasPendingQueries) return;
+
+    setCartItems((prev) => {
+      const nextItems = preLoginCart.map((item, index) => {
+        const productData = productQueries[index]?.data;
+        const variantData = guestVariantQueries[index]?.data;
+        const syntheticId = Number(
+          `9${item.product_id}${item.variant_id}${index}`,
+        );
+        const existingItem = prev.find(
+          (prevItem) => prevItem.id === syntheticId,
+        );
+
+        return {
+          id: syntheticId,
+          userId: 0,
+          quantity: item.quantity,
+          addedAt: existingItem?.addedAt ?? new Date().toISOString(),
+          updatedAt: existingItem?.updatedAt ?? new Date().toISOString(),
+          selected:
+            prev.find((prevItem) => prevItem.id === syntheticId)?.selected ??
+            false,
+          isGuest: true,
+          guestProductId: item.product_id,
+          guestVariantId: item.variant_id,
+          product: {
+            id: productData?.id ?? item.product_id,
+            name: productData?.name ?? "",
+            shop: {
+              id: productData?.shop?.id ?? 0,
+              userId: productData?.shop?.userId ?? 0,
+              shopName: productData?.shop?.shopName ?? "",
+            },
+          },
+          productVariant: variantData
+            ? {
+                id: variantData.id,
+                variantName: variantData.variantName ?? "",
+                sku: variantData.sku,
+                price: variantData.price,
+                stockQuantity: variantData.stockQuantity,
+                imageUrl: variantData.imageUrl,
+              }
+            : null,
+        } as CartStateItem;
+      });
+
+      const unchanged =
+        prev.length === nextItems.length &&
+        prev.every((prevItem, index) => {
+          const nextItem = nextItems[index];
+          if (!nextItem) return false;
+
+          return (
+            prevItem.id === nextItem.id &&
+            prevItem.quantity === nextItem.quantity &&
+            prevItem.selected === nextItem.selected &&
+            prevItem.guestProductId === nextItem.guestProductId &&
+            prevItem.guestVariantId === nextItem.guestVariantId &&
+            prevItem.product?.name === nextItem.product?.name &&
+            prevItem.productVariant?.price === nextItem.productVariant?.price &&
+            prevItem.productVariant?.stockQuantity ===
+              nextItem.productVariant?.stockQuantity
+          );
+        });
+
+      return unchanged ? prev : nextItems;
+    });
+  }, [guestVariantQueries, isLoggedIn, preLoginCart, productQueries]);
+
+  const variantQueries = useQueries({
+    queries: cartItems.map((item) => {
+      const variantId = resolveVariantId(item);
+
+      return {
+        ...productVariantQuery.detail(variantId ?? 0),
+        enabled: Boolean(variantId),
+      };
+    }),
+  });
+
+  const cartProductQueries = useQueries({
+    queries: cartItems.map((item) => {
+      const productId = resolveProductId(item);
+
+      return {
+        ...productQuery.detail_with_shop(productId ?? 0),
+        enabled: Boolean(productId),
+      };
+    }),
+  });
+
+  const enrichedCartItems = useMemo<EnrichedCartItem[]>(() => {
+    return cartItems.map((item, index) => {
+      const productData = cartProductQueries[index]?.data;
+      const variantData = variantQueries[index]?.data;
+      const currentVariant = item.productVariant;
+
+      return {
+        ...item,
+        product: {
+          id: productData?.id ?? item.product?.id ?? item.guestProductId ?? 0,
+          name:
+            productData?.name ??
+            (item.product as any)?.name ??
+            (item.product as any)?.product_name ??
+            "",
+          shop: {
+            id: productData?.shop?.id ?? item.product?.shop?.id ?? 0,
+            userId:
+              productData?.shop?.userId ?? item.product?.shop?.userId ?? 0,
+            shopName:
+              productData?.shop?.shopName ??
+              (item.product as any)?.shop?.shopName ??
+              (item.product as any)?.shop?.shop_name ??
+              "",
+          },
+        },
+        productVariant:
+          variantData || currentVariant
+            ? {
+                id: variantData?.id ?? currentVariant?.id ?? 0,
+                variantName:
+                  variantData?.variantName ??
+                  (currentVariant as any)?.variantName ??
+                  (currentVariant as any)?.variant_name ??
+                  "",
+                sku: variantData?.sku ?? currentVariant?.sku ?? "",
+                price: variantData?.price ?? currentVariant?.price ?? 0,
+                stockQuantity:
+                  variantData?.stockQuantity ??
+                  currentVariant?.stockQuantity ??
+                  0,
+                imageUrl:
+                  variantData?.imageUrl ?? currentVariant?.imageUrl ?? "",
+              }
+            : null,
+        width: variantData?.width ?? 0,
+        height: variantData?.height ?? 0,
+        weight: variantData?.weight ?? 0,
+        // Ưu tiên data fresh từ variantQuery, fallback về data gốc trong cartItem
+        stockQuantity:
+          variantData?.stockQuantity ?? item.productVariant?.stockQuantity ?? 0,
+      };
+    });
+  }, [cartItems, cartProductQueries, variantQueries]);
 
   // Lưu các item được chọn vào localStorage
   useEffect(() => {
-    const selectedItems = cartItems.filter((item) => item.selected);
+    const selectedItems = enrichedCartItems.filter((item) => item.selected);
     localStorage.setItem("selectedCartItems", JSON.stringify(selectedItems));
-  }, [cartItems]);
+  }, [enrichedCartItems]);
 
   useEffect(() => {
     if (isError) {
       alert(
         "Đã xảy ra lỗi khi tải dữ liệu giỏ hàng. Vui lòng thử lại sau. " +
           status,
-      );
+      ); //
       console.error("Error fetching cart data");
     }
-  }, [isError]);
+  }, [isError, status]);
 
   const [voucher, setVoucher] = useState("");
   const discount = 50000;
   const shippingFee = 35000;
+
+  const syncGuestCartLocalStorage = (nextItems: CartStateItem[]) => {
+    if (typeof window === "undefined") return;
+
+    const rawPayload = nextItems
+      .filter((item) => item.isGuest)
+      .map((item) => ({
+        user_id: null,
+        product_id: item.guestProductId ?? item.product?.id,
+        variant_id: item.guestVariantId ?? item.productVariant?.id,
+        quantity: item.quantity,
+      }));
+
+    const payload = rawPayload.filter(
+      (item): item is PreLoginCartItem =>
+        typeof item.product_id === "number" &&
+        typeof item.variant_id === "number",
+    );
+
+    localStorage.setItem("preLoginCart", JSON.stringify(payload));
+    setPreLoginCart(payload);
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -55,11 +324,14 @@ const ShoppingCart: React.FC = () => {
 
   // Group items theo shop
   const groupedByShop: Record<number, GroupedCartByShop> = useMemo(() => {
-    return cartItems.reduce(
+    return enrichedCartItems.reduce(
       (acc, item) => {
-        const shopId = item?.product?.shop?.id;
+        const shopId = item?.product?.shop?.id ?? 0;
         if (!acc[shopId]) {
-          acc[shopId] = { shop: item?.product?.shop, items: [] };
+          acc[shopId] = {
+            shop: item?.product?.shop,
+            items: [],
+          };
         }
         acc[shopId].items.push(item);
         return acc;
@@ -69,11 +341,11 @@ const ShoppingCart: React.FC = () => {
         GroupedCartByShop & { items: (CartItem & { selected: boolean })[] }
       >,
     );
-  }, [cartItems]);
+  }, [enrichedCartItems]);
 
   // ===== Tính toán =====
   const calculateSubtotal = () => {
-    return cartItems
+    return enrichedCartItems
       .filter((item) => item.selected)
       .reduce(
         (sum, item) => sum + (item.productVariant?.price ?? 0) * item.quantity,
@@ -85,12 +357,16 @@ const ShoppingCart: React.FC = () => {
     return calculateSubtotal() - discount + shippingFee;
   };
 
-  const selectedCount = cartItems.filter((item) => item.selected).length;
+  const selectedCount = enrichedCartItems.filter(
+    (item) => item.selected,
+  ).length;
 
   // ===== Checkbox logic =====
   const isAllSelected =
-    cartItems.length > 0 && cartItems.every((item) => item.selected);
-  const isIndeterminate = cartItems.some((i) => i.selected) && !isAllSelected;
+    enrichedCartItems.length > 0 &&
+    enrichedCartItems.every((item) => item.selected);
+  const isIndeterminate =
+    enrichedCartItems.some((item) => item.selected) && !isAllSelected;
 
   const toggleSelectAll = () => {
     setCartItems((prev) =>
@@ -125,7 +401,7 @@ const ShoppingCart: React.FC = () => {
     const allSelected = isShopAllSelected(shopId);
     setCartItems((prev) =>
       prev.map((item) =>
-        item.product.shop.id === shopId
+        item.product?.shop?.id === shopId
           ? { ...item, selected: !allSelected }
           : item,
       ),
@@ -133,18 +409,110 @@ const ShoppingCart: React.FC = () => {
   };
 
   // ===== CRUD =====
-  const updateQuantity = (itemId: number, delta: number) => {
+  const updateQuantity = async (itemId: number, delta: number) => {
+    const currentItem = enrichedCartItems.find((i) => i.id === itemId);
+    if (!currentItem) return;
+    if (updatingItems.has(itemId)) return;
+
+    const stock = currentItem.stockQuantity ?? Infinity;
+    const rawQty = Math.max(1, currentItem.quantity + delta);
+    const newQty = delta > 0 ? Math.min(rawQty, stock) : rawQty;
+
+    if (delta > 0 && rawQty > stock) {
+      setStockWarning((prev) => ({
+        ...prev,
+        [itemId]: `Chi con ${stock} san pham trong kho`,
+      }));
+    } else {
+      setStockWarning((prev) => {
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
+      });
+    }
+
+    if (newQty === currentItem.quantity) return;
+
+    if (currentItem.isGuest) {
+      setCartItems((prev) => {
+        const nextItems = prev.map((item) =>
+          item.id === itemId ? { ...item, quantity: newQty } : item,
+        );
+        syncGuestCartLocalStorage(nextItems);
+        return nextItems;
+      });
+      return;
+    }
+
+    // Optimistic update
     setCartItems((prev) =>
       prev.map((item) =>
-        item.id === itemId
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item,
+        item.id === itemId ? { ...item, quantity: newQty } : item,
       ),
     );
+    setUpdatingItems((prev) => new Set(prev).add(itemId));
+    try {
+      await Cart.updateCartItem(itemId, newQty);
+    } catch {
+      // Rollback on error
+      setCartItems((prev) =>
+        prev.map((item) =>
+          item.id === itemId
+            ? { ...item, quantity: currentItem.quantity }
+            : item,
+        ),
+      );
+    } finally {
+      setUpdatingItems((prev) => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+    }
   };
 
-  const removeItem = (itemId: number) => {
+  const removeItem = async (itemId: number) => {
+    const currentItem = cartItems.find((i) => i.id === itemId);
+    if (!currentItem) return;
+
+    if (currentItem.isGuest) {
+      setCartItems((prev) => {
+        const nextItems = prev.filter((item) => item.id !== itemId);
+        syncGuestCartLocalStorage(nextItems);
+        return nextItems;
+      });
+      setStockWarning((prev) => {
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
+      });
+      return;
+    }
+
+    if (updatingItems.has(itemId)) return;
+    setUpdatingItems((prev) => new Set(prev).add(itemId));
+    // Optimistic remove
+    const snapshot = cartItems.find((i) => i.id === itemId);
     setCartItems((prev) => prev.filter((item) => item.id !== itemId));
+    setStockWarning((prev) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
+    try {
+      await Cart.deleteCartItem(itemId);
+    } catch {
+      // Restore item on error
+      if (snapshot) {
+        setCartItems((prev) => [...prev, snapshot]);
+      }
+    } finally {
+      setUpdatingItems((prev) => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+    }
   };
 
   // ===== Suggestions (giữ mock data) =====
@@ -211,7 +579,14 @@ const ShoppingCart: React.FC = () => {
     },
   ];
 
-  if (!data && !isError) {
+  const isGuestLoading =
+    !isLoggedIn &&
+    preLoginCart.length > 0 &&
+    (productQueries.some((q) => q.isLoading) ||
+      guestVariantQueries.some((q) => q.isLoading)) &&
+    cartItems.length === 0;
+
+  if ((isLoggedIn && status === "pending") || isGuestLoading) {
     return (
       <div className="container py-5 text-center">
         <div className="spinner-border text-primary" role="status">
@@ -285,9 +660,7 @@ const ShoppingCart: React.FC = () => {
           {/* Shop Groups */}
           {Object.entries(groupedByShop)?.map(([shopIdStr, group]) => {
             const shopId = Number(shopIdStr);
-            const typedItems = group.items as (CartItem & {
-              selected: boolean;
-            })[];
+            const typedItems = group.items as EnrichedCartItem[];
 
             return (
               <div key={shopId} className="card shadow-sm mb-3">
@@ -305,7 +678,7 @@ const ShoppingCart: React.FC = () => {
                   />
                   <i className="bi bi-shop text-primary"></i>
                   <span className="fw-bold text-uppercase small">
-                    {group?.shop?.shopName}
+                    {group?.shop?.shopName || "Dang tai ten shop..."}
                   </span>
                   <i className="bi bi-chevron-right text-muted"></i>
                 </div>
@@ -342,13 +715,21 @@ const ShoppingCart: React.FC = () => {
                           </div>
                           <div className="flex-grow-1 min-w-0">
                             <h6 className="fw-bold mb-1 text-truncate">
-                              {item?.product?.name}
+                              {item?.product?.name ||
+                                "Dang tai ten san pham..."}
                             </h6>
-                            {item?.productVariant && (
+                            <div className="small text-muted mb-1">
+                              Shop:{" "}
+                              {item?.product?.shop?.shopName ||
+                                "Dang tai ten shop..."}
+                            </div>
+                            {(item?.productVariant ||
+                              item.productVariant?.id) && (
                               <div className="small text-muted d-flex align-items-center gap-1">
                                 Phân loại:{" "}
                                 <span className="text-dark fw-medium">
-                                  {item?.productVariant?.variantName}
+                                  {item?.productVariant?.variantName ||
+                                    "Dang tai ten phan loai..."}
                                 </span>
                                 <i className="bi bi-chevron-down"></i>
                               </div>
@@ -375,27 +756,65 @@ const ShoppingCart: React.FC = () => {
                             <div className="d-md-none small text-muted mb-1">
                               Số lượng
                             </div>
-                            <div className="btn-group" role="group">
+                            <div
+                              className="btn-group"
+                              role="group"
+                              style={{
+                                opacity: updatingItems.has(item.id) ? 0.6 : 1,
+                              }}
+                            >
                               <button
                                 className="btn btn-outline-secondary btn-sm"
                                 onClick={() => updateQuantity(item.id, -1)}
+                                disabled={
+                                  updatingItems.has(item.id) ||
+                                  item.quantity <= 1
+                                }
                               >
                                 <i className="bi bi-dash"></i>
                               </button>
                               <input
                                 type="text"
                                 className="form-control form-control-sm text-center"
-                                value={item.quantity}
+                                value={
+                                  updatingItems.has(item.id)
+                                    ? "..."
+                                    : item.quantity
+                                }
                                 readOnly
                                 style={{ width: "50px" }}
                               />
                               <button
                                 className="btn btn-outline-secondary btn-sm"
                                 onClick={() => updateQuantity(item.id, 1)}
+                                disabled={
+                                  updatingItems.has(item.id) ||
+                                  item.quantity >=
+                                    (item.stockQuantity ?? Infinity)
+                                }
                               >
                                 <i className="bi bi-plus"></i>
                               </button>
                             </div>
+                            {stockWarning[item.id] && (
+                              <div
+                                className="text-danger mt-1"
+                                style={{ fontSize: "11px" }}
+                              >
+                                <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                                {stockWarning[item.id]}
+                              </div>
+                            )}
+                            {(item.stockQuantity ?? 0) > 0 &&
+                              (item.stockQuantity ?? 0) <= 5 && (
+                                <div
+                                  className="text-warning mt-1"
+                                  style={{ fontSize: "11px" }}
+                                >
+                                  <i className="bi bi-clock-history me-1"></i>
+                                  Con {item.stockQuantity} san pham
+                                </div>
+                              )}
                           </div>
 
                           {/* Subtotal */}
@@ -414,10 +833,19 @@ const ShoppingCart: React.FC = () => {
                           {/* Delete */}
                           <div className="col-6 col-md-3">
                             <button
-                              className="btn btn-link text-muted p-2"
+                              className="btn btn-link text-danger p-2"
                               onClick={() => removeItem(item.id)}
+                              disabled={updatingItems.has(item.id)}
+                              title="Xoa san pham"
                             >
-                              <i className="bi bi-trash"></i>
+                              {updatingItems.has(item.id) ? (
+                                <span
+                                  className="spinner-border spinner-border-sm"
+                                  role="status"
+                                />
+                              ) : (
+                                <i className="bi bi-trash"></i>
+                              )}
                             </button>
                           </div>
                         </div>
@@ -523,7 +951,13 @@ const ShoppingCart: React.FC = () => {
                 <button
                   className="btn btn-primary w-100 py-3 fw-bold d-flex align-items-center justify-content-center gap-2"
                   disabled={selectedCount === 0}
-                  onClick={() => (window.location.href = "/checkout")}
+                  onClick={() => {
+                    if (isLoggedIn) {
+                      window.location.href = "/checkout";
+                    } else {
+                      window.location.href = "/login?redirect=cart";
+                    }
+                  }}
                 >
                   MUA HÀNG ({selectedCount})
                   <i className="bi bi-arrow-right"></i>

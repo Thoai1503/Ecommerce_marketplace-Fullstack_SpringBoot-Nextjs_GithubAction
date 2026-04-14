@@ -3,15 +3,19 @@ package docker_test.com.controllers;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import docker_test.com.dto.LoginRequest;
 import docker_test.com.dto.RegisterRequest;
 import docker_test.com.models.User;
 import docker_test.com.repository.UserRepository;
 import docker_test.com.utils.PasswordUtil;
+import docker_test.com.services.CloudinaryService;
 import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
@@ -20,6 +24,9 @@ import jakarta.servlet.http.HttpServletResponse;
 public class UserController {
 
     private final UserRepository userRepository;
+    
+    @Autowired
+    private CloudinaryService cloudinaryService;
 
     public UserController() {
         this.userRepository = UserRepository.Instance();
@@ -57,7 +64,7 @@ public class UserController {
     /* ================= REGISTER ================= */
     // POST http://localhost:8000/users/register
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest req) {
+    public ResponseEntity<?> register(@RequestBody RegisterRequest req,HttpServletResponse response) {
 
         // ✅ validate
         if (req.getEmail() == null || req.getEmail().isBlank()
@@ -85,10 +92,30 @@ public class UserController {
             );
 
             User created = userRepository.Create(user);
+            
+            System.out.println("Created user: " + created.toString());
 
             // ❌ không trả password
             created.setPasswordHash(null);
-
+            
+            ResponseCookie roleCookie = ResponseCookie.from("role", created.getUserType())
+        		    .httpOnly(true)
+        		    .secure(false)          // requires HTTPS
+        		    .path("/")
+        		    .maxAge(7 * 24 * 60 * 60)
+        		    .sameSite("Lax")
+        		    .build();
+        		response.addHeader("Set-Cookie", roleCookie.toString());
+                ResponseCookie userCookie = ResponseCookie.from("user", String.valueOf(created.getId()))
+            		    .httpOnly(true)
+            		    .secure(false)          // requires HTTPS
+            		    .path("/")
+            		    .maxAge(7 * 24 * 60 * 60)
+            		    .sameSite("Lax")
+            		    .build();
+            		response.addHeader("Set-Cookie", userCookie.toString());
+            
+            System.out.println("User registered successfully: " + created.toString());
             return ResponseEntity
                     .status(HttpStatus.CREATED)
                     .body(created);
@@ -208,6 +235,48 @@ public class UserController {
         }
 
         User updated = userRepository.Update(existing);
+
+        // ❌ KHÔNG TRẢ PASSWORD
+        updated.setPasswordHash(null);
+
+        return ResponseEntity.ok(updated);
+    }
+    
+    /* ================= UPDATE AVATAR ================= */
+    // POST http://localhost:8000/users/{id}/avatar
+    @PostMapping(value = "/{id}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateAvatar(
+            @PathVariable int id,
+            @RequestPart(value = "avatar", required = false) MultipartFile avatar
+    ) {
+        User existing = userRepository.GetById(id);
+
+        if (existing == null) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("User not found");
+        }
+
+        String avatarUrl = null;
+        if (avatar != null && !avatar.isEmpty()) {
+            try {
+                // Upload to Cloudinary
+                avatarUrl = cloudinaryService.uploadFile(avatar);
+            } catch (Exception e) {
+                return ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Avatar upload failed: " + e.getMessage());
+            }
+        }
+
+        // Update avatar in database
+        User updated = userRepository.updateAvatar(id, avatarUrl);
+
+        if (updated == null) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to update avatar");
+        }
 
         // ❌ KHÔNG TRẢ PASSWORD
         updated.setPasswordHash(null);

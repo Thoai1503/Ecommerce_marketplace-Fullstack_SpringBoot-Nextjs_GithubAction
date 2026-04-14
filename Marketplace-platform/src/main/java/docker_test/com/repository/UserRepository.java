@@ -172,7 +172,30 @@ public class UserRepository implements IRepositories<User> {
         return false;
     }
 
+    /* ================= UPDATE AVATAR ================= */
 
+    public User updateAvatar(int id, String avatarUrl) {
+
+        String sql = "UPDATE user SET avatar_url = ?, updated_at = ? WHERE id = ?";
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, avatarUrl);
+            ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setLong(3, id);
+
+            if (ps.executeUpdate() > 0) {
+                return GetById(id);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /* ================= EXTRA ================= */
 
     public boolean existsByEmail(String email) {
 

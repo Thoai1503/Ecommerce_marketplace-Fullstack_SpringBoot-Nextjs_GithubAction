@@ -11,7 +11,7 @@ const LoginForm = () => {
     console.log("API_URL:", API_URL);
   }, []);
   const searchParams = useSearchParams();
-  const redirectPath = searchParams.get("redirect") || "/";
+  const redirectPath = searchParams.get("redirect");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -92,7 +92,9 @@ const LoginForm = () => {
       }; SameSite=Lax`;
 
       // Sau khi login thành công, điều hướng về trang mong muốn (nếu có ?redirect=...)
-      window.location.href = redirectPath;
+      window.location.href = redirectPath
+        ? `/${encodeURIComponent(redirectPath)}`
+        : "/";
     } catch (err) {
       setErrors({ general: "Không kết nối được server" });
     } finally {
@@ -207,7 +209,12 @@ const LoginForm = () => {
           <p className="text-sm text-gray-600">
             Don’t have an account?
             <a
-              href="/register"
+              href={
+                `/register` +
+                (redirectPath
+                  ? `${redirectPath ? "?redirect=" + encodeURIComponent(redirectPath) : ""}`
+                  : "")
+              }
               className="ml-1 text-blue-600 font-semibold hover:underline"
             >
               Register

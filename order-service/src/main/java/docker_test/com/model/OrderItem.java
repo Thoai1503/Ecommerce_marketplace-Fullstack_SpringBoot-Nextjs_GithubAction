@@ -50,6 +50,9 @@ public class OrderItem {
 	@Column(name = "variant_name", nullable = false)
 	private String variantName;
 	
+	@Column(name ="image")
+	private String image;
+	
 	@Column(name = "quantity", nullable = false)
 	private Integer quantity;
 	

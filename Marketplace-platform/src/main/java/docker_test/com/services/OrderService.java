@@ -46,7 +46,8 @@ public class OrderService {
         Map<String, Integer> statusStats = orderRepository.countByStatus();
 
         Double pendingAmount = orderRepository.getPendingTotalAmount();
-
+   System.out.println("Orders: " + orders);
+   orders.forEach(order -> System.out.println("Order ID: " + order.getOrderId() + ", Status: " + order.getOrderStatus() + ", Amount: " + order.getTotalAmount()));
         return new OrderPageResponse(
                 orders,
                 totalRecords,
@@ -56,4 +57,11 @@ public class OrderService {
                 pendingAmount
         );
     }
+
+        public Order getAdminOrderById(Long id) {
+                if (id == null) {
+                        return null;
+                }
+                return orderRepository.findById(id);
+        }
 }

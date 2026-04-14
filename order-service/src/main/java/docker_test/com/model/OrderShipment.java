@@ -33,6 +33,10 @@ public class OrderShipment {
 	private Long shopId;
     @Column(name = "tracking_number", nullable = false)
 	private String trackingNumber;
+    @Column(name = "shipping_fee", nullable = false)
+    	private Double shippingFee;
+     @Column(name = "total_amount", nullable = false)
+     		private Double totalAmount;
      @Column(name = "carrier_name", nullable = false)
 	private String carrierName;
      @Column(name = "shipping_status", nullable = false)	

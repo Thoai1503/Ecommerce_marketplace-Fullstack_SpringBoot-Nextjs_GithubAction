@@ -1,0 +1,16 @@
+name: Deploy logistics-frontend
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "logistics-frontend/**"
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      context_path: ./logistics-frontend
+      image_name: logistics-frontend
+      service_name: logistics-frontend
+    secrets: inherit
