@@ -26,6 +26,11 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
   );
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
 
+  const formatPrice = (price?: number) => {
+    if (!price) return "";
+    return new Intl.NumberFormat("vi-VN").format(price);
+  };
+
   // Lấy ảnh hiển thị: ưu tiên ảnh đang hover, sau đó là ảnh chính
   const displayImage = hoveredImage || mainImage;
 
@@ -158,12 +163,14 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
 
                           <div className="mb-5">
                             <h4 className="mb-1">
-                              $49.00{" "}
-                              <span className="text-muted text-decoration-line-through ms-2">
-                                $69.00
-                              </span>{" "}
-                              <span className="text-warning">(45% OFF)</span>
+                              {formatPrice(variant?.price ?? data.price)}đ
+                              {data.original_price && (
+                                <span className="text-muted text-decoration-line-through ms-2">
+                                  {formatPrice(data.original_price)}đ
+                                </span>
+                              )}
                             </h4>
+
                             <small className="text-muted">
                               inclusive of all taxes
                             </small>
@@ -171,7 +178,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
 
                           {/* Color */}
                           <div className="mb-4">
-                            <h4 className="mb-3">Phân Loại</h4>
+                            <h4 className="mb-3">Classify</h4>
 
                             <div className="d-flex flex-wrap gap-3">
                               {/* Variant 1 - màu xanh */}
