@@ -68,7 +68,6 @@ public class OrderService {
         maybeThrowSimulatedRollback(dto, saved.getId());
         List<OrderShipmentDTO> orderShipments = dto.getOrder_shipment();
         orderShipments.forEach(os -> {
-
         	var orderShipmetDto= new OrderShipment();
 			orderShipmetDto.setOrderId(saved.getId());
 			orderShipmetDto.setCarrierName("LOG");
