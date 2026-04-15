@@ -160,10 +160,8 @@ public class ProductRepository implements IRepositories<Product> {
 				// product.setImage_url(rs.getString("image_url"));
 				product.setPrice(rs.getDouble("price"));
 
-				// Lấy JSON dưới dạng String
 				String variantsJson = rs.getString("variants");
 
-				// Parse JSON String thành List<VariantDTO>
 				if (variantsJson != null && !variantsJson.equals("[]")) {
 					List<ProductVariant> variants = mapper.readValue(variantsJson,
 							mapper.getTypeFactory().constructCollectionType(List.class, ProductVariant.class));
@@ -173,7 +171,6 @@ public class ProductRepository implements IRepositories<Product> {
 				}
 				String imagesJson = rs.getString("images");
 
-				// Parse JSON String thành List<ProductImage>
 				if (imagesJson != null && !imagesJson.equals("[]")) {
 					List<ProductImage> images = mapper.readValue(imagesJson,
 							mapper.getTypeFactory().constructCollectionType(List.class, ProductImage.class));
@@ -274,10 +271,8 @@ public class ProductRepository implements IRepositories<Product> {
 				product.setImage_url(rs.getString("image_url"));
 				product.setPrice(rs.getDouble("price"));
 
-				// Lấy JSON dưới dạng String
 				String variantsJson = rs.getString("variants");
 
-				// Parse JSON String thành List<VariantDTO>
 				if (variantsJson != null && !variantsJson.equals("[]")) {
 					List<ProductVariant> variants = mapper.readValue(variantsJson,
 							mapper.getTypeFactory().constructCollectionType(List.class, ProductVariant.class));
@@ -334,10 +329,8 @@ public class ProductRepository implements IRepositories<Product> {
 				product.setProduct_name(rs.getString("product_name"));
 				product.setPrice(rs.getDouble("price"));
 
-				// Lấy JSON dưới dạng String
 				String variantsJson = rs.getString("variants");
 
-				// Parse JSON String thành List<VariantDTO>
 				if (variantsJson != null && !variantsJson.equals("[]")) {
 					List<ProductVariant> variants = mapper.readValue(variantsJson,
 							mapper.getTypeFactory().constructCollectionType(List.class, ProductVariant.class));
@@ -389,7 +382,6 @@ public class ProductRepository implements IRepositories<Product> {
 	        e.printStackTrace();
 	    }
 	 return list;
-	 //get product by id with shop info
 	}
 	
 	 public Product GetByIdWithShopInfo(int id) {

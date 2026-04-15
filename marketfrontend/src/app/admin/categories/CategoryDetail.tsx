@@ -77,6 +77,7 @@ export default function CategoryDetail() {
   const [openValueModal, setOpenValueModal] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [openBrandModal, setOpenBrandModal] = useState(false);
+  const [showAllBrands, setShowAllBrands] = useState(false);
   const { brands } = useBrands();
   const {
     categoryBrands,
@@ -109,6 +110,10 @@ export default function CategoryDetail() {
       })
       .filter(Boolean);
   }, [categoryBrands, brands]);
+
+  const displayedBrands = useMemo(() => {
+    return showAllBrands ? linkedBrands : linkedBrands.slice(0, 5);
+  }, [linkedBrands, showAllBrands]);
 
   const toggleAttr = (attrId: number) => {
     setCollapsedAttrs((prev) =>
@@ -392,7 +397,7 @@ export default function CategoryDetail() {
                 <p className="text-sm text-slate-400">No brands</p>
               ) : (
                 <div className="space-y-2">
-                  {linkedBrands.map((b: any) => {
+                  {displayedBrands.map((b: any) => {
                     return (
                       <div
                         key={b.categoryBrandId}
@@ -431,6 +436,16 @@ export default function CategoryDetail() {
                       </div>
                     );
                   })}
+                  {linkedBrands.length > 5 && (
+                    <div className="text-center mt-3">
+                      <button
+                        onClick={() => setShowAllBrands(!showAllBrands)}
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        {showAllBrands ? "Collapse" : "See more"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -694,11 +709,10 @@ export default function CategoryDetail() {
           try {
             await createValue({
               attribute_id: selectedAttr.id,
-              unit_id: selectedUnit?.id ?? null, // 🔥 FIX CHUẨN
+              unit_id: selectedUnit?.id ?? null,
               value,
             });
 
-            // 🔥 SUCCESS MESSAGE
             const label = selectedUnit
               ? `${value} ${selectedUnit.symbol}`
               : value;
@@ -739,10 +753,8 @@ export default function CategoryDetail() {
               ),
             );
 
-            // 🔥 refresh lại danh sách brand
             refreshBrand?.();
 
-            // 🔥 đóng modal
             setOpenBrandModal(false);
           } catch (err) {
             console.error("Add brand failed:", err);

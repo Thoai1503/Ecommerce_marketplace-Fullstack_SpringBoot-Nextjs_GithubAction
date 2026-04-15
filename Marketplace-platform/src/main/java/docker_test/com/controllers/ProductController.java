@@ -19,51 +19,43 @@ import docker_test.com.repository.ProductRepository;
 @RestController("clientProductController")
 @RequestMapping("/product")
 public class ProductController {
-	 private final IRepositories repositories;
-	 private final IRepoFactory iRepoFactory;
-	 
-	 public ProductController (RepoFactoryImpl factoryImpl) {
-		 this.iRepoFactory= factoryImpl;
-		 this.repositories = iRepoFactory.createRepo("product");
-	 }
-        
-	 
-	 
-	 
-	 @GetMapping("")
-	 public ResponseEntity getAll() {
-		 var list = repositories.GetAll();
-		 
-		 return ResponseEntity.ok(list);
-	 } 
-	
-	 @GetMapping("/{id}")
-	 public ResponseEntity getById(@PathVariable Integer id) {
-		 var product = repositories.GetById(id);
-		 
-		 if(product == null) {
-			 return ResponseEntity.notFound().build();
-		 }
-		 
-		 return ResponseEntity.ok(product);
-	 }
-	@GetMapping("/with-shop/{id}")
-	public ResponseEntity getByIdWithShop(@PathVariable Integer id) {
-		var product = ((ProductRepository)repositories).GetByIdWithShopInfo(id);
-		
-		if(product == null) {
+	private final IRepositories repositories;
+	private final IRepoFactory iRepoFactory;
+
+	public ProductController(RepoFactoryImpl factoryImpl) {
+		this.iRepoFactory = factoryImpl;
+		this.repositories = iRepoFactory.createRepo("product");
+	}
+
+	@GetMapping("")
+	public ResponseEntity getAll() {
+		var list = repositories.GetAll();
+
+		return ResponseEntity.ok(list);
+	}
+
+	@GetMapping("/{id}")
+	public ResponseEntity getById(@PathVariable Integer id) {
+		var product = repositories.GetById(id);
+
+		if (product == null) {
 			return ResponseEntity.notFound().build();
 		}
-		
+
 		return ResponseEntity.ok(product);
 	}
-	
+
+	@GetMapping("/with-shop/{id}")
+	public ResponseEntity getByIdWithShop(@PathVariable Integer id) {
+		var product = ((ProductRepository) repositories).GetByIdWithShopInfo(id);
+
+		if (product == null) {
+			return ResponseEntity.notFound().build();
+		}
+
+		return ResponseEntity.ok(product);
+	}
+
 }
-  
 
- //
-
-
-
-
-
+//
