@@ -225,6 +225,47 @@ export interface ShipmentStatusHistory {
   updatedAt: string;
 }
 
+export type AdjustmentStatus =
+  | "PENDING_BUYER"
+  | "ACCEPTED_BY_BUYER"
+  | "REJECTED_BY_BUYER"
+  | "CANCELLED_BY_SHOP"
+  | "EXPIRED";
+
+export interface AdjustmentItem {
+  id: string;
+  order_item_id: string;
+  product_id: string;
+  variant_id: string;
+  product_name: string;
+  variant_name?: string;
+  old_quantity: number;
+  new_quantity: number;
+  unit_price: number;
+  old_total: number;
+  new_total: number;
+  diff_total: number;
+}
+
+export interface AdjustmentRequest {
+  id: string;
+  request_code: string;
+  order_shipment_id: string;
+  order_id: string;
+  shop_id: string;
+  status: AdjustmentStatus;
+  shop_reason?: string;
+  buyer_note?: string;
+  total_original_amount: number;
+  total_adjusted_amount: number;
+  total_diff_amount: number;
+  expires_at?: string;
+  responded_at?: string;
+  items: AdjustmentItem[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Shipment {
   id: string;
   order_id: string;
@@ -239,6 +280,10 @@ export interface Shipment {
   shipping_fee?: number;
   created_at: string;
   updated_at: string;
+  adjustment_request?: AdjustmentRequest;
+  adjustment_required?: boolean;
+  business_status?: string;
+  recipient?: any;
 }
 
 export interface Product {

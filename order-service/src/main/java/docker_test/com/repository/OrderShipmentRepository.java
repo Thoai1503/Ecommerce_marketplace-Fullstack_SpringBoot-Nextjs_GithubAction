@@ -87,4 +87,11 @@ public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Lo
 			""", nativeQuery = true)
 	
 	Optional<OrderShipmentWithOrderAndRecipientProjection> findShipmentDetailsById(@Param("id") Long id);
+//List<	Object> findStatusHistoryByShipmentId(Long shipmentId);
+	
+	
+	
+ 
+//	findStatusHistoryByShipmentId(Long shipmentId);
+	    
 }

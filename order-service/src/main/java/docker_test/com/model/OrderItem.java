@@ -61,6 +61,12 @@ public class OrderItem {
 	
 	@Column(name = "total_price", nullable = false)
 	private Double totalPrice;
+
+	@Column(name = "final_quantity")
+	private Integer finalQuantity;
+
+	@Column(name = "is_adjusted", nullable = false)
+	private Boolean isAdjusted;
 	
 //	@Column(name = "created_at", nullable = false)
 //	private LocalDateTime createdAt;
