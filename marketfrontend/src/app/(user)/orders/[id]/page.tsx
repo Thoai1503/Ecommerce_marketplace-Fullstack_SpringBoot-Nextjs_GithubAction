@@ -16,7 +16,13 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { Order, OrderItem, ShipmentStatus } from "@/types";
+import {
+  AdjustmentItem,
+  AdjustmentRequest,
+  Order,
+  OrderItem,
+  ShipmentStatus,
+} from "@/types";
 import { API_URL } from "@/helper/api";
 
 const orderStatusLabel: Record<Order["status"], string> = {
@@ -105,6 +111,119 @@ const pickText = (...values: unknown[]) => {
   return found == null ? "" : String(found);
 };
 
+// Validate and map adjustment request from API response
+const mapAdjustmentRequest = (raw: any): AdjustmentRequest | undefined => {
+  if (!raw) return undefined;
+
+  // Validate required fields
+  const id = String(raw?.id ?? raw?.adjustmentRequestId ?? "");
+  const status = String(raw?.status ?? "").toUpperCase();
+
+  // Check if it's a valid adjustment status
+  const validStatuses = [
+    "PENDING_BUYER",
+    "ACCEPTED_BY_BUYER",
+    "REJECTED_BY_BUYER",
+    "CANCELLED_BY_SHOP",
+    "EXPIRED",
+  ];
+
+  if (!id || !validStatuses.includes(status)) {
+    console.warn("Invalid adjustment request data:", { id, status });
+    return undefined;
+  }
+
+  try {
+    // Map items and calculate totals
+    const mappedItems: AdjustmentItem[] = Array.isArray(raw?.items)
+      ? raw.items
+          .map((item: any) => {
+            const itemId = String(item?.id ?? item?.adjustmentItemId ?? "");
+            if (!itemId) return null; // Skip invalid items
+
+            return {
+              id: itemId,
+              order_item_id: String(
+                item?.orderItemId ?? item?.order_item_id ?? "",
+              ),
+              product_id: String(item?.productId ?? item?.product_id ?? ""),
+              variant_id: String(item?.variantId ?? item?.variant_id ?? ""),
+              product_name: String(
+                item?.productName ?? item?.product_name ?? "",
+              ),
+              variant_name:
+                item?.variantName ?? item?.variant_name ?? undefined,
+              old_quantity: asNumber(
+                item?.oldQuantity ?? item?.old_quantity,
+                0,
+              ),
+              new_quantity: asNumber(
+                item?.newQuantity ?? item?.new_quantity,
+                0,
+              ),
+              unit_price: asNumber(item?.unitPrice ?? item?.unit_price, 0),
+              old_total: asNumber(item?.oldTotal ?? item?.old_total, 0),
+              new_total: asNumber(item?.newTotal ?? item?.new_total, 0),
+              diff_total: asNumber(item?.diffTotal ?? item?.diff_total, 0),
+            };
+          })
+          .filter(Boolean)
+      : [];
+
+    // Calculate totals from items if API returns 0
+    let totalOriginal = asNumber(
+      raw?.totalOriginalAmount ?? raw?.total_original_amount,
+      0,
+    );
+    let totalAdjusted = asNumber(
+      raw?.totalAdjustedAmount ?? raw?.total_adjusted_amount,
+      0,
+    );
+    let totalDiff = asNumber(raw?.totalDiffAmount ?? raw?.total_diff_amount, 0);
+
+    // If API didn't provide totals, calculate from items
+    if (totalOriginal === 0 && mappedItems.length > 0) {
+      totalOriginal = mappedItems.reduce(
+        (sum, item) => sum + item.old_total,
+        0,
+      );
+      totalAdjusted = mappedItems.reduce(
+        (sum, item) => sum + item.new_total,
+        0,
+      );
+      totalDiff = mappedItems.reduce((sum, item) => sum + item.diff_total, 0);
+    }
+
+    return {
+      id,
+      request_code: String(raw?.requestCode ?? raw?.request_code ?? ""),
+      order_shipment_id: String(
+        raw?.orderShipmentId ?? raw?.order_shipment_id ?? "",
+      ),
+      order_id: String(raw?.orderId ?? raw?.order_id ?? ""),
+      shop_id: String(raw?.shopId ?? raw?.shop_id ?? ""),
+      status: status as any,
+      shop_reason: raw?.shopReason ?? raw?.shop_reason ?? undefined,
+      buyer_note: raw?.buyerNote ?? raw?.buyer_note ?? undefined,
+      total_original_amount: totalOriginal,
+      total_adjusted_amount: totalAdjusted,
+      total_diff_amount: totalDiff,
+      expires_at: raw?.expiresAt ?? raw?.expires_at ?? undefined,
+      responded_at: raw?.respondedAt ?? raw?.responded_at ?? undefined,
+      items: mappedItems,
+      created_at: String(
+        raw?.createdAt ?? raw?.created_at ?? new Date().toISOString(),
+      ),
+      updated_at: String(
+        raw?.updatedAt ?? raw?.updated_at ?? new Date().toISOString(),
+      ),
+    };
+  } catch (error) {
+    console.error("Error mapping adjustment request:", error, raw);
+    return undefined;
+  }
+};
+
 const toOrderItem = (raw: any): OrderItem => ({
   id: String(raw?.id ?? raw?.itemId ?? ""),
   productName: pickText(raw?.productName, raw?.product_name, "San pham"),
@@ -117,12 +236,14 @@ const toOrderItem = (raw: any): OrderItem => ({
   sku: pickText(
     raw?.sku,
     raw?.variantSku,
+    // Fallback to variant name or IDs if no SKU available
+    raw?.variantName,
     raw?.variant_name,
-    raw?.productId,
+    `P${raw?.productId || ""}-V${raw?.variantId || ""}`,
     "N/A",
   ),
   variant:
-    pickText(raw?.variant, raw?.variantName, raw?.variant_name) || undefined,
+    pickText(raw?.variantName, raw?.variant_name, raw?.variant) || undefined,
   quantity: asNumber(raw?.quantity, 0),
   price: asNumber(raw?.price, 0),
   status: "Ready" as const,
@@ -354,6 +475,86 @@ export default function UserOrderDetailPage() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [adjustmentActionStatus, setAdjustmentActionStatus] = useState<
+    Record<string, "idle" | "pending" | "accepted" | "rejected">
+  >({});
+  const [adjustmentActionMessage, setAdjustmentActionMessage] = useState<
+    Record<string, string>
+  >({});
+
+  const handleAdjustmentDecision = async (
+    shipmentId: string,
+    requestId: string,
+    decision: "accepted" | "rejected",
+  ) => {
+    setAdjustmentActionStatus((prev) => ({
+      ...prev,
+      [shipmentId]: "pending",
+    }));
+
+    const newStatus =
+      decision === "accepted" ? "ACCEPTED_BY_BUYER" : "REJECTED_BY_BUYER";
+
+    try {
+      // Use POST method with proper URL pattern
+      const response = await fetch(
+        `${API_URL}/api/orders/${id}/shipments/${shipmentId}/adjustment-request/${requestId}/${decision}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}), // Empty body for now, backend may not need it
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      setAdjustmentActionMessage((prev) => ({
+        ...prev,
+        [shipmentId]:
+          decision === "accepted"
+            ? "Bạn đã chấp nhận yêu cầu điều chỉnh."
+            : "Bạn đã từ chối yêu cầu điều chỉnh.",
+      }));
+    } catch (error) {
+      console.error("Adjustment decision failed:", error);
+      setAdjustmentActionMessage((prev) => ({
+        ...prev,
+        [shipmentId]:
+          "Đã cập nhật trạng thái tạm thời. Nếu backend chưa hỗ trợ hành động này, vui lòng kiểm tra lại sau.",
+      }));
+    } finally {
+      setAdjustmentActionStatus((prev) => ({
+        ...prev,
+        [shipmentId]: "idle",
+      }));
+      setOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              shipments: prev.shipments?.map((shipment) =>
+                shipment.id !== shipmentId
+                  ? shipment
+                  : {
+                      ...shipment,
+                      adjustment_request: shipment.adjustment_request
+                        ? {
+                            ...shipment.adjustment_request,
+                            status: newStatus as
+                              | "ACCEPTED_BY_BUYER"
+                              | "REJECTED_BY_BUYER",
+                            responded_at: new Date().toISOString(),
+                          }
+                        : shipment.adjustment_request,
+                    },
+              ),
+            }
+          : prev,
+      );
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -385,74 +586,135 @@ export default function UserOrderDetailPage() {
               ? orderData.orderShipments
               : [];
 
-        const shipmentIds = new Set<number>();
+        // Extract shipment IDs - handle both 'id' and 'shipmentId' fields
+        const shipmentIdMap = new Map<number, any>();
         seedShipments.forEach((s) => {
-          const sid = asNumber(s?.shipmentId ?? s?.id ?? s?.shipment_id, 0);
-          if (sid > 0) shipmentIds.add(sid);
+          const sid = asNumber(s?.id ?? s?.shipmentId ?? s?.shipment_id, 0);
+          if (sid > 0) {
+            shipmentIdMap.set(sid, s); // Store original shipment data
+          }
         });
+
+        // Also extract from items if shipmentId is there
         rawItems.forEach((item: any) => {
           const sid = asNumber(item?.shipmentId ?? item?.shipment_id, 0);
-          if (sid > 0) shipmentIds.add(sid);
+          if (sid > 0 && !shipmentIdMap.has(sid)) {
+            shipmentIdMap.set(sid, {});
+          }
         });
 
         const shipmentDetails = await Promise.all(
-          Array.from(shipmentIds).map(async (shipmentId) => {
-            const detail = await getFirstSuccess<any>([
-              `/api/orders/shipments/${shipmentId}`,
-            ]);
-            return detail;
-          }),
+          Array.from(shipmentIdMap.entries()).map(
+            async ([shipmentId, seedData]) => {
+              const detail = await getFirstSuccess<any>([
+                `/api/orders/shipments/${shipmentId}`,
+              ]);
+              return { shipmentId, seedData, detail };
+            },
+          ),
         );
 
-        const shipments = shipmentDetails.filter(Boolean).map((raw) => {
-          const shipment = raw || {};
-          const recipient = shipment?.recipient || {};
-          const items = Array.isArray(shipment?.items) ? shipment.items : [];
+        const shipments = await Promise.all(
+          shipmentDetails
+            .filter((s) => s.detail)
+            .map(async ({ shipmentId, seedData, detail: raw }) => {
+              const shipment = raw || {};
+              const recipient = shipment?.recipient || {};
+              const items = Array.isArray(shipment?.items)
+                ? shipment.items
+                : [];
 
-          return {
-            id: String(shipment?.shipmentId ?? shipment?.id ?? ""),
-            order_id: String(shipment?.orderId ?? shipment?.order_id ?? id),
-            shop_id: String(shipment?.shopId ?? shipment?.shop_id ?? ""),
-            shopName: pickText(
-              shipment?.shopName,
-              `Shop #${shipment?.shopId ?? shipment?.shop_id ?? "-"}`,
-            ),
-            tracking_number: pickText(
-              shipment?.trackingNumber,
-              shipment?.tracking_number,
-            ),
-            carrier_name:
-              pickText(shipment?.carrierName, shipment?.carrier_name) ||
-              undefined,
-            shipping_status: normalizeShipmentStatus(
-              shipment?.shippingStatus ?? shipment?.shipping_status,
-            ),
-            estimated_delivery_at:
-              pickText(
-                shipment?.estimatedDeliveryAt,
-                shipment?.estimated_delivery_at,
-              ) || undefined,
-            created_at: pickText(
-              shipment?.createdAt,
-              shipment?.created_at,
-              orderData?.createdAt,
-              new Date().toISOString(),
-            ),
-            updated_at: pickText(
-              shipment?.updatedAt,
-              shipment?.updated_at,
-              orderData?.updatedAt,
-              new Date().toISOString(),
-            ),
-            shipping_fee: asNumber(
-              shipment?.shippingFee ?? shipment?.shipping_fee,
-              0,
-            ),
-            items: items.map(toOrderItem),
-            statusHistory: ensurePendingFirst(shipment?.statusHistory),
-            recipient,
-          };
-        });
+              // Use businessStatus from either seed data or detail, prefer seed data
+              let business_status =
+                seedData?.businessStatus ||
+                shipment?.businessStatus ||
+                "NORMAL";
+              const adjustment_required =
+                seedData?.adjustmentRequired ||
+                shipment?.adjustmentRequired ||
+                false;
+
+              // Fetch adjustment request if exists
+              let adjustmentRequest: AdjustmentRequest | undefined;
+
+              if (adjustment_required || business_status !== "NORMAL") {
+                try {
+                  const adjustData = await fetchJson<any>(
+                    `/api/orders/shipments/${shipmentId}/adjustment-request`,
+                  );
+                  adjustmentRequest = mapAdjustmentRequest(adjustData);
+                } catch (error) {
+                  console.warn(
+                    `Failed to fetch adjustment request for shipment ${shipmentId}:`,
+                    error,
+                  );
+                }
+              }
+
+              return {
+                id: String(shipmentId),
+                order_id: String(shipment?.orderId ?? shipment?.order_id ?? id),
+                shop_id: String(
+                  seedData?.shopId ||
+                    shipment?.shopId ||
+                    shipment?.shop_id ||
+                    "",
+                ),
+                shopName: pickText(
+                  shipment?.shopName,
+                  `Shop #${seedData?.shopId || shipment?.shopId || "-"}`,
+                ),
+                tracking_number: pickText(
+                  seedData?.trackingNumber ||
+                    shipment?.trackingNumber ||
+                    shipment?.tracking_number,
+                ),
+                carrier_name:
+                  pickText(
+                    seedData?.carrierName ||
+                      shipment?.carrierName ||
+                      shipment?.carrier_name,
+                  ) || undefined,
+                shipping_status: normalizeShipmentStatus(
+                  seedData?.shippingStatus ||
+                    shipment?.shippingStatus ||
+                    shipment?.shipping_status,
+                ),
+                estimated_delivery_at:
+                  pickText(
+                    shipment?.estimatedDeliveryAt,
+                    shipment?.estimated_delivery_at,
+                  ) || undefined,
+                created_at: pickText(
+                  seedData?.createdAt ||
+                    shipment?.createdAt ||
+                    shipment?.created_at ||
+                    orderData?.createdAt ||
+                    new Date().toISOString(),
+                ),
+                updated_at: pickText(
+                  seedData?.updatedAt ||
+                    shipment?.updatedAt ||
+                    shipment?.updated_at ||
+                    orderData?.updatedAt ||
+                    new Date().toISOString(),
+                ),
+                shipping_fee: asNumber(
+                  seedData?.shippingFee ||
+                    shipment?.shippingFee ||
+                    seedData?.shipping_fee ||
+                    shipment?.shipping_fee,
+                  0,
+                ),
+                items: items.map(toOrderItem),
+                statusHistory: ensurePendingFirst(shipment?.statusHistory),
+                recipient,
+                adjustment_request: adjustmentRequest,
+                adjustment_required,
+                business_status,
+              };
+            }),
+        );
 
         const fallbackItems = rawItems.map(toOrderItem);
         const orderItems: OrderItem[] =
@@ -735,16 +997,62 @@ export default function UserOrderDetailPage() {
                         const currentStep = shipmentStepOrder.indexOf(
                           shipment.shipping_status,
                         );
+                        const adjustmentRequest = shipment.adjustment_request;
 
                         return (
                           <div key={shipment.id} style={styles.shipmentItem}>
                             <div style={styles.shipmentHead}>
-                              <p
-                                className="mb-1 fw-bold"
-                                style={{ fontSize: 13 }}
-                              >
-                                {shipment.shopName}
-                              </p>
+                              <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <p
+                                  className="mb-1 fw-bold"
+                                  style={{ fontSize: 13 }}
+                                >
+                                  {shipment.shopName}
+                                </p>
+                                {adjustmentRequest && (
+                                  <span
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: 700,
+                                      padding: "4px 8px",
+                                      borderRadius: 999,
+                                      background:
+                                        adjustmentRequest.status ===
+                                        "PENDING_BUYER"
+                                          ? "#fef3c7"
+                                          : adjustmentRequest.status ===
+                                              "ACCEPTED_BY_BUYER"
+                                            ? "#dcfce7"
+                                            : adjustmentRequest.status ===
+                                                "REJECTED_BY_BUYER"
+                                              ? "#fee2e2"
+                                              : "#e2e8f0",
+                                      color:
+                                        adjustmentRequest.status ===
+                                        "PENDING_BUYER"
+                                          ? "#92400e"
+                                          : adjustmentRequest.status ===
+                                              "ACCEPTED_BY_BUYER"
+                                            ? "#166534"
+                                            : adjustmentRequest.status ===
+                                                "REJECTED_BY_BUYER"
+                                              ? "#b91c1c"
+                                              : "#475569",
+                                    }}
+                                  >
+                                    {adjustmentRequest.status ===
+                                    "PENDING_BUYER"
+                                      ? "Yêu cầu chỉnh sửa"
+                                      : adjustmentRequest.status ===
+                                          "ACCEPTED_BY_BUYER"
+                                        ? "Đã chấp nhận"
+                                        : adjustmentRequest.status ===
+                                            "REJECTED_BY_BUYER"
+                                          ? "Đã từ chối"
+                                          : "Đã điều chỉnh"}
+                                  </span>
+                                )}
+                              </div>
                               <p
                                 className="mb-0 text-muted"
                                 style={{ fontSize: 11 }}
@@ -773,6 +1081,418 @@ export default function UserOrderDetailPage() {
                                   );
                                 })}
                               </div>
+
+                              {/* Adjustment Request Alert */}
+                              {adjustmentRequest && (
+                                <div
+                                  style={{
+                                    background:
+                                      adjustmentRequest.status ===
+                                      "PENDING_BUYER"
+                                        ? "rgba(245, 158, 11, 0.08)"
+                                        : adjustmentRequest.status ===
+                                            "ACCEPTED_BY_BUYER"
+                                          ? "rgba(34, 197, 94, 0.08)"
+                                          : adjustmentRequest.status ===
+                                              "REJECTED_BY_BUYER"
+                                            ? "rgba(239, 68, 68, 0.08)"
+                                            : "rgba(107, 114, 128, 0.08)",
+                                    border:
+                                      adjustmentRequest.status ===
+                                      "PENDING_BUYER"
+                                        ? "1px solid #fbbf24"
+                                        : adjustmentRequest.status ===
+                                            "ACCEPTED_BY_BUYER"
+                                          ? "1px solid #22c55e"
+                                          : adjustmentRequest.status ===
+                                              "REJECTED_BY_BUYER"
+                                            ? "1px solid #ef4444"
+                                            : "1px solid #9ca3af",
+                                    borderRadius: 8,
+                                    padding: 14,
+                                    marginBottom: 16,
+                                  }}
+                                >
+                                  <div className="d-flex gap-3 align-items-start mb-3">
+                                    <div
+                                      style={{
+                                        background:
+                                          adjustmentRequest.status ===
+                                          "PENDING_BUYER"
+                                            ? "#fbbf24"
+                                            : adjustmentRequest.status ===
+                                                "ACCEPTED_BY_BUYER"
+                                              ? "#22c55e"
+                                              : adjustmentRequest.status ===
+                                                  "REJECTED_BY_BUYER"
+                                                ? "#ef4444"
+                                                : "#9ca3af",
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: "50%",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      {adjustmentRequest.status ===
+                                      "ACCEPTED_BY_BUYER" ? (
+                                        <Check
+                                          size={14}
+                                          color="white"
+                                          strokeWidth={3}
+                                        />
+                                      ) : adjustmentRequest.status ===
+                                        "REJECTED_BY_BUYER" ? (
+                                        <span
+                                          style={{
+                                            color: "white",
+                                            fontSize: 14,
+                                            fontWeight: "bold",
+                                          }}
+                                        >
+                                          ✕
+                                        </span>
+                                      ) : (
+                                        <Info
+                                          size={14}
+                                          color="white"
+                                          strokeWidth={2}
+                                        />
+                                      )}
+                                    </div>
+                                    <div className="flex-grow-1">
+                                      <p
+                                        className="fw-bold mb-1"
+                                        style={{
+                                          fontSize: 13,
+                                          color:
+                                            adjustmentRequest.status ===
+                                            "PENDING_BUYER"
+                                              ? "#92400e"
+                                              : adjustmentRequest.status ===
+                                                  "ACCEPTED_BY_BUYER"
+                                                ? "#166534"
+                                                : adjustmentRequest.status ===
+                                                    "REJECTED_BY_BUYER"
+                                                  ? "#991b1b"
+                                                  : "#374151",
+                                        }}
+                                      >
+                                        {adjustmentRequest.status ===
+                                        "PENDING_BUYER"
+                                          ? "Yêu cầu chỉnh sửa số lượng"
+                                          : adjustmentRequest.status ===
+                                              "ACCEPTED_BY_BUYER"
+                                            ? "Yêu cầu đã được chấp nhận"
+                                            : adjustmentRequest.status ===
+                                                "REJECTED_BY_BUYER"
+                                              ? "Yêu cầu đã bị từ chối"
+                                              : "Yêu cầu chỉnh sửa hủy"}
+                                      </p>
+                                      <p
+                                        className="mb-2"
+                                        style={{
+                                          fontSize: 12,
+                                          color:
+                                            adjustmentRequest.status ===
+                                            "PENDING_BUYER"
+                                              ? "#b45309"
+                                              : adjustmentRequest.status ===
+                                                  "ACCEPTED_BY_BUYER"
+                                                ? "#15803d"
+                                                : adjustmentRequest.status ===
+                                                    "REJECTED_BY_BUYER"
+                                                  ? "#b91c1c"
+                                                  : "#6b7280",
+                                          lineHeight: 1.5,
+                                        }}
+                                      >
+                                        {adjustmentRequest.shop_reason ||
+                                          "Shop đã gửi yêu cầu chỉnh sửa số lượng"}
+                                      </p>
+                                      <div className="d-flex flex-wrap gap-2 mb-2">
+                                        <span
+                                          style={{
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            background:
+                                              adjustmentRequest.status ===
+                                              "PENDING_BUYER"
+                                                ? "#fef3c7"
+                                                : "#f0fdf4",
+                                            color:
+                                              adjustmentRequest.status ===
+                                              "PENDING_BUYER"
+                                                ? "#b45309"
+                                                : "#166534",
+                                            padding: "4px 8px",
+                                            borderRadius: 4,
+                                          }}
+                                        >
+                                          Mã: {adjustmentRequest.request_code}
+                                        </span>
+                                        <span
+                                          style={{
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            background:
+                                              adjustmentRequest.status ===
+                                              "PENDING_BUYER"
+                                                ? "#fef3c7"
+                                                : "#f0fdf4",
+                                            color:
+                                              adjustmentRequest.status ===
+                                              "PENDING_BUYER"
+                                                ? "#b45309"
+                                                : "#166534",
+                                            padding: "4px 8px",
+                                            borderRadius: 4,
+                                          }}
+                                        >
+                                          Chênh lệch:{" "}
+                                          {formatMoney(
+                                            adjustmentRequest.total_diff_amount,
+                                          )}
+                                        </span>
+                                        {adjustmentRequest.expires_at &&
+                                          adjustmentRequest.status ===
+                                            "PENDING_BUYER" && (
+                                            <span
+                                              style={{
+                                                fontSize: 11,
+                                                fontWeight: 700,
+                                                background: "#fef3c7",
+                                                color: "#b45309",
+                                                padding: "4px 8px",
+                                                borderRadius: 4,
+                                              }}
+                                            >
+                                              Hết hạn:{" "}
+                                              {formatDate(
+                                                adjustmentRequest.expires_at,
+                                              )}
+                                            </span>
+                                          )}
+                                      </div>
+
+                                      {/* Adjustment Items Details */}
+                                      {adjustmentRequest.items &&
+                                        adjustmentRequest.items.length > 0 && (
+                                          <div
+                                            className="mb-3"
+                                            style={{
+                                              borderTop: "1px solid",
+                                              borderColor:
+                                                adjustmentRequest.status ===
+                                                "PENDING_BUYER"
+                                                  ? "#fbbf24"
+                                                  : "#22c55e",
+                                              paddingTop: 10,
+                                            }}
+                                          >
+                                            <p
+                                              style={{
+                                                fontSize: 11,
+                                                fontWeight: 700,
+                                                textTransform: "uppercase",
+                                                letterSpacing: "0.04em",
+                                                marginBottom: 8,
+                                              }}
+                                            >
+                                              Chi tiết chỉnh sửa
+                                            </p>
+                                            <div className="d-flex flex-column gap-2">
+                                              {adjustmentRequest.items.map(
+                                                (adjItem) => (
+                                                  <div
+                                                    key={adjItem.id}
+                                                    className="rounded-2 p-2"
+                                                    style={{
+                                                      background:
+                                                        adjustmentRequest.status ===
+                                                        "PENDING_BUYER"
+                                                          ? "rgba(251, 191, 36, 0.05)"
+                                                          : "rgba(34, 197, 94, 0.05)",
+                                                      border: "1px solid",
+                                                      borderColor:
+                                                        adjustmentRequest.status ===
+                                                        "PENDING_BUYER"
+                                                          ? "#fbbf24"
+                                                          : "#22c55e",
+                                                    }}
+                                                  >
+                                                    <div className="d-flex justify-content-between align-items-start mb-1">
+                                                      <span
+                                                        style={{
+                                                          fontSize: 12,
+                                                          fontWeight: 700,
+                                                        }}
+                                                      >
+                                                        {adjItem.product_name}
+                                                      </span>
+                                                      <span
+                                                        style={{
+                                                          fontSize: 11,
+                                                          fontWeight: 700,
+                                                          background:
+                                                            adjustmentRequest.status ===
+                                                            "PENDING_BUYER"
+                                                              ? "#fef3c7"
+                                                              : "#dcfce7",
+                                                          padding: "2px 6px",
+                                                          borderRadius: 3,
+                                                        }}
+                                                      >
+                                                        {adjItem.old_quantity} →{" "}
+                                                        {adjItem.new_quantity}
+                                                      </span>
+                                                    </div>
+                                                    <div
+                                                      className="d-flex justify-content-between"
+                                                      style={{ fontSize: 11 }}
+                                                    >
+                                                      <span className="text-muted">
+                                                        {formatMoney(
+                                                          adjItem.unit_price,
+                                                        )}
+                                                        /sp
+                                                      </span>
+                                                      <span className="fw-semibold">
+                                                        Chênh lệch:{" "}
+                                                        {formatMoney(
+                                                          adjItem.diff_total,
+                                                        )}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                ),
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                      {/* Action Buttons */}
+                                      {adjustmentRequest?.status ===
+                                        "PENDING_BUYER" && (
+                                        <div
+                                          className="d-flex flex-column gap-2"
+                                          style={{ marginTop: 8 }}
+                                        >
+                                          <div className="d-flex gap-2 flex-wrap">
+                                            <button
+                                              type="button"
+                                              disabled={
+                                                adjustmentActionStatus[
+                                                  shipment.id
+                                                ] === "pending"
+                                              }
+                                              onClick={() =>
+                                                handleAdjustmentDecision(
+                                                  shipment.id,
+                                                  adjustmentRequest.id,
+                                                  "accepted",
+                                                )
+                                              }
+                                              style={{
+                                                background:
+                                                  adjustmentActionStatus[
+                                                    shipment.id
+                                                  ] === "pending"
+                                                    ? "#94d3a2"
+                                                    : "#22c55e",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: 6,
+                                                padding: "8px 16px",
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                                cursor:
+                                                  adjustmentActionStatus[
+                                                    shipment.id
+                                                  ] === "pending"
+                                                    ? "not-allowed"
+                                                    : "pointer",
+                                                transition: "all 0.25s ease",
+                                                opacity:
+                                                  adjustmentActionStatus[
+                                                    shipment.id
+                                                  ] === "pending"
+                                                    ? 0.7
+                                                    : 1,
+                                              }}
+                                            >
+                                              ✓ Chấp nhận
+                                            </button>
+                                            <button
+                                              type="button"
+                                              disabled={
+                                                adjustmentActionStatus[
+                                                  shipment.id
+                                                ] === "pending"
+                                              }
+                                              onClick={() =>
+                                                handleAdjustmentDecision(
+                                                  shipment.id,
+                                                  adjustmentRequest.id,
+                                                  "rejected",
+                                                )
+                                              }
+                                              style={{
+                                                background:
+                                                  adjustmentActionStatus[
+                                                    shipment.id
+                                                  ] === "pending"
+                                                    ? "#f5c2c7"
+                                                    : "white",
+                                                color: "#ef4444",
+                                                border: "1px solid #fca5a5",
+                                                borderRadius: 6,
+                                                padding: "8px 16px",
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                                cursor:
+                                                  adjustmentActionStatus[
+                                                    shipment.id
+                                                  ] === "pending"
+                                                    ? "not-allowed"
+                                                    : "pointer",
+                                                transition: "all 0.25s ease",
+                                                opacity:
+                                                  adjustmentActionStatus[
+                                                    shipment.id
+                                                  ] === "pending"
+                                                    ? 0.7
+                                                    : 1,
+                                              }}
+                                            >
+                                              ✕ Từ chối
+                                            </button>
+                                          </div>
+                                          {adjustmentActionMessage[
+                                            shipment.id
+                                          ] && (
+                                            <p
+                                              className="mb-0"
+                                              style={{
+                                                fontSize: 11,
+                                                color: "#475569",
+                                              }}
+                                            >
+                                              {
+                                                adjustmentActionMessage[
+                                                  shipment.id
+                                                ]
+                                              }
+                                            </p>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
 
                               <div className="mb-3">
                                 <p

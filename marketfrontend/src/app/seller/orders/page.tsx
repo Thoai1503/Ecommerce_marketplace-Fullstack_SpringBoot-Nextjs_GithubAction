@@ -6,15 +6,46 @@ import { IOrder } from "@/validators/order";
 import { IOrderShipment } from "@/validators/orderShipment";
 import { convertAddressToNames } from "@/services/addressService";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import React, { useState, useMemo } from "react";
+import {
+  AlertTriangle,
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  Hash,
+  MapPin,
+  Package,
+  Phone,
+  ShoppingBag,
+  Truck,
+  User,
+  XCircle,
+} from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
 
 type PendingShipmentOrder = {
   shipmentId: number;
+
   orderId: number;
+  orderNumber?: string;
+  totalPrice?: number;
   buyerName: string;
-  recipient: any;
+  recipient: Record<string, unknown> | null | undefined;
   items: any[];
+};
+
+type LogisticsConfirmSuccess = {
+  trackingCode: string;
+  shippingStatus: string;
+  message?: string;
+};
+
+type AdjustmentDraftItem = {
+  orderItemId: number;
+  productName: string;
+  variantName?: string;
+  oldQuantity: number;
+  newQuantity: number;
+  unitPrice: number;
 };
 
 const mapShippingStatusToUiStatus = (shippingStatus?: string) => {
@@ -74,6 +105,580 @@ const getStatusLabel = (status?: string): string => {
   }
 };
 
+type RecipientShape = {
+  recipientName?: string;
+  recipientPhone?: string;
+  addressLine?: string;
+  ward?: string | number;
+  district?: string | number;
+  city?: string | number;
+  postalCode?: string | null;
+  name?: string;
+};
+
+function ConfirmLogisticsModal({
+  data,
+  success,
+  onClose,
+  onConfirm,
+  isConfirming,
+}: {
+  data: PendingShipmentOrder;
+  success: LogisticsConfirmSuccess | null;
+  onClose: () => void;
+  onConfirm: () => void;
+  isConfirming: boolean;
+}) {
+  const r = data.recipient as RecipientShape | null | undefined;
+  const addressInfo =
+    r &&
+    convertAddressToNames(
+      r.city ?? "",
+      r.district ?? "",
+      r.ward ?? "",
+      r.addressLine ?? "",
+    );
+  const recipientName = r?.recipientName || r?.name || "—";
+  const recipientPhone = r?.recipientPhone || "—";
+
+  const itemsLinesTotal = data.items.reduce((sum, it) => {
+    const q = it.quantity ?? 1;
+    const p = it.price ?? 0;
+    return sum + p * q;
+  }, 0);
+
+  const successUiStatus = success
+    ? mapShippingStatusToUiStatus(success.shippingStatus)
+    : null;
+  const successStatusLabel = successUiStatus
+    ? getStatusLabel(successUiStatus)
+    : "";
+
+  return (
+    <div
+      className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center px-2"
+      style={{ background: "rgba(0,0,0,0.45)", zIndex: 1050 }}
+      onClick={() => !isConfirming && onClose()}
+    >
+      <div
+        className="bg-white rounded-3 shadow border"
+        style={{ width: "720px", maxWidth: "100%" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-bottom bg-light rounded-top px-4 py-3">
+          <div className="d-flex align-items-start gap-3">
+            <div
+              className={`rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 ${
+                success
+                  ? "bg-success bg-opacity-10 text-success"
+                  : "bg-danger bg-opacity-10 text-danger"
+              }`}
+              style={{ width: 52, height: 52 }}
+            >
+              {success ? (
+                <CheckCircle size={28} strokeWidth={1.75} />
+              ) : (
+                <Package size={26} strokeWidth={1.75} />
+              )}
+            </div>
+            <div className="flex-grow-1">
+              <h5 className="mb-1 fw-bold d-flex align-items-center gap-2">
+                {success
+                  ? "Đã xác nhận và gửi logistics"
+                  : "Xác nhận đóng gói và gửi logistics"}
+                {!success && (
+                  <Truck size={18} className="text-danger" strokeWidth={2} />
+                )}
+              </h5>
+              <p className="text-muted small mb-0">
+                {success
+                  ? "Thông tin vận đơn đã được cập nhật. Bạn có thể đóng cửa sổ này."
+                  : "Kiểm tra lại thông tin người nhận và kiện hàng trước khi bàn giao cho đơn vị vận chuyển."}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="px-4 py-3 position-relative"
+          style={{ maxHeight: "70vh", overflowY: "auto" }}
+        >
+          {isConfirming && !success && (
+            <div
+              className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center rounded"
+              style={{
+                zIndex: 10,
+                background: "rgba(255,255,255,0.92)",
+                minHeight: 240,
+              }}
+            >
+              <div
+                className="spinner-border text-danger mb-3"
+                style={{ width: "2.5rem", height: "2.5rem" }}
+                role="status"
+              >
+                <span className="visually-hidden">Đang xử lý...</span>
+              </div>
+              <span className="fw-medium text-dark small text-center px-3">
+                Đang gửi yêu cầu đến logistics...
+              </span>
+            </div>
+          )}
+
+          {success && (
+            <div className="alert alert-success border-0 mb-3 py-3">
+              <div className="fw-semibold mb-2 d-flex align-items-center gap-2">
+                <Truck size={18} />
+                Thông tin vận chuyển mới
+              </div>
+              <div className="small mb-2">
+                <span className="text-muted">Mã vận đơn (tracking):</span>{" "}
+                <span className="fw-bold text-dark user-select-all">
+                  {success.trackingCode || "—"}
+                </span>
+              </div>
+              <div className="small mb-2">
+                <span className="text-muted">Trạng thái giao hàng:</span>{" "}
+                <span className="badge bg-success">{successStatusLabel}</span>
+                <span className="text-muted ms-2">
+                  ({success.shippingStatus})
+                </span>
+              </div>
+              {success.message ? (
+                <div className="small text-dark mb-0 border-top pt-2 mt-2">
+                  {success.message}
+                </div>
+              ) : null}
+            </div>
+          )}
+          <div className="d-flex flex-wrap gap-2 mb-3">
+            <span className="badge bg-light text-dark border d-inline-flex align-items-center gap-1">
+              <Hash size={12} />
+              Đơn #{data.orderId}
+              {data.orderNumber ? ` · ${data.orderNumber}` : ""}
+            </span>
+            <span className="badge bg-light text-dark border d-inline-flex align-items-center gap-1">
+              <ShoppingBag size={12} />
+              Mã lô giao: {data.shipmentId}
+            </span>
+            {(data.totalPrice != null || itemsLinesTotal > 0) && (
+              <span className="badge bg-danger d-inline-flex align-items-center gap-1">
+                Tổng: đ{(data.totalPrice ?? itemsLinesTotal).toLocaleString()}
+              </span>
+            )}
+          </div>
+
+          <div className="rounded border bg-white mb-3">
+            <div className="bg-light px-3 py-2 border-bottom small fw-semibold text-secondary d-flex align-items-center gap-2">
+              <User size={16} className="text-danger" />
+              Người mua / liên hệ đặt hàng
+            </div>
+            <div className="px-3 py-2 small">
+              <span className="fw-medium text-dark">{data.buyerName}</span>
+            </div>
+          </div>
+
+          <div className="rounded border bg-white mb-3">
+            <div className="bg-light px-3 py-2 border-bottom small fw-semibold text-secondary d-flex align-items-center gap-2">
+              <MapPin size={16} className="text-danger" />
+              Người nhận & địa chỉ giao
+            </div>
+            <div className="px-3 py-3 small">
+              <div className="d-flex align-items-start gap-2 mb-2">
+                <User size={16} className="text-muted mt-1 flex-shrink-0" />
+                <div>
+                  <div className="fw-semibold text-dark">{recipientName}</div>
+                  <div className="d-flex align-items-center gap-2 text-muted mt-1">
+                    <Phone size={14} />
+                    <span>{recipientPhone}</span>
+                  </div>
+                </div>
+              </div>
+              {addressInfo && (
+                <div className="d-flex align-items-start gap-2 ps-1">
+                  <MapPin size={16} className="text-muted mt-1 flex-shrink-0" />
+                  <div>
+                    <div className="text-dark">{addressInfo.fullAddress}</div>
+                    {r?.postalCode ? (
+                      <div className="text-muted mt-1">
+                        Mã bưu điện: {r.postalCode}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded border bg-white mb-2">
+            <div className="bg-light px-3 py-2 border-bottom small fw-semibold text-secondary d-flex align-items-center gap-2">
+              <ShoppingBag size={16} className="text-danger" />
+              Kiện hàng / sản phẩm
+            </div>
+            <div className="p-0">
+              {data.items.length === 0 ? (
+                <div className="px-3 py-4 text-center text-muted small">
+                  Không có thông tin sản phẩm.
+                </div>
+              ) : (
+                data.items.map((item, idx) => {
+                  const productName =
+                    item.product_name || item.productName || "Sản phẩm";
+                  const variantName = item.variantName || item.variant_name;
+                  const qty = item.quantity ?? 1;
+                  const price = item.price ?? 0;
+                  const line = price * qty;
+                  return (
+                    <div
+                      key={`${item.id ?? idx}-${idx}`}
+                      className={`d-flex align-items-start gap-3 px-3 py-3 ${
+                        idx < data.items.length - 1 ? "border-bottom" : ""
+                      }`}
+                    >
+                      {item.image ? (
+                        <img
+                          src={item.image}
+                          alt=""
+                          width={64}
+                          height={64}
+                          className="rounded border flex-shrink-0"
+                          style={{ objectFit: "cover" }}
+                        />
+                      ) : (
+                        <div
+                          className="bg-light border rounded d-flex align-items-center justify-content-center flex-shrink-0 text-muted"
+                          style={{ width: 64, height: 64 }}
+                        >
+                          <Package size={28} strokeWidth={1.25} />
+                        </div>
+                      )}
+                      <div className="flex-grow-1 min-w-0">
+                        <div className="fw-medium text-dark">{productName}</div>
+                        {variantName ? (
+                          <div className="text-muted small mt-1">
+                            Phiên bản: {variantName}
+                          </div>
+                        ) : null}
+                        <div className="d-flex flex-wrap gap-3 mt-2 small text-muted">
+                          <span>
+                            Đơn giá:{" "}
+                            <span className="text-dark">
+                              đ{price.toLocaleString()}
+                            </span>
+                          </span>
+                          <span>
+                            SL: <strong className="text-dark">{qty}</strong>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-end flex-shrink-0">
+                        <div className="small text-muted">Thành tiền</div>
+                        <div className="fw-bold text-dark">
+                          đ{line.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="px-4 py-3 bg-light border-top d-flex justify-content-end gap-2 rounded-bottom">
+          {success ? (
+            <button
+              type="button"
+              className="btn btn-success px-4"
+              onClick={onClose}
+            >
+              Đóng
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={onClose}
+                disabled={isConfirming}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger d-inline-flex align-items-center gap-2"
+                onClick={onConfirm}
+                disabled={isConfirming}
+              >
+                <Truck size={18} />
+                {isConfirming ? "Đang xác nhận..." : "Xác nhận gửi logistics"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OutOfStockAdjustmentModal({
+  data,
+  onClose,
+  onSubmitAdjustment,
+  onCancelShipment,
+  isSubmitting,
+}: {
+  data: PendingShipmentOrder;
+  onClose: () => void;
+  onSubmitAdjustment: (payload: {
+    reason: string;
+    items: Array<{ orderItemId: number; newQuantity: number }>;
+  }) => Promise<void>;
+  onCancelShipment: (reason: string) => Promise<void>;
+  isSubmitting: boolean;
+}) {
+  const [reason, setReason] = useState("");
+  const [draftItems, setDraftItems] = useState<AdjustmentDraftItem[]>([]);
+
+  useEffect(() => {
+    const initItems: AdjustmentDraftItem[] = (data.items ?? []).map(
+      (item, idx) => ({
+        orderItemId: Number(item.id ?? idx + 1),
+        productName: String(
+          item.product_name || item.productName || "Sản phẩm",
+        ),
+        variantName: item.variantName || item.variant_name || undefined,
+        oldQuantity: Number(item.quantity ?? 0),
+        newQuantity: Number(item.quantity ?? 0),
+        unitPrice: Number(item.price ?? 0),
+      }),
+    );
+    setDraftItems(initItems);
+    setReason("");
+  }, [data]);
+
+  const changedItems = useMemo(
+    () =>
+      draftItems
+        .filter((item) => item.newQuantity !== item.oldQuantity)
+        .map((item) => ({
+          orderItemId: item.orderItemId,
+          newQuantity: item.newQuantity,
+        })),
+    [draftItems],
+  );
+
+  const summary = useMemo(() => {
+    const oldTotal = draftItems.reduce(
+      (sum, item) => sum + item.oldQuantity * item.unitPrice,
+      0,
+    );
+    const newTotal = draftItems.reduce(
+      (sum, item) => sum + item.newQuantity * item.unitPrice,
+      0,
+    );
+    return {
+      oldTotal,
+      newTotal,
+      diffTotal: oldTotal - newTotal,
+    };
+  }, [draftItems]);
+
+  const setNewQuantity = (orderItemId: number, value: number) => {
+    setDraftItems((prev) =>
+      prev.map((item) =>
+        item.orderItemId === orderItemId
+          ? {
+              ...item,
+              newQuantity: Math.max(0, Math.min(item.oldQuantity, value)),
+            }
+          : item,
+      ),
+    );
+  };
+
+  const handleSubmitAdjustment = async () => {
+    if (!reason.trim()) {
+      alert("Vui lòng nhập lý do thiếu hàng.");
+      return;
+    }
+    if (changedItems.length === 0) {
+      alert("Vui lòng chỉnh số lượng ít nhất 1 sản phẩm.");
+      return;
+    }
+    await onSubmitAdjustment({
+      reason: reason.trim(),
+      items: changedItems,
+    });
+  };
+
+  const handleCancelShipment = async () => {
+    if (!reason.trim()) {
+      alert("Vui lòng nhập lý do hủy kiện.");
+      return;
+    }
+    const confirmed = window.confirm(
+      "Xác nhận hủy kiện do thiếu hàng? Hành động này sẽ thông báo cho buyer.",
+    );
+    if (!confirmed) return;
+    await onCancelShipment(reason.trim());
+  };
+
+  return (
+    <div
+      className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center px-2"
+      style={{ background: "rgba(0,0,0,0.45)", zIndex: 1050 }}
+      onClick={() => !isSubmitting && onClose()}
+    >
+      <div
+        className="bg-white rounded-3 shadow border"
+        style={{ width: "860px", maxWidth: "100%" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="border-bottom bg-light rounded-top px-4 py-3">
+          <h5 className="mb-1 fw-bold d-flex align-items-center gap-2">
+            <AlertTriangle size={18} className="text-warning" />
+            Thiếu hàng: Điều chỉnh số lượng hoặc hủy kiện
+          </h5>
+          <p className="text-muted small mb-0">
+            Đơn #{data.orderId}{" "}
+            {data.orderNumber ? `· ${data.orderNumber}` : ""} - Kiện #
+            {data.shipmentId}
+          </p>
+        </div>
+
+        <div
+          className="px-4 py-3"
+          style={{ maxHeight: "70vh", overflowY: "auto" }}
+        >
+          <div className="alert alert-warning small py-2 mb-3">
+            Giảm số lượng xuống <strong>0</strong> để bỏ item khỏi kiện.
+          </div>
+          <div className="table-responsive border rounded">
+            <table className="table table-sm mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th>Sản phẩm</th>
+                  <th className="text-center">SL đặt</th>
+                  <th className="text-center">SL mới</th>
+                  <th className="text-end">Đơn giá</th>
+                  <th className="text-end">Chênh lệch</th>
+                </tr>
+              </thead>
+              <tbody>
+                {draftItems.map((item) => {
+                  const diff =
+                    (item.oldQuantity - item.newQuantity) * item.unitPrice;
+                  return (
+                    <tr key={item.orderItemId}>
+                      <td>
+                        <div className="fw-medium">{item.productName}</div>
+                        {item.variantName ? (
+                          <small className="text-muted">
+                            {item.variantName}
+                          </small>
+                        ) : null}
+                      </td>
+                      <td className="text-center">{item.oldQuantity}</td>
+                      <td className="text-center">
+                        <input
+                          type="number"
+                          min={0}
+                          max={item.oldQuantity}
+                          value={item.newQuantity}
+                          onChange={(e) =>
+                            setNewQuantity(
+                              item.orderItemId,
+                              Number(e.target.value || 0),
+                            )
+                          }
+                          className="form-control form-control-sm text-center mx-auto"
+                          style={{ width: 90 }}
+                          disabled={isSubmitting}
+                        />
+                      </td>
+                      <td className="text-end">
+                        đ{item.unitPrice.toLocaleString()}
+                      </td>
+                      <td className="text-end text-danger">
+                        {diff > 0 ? `- đ${diff.toLocaleString()}` : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="row g-3 mt-1">
+            <div className="col-md-8">
+              <label className="form-label small fw-semibold mb-1">
+                Lý do thiếu hàng <span className="text-danger">*</span>
+              </label>
+              <textarea
+                className="form-control"
+                rows={3}
+                placeholder="Ví dụ: Hết màu/size này ở kho, chỉ còn số lượng như đã cập nhật..."
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="col-md-4">
+              <div className="border rounded p-3 bg-light small h-100">
+                <div className="d-flex justify-content-between">
+                  <span>Tổng ban đầu</span>
+                  <strong>đ{summary.oldTotal.toLocaleString()}</strong>
+                </div>
+                <div className="d-flex justify-content-between mt-2">
+                  <span>Tổng sau chỉnh</span>
+                  <strong>đ{summary.newTotal.toLocaleString()}</strong>
+                </div>
+                <div className="d-flex justify-content-between mt-2 pt-2 border-top text-danger">
+                  <span>Giảm trừ</span>
+                  <strong>- đ{summary.diffTotal.toLocaleString()}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-4 py-3 bg-light border-top d-flex justify-content-between gap-2 rounded-bottom">
+          <button
+            type="button"
+            className="btn btn-outline-danger d-inline-flex align-items-center gap-2"
+            onClick={handleCancelShipment}
+            disabled={isSubmitting}
+          >
+            <XCircle size={16} />
+            {isSubmitting ? "Đang xử lý..." : "Hủy kiện do thiếu hàng"}
+          </button>
+          <div className="d-flex gap-2">
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Đóng
+            </button>
+            <button
+              type="button"
+              className="btn btn-warning"
+              onClick={handleSubmitAdjustment}
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? "Đang gửi..."
+                : "Gửi đề xuất điều chỉnh cho buyer"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const page = () => {
   const { shop: shopData } = useSellerAuth();
   console.log("Shop Data in Order Page:", JSON.stringify(shopData, null, 2));
@@ -120,11 +725,19 @@ const page = () => {
   const [pendingShipmentOrder, setPendingShipmentOrder] =
     useState<PendingShipmentOrder | null>(null);
   const [isConfirmingLogistics, setIsConfirmingLogistics] = useState(false);
+  const [logisticsConfirmSuccess, setLogisticsConfirmSuccess] =
+    useState<LogisticsConfirmSuccess | null>(null);
+  const [adjustmentShipmentOrder, setAdjustmentShipmentOrder] =
+    useState<PendingShipmentOrder | null>(null);
+  const [isSubmittingAdjustment, setIsSubmittingAdjustment] = useState(false);
 
   const openPendingShipmentModal = (order: any) => {
+    setLogisticsConfirmSuccess(null);
     setPendingShipmentOrder({
       shipmentId: Number(order.shipmentId),
       orderId: Number(order.id),
+      orderNumber: order.order_code || order.order_number,
+      totalPrice: order.total_price,
       buyerName: order.buyer_name || order.recipient?.name || "Khach mua",
       recipient: order.recipient,
       items: order.orders_items || [],
@@ -132,24 +745,112 @@ const page = () => {
   };
 
   const closePendingShipmentModal = () => {
-    if (!isConfirmingLogistics) {
-      setPendingShipmentOrder(null);
-    }
+    if (isConfirmingLogistics) return;
+    setLogisticsConfirmSuccess(null);
+    setPendingShipmentOrder(null);
+  };
+
+  const openAdjustmentModal = (order: any) => {
+    setAdjustmentShipmentOrder({
+      shipmentId: Number(order.shipmentId),
+      orderId: Number(order.id),
+      orderNumber: order.order_code || order.order_number,
+      totalPrice: order.total_price,
+      buyerName: order.buyer_name || order.recipient?.name || "Khach mua",
+      recipient: order.recipient,
+      items: order.orders_items || [],
+    });
+  };
+
+  const closeAdjustmentModal = () => {
+    if (isSubmittingAdjustment) return;
+    setAdjustmentShipmentOrder(null);
   };
 
   const handleConfirmLogistics = async () => {
     if (!pendingShipmentOrder) return;
     try {
       setIsConfirmingLogistics(true);
-      await OrderShipments.confirmPackaged(pendingShipmentOrder.shipmentId);
+      const res = await OrderShipments.confirmPackaged(
+        pendingShipmentOrder.shipmentId,
+      );
+      const raw = (res as { data?: unknown })?.data ?? res;
+      const payload = raw as Record<string, unknown>;
+      const nested =
+        payload &&
+        typeof payload === "object" &&
+        "data" in payload &&
+        payload.data &&
+        typeof payload.data === "object"
+          ? (payload.data as Record<string, unknown>)
+          : payload;
+
+      const trackingCode = String(nested?.trackingCode ?? "");
+      const shippingStatus = String(nested?.shippingStatus ?? "");
+      const message =
+        nested?.message != null ? String(nested.message) : undefined;
+
       await refetchOrderShipments();
-      setPendingShipmentOrder(null);
-      alert("Logistics da xac nhan dong goi. Tracking code da duoc cap nhat.");
+      setLogisticsConfirmSuccess({
+        trackingCode,
+        shippingStatus,
+        message,
+      });
     } catch (error) {
       console.error("Confirm logistics failed", error);
-      alert("Khong the xac nhan logistics. Vui long thu lai.");
+      alert("Không thể xác nhận logistics. Vui lòng thử lại.");
     } finally {
       setIsConfirmingLogistics(false);
+    }
+  };
+
+  const handleSubmitAdjustment = async (payload: {
+    reason: string;
+    items: Array<{ orderItemId: number; newQuantity: number }>;
+  }) => {
+    if (!adjustmentShipmentOrder) return;
+    try {
+      setIsSubmittingAdjustment(true);
+      await OrderShipments.createAdjustmentRequest(
+        adjustmentShipmentOrder.shipmentId,
+        {
+          shopReason: payload.reason,
+          items: payload.items,
+        },
+      );
+      await refetchOrderShipments();
+      alert("Đã gửi đề xuất điều chỉnh số lượng cho buyer.");
+      setAdjustmentShipmentOrder(null);
+    } catch (error) {
+      console.error("Create adjustment request failed", error);
+      alert(
+        "Chưa gửi được đề xuất điều chỉnh. Vui lòng kiểm tra endpoint /adjustment-request ở order-service.",
+      );
+    } finally {
+      setIsSubmittingAdjustment(false);
+    }
+  };
+
+  const handleCancelShipmentByOos = async (reason: string) => {
+    if (!adjustmentShipmentOrder) return;
+    try {
+      setIsSubmittingAdjustment(true);
+      await OrderShipments.cancelByOutOfStock(
+        adjustmentShipmentOrder.shipmentId,
+        {
+          reason,
+        },
+      );
+      await refetchOrderShipments();
+      alert("Đã hủy kiện do thiếu hàng.");
+      setAdjustmentShipmentOrder(null);
+    } catch (error) {
+      console.error("Cancel shipment by OOS failed", error);
+      alert(
+        "Chưa hủy được kiện. Vui lòng kiểm tra endpoint /cancel-by-oos ở order-service.",
+      );
+    } finally {
+      setIsSubmittingAdjustment(false);
     }
   };
 
@@ -442,6 +1143,7 @@ const page = () => {
                           )}
                       </div>
                     </td>
+
                     <td>
                       <div className="fw-bold">
                         đ{(order.total_price ?? 0).toLocaleString()}
@@ -493,21 +1195,24 @@ const page = () => {
                         {order._source === "api" &&
                           order.status === "pending_shipment" &&
                           !order.tracking_number && (
-                            <button
-                              type="button"
-                              className="btn btn-link p-0 text-primary text-decoration-none small text-start"
-                              onClick={() => {
-                                alert(
-                                  "Chờ lấy hàng " +
-                                    order.id +
-                                    " - " +
-                                    order.shipmentId,
-                                );
-                                openPendingShipmentModal(order);
-                              }}
-                            >
-                              Chờ lấy hàng
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                className="btn btn-link p-0 text-primary text-decoration-none small text-start"
+                                onClick={() => {
+                                  openPendingShipmentModal(order);
+                                }}
+                              >
+                                Chờ lấy hàng
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-link p-0 text-warning text-decoration-none small text-start"
+                                onClick={() => openAdjustmentModal(order)}
+                              >
+                                Thiếu hàng: chỉnh SL / bỏ item
+                              </button>
+                            </>
                           )}
                         <a
                           href="#"
@@ -595,71 +1300,22 @@ const page = () => {
       </div>
 
       {pendingShipmentOrder && (
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-          style={{ background: "rgba(0,0,0,0.45)", zIndex: 1050 }}
-          onClick={closePendingShipmentModal}
-        >
-          <div
-            className="bg-white rounded-3 shadow p-4"
-            style={{ width: "680px", maxWidth: "95vw" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h5 className="mb-3">Xác nhận đóng gói và gửi logistics</h5>
-            <p className="text-muted mb-2">
-              Đơn hàng: <strong>#{pendingShipmentOrder.orderId}</strong>
-            </p>
-            <p className="text-muted mb-2">
-              Người mua: <strong>{pendingShipmentOrder.buyerName}</strong>
-            </p>
-            <p className="text-muted mb-3">
-              Người nhận:{" "}
-              <strong>
-                {pendingShipmentOrder.recipient?.recipientName || "N/A"}
-              </strong>{" "}
-              - {pendingShipmentOrder.recipient?.recipientPhone || "N/A"}
-            </p>
-            <div
-              className="border rounded p-3 mb-3"
-              style={{ maxHeight: "220px", overflowY: "auto" }}
-            >
-              {pendingShipmentOrder.items.length === 0 && (
-                <small className="text-muted">
-                  Không có thông tin sản phẩm.
-                </small>
-              )}
-              {pendingShipmentOrder.items.map((item, idx) => (
-                <div
-                  key={`${item.id ?? idx}-${idx}`}
-                  className="d-flex justify-content-between align-items-center py-1 border-bottom"
-                >
-                  <span>{item.product_name || "Sản phẩm"}</span>
-                  <span>x{item.quantity ?? 1}</span>
-                </div>
-              ))}
-            </div>
-            <div className="d-flex justify-content-end gap-2">
-              <button
-                type="button"
-                className="btn btn-outline-secondary"
-                onClick={closePendingShipmentModal}
-                disabled={isConfirmingLogistics}
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleConfirmLogistics}
-                disabled={isConfirmingLogistics}
-              >
-                {isConfirmingLogistics
-                  ? "Đang xác nhận..."
-                  : "Xác nhận logistics"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmLogisticsModal
+          data={pendingShipmentOrder}
+          success={logisticsConfirmSuccess}
+          onClose={closePendingShipmentModal}
+          onConfirm={handleConfirmLogistics}
+          isConfirming={isConfirmingLogistics}
+        />
+      )}
+      {adjustmentShipmentOrder && (
+        <OutOfStockAdjustmentModal
+          data={adjustmentShipmentOrder}
+          onClose={closeAdjustmentModal}
+          onSubmitAdjustment={handleSubmitAdjustment}
+          onCancelShipment={handleCancelShipmentByOos}
+          isSubmitting={isSubmittingAdjustment}
+        />
       )}
     </div>
   );
