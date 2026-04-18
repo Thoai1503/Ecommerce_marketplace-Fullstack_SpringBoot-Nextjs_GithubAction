@@ -508,6 +508,8 @@ export default function UserOrderDetailPage() {
       );
 
       if (!response.ok) {
+        alert(`HTTP ${response.status}: ${response.statusText}`);
+
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
