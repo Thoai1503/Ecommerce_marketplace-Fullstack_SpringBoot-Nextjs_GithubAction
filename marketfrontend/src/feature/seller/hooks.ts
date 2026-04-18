@@ -31,6 +31,11 @@ export const useAddProductSeller = (
     shop_id: 0,
     description: "",
     category_id: 2,
+    weight: 0,
+    length: 0,
+    width: 0,
+    height: 0,
+    stock_quantity: 0,
     original_price: 0,
     price: 0,
   });
@@ -106,7 +111,12 @@ export const useAddProductSeller = (
         description: "",
         category_id: 2,
         original_price: 0,
+        weight: 0,
+        length: 0,
+        width: 0,
+        height: 0,
         price: 0,
+        stock_quantity: 0,
       });
       createVariant({
         id: 0,
@@ -115,6 +125,10 @@ export const useAddProductSeller = (
         sku: `SKU-${data.id}`,
         price: data.original_price || 0,
         stock_quantity: data.stock_quantity || 0,
+        weight: data.weight || 0,
+        height: data.height || 0,
+        length: data.length || 0,
+        width: data.width || 0,
         image_url: data.image_url || "",
       });
     },
@@ -198,7 +212,7 @@ export const useAddProductSeller = (
       return;
     }
 
-    alert(JSON.stringify(product, null, 2));
+    // alert(JSON.stringify(product, null, 2));
     // return;
     add(product);
     // TODO: Gọi API để tạo sản phẩm
@@ -266,7 +280,7 @@ export const useAddImageSeller = (id?: number) => {
     const uploadImage = updatedList.filter((item) =>
       item.thumbUrl?.startsWith("data:image"),
     );
-    alert("uploadImage: " + JSON.stringify(updatedList));
+    //  alert("uploadImage: " + JSON.stringify(updatedList));
     console.log("uploadImage: " + uploadImage.length);
   };
 
