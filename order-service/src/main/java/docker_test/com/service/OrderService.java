@@ -74,6 +74,9 @@ public class OrderService {
 			orderShipmetDto.setShippingStatus("PENDING");
 			orderShipmetDto.setShopId(os.getShop_id());
 			orderShipmetDto.setTrackingNumber(null);
+			orderShipmetDto.setAdjustmentRequired(false);
+			orderShipmetDto.setBusinessStatus("NORMAL");
+			
 			orderShipmetDto.setShippingFee(Double.valueOf(os.getShipping_fee()));
 		    orderShipmetDto.setTotalAmount(os.getTotal_amount());
 						var orderShipment =
@@ -228,6 +231,7 @@ public class OrderService {
                 .quantity(dto.getQuantity())
                 .price(dto.getPrice())
                 .totalPrice(dto.getPrice() * dto.getQuantity())
+                .isAdjusted(false)
                 .build();
     }
     
