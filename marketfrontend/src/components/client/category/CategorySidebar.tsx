@@ -32,24 +32,20 @@ export default function CategorySidebar({
     const brands = params.getAll("brand");
 
     if (brands.includes(String(id))) {
-      // remove
       params.delete("brand");
       brands
         .filter((b) => b !== String(id))
         .forEach((b) => params.append("brand", b));
     } else {
-      // add
       params.append("brand", String(id));
     }
 
     pushWithParams(params);
   };
 
-  // ===== CHANGE CATEGORY =====
   const goCategory = (childId?: number) => {
     const params = new URLSearchParams(searchParams.toString());
 
-    // reset brand khi đổi category
     params.delete("brand");
 
     if (childId) {

@@ -29,4 +29,15 @@ public class ShopController {
         var result = shopRepository.Create(item);
         return ResponseEntity.ok(result);
     }
+    
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getById(@PathVariable int id) {
+        var shop = shopRepository.GetById(id);
+
+        if (shop == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(shop);
+    }
 }

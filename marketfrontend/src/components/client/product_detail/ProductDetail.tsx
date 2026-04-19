@@ -13,13 +13,14 @@ import React, { useEffect, useState } from "react";
 
 const ProductDetail = ({ data }: { data: IProduct }) => {
   const { userId } = useUserAuth();
+  const [shop, setShop] = useState<any>(null);
   console.log("Product Detail User ID:", userId);
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { mutate: addToCart } = useAddToCartMutation();
+  const [shopProducts, setShopProducts] = useState<any[]>([]);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fullUrl = pathname + "?" + searchParams.toString();
-
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
   const [variant, setVariant] = useState<Variant | null>(null);
   const [mainImage, setMainImage] = useState(
@@ -32,12 +33,39 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
     return new Intl.NumberFormat("vi-VN").format(price);
   };
 
-  // Lấy ảnh hiển thị: ưu tiên ảnh đang hover, sau đó là ảnh chính
+  useEffect(() => {
+    if (!data?.shop_id) return;
+
+    const fetchData = async () => {
+      try {
+        // shop
+        const shopRes = await fetch(`${API_URL}/shops/${data.shop_id}`);
+        const shopJson = await shopRes.json();
+        setShop(shopJson);
+
+        // products theo shop
+        const prodRes = await fetch(`${API_URL}/product/shop/${data.shop_id}`);
+        const prodJson = await prodRes.json();
+
+        let list: any[] = [];
+
+        if (Array.isArray(prodJson)) list = prodJson;
+        else if (Array.isArray(prodJson?.data)) list = prodJson.data;
+        else if (Array.isArray(prodJson?.products)) list = prodJson.products;
+
+        setShopProducts(list);
+      } catch (err) {
+        console.error(err);
+        setShopProducts([]);
+      }
+    };
+
+    fetchData();
+  }, [data]);
+
   const displayImage = hoveredImage || mainImage;
 
   const handleAddToCart = (cart: ICart) => {
-    // alert(`Thêm vào giỏ hàng: ${JSON.stringify(cart, null, 2)}`);
-
     if (!userId) {
       if (selectedVariant === null) {
         message.warning("Vui lòng chọn phân loại sản phẩm");
@@ -61,9 +89,6 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
           );
           return;
         } else {
-          // alert(
-          //   "Sản phẩm đã tồn tại trong giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
-          // );
           const pushedItem = [...preLoginCart, cart];
           localStorage.setItem("preLoginCart", JSON.stringify(pushedItem));
           message.success(
@@ -72,9 +97,6 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
           return;
         }
       }
-      // else {
-      //   preLoginCart.push(cart);
-      // }
       preLoginCart.push(cart);
 
       localStorage.setItem("preLoginCart", JSON.stringify(preLoginCart));
@@ -453,6 +475,78 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                         </div>
                       </div>
                     </div>
+                    <div className="shop-header mt-4 p-4 rounded text-white">
+                      <div className="d-flex justify-content-between align-items-center flex-wrap">
+                        {/* LEFT */}
+                        <div className="d-flex align-items-center gap-3">
+                          <img
+                            src={
+                              shop?.shop_logo ||
+                              "/assets/images/avatar-shop.png"
+                            }
+                            width={70}
+                            height={70}
+                            className="rounded-circle border border-white"
+                          />
+
+                          <div>
+                            <div className="fw-bold fs-5">
+                              {shop?.shop_name || "Loading..."}
+                            </div>
+
+                            <small className="opacity-75">Online recently</small>
+
+                            <div className="mt-2 d-flex gap-2">
+                              <button className="btn btn-outline-light btn-sm">
+                                💬 Chat Now
+                              </button>
+
+                              <button
+                                className="btn btn-outline-light btn-sm"
+                                onClick={() =>
+                                  (window.location.href = `/shop/${data.shop_id}`)
+                                }
+                              >
+                                🏪 View Shop
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* RIGHT */}
+                        <div className="d-flex gap-5 text-center mt-3 mt-md-0">
+                          <div>
+                            <div className="small opacity-75">Products</div>
+                            <div className="stat-number">
+                              {shopProducts.length}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="small opacity-75">Ratings</div>
+                            <div className="stat-number">
+                              {shop?.rating || 0}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="small opacity-75">
+                              Response Rate
+                            </div>
+                            <div className="stat-number">
+                              {shop?.response_rate || 0}%
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="small opacity-75">Response Time</div>
+                            <div className="stat-number">
+                              {shop?.response_time || 0}h
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -478,6 +572,21 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
         .variant-item:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .shop-header {
+          background: linear-gradient(135deg, #1cc7d0, #1a4fff);
+          transition: 0.3s;
+        }
+
+        .shop-header:hover {
+          opacity: 0.95;
+        }
+
+        .stat-number {
+          color: #ffd700; /* vàng */
+          font-weight: bold;
+          font-size: 18px;
         }
       `}</style>
     </div>
