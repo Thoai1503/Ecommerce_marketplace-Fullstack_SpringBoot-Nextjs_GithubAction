@@ -147,23 +147,21 @@ public class ShopRepository implements IRepositories<Shop> {
     }
 
     /* ================= GET BY ID ================= */
-    @Override
     public Shop GetById(int id) {
-
-        String sql = "SELECT * FROM shop WHERE shop_id = ?";
+        String sql = "SELECT * FROM shop WHERE id = ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            ps.setLong(1,id);
+            ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
-                return shopMapper.RowMap(rs);
+                return new ShopMapper().RowMap(rs); // ✅ map đúng
             }
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         return null;

@@ -55,6 +55,14 @@ public class ProductController {
 
 		return ResponseEntity.ok(product);
 	}
+	
+	@GetMapping("/shop/{shopId}")
+	public ResponseEntity<?> getByShopId(@PathVariable int shopId) {
+
+	    var products = ((ProductRepository) repositories).GetByShopId(shopId);
+
+	    return ResponseEntity.ok(products);
+	}
 
 }
 

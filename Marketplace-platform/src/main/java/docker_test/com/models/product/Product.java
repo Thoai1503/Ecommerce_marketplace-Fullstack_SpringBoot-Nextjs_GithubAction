@@ -7,8 +7,8 @@ import docker_test.com.models.Shop;
 
 public final class Product {
     
-	private Integer id ;  // instead of int
-	private Integer shop_id ;  // instead of long
+	private Integer id ;
+	private Integer shop_id ;
 	private Integer category_id ;
     private String product_name;
     private Shop shop; 

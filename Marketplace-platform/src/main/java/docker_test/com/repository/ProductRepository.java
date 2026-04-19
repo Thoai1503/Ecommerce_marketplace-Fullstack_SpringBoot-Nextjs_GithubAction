@@ -1,4 +1,5 @@
- package docker_test.com.repository;
+package docker_test.com.repository;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -154,10 +155,9 @@ public class ProductRepository implements IRepositories<Product> {
 			while (rs.next()) {
 				Product product = new Product();
 				product.setId(rs.getInt("id"));
-
+				product.setShop_id(rs.getInt("shop_id"));
 				product.setProduct_name(rs.getString("product_name"));
 				product.setProduct_slug(rs.getString("product_slug"));
-				// product.setImage_url(rs.getString("image_url"));
 				product.setPrice(rs.getDouble("price"));
 
 				String variantsJson = rs.getString("variants");
@@ -207,11 +207,10 @@ public class ProductRepository implements IRepositories<Product> {
 				image.setId(rs.getInt("id"));
 				image.setProduct_name(rs.getString("product_name"));
 				image.setProduct_slug(rs.getString("product_slug"));
-				image.setCategory_id(1);
-				image.setShop_id(0);
+				image.setCategory_id(rs.getInt("category_id"));
+				image.setShop_id(rs.getInt("shop_id"));
 				image.setPrice(rs.getDouble("price"));
 				image.setOriginal_price(rs.getDouble("original_price"));
-				image.setProduct_name(rs.getString("product_name"));
 				image.setImage_url(rs.getString("image_url"));
 				image.setCreated_at(rs.getTimestamp("created_at").toLocalDateTime());
 				list.add(image);
@@ -230,7 +229,9 @@ public class ProductRepository implements IRepositories<Product> {
 		String sql = """
 				SELECT
 				    p.id,
+				    p.shop_id,
 				    p.product_name,
+				    p.product_slug,
 				    p.price,
 				    pi.image_url,
 				    CASE
@@ -267,7 +268,9 @@ public class ProductRepository implements IRepositories<Product> {
 			while (rs.next()) {
 				Product product = new Product();
 				product.setId(rs.getInt("id"));
+				product.setShop_id(rs.getInt("shop_id"));
 				product.setProduct_name(rs.getString("product_name"));
+				product.setProduct_slug(rs.getString("product_slug"));
 				product.setImage_url(rs.getString("image_url"));
 				product.setPrice(rs.getDouble("price"));
 
@@ -347,116 +350,134 @@ public class ProductRepository implements IRepositories<Product> {
 
 		return products;
 	}
-	
+
 	public List<Map<String, Object>> query(String sql, Object... params) {
 
-	    List<Map<String, Object>> list = new ArrayList<>();
+		List<Map<String, Object>> list = new ArrayList<>();
 
-	    try (
-	        Connection con = DBConnection.getConn();
-	        PreparedStatement ps = con.prepareStatement(sql)
-	    ) {
+		try (Connection con = DBConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-	        // set params
-	        for (int i = 0; i < params.length; i++) {
-	            ps.setObject(i + 1, params[i]);
-	        }
-
-	        ResultSet rs = ps.executeQuery();
-	        ResultSetMetaData meta = rs.getMetaData();
-
-	        while (rs.next()) {
-
-	            Map<String, Object> row = new HashMap<>();
-
-	            for (int i = 1; i <= meta.getColumnCount(); i++) {
-	                row.put(meta.getColumnName(i), rs.getObject(i));
-	            }
-
-	            list.add(row);
-	            
-	        }
-	        return   list;
-
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	    }
-	 return list;
-	}
-	
-	 public Product GetByIdWithShopInfo(int id) {
-		 String sql = """
-		 		SELECT
-		 			p.id,
-		 			p.product_name,
-		 			p.price,
-		 			s.id AS shop_id,
-		 			s.shop_name,
-		 			(
-		 				SELECT JSON_ARRAYAGG(
-		 					JSON_OBJECT(
-		 						'id', pi.id,
-		 						'image_url', pi.image_url,
-		 						'display_order', pi.display_order,
-		 						'is_thumbnail', pi.is_thumbnail
-		 					)
-		 				)
-		 				FROM product_image pi
-		 				WHERE pi.product_id = p.id
-		 				ORDER BY pi.display_order ASC
-		 			) AS images
-		 			FROM product p
-		 			LEFT JOIN shop s ON p.shop_id = s.id
-		 			WHERE p.id = ?;
-		 			
-		 							""";
-		
-		 System.out.print("Get by id with shop info..");
-		 try (Connection con = dbConnection.getConn();
-					PreparedStatement ps = con.prepareStatement(sql)){
-	
-			  ps.setInt(1, id);
-			  ResultSet rs =	ps.executeQuery();
-			  ObjectMapper mapper = new ObjectMapper();
-	            
-	            while (rs.next()) {
-	                Product product = new Product();
-	                product.setId(rs.getInt("id"));
-	                product.setProduct_name(rs.getString("product_name"));	
-	                product.setPrice(rs.getDouble("price"));
-	                
-	                Shop shop = new Shop();
-	                shop.setId(rs.getInt("shop_id"));
-	                shop.setShop_name(rs.getString("shop_name"));
-	                product.setShop(shop);
-	                
-	                // Lấy JSON dưới dạng String
-	                String imagesJson = rs.getString("images");
-	                
-	                // Parse JSON String thành List<ProductImage>
-	                if (imagesJson != null && !imagesJson.equals("[]")) {
-	                    List<ProductImage> images = mapper.readValue(
-	                        imagesJson, 
-	                        mapper.getTypeFactory().constructCollectionType(
-	                            List.class, ProductImage.class
-	                        )
-	                    );
-	                    product.setImages(images);
-	                } else {
-	                    product.setImages(new ArrayList<>());
-	                }
-	                
-	                System.out.println("Product: " + product.toString());
-	                return product;
-	            }
-		 }
-	 			catch (Exception ex) {
-				ex.printStackTrace();;
+			// set params
+			for (int i = 0; i < params.length; i++) {
+				ps.setObject(i + 1, params[i]);
 			}
-		 return null;
-		 			
-		 					
-		 				
-	 }
-	
+
+			ResultSet rs = ps.executeQuery();
+			ResultSetMetaData meta = rs.getMetaData();
+
+			while (rs.next()) {
+
+				Map<String, Object> row = new HashMap<>();
+
+				for (int i = 1; i <= meta.getColumnCount(); i++) {
+					row.put(meta.getColumnName(i), rs.getObject(i));
+				}
+
+				list.add(row);
+
+			}
+			return list;
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return list;
+	}
+
+	public Product GetByIdWithShopInfo(int id) {
+
+		String sql = """
+				    SELECT
+				        p.id,
+				        p.product_name,
+				        p.price,
+				        s.id AS shop_id,
+				        s.shop_name,
+				        (
+				            SELECT JSON_ARRAYAGG(
+				                JSON_OBJECT(
+				                    'id', pi.id,
+				                    'image_url', pi.image_url,
+				                    'display_order', pi.display_order,
+				                    'is_thumbnail', pi.is_thumbnail
+				                )
+				            )
+				            FROM product_image pi
+				            WHERE pi.product_id = p.id
+				            ORDER BY pi.display_order ASC
+				        ) AS images
+				    FROM product p
+				    LEFT JOIN shop s ON p.shop_id = s.id
+				    WHERE p.id = ?
+				""";
+
+		System.out.print("Get by id with shop info..");
+
+		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+
+			ps.setInt(1, id);
+			ResultSet rs = ps.executeQuery();
+
+			ObjectMapper mapper = new ObjectMapper();
+
+			if (rs.next()) {
+				Product product = new Product();
+
+				// ===== PRODUCT =====
+				product.setId(rs.getInt("id"));
+				product.setProduct_name(rs.getString("product_name"));
+				product.setPrice(rs.getDouble("price"));
+
+				// ===== SHOP_ID =====
+				int shopId = rs.getInt("shop_id");
+				product.setShop_id(shopId);
+
+				// ===== SHOP OBJECT =====
+				if (shopId > 0) {
+					Shop shop = new Shop();
+					shop.setId(shopId);
+					shop.setShop_name(rs.getString("shop_name"));
+					product.setShop(shop);
+				}
+
+				// ===== IMAGES =====
+				String imagesJson = rs.getString("images");
+
+				if (imagesJson != null && !imagesJson.equals("[]")) {
+					List<ProductImage> images = mapper.readValue(imagesJson,
+							mapper.getTypeFactory().constructCollectionType(List.class, ProductImage.class));
+					product.setImages(images);
+				} else {
+					product.setImages(new ArrayList<>());
+				}
+
+				System.out.println("Product: " + product);
+				return product;
+			}
+
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+
+		return null;
+	}
+
+	public int countProductByShop(int shopId) {
+		String sql = "SELECT COUNT(*) FROM product WHERE shop_id = ?";
+
+		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+
+			ps.setInt(1, shopId);
+			ResultSet rs = ps.executeQuery();
+
+			if (rs.next()) {
+				return rs.getInt(1);
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return 0;
+	} 
 }
