@@ -25,7 +25,6 @@ public class UserRepository implements IRepositories<User> {
         return instance;
     }
 
-    /* ================= CREATE ================= */
 
     @Override
     public User Create(User item) throws SQLException {
@@ -94,7 +93,6 @@ public class UserRepository implements IRepositories<User> {
         return null;
     }
 
-    /* ================= GET ALL ================== */
 
     @Override
     public List<User> GetAll() {
@@ -155,7 +153,6 @@ public class UserRepository implements IRepositories<User> {
         return null;
     }
 
-    /* ================= DELETE ================= */
 
     @Override
     public boolean Delete(int id) {

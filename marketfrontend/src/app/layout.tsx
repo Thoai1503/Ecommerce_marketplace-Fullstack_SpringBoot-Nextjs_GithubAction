@@ -28,6 +28,10 @@ export default function RootLayout({
     <StoreProvider>
       <html lang="en" className="mdl-js">
         <head>
+          <link
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+            rel="stylesheet"
+          />
           <style>
             {`     :root {
                 --primary: #2b8cee;
