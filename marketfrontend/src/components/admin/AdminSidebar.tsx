@@ -199,7 +199,7 @@ export default function AdminSidebar({
         { label: "Sản phẩm", path: "/admin/products", icon: <Package /> },
         { label: "Khách hàng", path: "/admin/customers", icon: <Users /> },
         { label: "Nhà bán hàng", path: "/admin/sellers", icon: <Store /> },
-        { label: "Mã giảm giá", path: "/admin/coupons", icon: <Ticket /> },
+        { label: "Mã giảm giá", path: "/admin/vouchers", icon: <Ticket /> },
         {
           label: "Tài chính",
           id: "finance",

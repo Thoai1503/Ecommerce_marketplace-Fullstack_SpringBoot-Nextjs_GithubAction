@@ -35,10 +35,10 @@ public final class ProductMapper implements IMapper<Product> {
             product.setReview_count(rs.getInt(StringValue.PRODUCT_REVIEW_COUNT_COL));
             
             // Kích thước / Cân nặng
-            product.setWeight(rs.getDouble(StringValue.PRODUCT_WEIGHT_COL));
-            product.setLength(rs.getDouble(StringValue.PRODUCT_LENGTH_COL));
-            product.setWidth(rs.getDouble(StringValue.PRODUCT_WIDTH_COL));
-            product.setHeight(rs.getDouble(StringValue.PRODUCT_HEIGHT_COL));
+            product.setWeight(rs.getInt(StringValue.PRODUCT_WEIGHT_COL));
+            product.setLength(rs.getInt(StringValue.PRODUCT_LENGTH_COL));
+            product.setWidth(rs.getInt(StringValue.PRODUCT_WIDTH_COL));
+            product.setHeight(rs.getInt(StringValue.PRODUCT_HEIGHT_COL));
             
             product.setBrand(rs.getString(StringValue.PRODUCT_BRAND_COL));
             product.setIs_active(rs.getInt(StringValue.PRODUCT_ACTIVE_COL));
