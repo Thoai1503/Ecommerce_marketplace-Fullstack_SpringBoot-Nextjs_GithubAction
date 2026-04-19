@@ -145,6 +145,124 @@ export interface Coupon {
   createdAt: string;
 }
 
+// --- VOUCHER V2 ADMIN TYPES ---
+export type VoucherIssuerType = "PLATFORM" | "SHOP" | "BRAND";
+export type VoucherDiscountType =
+  | "PERCENT"
+  | "FIXED"
+  | "FREE_SHIPPING"
+  | "GIFT_ITEM";
+export type VoucherStatus =
+  | "DRAFT"
+  | "ACTIVE"
+  | "PAUSED"
+  | "EXPIRED"
+  | "DEPLETED"
+  | "ARCHIVED";
+
+export interface VoucherCampaign {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  startAt: string;
+  endAt: string;
+  status: "DRAFT" | "ACTIVE" | "PAUSED" | "ENDED" | "CANCELLED";
+  createdAt: string;
+}
+
+export interface AdminVoucher {
+  id: string;
+  campaignId?: string | null;
+  campaignCode?: string | null;
+  code: string;
+  title: string;
+  description?: string;
+  issuerType: VoucherIssuerType;
+  issuerId?: number | null;
+  issuerName?: string | null;
+  discountType: VoucherDiscountType;
+  discountPercent?: number | null;
+  discountAmount?: number | null;
+  maxDiscountAmount?: number | null;
+  minOrderValue: number;
+  maxOrderValue?: number | null;
+  totalQuota: number;
+  claimedCount: number;
+  redeemedCount: number;
+  perUserQuota: number;
+  stackable: boolean;
+  claimStartAt: string;
+  claimEndAt: string;
+  validFrom: string;
+  validTo: string;
+  status: VoucherStatus;
+  priority: number;
+  createdAt: string;
+}
+
+export interface VoucherAdminStats {
+  totalVouchers: number;
+  activeVouchers: number;
+  redemptionRate: number;
+  totalDiscountAmount: number;
+}
+
+export type VoucherScopeType =
+  | "SHOP"
+  | "CATEGORY"
+  | "PRODUCT"
+  | "BRAND"
+  | "PAYMENT_METHOD"
+  | "SHIPPING_METHOD";
+
+export interface VoucherScopeRule {
+  id: string;
+  voucherId: string;
+  scopeType: VoucherScopeType;
+  scopeId: number;
+  includeExclude: "INCLUDE" | "EXCLUDE";
+  createdAt: string;
+}
+
+export interface VoucherSegmentRule {
+  id: string;
+  voucherId: string;
+  segmentType:
+    | "NEW_USER"
+    | "VIP"
+    | "APP_ONLY"
+    | "MEMBERSHIP_TIER"
+    | "FIRST_ORDER";
+  segmentValue?: string | null;
+}
+
+export interface VoucherRulesPayload {
+  scopeRules: VoucherScopeRule[];
+  segmentRules: VoucherSegmentRule[];
+}
+
+export interface VoucherRedemptionEvent {
+  id: string;
+  voucherId: string;
+  userName: string;
+  orderCode: string;
+  discountAmountApplied: number;
+  finalOrderAmount: number;
+  status: "SUCCESS" | "FAILED" | "ROLLED_BACK";
+  redeemedAt: string;
+}
+
+export interface VoucherAuditEvent {
+  id: string;
+  voucherId: string;
+  eventType: string;
+  actorType: "ADMIN" | "SYSTEM" | "USER";
+  actorName: string;
+  note?: string;
+  createdAt: string;
+}
+
 // --- FINANCE TYPES ---
 export type TransactionStatus = "PAID" | "PENDING" | "CANCELLED";
 export type PaymentRequestStatus = "PENDING" | "PAID" | "CANCELLED";
@@ -225,6 +343,47 @@ export interface ShipmentStatusHistory {
   updatedAt: string;
 }
 
+export type AdjustmentStatus =
+  | "PENDING_BUYER"
+  | "ACCEPTED_BY_BUYER"
+  | "REJECTED_BY_BUYER"
+  | "CANCELLED_BY_SHOP"
+  | "EXPIRED";
+
+export interface AdjustmentItem {
+  id: string;
+  order_item_id: string;
+  product_id: string;
+  variant_id: string;
+  product_name: string;
+  variant_name?: string;
+  old_quantity: number;
+  new_quantity: number;
+  unit_price: number;
+  old_total: number;
+  new_total: number;
+  diff_total: number;
+}
+
+export interface AdjustmentRequest {
+  id: string;
+  request_code: string;
+  order_shipment_id: string;
+  order_id: string;
+  shop_id: string;
+  status: AdjustmentStatus;
+  shop_reason?: string;
+  buyer_note?: string;
+  total_original_amount: number;
+  total_adjusted_amount: number;
+  total_diff_amount: number;
+  expires_at?: string;
+  responded_at?: string;
+  items: AdjustmentItem[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Shipment {
   id: string;
   order_id: string;
@@ -239,6 +398,10 @@ export interface Shipment {
   shipping_fee?: number;
   created_at: string;
   updated_at: string;
+  adjustment_request?: AdjustmentRequest;
+  adjustment_required?: boolean;
+  business_status?: string;
+  recipient?: any;
 }
 
 export interface Product {

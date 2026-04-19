@@ -41,6 +41,7 @@ public class PaymentController {
 	        fields.put(entry.getKey(), entry.getValue()[0]);
 	    }
  	    String vnp_SecureHash = fields.get("vnp_SecureHash");
+ 	    
  	    fields.remove("vnp_SecureHash");
  	    var responseCode = String.valueOf(fields.get("vnp_ResponseCode"));
  	    System.out.println("Response code: " + responseCode);

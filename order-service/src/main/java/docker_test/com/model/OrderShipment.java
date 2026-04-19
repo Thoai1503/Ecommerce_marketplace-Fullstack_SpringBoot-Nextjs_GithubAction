@@ -31,7 +31,7 @@ public class OrderShipment {
     
     @Column(name = "shop_id", nullable = false)
 	private Long shopId;
-    @Column(name = "tracking_number", nullable = false)
+    @Column(name = "tracking_number")
 	private String trackingNumber;
     @Column(name = "shipping_fee", nullable = false)
     	private Double shippingFee;
@@ -41,6 +41,18 @@ public class OrderShipment {
 	private String carrierName;
      @Column(name = "shipping_status", nullable = false)	
 	private String shippingStatus;
-	
+
+    @Column(name = "business_status")
+    private String businessStatus;
+
+    @Column(name = "latest_adjustment_request_id")
+    private Long latestAdjustmentRequestId;
+
+    @Column(name = "adjusted_total_amount")
+    private Double adjustedTotalAmount;
+
+    @Column(name = "adjustment_required", nullable = false)
+    private Boolean adjustmentRequired;
+
 }
 

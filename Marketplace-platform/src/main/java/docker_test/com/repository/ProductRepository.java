@@ -44,32 +44,41 @@ public class ProductRepository implements IRepositories<Product> {
 
 	@Override
 	public Product Create(Product item) throws SQLException {
-		System.out.print("Body: " + item.toString());
-		String sql = "insert into product (shop_id,category_id,description,product_name,product_slug,price,original_price) values (?,?,?,?,?,?,?)";
-		try (Connection con = dbConnection.getConn();
-				PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-			ps.setLong(1, item.getShop_id());
-			ps.setLong(2, item.getCategory_id());
-			ps.setString(3, item.getDescription());
-
-			ps.setString(4, item.getProduct_name());
-			ps.setString(5, item.getProduct_slug());
-			ps.setDouble(6, item.getPrice());
-			ps.setDouble(7, item.getOriginal_price());
-
-			int rows = ps.executeUpdate();
-
-			if (rows > 0) {
-				try (ResultSet rs = ps.getGeneratedKeys()) {
-					if (rs.next()) {
-						var id = rs.getInt(1);
-						item.setId(id);
-						System.out.println("ID user mới: " + id);
+		 System.out.print("Body: "+item.toString());
+		 String sql = "insert into product (shop_id,category_id,description,product_name,product_slug,price,original_price,weight,length,width,height,stock_quantity) values (?,?,?,?,?,?,?,?,?,?,?,?)";
+		 try (Connection con = dbConnection.getConn();
+					PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
+			 ps.setLong(1, item.getShop_id());
+			 ps.setLong(2, item.getCategory_id());
+			 ps.setString(3, item.getDescription());
+		
+			 ps.setString(4, item.getProduct_name());
+			 ps.setString(5, item.getProduct_slug());
+			 ps.setDouble(6, item.getPrice());
+			 ps.setDouble(7, item.getOriginal_price());
+			 
+			 ps.setInt(8, item.getWeight());
+			 ps.setInt(9, item.getLength());
+			 ps.setInt(10, item.getWidth());
+			 ps.setInt(11, item.getHeight());
+			 ps.setInt(12, item.getStock_quantity());
+			 
+			 int rows =ps.executeUpdate();
+			 
+			 if (rows > 0) {
+					try (ResultSet rs = ps.getGeneratedKeys()) {
+						if (rs.next()) {
+							var id = rs.getInt(1);
+							item.setId(id);
+							System.out.println("ID user mới: " + id);
+						}
 					}
 				}
 				return item;
 			}
-		}
+			 catch (Exception ex) {
+					ex.printStackTrace();;
+				}
 
 		// TODO Auto-generated method stub
 		return null;

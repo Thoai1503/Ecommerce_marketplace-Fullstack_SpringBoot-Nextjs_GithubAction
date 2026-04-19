@@ -55,4 +55,32 @@ export class OrderShipments extends Model {
       url: `${API_URL}/api/orders/shipments/${shipmentId}/confirm-packaged`,
     });
   }
+
+  static createAdjustmentRequest(
+    shipmentId: number,
+    payload: {
+      shopReason: string;
+      items: Array<{
+        orderItemId: number;
+        newQuantity: number;
+      }>;
+    },
+  ) {
+    return this.api.post({
+      url: `${API_URL}/api/orders/shipments/${shipmentId}/adjustment-request`,
+      data: payload,
+    });
+  }
+
+  static cancelByOutOfStock(
+    shipmentId: number,
+    payload: {
+      reason: string;
+    },
+  ) {
+    return this.api.post({
+      url: `${API_URL}/api/orders/shipments/${shipmentId}/cancel-by-oos`,
+      data: payload,
+    });
+  }
 }
