@@ -1,5 +1,6 @@
 package docker_test.com.models.product;
 
+import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -145,35 +146,35 @@ public final class Product {
 		this.rating = rating;
 	}
 
-	public Double getWeight() {
+	public Integer getWeight() {
 		return weight;
 	}
 
-	public void setWeight(Double weight) {
+	public void setWeight(Integer weight) {
 		this.weight = weight;
 	}
 
-	public Double getLength() {
+	public Integer getLength() {
 		return length;
 	}
 
-	public void setLength(Double length) {
+	public void setLength(Integer length) {
 		this.length = length;
 	}
 
-	public Double getWidth() {
+	public Integer getWidth() {
 		return width;
 	}
 
-	public void setWidth(Double width) {
+	public void setWidth(Integer width) {
 		this.width = width;
 	}
 
-	public Double getHeight() {
+	public Integer getHeight() {
 		return height;
 	}
 
-	public void setHeight(Double height) {
+	public void setHeight(Integer height) {
 		this.height = height;
 	}
 
@@ -197,10 +198,10 @@ public final class Product {
     private Integer sold_count = null;
     private Double rating;
     private Integer review_count=null;
-    private Double weight;
-    private Double length;
-    private Double width;
-    private Double height;
+    private Integer weight;
+    private Integer length;
+    private Integer width;
+    private Integer height;
     private String brand;
     
     public List<ProductVariant> getVariants() {
@@ -239,7 +240,7 @@ public final class Product {
     public Product(Integer id, Integer shop_id, Integer category_id, String product_name,
                    String product_slug, String description, Double price, Double original_price,
                    Integer stock_quantity, Integer sold_count, Double rating, Integer review_count,
-                   Double weight, Double length, Double width, Double height,
+                   Integer weight, Integer length, Integer width, Integer height,
                    String brand, Integer is_active, LocalDateTime created_at, LocalDateTime updated_at) {
         this.id = id;
         this.shop_id = shop_id;

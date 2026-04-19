@@ -706,7 +706,7 @@ const AddProductForm: React.FC = () => {
                   <div className="card-body">
                     <h3 className="h5 fw-bold mb-4">Pricing Configuration</h3>
                     <div className="row g-3">
-                      <div className="col-md-4">
+                      <div className="col-md-3">
                         <label className="form-label fw-semibold">
                           Base Price
                         </label>
@@ -728,7 +728,30 @@ const AddProductForm: React.FC = () => {
                           />
                         </div>
                       </div>
-                      <div className="col-md-4">
+                      <div className="col-md-3">
+                        <label className="form-label fw-semibold">
+                          Inventory
+                        </label>
+                        <div className="input-group">
+                          <input
+                            type="number"
+                            min="0"
+                            className="form-control"
+                            name="stock_quantity"
+                            value={product.stock_quantity ?? ""}
+                            onChange={(event) => {
+                              const { value, name } = event.target;
+                              setProduct((prev: any) => ({
+                                ...prev,
+                                [name]: value === "" ? 0 : Number(value),
+                              }));
+                            }}
+                            placeholder="0"
+                          />
+                          <span className="input-group-text">pcs</span>
+                        </div>
+                      </div>
+                      <div className="col-md-3">
                         <label className="form-label fw-semibold">
                           Compare at Price
                         </label>
@@ -741,7 +764,7 @@ const AddProductForm: React.FC = () => {
                           />
                         </div>
                       </div>
-                      <div className="col-md-4">
+                      <div className="col-md-3">
                         <label className="form-label fw-semibold">
                           Cost per Item
                         </label>
@@ -788,35 +811,78 @@ const AddProductForm: React.FC = () => {
                   <div className="card-body">
                     <h3 className="h5 fw-bold mb-4">Shipping Information</h3>
                     <div className="row g-3">
-                      <div className="col-md-4">
+                      <div className="col-md-6 col-lg-3">
                         <label className="form-label fw-semibold">Weight</label>
                         <div className="input-group">
                           <input
                             type="text"
                             className="form-control"
                             placeholder="0.0"
+                            name="weight"
+                            onChange={(e) => {
+                              const { name, value } = e.target;
+                              setProduct((prev: any) => ({
+                                ...prev,
+                                [name]: value,
+                              }));
+                            }}
                           />
-                          <span className="input-group-text">kg</span>
+                          <span className="input-group-text">g</span>
                         </div>
                       </div>
-                      <div className="col-md-4">
+                      <div className="col-md-6 col-lg-3">
                         <label className="form-label fw-semibold">Length</label>
                         <div className="input-group">
                           <input
                             type="text"
                             className="form-control"
                             placeholder="0"
+                            name="length"
+                            onChange={(e) => {
+                              const { name, value } = e.target;
+                              setProduct((prev: any) => ({
+                                ...prev,
+                                [name]: value,
+                              }));
+                            }}
                           />
                           <span className="input-group-text">cm</span>
                         </div>
                       </div>
-                      <div className="col-md-4">
+                      <div className="col-md-6 col-lg-3">
                         <label className="form-label fw-semibold">Width</label>
                         <div className="input-group">
                           <input
                             type="text"
                             className="form-control"
                             placeholder="0"
+                            name="width"
+                            onChange={(e) => {
+                              const { name, value } = e.target;
+                              setProduct((prev: any) => ({
+                                ...prev,
+                                [name]: value,
+                              }));
+                            }}
+                          />
+                          <span className="input-group-text">cm</span>
+                        </div>
+                      </div>
+                      <div className="col-md-6 col-lg-3">
+                        <label className="form-label fw-semibold">Height</label>
+                        <div className="input-group">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="0"
+                            name="height"
+                            onChange={(e) => {
+                              const { name, value } = e.target;
+                              setProduct((prev: any) => ({
+                                ...prev,
+                                [name]: value,
+                              }));
+                            }}
                           />
                           <span className="input-group-text">cm</span>
                         </div>

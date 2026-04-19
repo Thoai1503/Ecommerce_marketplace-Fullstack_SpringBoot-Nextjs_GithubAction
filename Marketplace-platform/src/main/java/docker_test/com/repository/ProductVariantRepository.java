@@ -62,7 +62,7 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 
 	@Override
 	public ProductVariant Create(ProductVariant item) throws SQLException {
-		String sql = "insert into product_variant (product_id, variant_name, sku, price, stock_quantity, image_url) values (?,?,?,?,?,?)";
+		String sql = "insert into product_variant (product_id, variant_name, sku, price, stock_quantity, image_url,width,weight,height) values (?,?,?,?,?,?,?,?,?)";
 		try(Connection con = dbConnection.getConn();
 				PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
 			  ps.setLong(1, item.getProduct_id());
@@ -71,6 +71,9 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 			  ps.setDouble(4, item.getPrice());
 			  ps.setInt(5, item.getStock_quantity());
 			  ps.setString(6, item.getImage_url());
+			  ps.setLong(7, item.getWidth());
+			  ps.setLong(8, item.getWeight());
+			  ps.setLong(9, item.getHeight());
 			  int affectedRows = ps.executeUpdate();
 			  if (affectedRows > 0) {
 				  try (ResultSet keys = ps.getGeneratedKeys()) {
