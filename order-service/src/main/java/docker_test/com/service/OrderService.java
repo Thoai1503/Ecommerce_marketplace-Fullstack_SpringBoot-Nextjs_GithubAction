@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ public class OrderService {
     private static final String ROLLBACK_TEST_FLAG = "SIMULATE_ROLLBACK";
     private final int STOCK = 10;
     private final WebClient webClient;
+    private final String paymentServiceUrl;
 	
 
 	
@@ -50,7 +52,8 @@ public class OrderService {
                         OrderEventPublisher eventPublisher,
                         OrderShipmentRepository orderShipmentRepository     ,
                         RedisTemplate redisTemplate,
-                        WebClient webClient
+						WebClient webClient,
+						@Value("${payment.service.url:http://localhost:8008}") String paymentServiceUrl
     		) {
         this.orderRepository   = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -59,6 +62,7 @@ public class OrderService {
         
         this.redisTemplate = redisTemplate;
         this.webClient = webClient;
+                this.paymentServiceUrl = paymentServiceUrl;
     }
 
     // All DB writes + event publish happen in one transaction.
@@ -77,13 +81,13 @@ public class OrderService {
         List<OrderShipmentDTO> orderShipments = dto.getOrder_shipment();
         orderShipments.forEach(os -> {
         	var orderShipmetDto= new OrderShipment();
-			orderShipmetDto.setOrderId(saved.getId());
-			orderShipmetDto.setCarrierName("LOG");
-			orderShipmetDto.setShippingStatus("PENDING");
-			orderShipmetDto.setShopId(os.getShop_id());
-			orderShipmetDto.setTrackingNumber(null);
-			orderShipmetDto.setAdjustmentRequired(false);
-			orderShipmetDto.setBusinessStatus("NORMAL");
+        	orderShipmetDto.setOrderId(saved.getId());
+        	orderShipmetDto.setCarrierName("LOG");
+        	orderShipmetDto.setShippingStatus("PENDING");
+        	orderShipmetDto.setShopId(os.getShop_id());
+        	orderShipmetDto.setTrackingNumber(null);
+        	orderShipmetDto.setAdjustmentRequired(false);
+        	orderShipmetDto.setBusinessStatus("NORMAL");
 			
 			orderShipmetDto.setShippingFee(Double.valueOf(os.getShipping_fee()));
 		    orderShipmetDto.setTotalAmount(os.getTotal_amount());
@@ -111,8 +115,11 @@ public class OrderService {
         dto.setOrder_number(saved.getOrderNumber());
               
         
+        String paymentCreateUrl = resolvePaymentCreateUrl();
+        log.info("Calling payment service URL: {}", paymentCreateUrl);
+
         String paymentUrl = webClient.post()
-				.uri("http://localhost:8082/api/payments/create-url")
+            .uri(paymentCreateUrl)
 				.bodyValue(Map.of(
 						"orderId", saved.getId(),
 						"amount", saved.getFinalAmount(),
@@ -156,6 +163,16 @@ public class OrderService {
         }
 
         return responseDTO;
+    }
+
+    private String resolvePaymentCreateUrl() {
+   
+        if (paymentServiceUrl.endsWith("/")) {
+        	log.info("payment.service.url ends with '/'. Constructing payment URL accordingly.");
+            return paymentServiceUrl + "api/payments/create-url";
+        }
+            log.info("Constructing payment URL using payment.service.url: {}", paymentServiceUrl);
+        return paymentServiceUrl.trim() + "/api/payments/create-url";
     }
 
         

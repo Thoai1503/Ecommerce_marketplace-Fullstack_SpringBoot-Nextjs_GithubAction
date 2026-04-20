@@ -13,6 +13,7 @@ import payment_service.com.dto.PaymentCallbackRequest;
 import payment_service.com.dto.PaymentCallbackResult;
 import payment_service.com.dto.PaymentProvider;
 import payment_service.com.gateway.PaymentCallbackHandler;
+import payment_service.com.publisher.OrderPaymentStatusPublisher;
 
 /**
  * Orchestrates payment callback processing across multiple gateway providers.
@@ -31,7 +32,16 @@ import payment_service.com.gateway.PaymentCallbackHandler;
 public class ProcessPaymentCallbackService {
 
     private static final Logger log = LoggerFactory.getLogger(ProcessPaymentCallbackService.class);
+    private final OrderPaymentStatusPublisher paymentStatusPublisher;
 
+	 public ProcessPaymentCallbackService(List<PaymentCallbackHandler> handlers,
+										 OrderPaymentStatusPublisher paymentStatusPublisher) {
+		this.handlerRegistry = handlers.stream()
+				.collect(Collectors.toMap(PaymentCallbackHandler::supports, Function.identity()));
+		this.paymentStatusPublisher = paymentStatusPublisher;
+		
+		log.info("Payment callback handlers registered: {}", handlerRegistry.keySet());
+	}
     /** Registry: PaymentProvider → callback handler. Built once at startup. */
     private final Map<PaymentProvider, PaymentCallbackHandler> handlerRegistry;
 
@@ -39,11 +49,6 @@ public class ProcessPaymentCallbackService {
      * Spring injects all {@link PaymentCallbackHandler} beans as a list;
      * this constructor converts it into a lookup map keyed by {@link PaymentProvider}.
      */
-    public ProcessPaymentCallbackService(List<PaymentCallbackHandler> handlers) {
-        this.handlerRegistry = handlers.stream()
-                .collect(Collectors.toMap(PaymentCallbackHandler::supports, Function.identity()));
-        log.info("Payment callback handlers registered: {}", handlerRegistry.keySet());
-    }
 
     /**
      * Process an incoming callback and update order/payment state.
@@ -64,9 +69,17 @@ public class ProcessPaymentCallbackService {
 
         log.info("Processing callback from {}: sourceIP={}", provider, request.getSourceIpAddress());
         PaymentCallbackResult result = handler.processCallback(request);
+        
+        paymentStatusPublisher.publish(result);
+        
+        
+        
         log.info("Callback processed: provider={}, orderId={}, success={}", 
                 provider, result.getOrderId(), result.isSuccess());
 
         return result;
     }
+    
+    private record CallbackProcessingResult(boolean success, String orderId) {
+	}
 }
