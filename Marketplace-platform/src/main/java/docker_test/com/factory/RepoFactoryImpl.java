@@ -39,12 +39,11 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	private final AttributeRepository attributeRepository;
 	private final AttributeValueRepository attributeValueRepository;
 	
-	public static RepoFactoryImpl Instance() {
-	
-		if (instance==null) {
-			instance=new RepoFactoryImpl();
-		}
-		return instance;
+	public static synchronized RepoFactoryImpl Instance() {
+	    if (instance == null) {
+	        instance = new RepoFactoryImpl();
+	    }
+	    return instance;
 	}
 	
 	
