@@ -63,7 +63,7 @@ export const SellerAuthProvider = ({
 export const useSellerAuth = () => {
   const context = useContext(SellerAuthContext);
   if (context === undefined) {
-    throw new Error("useUserAuth must be used within a UserAuthProvider");
+    throw new Error("useUserAuth must be used within a UserAuthProvider ");
   }
   return context;
 };
