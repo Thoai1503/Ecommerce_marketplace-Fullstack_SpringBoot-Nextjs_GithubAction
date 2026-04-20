@@ -17,7 +17,7 @@ import {
 } from "@/components/client/checkout_page/types";
 import type { Address } from "@/components/client/checkout_page/types";
 
-type PaymentMethod = "cod" | "vnpay" | "bank";
+type PaymentMethod = "cod" | "VNPAY" | "BANK";
 
 const PAYMENT_OPTIONS: {
   id: PaymentMethod;
@@ -32,13 +32,13 @@ const PAYMENT_OPTIONS: {
     icon: <Banknote size={24} color="#22c55e" strokeWidth={1.5} />,
   },
   {
-    id: "vnpay",
+    id: "VNPAY",
     label: "VNPay",
     description: "Thanh toán qua cổng VNPay (ATM, QR, thẻ quốc tế).",
     icon: <CreditCard size={24} color="#137fec" strokeWidth={1.5} />,
   },
   {
-    id: "bank",
+    id: "BANK",
     label: "Chuyển khoản ngân hàng",
     description: "Chuyển khoản trực tiếp qua tài khoản ngân hàng.",
     icon: <Wallet size={24} color="#f59e0b" strokeWidth={1.5} />,

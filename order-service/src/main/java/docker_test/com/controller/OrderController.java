@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import docker_test.com.dto.OrderDTO;
+import docker_test.com.dto.OrderResponeDTO;
 import docker_test.com.dto.RecipientDTO;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
@@ -97,17 +98,20 @@ public class OrderController {
 	
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)           // return 201, not 200
-    public ResponseEntity<OrderResponseDTO> placeOrder(@Valid @RequestBody OrderDTO dto) {
+    public ResponseEntity<OrderResponeDTO> placeOrder(@Valid @RequestBody OrderDTO dto) {
     	RecipientDTO recipient = dto.getRecipient();
     	System.out.println("Received order for recipient: " + recipient.getName() + ", Phone: " + recipient.getPhone());
         dto.getOrder_shipment().forEach(shipment -> {
 			System.out.println("Shipment :" + shipment.toString());
 		});
     	try {
-    	Order saved = orderService.placeOrder(dto);
+    		
+    		
+    	OrderResponeDTO saved = orderService.placeOrder(dto);
+    	System.out.println("Order placed successfully : " + saved.toString());
     	return ResponseEntity
     			.status(HttpStatus.CREATED)
-    			.body(new OrderResponseDTO(saved.getId(), saved.getOrderNumber(), "PENDING"));
+    			.body(saved);
     	}
         catch (Exception e) {
 			System.err.println("Error placing order: " + e.getMessage());
@@ -116,7 +120,7 @@ public class OrderController {
 			//giúp tôi trả về cả message lỗi trong response body
 			return ResponseEntity
 					.status(HttpStatus.INTERNAL_SERVER_ERROR)
-					.body(new OrderResponseDTO(null, null, "ERROR: " + e.getMessage()));
+					.body(new OrderResponeDTO(null, null, "Failed to place order: " + e.getMessage()));
 		}
     }
 

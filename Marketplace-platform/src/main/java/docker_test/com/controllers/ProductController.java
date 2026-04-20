@@ -1,6 +1,7 @@
 package docker_test.com.controllers;
 
 import java.sql.SQLException;
+import java.util.HashSet;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,8 +34,13 @@ public class ProductController {
 	 @GetMapping("")
 	 public ResponseEntity getAll() {
 		 var list = repositories.GetAll();
+		 //Convert the list to hashSet
+		HashSet<Product> set = new HashSet<>(list); 
+		
 		 
-		 return ResponseEntity.ok(list);
+		 
+		 
+		 return ResponseEntity.ok(set);
 	 } 
 	
 	 @GetMapping("/{id}")
