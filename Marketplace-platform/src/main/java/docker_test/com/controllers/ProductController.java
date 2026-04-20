@@ -53,16 +53,7 @@ public class ProductController {
 		 
 		 return ResponseEntity.ok(product);
 	 }
-	@GetMapping("/with-shop/{id}")
-	public ResponseEntity getByIdWithShop(@PathVariable Integer id) {
-		var product = ((ProductRepository)repositories).GetByIdWithShopInfo(id);
-		
-		if(product == null) {
-			return ResponseEntity.notFound().build();
-		}
 
-		return ResponseEntity.ok(product);
-	}
 
 	@GetMapping("/with-shop/{id}")
 	public ResponseEntity getByIdWithShop(@PathVariable Integer id) {
