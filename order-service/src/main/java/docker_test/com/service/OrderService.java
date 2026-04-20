@@ -12,9 +12,11 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import docker_test.com.dto.OrderDTO;
 import docker_test.com.dto.OrderItemDTO;
+import docker_test.com.dto.OrderResponeDTO;
 import docker_test.com.dto.OrderShipmentDTO;
 import docker_test.com.exception.SimulatedRollbackException;
 import docker_test.com.model.Order;
@@ -32,6 +34,7 @@ public class OrderService {
 
     private static final String ROLLBACK_TEST_FLAG = "SIMULATE_ROLLBACK";
     private final int STOCK = 10;
+    private final WebClient webClient;
 	
 
 	
@@ -46,7 +49,8 @@ public class OrderService {
                         OrderItemRepository orderItemRepository,
                         OrderEventPublisher eventPublisher,
                         OrderShipmentRepository orderShipmentRepository     ,
-                        RedisTemplate redisTemplate
+                        RedisTemplate redisTemplate,
+                        WebClient webClient
     		) {
         this.orderRepository   = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -54,18 +58,22 @@ public class OrderService {
         this.orderShipmentRepository = orderShipmentRepository;
         
         this.redisTemplate = redisTemplate;
+        this.webClient = webClient;
     }
 
     // All DB writes + event publish happen in one transaction.
     // If any save fails, the whole operation rolls back.
     @Transactional
-    public Order placeOrder(OrderDTO dto) {
+    public OrderResponeDTO placeOrder(OrderDTO dto) {
         log.info("Placing order for user_id={}", dto.getUser_id());
         var itemsByShopIdMap = groupByShopId(dto.getOrders_items());
         
         Order order = buildOrder(dto);
         Order saved = orderRepository.save(order);
+        
         maybeThrowSimulatedRollback(dto, saved.getId());
+        
+     
         List<OrderShipmentDTO> orderShipments = dto.getOrder_shipment();
         orderShipments.forEach(os -> {
         	var orderShipmetDto= new OrderShipment();
@@ -101,8 +109,25 @@ public class OrderService {
         dto.setId(saved.getId());
         dto.setRecipient(dto.getRecipient());
         dto.setOrder_number(saved.getOrderNumber());
+              
         
-        // Publish event with error handling and automatic rollback on failure
+        String paymentUrl = webClient.post()
+				.uri("http://localhost:8082/api/payments/create-url")
+				.bodyValue(Map.of(
+						"orderId", saved.getId(),
+						"amount", saved.getFinalAmount(),
+						"paymentProvider", saved.getPaymentMethod(),
+						"orderInfo", "Payment for order " + saved.getOrderNumber(),
+						"ipAddress", "10.0.0.0.1",
+						"orderType", "ecommerce"
+						
+						
+				))
+				.retrieve()
+                .bodyToMono(String.class)
+				.block();
+        System.out.println("Payment url response: " + paymentUrl);
+
         try {
             eventPublisher.publish(dto);
             log.info("Order event published successfully for orderId={}", saved.getId());
@@ -112,8 +137,25 @@ public class OrderService {
             // Throwing exception will trigger @Transactional rollback
             throw new RuntimeException("Failed to publish order event: " + e.getMessage(), e);
         }
+        OrderResponeDTO responseDTO = new OrderResponeDTO();
+        responseDTO.setId(saved.getId().intValue());
+        
+        if (!"COD".equalsIgnoreCase(order.getPaymentMethod())) {
+		
+            if (paymentUrl != null && !paymentUrl.isBlank()) {
+                log.info("Payment URL generated for orderId={}", saved.getId());
+                responseDTO.setPaymentUrl(paymentUrl);
+                return responseDTO;
+            } else {
+                log.warn("Payment URL generation failed for orderId={}. Response: {}", saved.getId(), paymentUrl);
+                saved.setPaymentStatus("FAILED");
+                orderRepository.save(saved);
+                // Depending on business rules, you might want to throw an exception here to rollback the order creation
+                // throw new RuntimeException("Payment failed for orderId=" + saved.getId());
+            }
+        }
 
-        return saved;
+        return responseDTO;
     }
 
         

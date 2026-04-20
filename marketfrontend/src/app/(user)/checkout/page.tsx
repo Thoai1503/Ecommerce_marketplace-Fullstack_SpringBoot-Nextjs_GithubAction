@@ -744,7 +744,7 @@ export default function CheckoutPage() {
         };
       },
     );
-
+    alert("Orders Shipment:\n" + JSON.stringify(ordersShipment, null, 2));
     alert(
       `Thông tin vận chuyển:\n${ordersShipment
         .map(
@@ -815,8 +815,9 @@ export default function CheckoutPage() {
           ...prev,
           orderId: dt.id,
         }));
-        if (paymentInfo.method === "vnpay") {
-          checkOut({ ...paymentInfo, orderId: dt.id });
+        if (paymentInfo.method !== "cod") {
+          //checkOut({ ...paymentInfo, orderId: dt.id });
+          window.location.href = `${dt.paymentUrl}`; // Chuyển hướng đến cổng thanh toán VNPAY
         } else {
           window.location.href = `/orders/${dt.id}`; // Chuyển hướng đến trang thành công sau khi đặt hàng với phương thức khác
         }

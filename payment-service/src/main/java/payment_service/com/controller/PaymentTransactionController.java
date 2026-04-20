@@ -8,7 +8,7 @@ import payment_service.com.service.PaymentTransactionService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/transactions")
+@RequestMapping("/api/payments/transactions")
 @RequiredArgsConstructor
 public class PaymentTransactionController {
     

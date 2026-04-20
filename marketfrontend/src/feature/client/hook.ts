@@ -15,6 +15,7 @@ export const useCheckoutPage = () => {
   const { mutate: checkOut } = useMutation({
     mutationFn: (paymentInfo: any) => checkOutAPI(paymentInfo),
     onSuccess: (data) => {
+      alert("Data thanh toán: " + JSON.stringify(data));
       if (!data.data.startsWith("http")) {
         alert(data.data);
         return;
