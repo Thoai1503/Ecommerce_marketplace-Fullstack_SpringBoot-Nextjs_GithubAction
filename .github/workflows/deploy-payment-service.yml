@@ -1,0 +1,16 @@
+name: Deploy Payment Service
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "payment-service/**"
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      context_path: ./payment-service
+      image_name: payment_service
+      service_name: payment-service
+    secrets: inherit

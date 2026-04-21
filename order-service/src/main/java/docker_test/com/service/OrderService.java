@@ -53,7 +53,7 @@ public class OrderService {
                         OrderShipmentRepository orderShipmentRepository     ,
                         RedisTemplate redisTemplate,
 						WebClient webClient,
-						@Value("${payment.service.url:http://localhost:8008}") String paymentServiceUrl
+						@Value("${payment.service.url}") String paymentServiceUrl
     		) {
         this.orderRepository   = orderRepository;
         this.orderItemRepository = orderItemRepository;
