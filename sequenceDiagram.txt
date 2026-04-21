@@ -1,0 +1,46 @@
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant FE as Frontend
+    participant OS as Order Service
+    participant ODB as Order DB
+    participant PS as Payment Service
+    participant PDB as Payment DB
+    participant PG as Payment Gateway
+    participant K as Kafka
+
+    U->>FE: Place Order
+    FE->>OS: POST /api/orders
+
+    OS->>ODB: Save Order (PENDING_PAYMENT)
+    ODB-->>OS: orderId, orderNumber (committed)
+
+    OS->>PS: POST /transactions/intents (sync)
+    Note over OS,PS: idempotencyKey = ORDER-{orderId}
+
+    PS->>PDB: Find by refType=ORDER + refId=orderId + txnType
+    alt Existing transaction
+        PDB-->>PS: Existing txnCode + paymentUrl
+    else New transaction
+        PS->>PG: Create payment link
+        PG-->>PS: paymentUrl
+        PS->>PDB: Save transaction (PENDING)
+    end
+
+    PS-->>OS: txnCode + paymentUrl + expiredAt
+    OS->>ODB: Attach paymentTxnCode/paymentUrl
+    OS-->>FE: 201 Created + paymentUrl
+    FE->>PG: Redirect user to pay
+
+    PG-->>PS: Webhook (success/failed/expired)
+    PS->>PDB: Update transaction status
+    PS->>K: Publish payment.status.changed
+
+    OS-->>K: Consume payment.status.changed
+    OS->>ODB: Update order status
+    Note over OS,ODB: SUCCESS -> CONFIRMED / PAID\nFAILED, EXPIRED -> PENDING_PAYMENT
+
+    opt Payment service timeout on create intent
+        OS->>ODB: mark payment init failed or keep pending
+        OS-->>FE: return error/retry message
+    end

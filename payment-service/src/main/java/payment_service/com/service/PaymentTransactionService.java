@@ -31,6 +31,14 @@ public class PaymentTransactionService {
         return transactionRepository.findByOrderId(orderId)
             .orElseThrow(() -> new RuntimeException("Transaction not found for order: " + orderId));
     }
+
+    public Optional<PaymentTransaction> findOptionalByTxnCode(String txnCode) {
+        return transactionRepository.findByTxnCode(txnCode);
+    }
+
+    public Optional<PaymentTransaction> findOptionalByOrderId(Long orderId) {
+        return transactionRepository.findByOrderId(orderId);
+    }
     
     public List<PaymentTransaction> getUserTransactions(Long userId) {
         return transactionRepository.findByUserIdOrderByCreatedAtDesc(userId);

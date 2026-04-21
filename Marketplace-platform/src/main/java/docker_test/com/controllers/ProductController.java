@@ -1,6 +1,7 @@
 package docker_test.com.controllers;
 
 import java.sql.SQLException;
+import java.util.HashSet;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,31 +20,40 @@ import docker_test.com.repository.ProductRepository;
 @RestController("clientProductController")
 @RequestMapping("/product")
 public class ProductController {
-	private final IRepositories repositories;
-	private final IRepoFactory iRepoFactory;
+	 private final IRepositories repositories;
+	 private final IRepoFactory iRepoFactory;
+	 
+	 public ProductController (RepoFactoryImpl factoryImpl) {
+		 this.iRepoFactory= factoryImpl;
+		 this.repositories = iRepoFactory.createRepo("product");
+	 }
+        
+	 
+	 
+	 
+	 @GetMapping("")
+	 public ResponseEntity getAll() {
+		 var list = repositories.GetAll();
+		 //Convert the list to hashSet
+		HashSet<Product> set = new HashSet<>(list); 
+		
+		 
+		 
+		 
+		 return ResponseEntity.ok(set);
+	 } 
+	
+	 @GetMapping("/{id}")
+	 public ResponseEntity getById(@PathVariable Integer id) {
+		 var product = repositories.GetById(id);
+		 
+		 if(product == null) {
+			 return ResponseEntity.notFound().build();
+		 }
+		 
+		 return ResponseEntity.ok(product);
+	 }
 
-	public ProductController(RepoFactoryImpl factoryImpl) {
-		this.iRepoFactory = factoryImpl;
-		this.repositories = iRepoFactory.createRepo("product");
-	}
-
-	@GetMapping("")
-	public ResponseEntity getAll() {
-		var list = repositories.GetAll();
-
-		return ResponseEntity.ok(list);
-	}
-
-	@GetMapping("/{id}")
-	public ResponseEntity getById(@PathVariable Integer id) {
-		var product = repositories.GetById(id);
-
-		if (product == null) {
-			return ResponseEntity.notFound().build();
-		}
-
-		return ResponseEntity.ok(product);
-	}
 
 	@GetMapping("/with-shop/{id}")
 	public ResponseEntity getByIdWithShop(@PathVariable Integer id) {
