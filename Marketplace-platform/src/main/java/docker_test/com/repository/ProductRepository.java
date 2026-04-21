@@ -44,43 +44,41 @@ public class ProductRepository implements IRepositories<Product> {
 
 	@Override
 	public Product Create(Product item) throws SQLException {
-		 System.out.print("Body: "+item.toString());
-		 String sql = "insert into product (shop_id,category_id,description,product_name,product_slug,price,original_price,weight,length,width,height,stock_quantity) values (?,?,?,?,?,?,?,?,?,?,?,?)";
-		 try (Connection con = dbConnection.getConn();
-					PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
-			 ps.setLong(1, item.getShop_id());
-			 ps.setLong(2, item.getCategory_id());
-			 ps.setString(3, item.getDescription());
-		
-			 ps.setString(4, item.getProduct_name());
-			 ps.setString(5, item.getProduct_slug());
-			 ps.setDouble(6, item.getPrice());
-			 ps.setDouble(7, item.getOriginal_price());
-			 
-			 ps.setInt(8, item.getWeight());
-			 ps.setInt(9, item.getLength());
-			 ps.setInt(10, item.getWidth());
-			 ps.setInt(11, item.getHeight());
-			 ps.setInt(12, item.getStock_quantity());
-			 
-			 int rows =ps.executeUpdate();
-			 
-			 if (rows > 0) {
-					try (ResultSet rs = ps.getGeneratedKeys()) {
-						if (rs.next()) {
-							var id = rs.getInt(1);
-							item.setId(id);
-							System.out.println("ID user mới: " + id);
-						}
+		System.out.print("Body: " + item.toString());
+		String sql = "insert into product (shop_id,category_id,description,product_name,product_slug,price,original_price,weight,length,width,height,stock_quantity) values (?,?,?,?,?,?,?,?,?,?,?,?)";
+		try (Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+			ps.setLong(1, item.getShop_id());
+			ps.setLong(2, item.getCategory_id());
+			ps.setString(3, item.getDescription());
+
+			ps.setString(4, item.getProduct_name());
+			ps.setString(5, item.getProduct_slug());
+			ps.setDouble(6, item.getPrice());
+			ps.setDouble(7, item.getOriginal_price());
+
+			ps.setInt(8, item.getWeight());
+			ps.setInt(9, item.getLength());
+			ps.setInt(10, item.getWidth());
+			ps.setInt(11, item.getHeight());
+			ps.setInt(12, item.getStock_quantity());
+
+			int rows = ps.executeUpdate();
+
+			if (rows > 0) {
+				try (ResultSet rs = ps.getGeneratedKeys()) {
+					if (rs.next()) {
+						var id = rs.getInt(1);
+						item.setId(id);
+						System.out.println("ID user mới: " + id);
 					}
 				}
-				return item;
 			}
-			 catch (Exception ex) {
-					ex.printStackTrace();;
-				}
-
-		// TODO Auto-generated method stub
+			return item;
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			;
+		}
 		return null;
 	}
 
@@ -116,7 +114,7 @@ public class ProductRepository implements IRepositories<Product> {
 				    p.length,
 				    p.width,
 				    p.height,
-				    p.brand,
+				    p.brand_id,
 				    p.is_active,
 				    p.created_at,
 				    p.updated_at,
@@ -239,6 +237,8 @@ public class ProductRepository implements IRepositories<Product> {
 				SELECT
 				    p.id,
 				    p.shop_id,
+				    p.category_id,
+				    c.category_name,  
 				    p.product_name,
 				    p.product_slug,
 				    p.price,
@@ -259,6 +259,7 @@ public class ProductRepository implements IRepositories<Product> {
 				        ELSE JSON_ARRAY()
 				    END AS variants
 				FROM product p
+				LEFT JOIN category c ON p.category_id = c.id
 				left join product_image pi on  p.id = pi.product_id and pi.id = (select MIN(id) from product_image where product_id =p.id)
 				LEFT JOIN product_variant pv ON p.id = pv.product_id
 				WHERE p.shop_id = ?
@@ -278,6 +279,8 @@ public class ProductRepository implements IRepositories<Product> {
 				Product product = new Product();
 				product.setId(rs.getInt("id"));
 				product.setShop_id(rs.getInt("shop_id"));
+				product.setCategory_id(rs.getInt("category_id"));
+				product.setCategory_name(rs.getString("category_name"));
 				product.setProduct_name(rs.getString("product_name"));
 				product.setProduct_slug(rs.getString("product_slug"));
 				product.setImage_url(rs.getString("image_url"));
@@ -488,5 +491,38 @@ public class ProductRepository implements IRepositories<Product> {
 		}
 
 		return 0;
-	} 
+	}
+
+	public List<Category> getCategoriesByShop(int shopId) {
+
+		List<Category> categories = new ArrayList<>();
+
+		String sql = """
+				    SELECT DISTINCT
+				        c.id,
+				        c.category_name
+				    FROM product p
+				    JOIN category c ON p.category_id = c.id
+				    WHERE p.shop_id = ?
+				""";
+
+		try (Connection conn = dbConnection.getConn(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+			stmt.setInt(1, shopId);
+			ResultSet rs = stmt.executeQuery();
+
+			while (rs.next()) {
+				Category c = new Category();
+				c.setId(rs.getInt("id"));
+				c.setCategory_name(rs.getString("category_name"));
+
+				categories.add(c);
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return categories;
+	}
 }

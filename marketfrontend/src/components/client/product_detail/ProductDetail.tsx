@@ -349,74 +349,155 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
 
                           <hr className="mt-4 mb-2" />
 
-                          {/* Accordion */}
-                          <div className="accordion" id="ecommerceAccordion">
-                            <div className="accordion-item">
-                              <h2 className="accordion-header">
-                                <button
-                                  className="accordion-button"
-                                  type="button"
-                                  data-bs-toggle="collapse"
-                                  data-bs-target="#productDetails"
-                                  aria-expanded="true"
-                                >
-                                  Product Details
-                                </button>
-                              </h2>
-                              <div
-                                id="productDetails"
-                                className="accordion-collapse collapse show"
-                                data-bs-parent="#ecommerceAccordion"
-                              >
-                                <div className="accordion-body">
-                                  <p>
-                                    Lorem ipsum dolor sit amet, consectetur
-                                    adipiscing elit...
-                                  </p>
-                                  <h5>Features:</h5>
-                                  <ul>
-                                    <li>Lorem ipsum dolor sit amet...</li>
-                                    <li>Integer ut justo quis diam...</li>
-                                  </ul>
-                                </div>
-                              </div>
+                          variant
+
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shop-header mt-4 p-4 rounded text-white">
+                      <div className="d-flex justify-content-between align-items-center flex-wrap">
+                        {/* LEFT */}
+                        <div className="d-flex align-items-center gap-3">
+                          <img
+                            src={
+                              shop?.shop_logo ||
+                              "/assets/images/avatar-shop.png"
+                            }
+                            width={70}
+                            height={70}
+                            className="rounded-circle border border-white"
+                          />
+
+                          <div>
+                            <div className="fw-bold fs-5">
+                              {shop?.shop_name || "Loading..."}
                             </div>
 
-                            <div className="accordion-item">
-                              <h2 className="accordion-header">
-                                <button
-                                  className="accordion-button collapsed"
-                                  type="button"
-                                  data-bs-toggle="collapse"
-                                  data-bs-target="#specifications"
-                                >
-                                  Specifications
-                                </button>
-                              </h2>
-                              <div
-                                id="specifications"
-                                className="accordion-collapse collapse"
-                                data-bs-parent="#ecommerceAccordion"
+                            <small className="opacity-75">
+                              Online recently
+                            </small>
+
+                            <div className="mt-2 d-flex gap-2">
+                              <button className="btn btn-outline-light btn-sm">
+                                💬 Chat Now
+                              </button>
+
+                              <button
+                                className="btn btn-outline-light btn-sm"
+                                onClick={() =>
+                                  (window.location.href = `/shop/${data.shop_id}`)
+                                }
                               >
-                                <div className="accordion-body">
-                                  <table className="table table-striped">
-                                    <tbody>
-                                      <tr>
-                                        <th className="w-25">Sport</th>
-                                        <td>Running</td>
-                                      </tr>
-                                      <tr>
-                                        <th>Material</th>
-                                        <td>Mesh</td>
-                                      </tr>
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
+                                🏪 View Shop
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* RIGHT */}
+                        <div className="d-flex gap-5 text-center mt-3 mt-md-0">
+                          <div>
+                            <div className="small opacity-75">Products</div>
+                            <div className="stat-number">
+                              {shopProducts.length}
                             </div>
                           </div>
 
-                          {/* Ratings & Reviews */}
+                          <div>
+                            <div className="small opacity-75">Ratings</div>
+                            <div className="stat-number">
+                              {shop?.rating || 0}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="small opacity-75">
+                              Response Rate
+                            </div>
+                            <div className="stat-number">
+                              {shop?.response_rate || 0}%
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="small opacity-75">
+                              Response Time
+                            </div>
+                            <div className="stat-number">
+                              {shop?.response_time || 0}h
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Accordion */}
+                    <div className="accordion" id="ecommerceAccordion">
+                      <div className="accordion-item">
+                        <h2 className="accordion-header">
+                          <button
+                            className="accordion-button"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#productDetails"
+                            aria-expanded="true"
+                          >
+                            Product Details
+                          </button>
+                        </h2>
+                        <div
+                          id="productDetails"
+                          className="accordion-collapse collapse show"
+                          data-bs-parent="#ecommerceAccordion"
+                        >
+                          <div className="accordion-body">
+                            <p>
+                              Lorem ipsum dolor sit amet, consectetur adipiscing
+                              elit...
+                            </p>
+                            <h5>Features:</h5>
+                            <ul>
+                              <li>Lorem ipsum dolor sit amet...</li>
+                              <li>Integer ut justo quis diam...</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="accordion-item">
+                        <h2 className="accordion-header">
+                          <button
+                            className="accordion-button collapsed"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#specifications"
+                          >
+                            Specifications
+                          </button>
+                        </h2>
+                        <div
+                          id="specifications"
+                          className="accordion-collapse collapse"
+                          data-bs-parent="#ecommerceAccordion"
+                        >
+                          <div className="accordion-body">
+                            <table className="table table-striped">
+                              <tbody>
+                                <tr>
+                                  <th className="w-25">Sport</th>
+                                  <td>Running</td>
+                                </tr>
+                                <tr>
+                                  <th>Material</th>
+                                  <td>Mesh</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          
+                        </div>
+                      </div>
+                    </div>
+                                              {/* Ratings & Reviews */}
                           <div className="mt-5">
                             <h3 className="mb-4">Ratings & Reviews</h3>
 
@@ -472,81 +553,6 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="shop-header mt-4 p-4 rounded text-white">
-                      <div className="d-flex justify-content-between align-items-center flex-wrap">
-                        {/* LEFT */}
-                        <div className="d-flex align-items-center gap-3">
-                          <img
-                            src={
-                              shop?.shop_logo ||
-                              "/assets/images/avatar-shop.png"
-                            }
-                            width={70}
-                            height={70}
-                            className="rounded-circle border border-white"
-                          />
-
-                          <div>
-                            <div className="fw-bold fs-5">
-                              {shop?.shop_name || "Loading..."}
-                            </div>
-
-                            <small className="opacity-75">Online recently</small>
-
-                            <div className="mt-2 d-flex gap-2">
-                              <button className="btn btn-outline-light btn-sm">
-                                💬 Chat Now
-                              </button>
-
-                              <button
-                                className="btn btn-outline-light btn-sm"
-                                onClick={() =>
-                                  (window.location.href = `/shop/${data.shop_id}`)
-                                }
-                              >
-                                🏪 View Shop
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* RIGHT */}
-                        <div className="d-flex gap-5 text-center mt-3 mt-md-0">
-                          <div>
-                            <div className="small opacity-75">Products</div>
-                            <div className="stat-number">
-                              {shopProducts.length}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="small opacity-75">Ratings</div>
-                            <div className="stat-number">
-                              {shop?.rating || 0}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="small opacity-75">
-                              Response Rate
-                            </div>
-                            <div className="stat-number">
-                              {shop?.response_rate || 0}%
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="small opacity-75">Response Time</div>
-                            <div className="stat-number">
-                              {shop?.response_time || 0}h
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
