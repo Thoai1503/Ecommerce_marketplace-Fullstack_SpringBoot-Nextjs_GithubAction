@@ -76,6 +76,28 @@ const mapShippingStatusToUiStatus = (shippingStatus?: string) => {
   }
 };
 
+const mapOrderStatusToUiStatus = (orderStatus?: string) => {
+  switch ((orderStatus || "").toUpperCase()) {
+    case "CANCELED":
+    case "CANCELLED":
+    case "CANCEL":
+      return "cancelled";
+    default:
+      return null;
+  }
+};
+
+const resolveShipmentUiStatus = (
+  orderStatus?: string,
+  shippingStatus?: string,
+) => {
+  const orderUiStatus = mapOrderStatusToUiStatus(orderStatus);
+  if (orderUiStatus) {
+    return orderUiStatus;
+  }
+  return mapShippingStatusToUiStatus(shippingStatus);
+};
+
 const getStatusLabel = (status?: string): string => {
   switch (status) {
     case "pending_shipment":
@@ -699,7 +721,10 @@ const page = () => {
         order_number: shipment.order?.orderNumber,
         order_code: shipment.order?.orderNumber,
         total_price: shipment.totalAmount,
-        status: mapShippingStatusToUiStatus(shipment.shippingStatus),
+        status: resolveShipmentUiStatus(
+          shipment.order?.orderStatus,
+          shipment.shippingStatus,
+        ),
         buyer_name: shipment.recipient?.recipientName,
         orders_items: shipment.items,
         tracking_number: shipment.trackingNumber,
