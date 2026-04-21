@@ -194,7 +194,7 @@ public class OrderService {
                 System.out.println("Sau khi incrby thì số lượng bán ra: " + slBanRa);
 
                 if (slBanRa > STOCK) {
-                    // Rollback
+                    // Rollb	ack
                     redisTemplate.opsForValue().decrement(keyName, slMua);
                     System.out.println("Hết hàng tại thời điểm " + System.currentTimeMillis() + " - Đã rollback");
 
