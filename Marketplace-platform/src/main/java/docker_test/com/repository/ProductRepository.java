@@ -116,7 +116,7 @@ public class ProductRepository implements IRepositories<Product> {
 				    p.length,
 				    p.width,
 				    p.height,
-				    p.brand,
+				    p.brand_id,
 				    p.is_active,
 				    p.created_at,
 				    p.updated_at,
