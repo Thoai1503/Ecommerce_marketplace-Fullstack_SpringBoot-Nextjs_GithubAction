@@ -2,6 +2,7 @@ package docker_test.com.service;
 
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -19,6 +20,7 @@ import docker_test.com.dto.OrderDTO;
 import docker_test.com.dto.OrderItemDTO;
 import docker_test.com.dto.OrderResponeDTO;
 import docker_test.com.dto.OrderShipmentDTO;
+import docker_test.com.dto.PaymentStatusUpdatedEvent;
 import docker_test.com.exception.SimulatedRollbackException;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
@@ -173,6 +175,39 @@ public class OrderService {
         }
             log.info("Constructing payment URL using payment.service.url: {}", paymentServiceUrl);
         return paymentServiceUrl.trim() + "/api/payments/create-url";
+    }
+
+    @Transactional
+    public void applyPaymentStatusEvent(PaymentStatusUpdatedEvent event) {
+        if (event == null || event.getOrderId() == null) {
+            throw new IllegalArgumentException("orderId is required");
+        }
+
+        boolean paymentSuccess = isPaymentSuccess(event);
+        String normalizedPaymentStatus = paymentSuccess ? "PAID" : "FAILED";
+
+        Order order = orderRepository.findById(event.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Order not found: " + event.getOrderId()));
+
+        order.setPaymentStatus(normalizedPaymentStatus);
+        if (!paymentSuccess) {
+            order.setOrderStatus("CANCELED");
+        }
+        orderRepository.save(order);					
+
+        log.info("Payment status updated for orderId={}, paymentStatus={}, txnRef={}, provider={}, responseCode={}",
+                event.getOrderId(),
+                normalizedPaymentStatus,
+                event.getTxnRef(),
+                event.getProvider(),
+                event.getResponseCode());
+    }							
+
+    private boolean isPaymentSuccess(PaymentStatusUpdatedEvent event) {
+        boolean isSuccess = Boolean.TRUE.equals(event.getSuccess());
+        String responseCode = event.getResponseCode() == null ? "" : event.getResponseCode().trim().toUpperCase(Locale.ROOT);
+
+        return isSuccess && "00".equals(responseCode);
     }
 
         
