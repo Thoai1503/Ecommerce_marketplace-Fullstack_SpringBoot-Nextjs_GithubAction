@@ -62,6 +62,7 @@ public class CreatePaymentController {
      * @return 200 with {@link CreatePaymentUrlResult}, or 400/500 on failure
      */
     @PostMapping("/create-url")
+    // The request body contains the payment provider, order ID, amount, and other details needed to create the payment URL.
     public ResponseEntity<String> createPaymentUrl(
             @Valid @RequestBody CreatePaymentUrlRequest request,
             HttpServletRequest httpServletRequest) {
