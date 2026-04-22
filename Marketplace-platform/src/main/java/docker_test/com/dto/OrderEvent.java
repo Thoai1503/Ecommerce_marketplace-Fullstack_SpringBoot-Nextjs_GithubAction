@@ -1,5 +1,33 @@
-package docker_test.com.dto;
-
-public class OrderEvent {
-
-}
+//package docker_test.com.dto;
+//
+//
+//import lombok.AllArgsConstructor;
+//import lombok.Data;
+//import lombok.NoArgsConstructor;
+//
+//@Data
+//@AllArgsConstructor
+//@NoArgsConstructor
+//public class OrderEvent {
+//    public String getMessage() {
+//		return message;
+//	}
+//	public void setMessage(String message) {
+//		this.message = message;
+//	}
+//	public String getStatus() {
+//		return status;
+//	}
+//	public void setStatus(String status) {
+//		this.status = status;
+//	}
+//	public Order getOrder() {
+//		return order;
+//	}
+//	public void setOrder(Order order) {
+//		this.order = order;
+//	}
+//	private String message;
+//    private String status;
+//    private Order order;
+//}

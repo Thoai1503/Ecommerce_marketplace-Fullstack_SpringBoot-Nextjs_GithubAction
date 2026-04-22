@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +34,7 @@ import docker_test.com.dto.*;
 
 @Service
 public class OrderService {
-	private final RedisTemplate redisTemplate;
+    private final RedisTemplate<Object, Object> redisTemplate;
 
     private static final String ROLLBACK_TEST_FLAG = "SIMULATE_ROLLBACK";
     private final int STOCK = 10;
@@ -53,7 +54,7 @@ public class OrderService {
                         OrderItemRepository orderItemRepository,
                         OrderEventPublisher eventPublisher,
                         OrderShipmentRepository orderShipmentRepository     ,
-                        RedisTemplate redisTemplate,
+                        @Qualifier("redisTemplate") RedisTemplate<Object, Object> redisTemplate,
 						WebClient webClient,
 						@Value("${payment.service.url}") String paymentServiceUrl
     		) {
@@ -290,14 +291,13 @@ public class OrderService {
                 .build();
     }
     private OrderShipment buildOrderShipment (OrderShipmentDTO dto) {
-    	return OrderShipment.builder()
-    			.shopId(dto.getShop_id())
-    			.orderId(dto.getOrder_id())
-    		    .trackingNumber(dto.getTracking_number())
-    		    .shippingStatus(dto.getShipping_status())
-    		    .carrierName("LOG")
-    		   
-    			.build();
+        OrderShipment shipment = new OrderShipment();
+        shipment.setShopId(dto.getShop_id());
+        shipment.setOrderId(dto.getOrder_id());
+        shipment.setTrackingNumber(dto.getTracking_number());
+        shipment.setShippingStatus(dto.getShipping_status());
+        shipment.setCarrierName("LOG");
+        return shipment;
     }
 
     private List<OrderItem> buildItems(OrderDTO dto, Long orderId) {
