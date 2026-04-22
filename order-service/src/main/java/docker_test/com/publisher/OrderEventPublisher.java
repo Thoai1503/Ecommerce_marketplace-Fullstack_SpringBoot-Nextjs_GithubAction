@@ -4,8 +4,6 @@ import docker_test.com.dto.OrderCreatedEvent;
 import docker_test.com.dto.OrderDTO;
 import docker_test.com.dto.OrderItem;
 
-import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,15 +15,18 @@ public class OrderEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(OrderEventPublisher.class);
 
-    @Value("${spring.kafka.topic.name}")
-    private String topicName;  // inject topic name, don't hardcode it
+    @Value("${spring.kafka.topic.order-created.name}")
+    private String orderCreatedTopicName;
+
+    @Value("${spring.kafka.topic.stock-update.name}")
+    private String stockUpdateTopicName;
 
     
     private final KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate;
    
-    private final KafkaTemplate<String, List<OrderItem>> stockUpdateKafkaTemplate;
+    private final KafkaTemplate<String, OrderItem> stockUpdateKafkaTemplate;
     
-    public OrderEventPublisher(KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate, KafkaTemplate<String, List<OrderItem>> stockUpdateKafkaTemplate) {
+    public OrderEventPublisher(KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate, KafkaTemplate<String, OrderItem> stockUpdateKafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
         this.stockUpdateKafkaTemplate = stockUpdateKafkaTemplate;
     }
@@ -40,11 +41,7 @@ public class OrderEventPublisher {
         event.setMessage("Order status is in pending state");
 
         log.info("Publishing order_created event for order_id={}", dto.getId());
-//fvdsedfvs
-//sdfsdf
-
-//dfvd
-        kafkaTemplate.send(topicName, String.valueOf(dto.getId()), event)
+        kafkaTemplate.send(orderCreatedTopicName, String.valueOf(dto.getId()), event)
                 .whenComplete((result, ex) -> {
                     if (ex == null) {
                         log.info("Event sent OK offset={}",
@@ -55,19 +52,20 @@ public class OrderEventPublisher {
                 });
     }
     
-    public void publishStockUpdate(List<OrderItem> items) {
+    public void publishStockUpdate(OrderItem items) {
 		log.info("Publishing stock update event for order items={}", items);
-		stockUpdateKafkaTemplate.send("update_stock_topics", "stock_update", items)
+        stockUpdateKafkaTemplate.send(stockUpdateTopicName, String.valueOf(items.getVariant_id()), items)
 		.whenComplete((result, ex) -> {
 			if (ex == null) {
 				log.info("Stock update event sent OK offset={}",
 						result.getRecordMetadata().offset());
 			} else {
-				log.error("Failed to send stock update event for order items={}", items, ex);
+				log.error("Failed to send stock update event for variant_id={}", items.getVariant_id(), ex);
 			}
 		});
-    
-    	
     }
+
+    	
+    
     
 }

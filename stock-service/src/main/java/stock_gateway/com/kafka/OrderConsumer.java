@@ -13,7 +13,11 @@ public class OrderConsumer {
 	 private static final Logger LOGGER = LoggerFactory.getLogger(OrderConsumer.class);
 	 
 	 
-	 @KafkaListener(topics = "${spring.kafka.topic.name}",groupId = "${spring.kafka.consumer.group-id}")
+	 @KafkaListener(topics = "${spring.kafka.topic.order.name}",groupId = "${spring.kafka.consumer.group-id}",
+	 		properties = {
+	 				"spring.json.use.type.headers=false",
+	 				"spring.json.value.default.type=docker_test.com.dto.OrderEvent"
+	 		})
 	 public void consume(OrderEvent event) {
 		LOGGER.info(String.format("Order event recieved in stock service => %s", event.toString())); 
 	 }
