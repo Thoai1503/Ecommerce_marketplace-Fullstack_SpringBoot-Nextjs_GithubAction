@@ -14,7 +14,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 
-
+// Lưu ý: Các trường như created_at, updated_at có thể được tự động quản lý bởi JPA nếu bạn sử dụng @CreationTimestamp và @UpdateTimestamp
 @Entity
 @Table(name = "orders")
 @Getter
