@@ -142,7 +142,10 @@ public class OrderService {
 
         try {
             eventPublisher.publish(dto);
-            eventPublisher.publishStockUpdate(dto.getOrders_items());
+         dto.getOrders_items().forEach(item -> {
+        	// OrderItem orderItem = buildItem(item, saved.getId());
+        	 eventPublisher.publishStockUpdate(item);
+         });
             log.info("Order event published successfully for orderId={}", saved.getId());
         } catch (Exception e) {
             log.error("Failed to publish order event for orderId={}. Transaction will be rolled back. Error: {}", 
