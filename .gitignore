@@ -4,3 +4,4 @@ logistic-service/src/main/resources/application-local.properties
 order-service/src/main/resources/application-local.properties
 
 payment-service/src/main/resources/application-local.yml
+stock-service/src/main/resources/application-local.properties

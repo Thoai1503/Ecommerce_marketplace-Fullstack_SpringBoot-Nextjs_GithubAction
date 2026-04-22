@@ -24,12 +24,12 @@ import docker_test.com.dto.PaymentStatusUpdatedEvent;
 import docker_test.com.exception.SimulatedRollbackException;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
-import docker_test.com.model.OrderShipment;
+import docker_test.com.models.OrderShipment;
 import docker_test.com.publisher.OrderEventPublisher;
 import docker_test.com.repository.OrderItemRepository;
 import docker_test.com.repository.OrderRepository;
 import docker_test.com.repository.OrderShipmentRepository;
-
+import docker_test.com.dto.*;
 
 @Service
 public class OrderService {
@@ -115,6 +115,8 @@ public class OrderService {
         dto.setId(saved.getId());
         dto.setRecipient(dto.getRecipient());
         dto.setOrder_number(saved.getOrderNumber());
+        
+        
               
         
         String paymentCreateUrl = resolvePaymentCreateUrl();
@@ -139,6 +141,7 @@ public class OrderService {
 
         try {
             eventPublisher.publish(dto);
+            eventPublisher.publishStockUpdate(dto.getOrders_items());
             log.info("Order event published successfully for orderId={}", saved.getId());
         } catch (Exception e) {
             log.error("Failed to publish order event for orderId={}. Transaction will be rolled back. Error: {}", 
@@ -312,7 +315,7 @@ public class OrderService {
                 .toList();
     }
     
-    private OrderItem buildItem (OrderItemDTO dto, Long orderId) {
+    private OrderItem buildItem (docker_test.com.dto.OrderItem dto, Long orderId) {
     	return OrderItem.builder()
                 .orderId(orderId)
                 .productId(dto.getProduct_id())
@@ -330,18 +333,18 @@ public class OrderService {
     }
     
     
-    private Map<Long,List<OrderItem>> groupByShopId(List<OrderItemDTO> itemDTOs){
-    	var list = itemDTOs.stream().map(item->{
-    		return buildItem(item, null);
-    	});
-    	return list.collect(Collectors.groupingBy(OrderItem::getShopId));
+    private Map<Long,List<OrderItem>> groupByShopId(List<docker_test.com.dto.OrderItem> itemDTOs){
+        var list = itemDTOs.stream().map(item->{
+            return buildItem(item, null);
+        });
+        return list.collect(Collectors.groupingBy(OrderItem::getShopId));
     }
     
     
-    private Map<Long, List<OrderItemDTO>> groupByShopId1 (OrderDTO order){
-    	var list = order.getOrders_items();
-    	 
-    	list.stream().collect(Collectors.groupingBy(OrderItemDTO::getShop_id)).entrySet().forEach(entry -> {
+    private Map<Long, List<OrderItem>> groupByShopId1 (OrderDTO order){
+        var list = order.getOrders_items();
+         
+        list.stream().collect(Collectors.groupingBy(docker_test.com.dto.OrderItem::getShop_id)).entrySet().forEach(entry -> {
         Long shopId = entry.getKey();
         System.out.println("Shop ID: " + shopId);
         entry.getValue().forEach(item -> {
@@ -349,8 +352,8 @@ public class OrderService {
         });
  });
 
-    	
-    	return  list.stream().collect(Collectors.groupingBy(OrderItemDTO::getShop_id));
+        
+        return  list.stream().map(item -> buildItem(item, null)).collect(Collectors.groupingBy(OrderItem::getShopId));
     }
     
 	

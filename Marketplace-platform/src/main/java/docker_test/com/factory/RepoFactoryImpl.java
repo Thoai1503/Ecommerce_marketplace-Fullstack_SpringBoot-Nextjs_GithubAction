@@ -34,7 +34,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	private final ProductVariantRepository productVariantRepository;
 	private final BrandRepository brandRepository;
 	private final CategoryBrandRepository categoryBrandRepisitory;
-	private final OrderRepository orderRepository;
+	//private final OrderRepository orderRepository;
 //	private final ProductRepository productRepository;
 	private final AttributeRepository attributeRepository;
 	private final AttributeValueRepository attributeValueRepository;
@@ -60,7 +60,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		this.productVariantRepository = ProductVariantRepository.Instance();
 		this.brandRepository = BrandRepository.Instance();
 		this.categoryBrandRepisitory = CategoryBrandRepository.Instance();
-		this.orderRepository = OrderRepository.Instance();
+//		this.orderRepository = OrderRepository.Instance();
 		this.attributeRepository = AttributeRepository.Instance();
 		this.attributeValueRepository = AttributeValueRepository.Instance();
 	}
@@ -79,7 +79,7 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		case "product_variant" -> (IRepositories<ProductVariant>) productVariantRepository;
 		case "brand" -> (IRepositories) brandRepository;
 		case "category_brand" -> (IRepositories) categoryBrandRepisitory; 
-		case "order" -> (IRepositories) orderRepository;
+	//	case "order" -> (IRepositories) orderRepository;
 		case "attribute" -> (IRepositories) attributeRepository;
 		case "attribute_value" -> (IRepositories) attributeValueRepository;
 	

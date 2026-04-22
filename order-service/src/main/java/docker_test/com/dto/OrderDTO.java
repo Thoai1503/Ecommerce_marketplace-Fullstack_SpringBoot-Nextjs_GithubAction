@@ -158,15 +158,15 @@ public class OrderDTO {
 	}
 
 	private double total_price;
-    public List<OrderItemDTO> getOrders_items() {
+    public List<OrderItem> getOrders_items() {
 		return orders_items;
 	}
 
-	public void setOrders_items(List<OrderItemDTO> orders_items) {
+	public void setOrders_items(List<OrderItem> orders_items) {
 		this.orders_items = orders_items;
 	}
 
-	private List<OrderItemDTO> orders_items;
+	private List<OrderItem> orders_items;
 	
 	public OrderDTO() {
 	}
