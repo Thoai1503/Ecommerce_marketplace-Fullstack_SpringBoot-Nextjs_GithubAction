@@ -56,5 +56,100 @@ public class OrderShipment {
 
 	    @Column(name = "adjustment_required", nullable = false)
 	    private Boolean adjustmentRequired;
-	
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public Long getOrderId() {
+		return orderId;
+	}
+
+	public void setOrderId(Long orderId) {
+		this.orderId = orderId;
+	}
+
+	public Long getShopId() {
+		return shopId;
+	}
+
+	public void setShopId(Long shopId) {
+		this.shopId = shopId;
+	}
+
+	public String getTrackingNumber() {
+		return trackingNumber;
+	}
+
+	public void setTrackingNumber(String trackingNumber) {
+		this.trackingNumber = trackingNumber;
+	}
+
+	public Double getShippingFee() {
+		return shippingFee;
+	}
+
+	public void setShippingFee(Double shippingFee) {
+		this.shippingFee = shippingFee;
+	}
+
+	public Double getTotalAmount() {
+		return totalAmount;
+	}
+
+	public void setTotalAmount(Double totalAmount) {
+		this.totalAmount = totalAmount;
+	}
+
+	public String getCarrierName() {
+		return carrierName;
+	}
+
+	public void setCarrierName(String carrierName) {
+		this.carrierName = carrierName;
+	}
+
+	public String getShippingStatus() {
+		return shippingStatus;
+	}
+
+	public void setShippingStatus(String shippingStatus) {
+		this.shippingStatus = shippingStatus;
+	}
+
+	public String getBusinessStatus() {
+		return businessStatus;
+	}
+
+	public void setBusinessStatus(String businessStatus) {
+		this.businessStatus = businessStatus;
+	}
+
+	public Long getLatestAdjustmentRequestId() {
+		return latestAdjustmentRequestId;
+	}
+
+	public void setLatestAdjustmentRequestId(Long latestAdjustmentRequestId) {
+		this.latestAdjustmentRequestId = latestAdjustmentRequestId;
+	}
+
+	public Double getAdjustedTotalAmount() {
+		return adjustedTotalAmount;
+	}
+
+	public void setAdjustedTotalAmount(Double adjustedTotalAmount) {
+		this.adjustedTotalAmount = adjustedTotalAmount;
+	}
+
+	public Boolean getAdjustmentRequired() {
+		return adjustmentRequired;
+	}
+
+	public void setAdjustmentRequired(Boolean adjustmentRequired) {
+		this.adjustmentRequired = adjustmentRequired;
+	}
 }

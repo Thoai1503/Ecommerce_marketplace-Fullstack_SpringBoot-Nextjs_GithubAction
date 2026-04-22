@@ -1,19 +1,9 @@
-# Multi-stage Dockerfile for the api-gateway (Maven + Java 21)
+# Runtime-only Dockerfile for order-service.
+# Build jar locally first, then build image from order-service folder:
+#   1) mvnw -f ../Marketplace-platform/pom.xml -DskipTests install
+#   2) mvnw -DskipTests package
+#   3) docker build -t order-service:local .
 
-# --- Builder: compile with Maven ---
-FROM maven:3.9.4-eclipse-temurin-21 AS builder
-WORKDIR /workspace
-
-COPY pom.xml .
-COPY mvnw mvnw
-COPY mvnw.cmd mvnw.cmd
-COPY .mvn .mvn
-RUN mvn -B -DskipTests dependency:go-offline || true
-
-COPY src ./src
-RUN mvn -B -DskipTests package -DskipTests
-
-# --- Runtime: lightweight JRE ---
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
@@ -21,8 +11,8 @@ ENV TZ=Asia/Ho_Chi_Minh
 ENV JAVA_TOOL_OPTIONS="-Duser.timezone=Asia/Ho_Chi_Minh"
 ENV JAVA_OPTS=""
 
-# Copy JAR from builder
-COPY --from=builder /workspace/target/*.jar ./app.jar
+# Copy prebuilt jar from local target directory.
+COPY target/*.jar ./app.jar
 
 EXPOSE 8002
 

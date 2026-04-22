@@ -52,7 +52,7 @@
 		<dependency>
 		 <groupId>group1</groupId>
 		   		<artifactId>Marketplace-platform</artifactId>
-           		<version>0.0.1</version>
+           		<version>0.0.1</version>	
 		</dependency>
 
 		<dependency>
