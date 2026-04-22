@@ -15,7 +15,7 @@ import docker_test.com.dto.OrderResponeDTO;
 import docker_test.com.dto.RecipientDTO;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
-import docker_test.com.model.OrderShipment;
+import docker_test.com.models.OrderShipment;
 import docker_test.com.repository.OrderItemRepository;
 import docker_test.com.repository.OrderRepository;
 import docker_test.com.repository.OrderShipmentRepository;

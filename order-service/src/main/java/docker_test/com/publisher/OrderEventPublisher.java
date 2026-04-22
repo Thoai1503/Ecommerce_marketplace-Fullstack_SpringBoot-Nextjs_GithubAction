@@ -2,6 +2,10 @@ package docker_test.com.publisher;
 
 import docker_test.com.dto.OrderCreatedEvent;
 import docker_test.com.dto.OrderDTO;
+import docker_test.com.dto.OrderItem;
+
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,9 +22,12 @@ public class OrderEventPublisher {
 
     
     private final KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate;
-
-    public OrderEventPublisher(KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate) {
+   
+    private final KafkaTemplate<String, List<OrderItem>> stockUpdateKafkaTemplate;
+    
+    public OrderEventPublisher(KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate, KafkaTemplate<String, List<OrderItem>> stockUpdateKafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
+        this.stockUpdateKafkaTemplate = stockUpdateKafkaTemplate;
     }
 
     public void publish(OrderDTO dto) {
@@ -47,4 +54,20 @@ public class OrderEventPublisher {
                     }
                 });
     }
+    
+    public void publishStockUpdate(List<OrderItem> items) {
+		log.info("Publishing stock update event for order items={}", items);
+		stockUpdateKafkaTemplate.send("update_stock_topics", "stock_update", items)
+		.whenComplete((result, ex) -> {
+			if (ex == null) {
+				log.info("Stock update event sent OK offset={}",
+						result.getRecordMetadata().offset());
+			} else {
+				log.error("Failed to send stock update event for order items={}", items, ex);
+			}
+		});
+    
+    	
+    }
+    
 }
