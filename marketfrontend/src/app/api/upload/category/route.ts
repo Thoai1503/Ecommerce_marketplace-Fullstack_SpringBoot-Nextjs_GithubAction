@@ -3,17 +3,12 @@ import fs from "fs";
 import path from "path";
 
 export async function POST(request: Request) {
-
   try {
-
     const formData = await request.formData();
     const file = formData.get("file") as File;
 
     if (!file) {
-      return NextResponse.json(
-        { error: "No file uploaded" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
     const bytes = await file.arrayBuffer();
@@ -21,12 +16,8 @@ export async function POST(request: Request) {
 
     const fileName = Date.now() + "-" + file.name;
 
-    const uploadDir = path.join(
-      process.cwd(),
-      "public",
-      "image",
-      "category"
-    );
+    // ✅ FIX HERE
+    const uploadDir = path.resolve("./public/image/category");
 
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
@@ -37,18 +28,11 @@ export async function POST(request: Request) {
     fs.writeFileSync(filePath, buffer);
 
     return NextResponse.json({
-      url: `/image/category/${fileName}`
+      url: `/image/category/${fileName}`,
     });
-
   } catch (error) {
-
     console.error("UPLOAD ERROR:", error);
 
-    return NextResponse.json(
-      { error: "Upload failed" },
-      { status: 500 }
-    );
-
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
-
 }
