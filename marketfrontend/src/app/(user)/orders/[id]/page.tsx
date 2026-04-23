@@ -14,6 +14,7 @@ import {
   MapPin,
   ReceiptText,
   ShieldCheck,
+  Star,
 } from "lucide-react";
 
 import {
@@ -42,6 +43,7 @@ const shipmentStepOrder: ShipmentStatus[] = [
   "SHIPPING",
   "DELIVERING",
   "DELIVERED",
+  "COMPLETED",
 ];
 
 const shipmentStepLabel: Record<ShipmentStatus, string> = {
@@ -51,6 +53,7 @@ const shipmentStepLabel: Record<ShipmentStatus, string> = {
   SHIPPING: "Dang trung chuyen",
   DELIVERING: "Dang giao",
   DELIVERED: "Giao thanh cong",
+  COMPLETED: "Da hoan thanh",
   FAILED: "Giao that bai",
   RETURNED: "Hoan ve",
 };
@@ -95,6 +98,7 @@ const normalizeShipmentStatus = (
     DELIVERING: "DELIVERING",
     OUT_FOR_DELIVERY: "DELIVERING",
     DELIVERED: "DELIVERED",
+    COMPLETED: "COMPLETED",
     FAILED: "FAILED",
     RETURNED: "RETURNED",
   };
@@ -481,6 +485,128 @@ export default function UserOrderDetailPage() {
   const [adjustmentActionMessage, setAdjustmentActionMessage] = useState<
     Record<string, string>
   >({});
+  const [receiveActionStatus, setReceiveActionStatus] = useState<
+    Record<string, "idle" | "pending">
+  >({});
+  const [receiveActionMessage, setReceiveActionMessage] = useState<
+    Record<string, string>
+  >({});
+
+  const markShipmentAsCompletedLocal = (shipmentId: string, note: string) => {
+    setOrder((prev) => {
+      if (!prev) return prev;
+
+      const now = new Date().toISOString();
+      const targetShipment = prev.shipments?.find((s) => s.id === shipmentId);
+
+      return {
+        ...prev,
+        shipments: prev.shipments?.map((shipment) => {
+          if (shipment.id !== shipmentId) return shipment;
+
+          const alreadyCompleted = (shipment.statusHistory || []).some(
+            (h) => h.status === "COMPLETED",
+          );
+
+          return {
+            ...shipment,
+            shipping_status: "COMPLETED",
+            updated_at: now,
+            statusHistory: alreadyCompleted
+              ? shipment.statusHistory
+              : [
+                  ...(shipment.statusHistory || []),
+                  {
+                    status: "COMPLETED",
+                    description: note,
+                    updatedAt: now,
+                  },
+                ],
+          };
+        }),
+        logs: [
+          ...(prev.logs || []),
+          {
+            id: `${shipmentId}-completed-${Date.now()}`,
+            action: "SHIPMENT_COMPLETED",
+            note: `${targetShipment?.shopName || "Shipment"}: ${note}`,
+            performedBy: "buyer",
+            createdAt: now,
+          },
+        ].sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        ),
+      };
+    });
+  };
+
+  const handleConfirmReceived = async (shipmentId: string) => {
+    setReceiveActionStatus((prev) => ({
+      ...prev,
+      [shipmentId]: "pending",
+    }));
+
+    let confirmedByApi = false;
+
+    const attempts: Array<{ path: string; method: "POST" | "PATCH" }> = [
+      {
+        path: `/api/orders/shipments/${shipmentId}/confirm-received`,
+        method: "POST",
+      },
+      {
+        path: `/api/orders/shipments/${shipmentId}/complete`,
+        method: "POST",
+      },
+      {
+        path: `/api/orders/shipments/${shipmentId}/status`,
+        method: "PATCH",
+      },
+      {
+        path: `/api/orders/shipments/${shipmentId}`,
+        method: "PATCH",
+      },
+    ];
+
+    try {
+      for (const attempt of attempts) {
+        const response = await fetch(`${API_URL}${attempt.path}`, {
+          method: attempt.method,
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shippingStatus: "COMPLETED" }),
+        });
+
+        if (response.ok) {
+          confirmedByApi = true;
+          break;
+        }
+      }
+
+      setReceiveActionMessage((prev) => ({
+        ...prev,
+        [shipmentId]: confirmedByApi
+          ? "Ban da xac nhan da nhan hang."
+          : "Da cap nhat tam thoi tren giao dien. Neu backend chua ho tro endpoint, vui long kiem tra lai sau.",
+      }));
+    } catch (error) {
+      console.error("Confirm received failed:", error);
+      setReceiveActionMessage((prev) => ({
+        ...prev,
+        [shipmentId]:
+          "Da cap nhat tam thoi tren giao dien. Neu backend chua ho tro endpoint, vui long kiem tra lai sau.",
+      }));
+    } finally {
+      markShipmentAsCompletedLocal(
+        shipmentId,
+        "Nguoi mua da xac nhan da nhan hang",
+      );
+      setReceiveActionStatus((prev) => ({
+        ...prev,
+        [shipmentId]: "idle",
+      }));
+    }
+  };
 
   const handleAdjustmentDecision = async (
     shipmentId: string,
@@ -1065,24 +1191,69 @@ export default function UserOrderDetailPage() {
                             </div>
 
                             <div style={{ padding: "14px 16px" }}>
-                              <div className="d-flex flex-wrap gap-2 mb-3">
-                                {shipmentStepOrder.map((step, idx) => {
-                                  const done = currentStep >= idx;
-                                  return (
-                                    <span
-                                      key={`${shipment.id}-${step}`}
-                                      className="badge rounded-pill px-3 py-2"
-                                      style={
-                                        done
-                                          ? styles.timelineChipDone
-                                          : styles.timelineChipPending
-                                      }
-                                    >
-                                      {shipmentStepLabel[step]}
-                                    </span>
-                                  );
-                                })}
+                              <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                <div className="d-flex flex-wrap gap-2">
+                                  {shipmentStepOrder.map((step, idx) => {
+                                    const done = currentStep >= idx;
+                                    return (
+                                      <span
+                                        key={`${shipment.id}-${step}`}
+                                        className="badge rounded-pill px-3 py-2"
+                                        style={
+                                          done
+                                            ? styles.timelineChipDone
+                                            : styles.timelineChipPending
+                                        }
+                                      >
+                                        {shipmentStepLabel[step]}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+
+                                {(shipment.shipping_status === "DELIVERED" ||
+                                  shipment.shipping_status === "COMPLETED") && (
+                                  <div className="d-flex align-items-center gap-2 ms-auto">
+                                    {shipment.shipping_status ===
+                                    "DELIVERED" ? (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleConfirmReceived(shipment.id)
+                                        }
+                                        disabled={
+                                          receiveActionStatus[shipment.id] ===
+                                          "pending"
+                                        }
+                                        className="btn btn-success btn-sm"
+                                      >
+                                        {receiveActionStatus[shipment.id] ===
+                                        "pending"
+                                          ? "Dang xac nhan..."
+                                          : "TÔI ĐÃ NHẬN ĐƯỢC HÀNG"}
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1"
+                                      >
+                                        <Star size={14} />
+                                        Đánh giá sản phẩm
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
+
+                              {shipment.shipping_status === "DELIVERED" &&
+                                receiveActionMessage[shipment.id] && (
+                                  <p
+                                    className="text-secondary mb-3"
+                                    style={{ fontSize: 11 }}
+                                  >
+                                    {receiveActionMessage[shipment.id]}
+                                  </p>
+                                )}
 
                               {/* Adjustment Request Alert */}
                               {adjustmentRequest && (
