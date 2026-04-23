@@ -6,11 +6,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 //import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -21,11 +21,15 @@ import docker_test.com.OrderGatewayApplication.LeftJoinSimulation.JoinResult;
 //import docker_test.com.models.Cart;
 
 @SpringBootApplication
+//@ComponentScan(
+//    basePackages = "docker_test.com",
+//    excludeFilters = @ComponentScan.Filter(
+//        type = FilterType.REGEX,
+//        pattern = "docker_test\\.com\\.controllers\\..*"
+//    )
+//)
 //@EnableDiscoveryClient
 public class OrderGatewayApplication {
-    @Autowired
-    private RedisTemplate template;
-
     @Bean
     public WebClient webClient() {
         return WebClient.builder().build();

@@ -21,7 +21,11 @@ public class ShipmentStatusSubscriber {
 
     @KafkaListener(
             topics = "${spring.kafka.topic.shipment-status:update_shipment_status}",
-            groupId = "${spring.kafka.consumer.group-id:order-service-shipment-status-group}"
+            groupId = "${spring.kafka.consumer.group-id.shipment-status:order-service-shipment-status-group}",
+            properties = {
+                "spring.json.use.type.headers=false",
+                "spring.json.value.default.type=docker_test.com.dto.ShipmentStatusUpdatedEvent"
+            }
     )
     public void consumeShipmentStatusUpdate(ShipmentStatusUpdatedEvent event) {
         log.info("Received shipment status event trackingCode={}, status={}", event.getTrackingCode(), event.getStatus());

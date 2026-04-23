@@ -2,12 +2,14 @@ package docker_test.com.service;
 
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
@@ -19,19 +21,20 @@ import docker_test.com.dto.OrderDTO;
 import docker_test.com.dto.OrderItemDTO;
 import docker_test.com.dto.OrderResponeDTO;
 import docker_test.com.dto.OrderShipmentDTO;
+import docker_test.com.dto.PaymentStatusUpdatedEvent;
 import docker_test.com.exception.SimulatedRollbackException;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
-import docker_test.com.model.OrderShipment;
+import docker_test.com.models.OrderShipment;
 import docker_test.com.publisher.OrderEventPublisher;
 import docker_test.com.repository.OrderItemRepository;
 import docker_test.com.repository.OrderRepository;
 import docker_test.com.repository.OrderShipmentRepository;
-
+import docker_test.com.dto.*;
 
 @Service
 public class OrderService {
-	private final RedisTemplate redisTemplate;
+    private final RedisTemplate<Object, Object> redisTemplate;
 
     private static final String ROLLBACK_TEST_FLAG = "SIMULATE_ROLLBACK";
     private final int STOCK = 10;
@@ -51,7 +54,7 @@ public class OrderService {
                         OrderItemRepository orderItemRepository,
                         OrderEventPublisher eventPublisher,
                         OrderShipmentRepository orderShipmentRepository     ,
-                        RedisTemplate redisTemplate,
+                        @Qualifier("redisTemplate") RedisTemplate<Object, Object> redisTemplate,
 						WebClient webClient,
 						@Value("${payment.service.url}") String paymentServiceUrl
     		) {
@@ -113,6 +116,8 @@ public class OrderService {
         dto.setId(saved.getId());
         dto.setRecipient(dto.getRecipient());
         dto.setOrder_number(saved.getOrderNumber());
+        
+        
               
         
         String paymentCreateUrl = resolvePaymentCreateUrl();
@@ -137,6 +142,10 @@ public class OrderService {
 
         try {
             eventPublisher.publish(dto);
+         dto.getOrders_items().forEach(item -> {
+        	// OrderItem orderItem = buildItem(item, saved.getId());
+        	 eventPublisher.publishStockUpdate(item);
+         });
             log.info("Order event published successfully for orderId={}", saved.getId());
         } catch (Exception e) {
             log.error("Failed to publish order event for orderId={}. Transaction will be rolled back. Error: {}", 
@@ -173,6 +182,39 @@ public class OrderService {
         }
             log.info("Constructing payment URL using payment.service.url: {}", paymentServiceUrl);
         return paymentServiceUrl.trim() + "/api/payments/create-url";
+    }
+
+    @Transactional
+    public void applyPaymentStatusEvent(PaymentStatusUpdatedEvent event) {
+        if (event == null || event.getOrderId() == null) {
+            throw new IllegalArgumentException("orderId is required");
+        }
+
+        boolean paymentSuccess = isPaymentSuccess(event);
+        String normalizedPaymentStatus = paymentSuccess ? "PAID" : "FAILED";
+
+        Order order = orderRepository.findById(event.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Order not found: " + event.getOrderId()));
+
+        order.setPaymentStatus(normalizedPaymentStatus);
+        if (!paymentSuccess) {
+            order.setOrderStatus("CANCELED");
+        }
+        orderRepository.save(order);					
+
+        log.info("Payment status updated for orderId={}, paymentStatus={}, txnRef={}, provider={}, responseCode={}",
+                event.getOrderId(),
+                normalizedPaymentStatus,
+                event.getTxnRef(),
+                event.getProvider(),
+                event.getResponseCode());
+    }							
+
+    private boolean isPaymentSuccess(PaymentStatusUpdatedEvent event) {
+        boolean isSuccess = Boolean.TRUE.equals(event.getSuccess());
+        String responseCode = event.getResponseCode() == null ? "" : event.getResponseCode().trim().toUpperCase(Locale.ROOT);
+
+        return isSuccess && "00".equals(responseCode);
     }
 
         
@@ -252,14 +294,13 @@ public class OrderService {
                 .build();
     }
     private OrderShipment buildOrderShipment (OrderShipmentDTO dto) {
-    	return OrderShipment.builder()
-    			.shopId(dto.getShop_id())
-    			.orderId(dto.getOrder_id())
-    		    .trackingNumber(dto.getTracking_number())
-    		    .shippingStatus(dto.getShipping_status())
-    		    .carrierName("LOG")
-    		   
-    			.build();
+        OrderShipment shipment = new OrderShipment();
+        shipment.setShopId(dto.getShop_id());
+        shipment.setOrderId(dto.getOrder_id());
+        shipment.setTrackingNumber(dto.getTracking_number());
+        shipment.setShippingStatus(dto.getShipping_status());
+        shipment.setCarrierName("LOG");
+        return shipment;
     }
 
     private List<OrderItem> buildItems(OrderDTO dto, Long orderId) {
@@ -277,7 +318,7 @@ public class OrderService {
                 .toList();
     }
     
-    private OrderItem buildItem (OrderItemDTO dto, Long orderId) {
+    private OrderItem buildItem (docker_test.com.dto.OrderItem dto, Long orderId) {
     	return OrderItem.builder()
                 .orderId(orderId)
                 .productId(dto.getProduct_id())
@@ -295,18 +336,18 @@ public class OrderService {
     }
     
     
-    private Map<Long,List<OrderItem>> groupByShopId(List<OrderItemDTO> itemDTOs){
-    	var list = itemDTOs.stream().map(item->{
-    		return buildItem(item, null);
-    	});
-    	return list.collect(Collectors.groupingBy(OrderItem::getShopId));
+    private Map<Long,List<OrderItem>> groupByShopId(List<docker_test.com.dto.OrderItem> itemDTOs){
+        var list = itemDTOs.stream().map(item->{
+            return buildItem(item, null);
+        });
+        return list.collect(Collectors.groupingBy(OrderItem::getShopId));
     }
     
     
-    private Map<Long, List<OrderItemDTO>> groupByShopId1 (OrderDTO order){
-    	var list = order.getOrders_items();
-    	 
-    	list.stream().collect(Collectors.groupingBy(OrderItemDTO::getShop_id)).entrySet().forEach(entry -> {
+    private Map<Long, List<OrderItem>> groupByShopId1 (OrderDTO order){
+        var list = order.getOrders_items();
+         
+        list.stream().collect(Collectors.groupingBy(docker_test.com.dto.OrderItem::getShop_id)).entrySet().forEach(entry -> {
         Long shopId = entry.getKey();
         System.out.println("Shop ID: " + shopId);
         entry.getValue().forEach(item -> {
@@ -314,8 +355,8 @@ public class OrderService {
         });
  });
 
-    	
-    	return  list.stream().collect(Collectors.groupingBy(OrderItemDTO::getShop_id));
+        
+        return  list.stream().map(item -> buildItem(item, null)).collect(Collectors.groupingBy(OrderItem::getShopId));
     }
     
 	
