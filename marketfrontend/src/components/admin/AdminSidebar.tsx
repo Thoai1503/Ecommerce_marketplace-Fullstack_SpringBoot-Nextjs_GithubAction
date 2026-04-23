@@ -216,6 +216,26 @@ export default function AdminSidebar({
               active: pathname === "/admin/finance/transactions",
             },
             {
+              label: "Hoàn tiền",
+              path: "/admin/finance/refunds",
+              active: pathname === "/admin/finance/refunds",
+            },
+            {
+              label: "Tranh chấp",
+              path: "/admin/finance/disputes",
+              active: pathname === "/admin/finance/disputes",
+            },
+            {
+              label: "Đối soát seller",
+              path: "/admin/finance/settlements",
+              active: pathname === "/admin/finance/settlements",
+            },
+            {
+              label: "Ví người dùng",
+              path: "/admin/finance/wallets",
+              active: pathname === "/admin/finance/wallets",
+            },
+            {
               label: "Thanh toán Seller",
               path: "/admin/finance/payments",
               active: pathname === "/admin/finance/payments",
