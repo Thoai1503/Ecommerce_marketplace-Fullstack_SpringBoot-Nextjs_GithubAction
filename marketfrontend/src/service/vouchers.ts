@@ -8,8 +8,9 @@ import {
   VoucherRulesPayload,
   VoucherStatus,
 } from "@/types";
+import { API_URL } from "@/helper/api";
 
-const API = "http://localhost:8000/api/vouchers";
+const API = `${API_URL}/api/vouchers`;
 
 // ================= GET ALL =================
 export const getVouchers = async (): Promise<AdminVoucher[]> => {
@@ -19,7 +20,7 @@ export const getVouchers = async (): Promise<AdminVoucher[]> => {
 
 // ================= GET BY ID =================
 export const getVoucherById = async (id: string): Promise<AdminVoucher> => {
-  const res = await axios.get(`${API}/${id}`);
+  const res = await axios.get(`${API_URL}/api/vouchers/${id}`);
   return res.data;
 };
 
@@ -27,7 +28,7 @@ export const getVoucherById = async (id: string): Promise<AdminVoucher> => {
 export const createVoucher = async (
   data: Partial<AdminVoucher>,
 ): Promise<AdminVoucher> => {
-  const res = await axios.post("http://localhost:8000/api/vouchers", data);
+  const res = await axios.post(`${API_URL}/api/vouchers`, data);
   return res.data;
 };
 
@@ -36,13 +37,13 @@ export const updateVoucher = async (
   id: string,
   data: Partial<AdminVoucher>,
 ): Promise<AdminVoucher> => {
-  const res = await axios.put(`${API}/${id}`, data);
+  const res = await axios.put(`${API_URL}/api/vouchers/${id}`, data);
   return res.data;
 };
 
 // ================= DELETE =================
 export const deleteVoucher = async (id: string): Promise<boolean> => {
-  await axios.delete(`${API}/${id}`);
+  await axios.delete(`${API_URL}/api/vouchers/${id}`);
   return true;
 };
 
@@ -51,13 +52,13 @@ export const updateVoucherStatus = async (
   id: string,
   status: VoucherStatus,
 ): Promise<AdminVoucher> => {
-  const res = await axios.put(`${API}/${id}`, { status });
+  const res = await axios.put(`${API_URL}/api/vouchers/${id}`, { status });
   return res.data;
 };
 
 // ================= CAMPAIGNS (TẠM MOCK hoặc API sau) =================
 export const getVoucherCampaigns = async (): Promise<VoucherCampaign[]> => {
-  const res = await axios.get("http://localhost:8000/api/vouchercampaigns");
+  const res = await axios.get(`${API_URL}/api/vouchercampaigns`);
   return res.data;
 };
 
@@ -104,6 +105,6 @@ export const getVoucherAuditLogs = async (
   return [];
 };
 export const getBrands = async (): Promise<any[]> => {
-  const res = await axios.get("http://localhost:8000/api/brands");
+  const res = await axios.get(`${API_URL}/api/brands`);
   return res.data;
 };
