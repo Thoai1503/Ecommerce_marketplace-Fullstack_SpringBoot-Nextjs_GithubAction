@@ -263,44 +263,207 @@ export interface VoucherAuditEvent {
   createdAt: string;
 }
 
-// --- FINANCE TYPES ---
-export type TransactionStatus = "PAID" | "PENDING" | "CANCELLED";
-export type PaymentRequestStatus = "PENDING" | "PAID" | "CANCELLED";
+// --- FINANCE TYPES (PAYMENT SERVICE) ---
+export type PaymentTxnType =
+  | "ORDER_PAYMENT"
+  | "WALLET_TOPUP"
+  | "WALLET_WITHDRAW"
+  | "SETTLEMENT_PAYOUT"
+  | "REFUND_PAYOUT"
+  | "PLATFORM_FEE"
+  | "ADJUSTMENT";
 
-export interface Transaction {
-  id: string;
-  orderId: string;
-  orderCode: string;
-  customerName: string;
-  sellerName: string;
-  amount: number;
-  date: string;
-  status: TransactionStatus;
-  paymentMethod: string;
+export type PaymentTxnStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "SUCCESS"
+  | "FAILED"
+  | "CANCELLED"
+  | "EXPIRED"
+  | "REFUNDED";
+
+export interface PaymentTransaction {
+  id: number;
+  txnCode: string;
+  txnType: PaymentTxnType;
+  refType?: string | null;
+  refId?: number | null;
+  refCode?: string | null;
+  payerType?: string | null;
+  payerId?: number | null;
+  payeeType?: string | null;
+  payeeId?: number | null;
+  orderId?: number | null;
+  orderNumber?: string | null;
+  userId?: number | null;
+  grossAmount: number;
+  feeAmount: number;
+  discountAmount: number;
+  netAmount: number;
+  currency: string;
+  paymentMethod?: string | null;
+  gatewayCode?: string | null;
+  gatewayTxnId?: string | null;
+  gatewayOrderId?: string | null;
+  gatewayRefCode?: string | null;
+  gatewayResponseCode?: string | null;
+  gatewayResponseMsg?: string | null;
+  paymentUrl?: string | null;
+  bankCode?: string | null;
+  bankAccountName?: string | null;
+  bankAccountNumber?: string | null;
+  cardType?: string | null;
+  status: PaymentTxnStatus;
+  failureReason?: string | null;
+  expiredAt?: string | null;
+  completedAt?: string | null;
+  confirmedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  initiatedBy?: string | null;
+  initiatorId?: number | null;
+  note?: string | null;
 }
 
-export interface SellerPayment {
-  id: string;
-  sellerId: string;
-  sellerName: string;
-  period: string;
-  revenue: number;
-  commission: number;
-  commissionRate: number;
-  amount: number;
-  status: PaymentRequestStatus;
-  paidAt?: string;
+export interface TransactionStatusUpdatePayload {
+  status: PaymentTxnStatus;
+  reason?: string;
+  changedBy: string;
+  actorId?: number;
+}
+
+export type RefundStatus =
+  | "REQUESTED"
+  | "APPROVED"
+  | "REJECTED"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "FAILED";
+
+export interface RefundRequestAdmin {
+  id: number;
+  refundCode: string;
+  transaction?: { id: number; txnCode?: string } | null;
+  orderId: number;
+  orderNumber: string;
+  userId: number;
+  shopId?: number | null;
+  refundAmount: number;
+  shippingRefund: number;
+  currency: string;
+  refundType: string;
+  reason?: string | null;
+  refundMethod: string;
+  status: RefundStatus;
+  reviewNote?: string | null;
+  requestedAt: string;
+  completedAt?: string | null;
   createdAt: string;
 }
 
-export interface FinanceStats {
-  totalRevenue: number;
-  thisMonthRevenue: number;
-  pendingPayoutsCount: number;
-  pendingPayoutsValue: number;
-  revenueTrend: number;
-  monthTrend: number;
-  payoutsTrend: number;
+export interface RefundStatusUpdatePayload {
+  status: RefundStatus;
+  reason?: string;
+  changedBy: string;
+  actorId?: number;
+}
+
+export type DisputeStatus =
+  | "OPEN"
+  | "UNDER_REVIEW"
+  | "RESOLVED_BUYER"
+  | "RESOLVED_SELLER"
+  | "CLOSED";
+
+export interface PaymentDisputeAdmin {
+  id: number;
+  disputeCode: string;
+  transaction?: { id: number; txnCode?: string } | null;
+  orderId: number;
+  userId: number;
+  shopId?: number | null;
+  disputeType: string;
+  disputeAmount: number;
+  description?: string | null;
+  status: DisputeStatus;
+  resolutionNote?: string | null;
+  resolvedBy?: number | null;
+  openedAt: string;
+  resolvedAt?: string | null;
+  createdAt: string;
+}
+
+export interface DisputeResolvePayload {
+  resolution: "RESOLVED_BUYER" | "RESOLVED_SELLER" | "CLOSED";
+  resolutionNote?: string;
+  resolvedBy: number;
+}
+
+export type SettlementStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "PAID"
+  | "ON_HOLD"
+  | "CANCELLED";
+
+export interface SellerSettlementAdmin {
+  id: number;
+  settlementCode: string;
+  shopId: number;
+  periodFrom: string;
+  periodTo: string;
+  grossAmount: number;
+  platformFee: number;
+  shippingSubsidy: number;
+  voucherCost: number;
+  adjustmentAmount: number;
+  netAmount: number;
+  currency: string;
+  bankCode?: string | null;
+  bankAccountName?: string | null;
+  bankAccountNumber?: string | null;
+  status: SettlementStatus;
+  onHoldReason?: string | null;
+  paidAt?: string | null;
+  bankTransferRef?: string | null;
+  processedBy?: number | null;
+  createdAt: string;
+}
+
+export interface SettlementStatusUpdatePayload {
+  status: SettlementStatus;
+}
+
+export interface PaymentWalletAdmin {
+  id: number;
+  userId: number;
+  balance: number;
+  lockedBalance: number;
+  currency: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WalletTransactionAdmin {
+  id: number;
+  wallet?: { id: number } | null;
+  userId: number;
+  txnType: string;
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  refType?: string | null;
+  refId?: number | null;
+  description?: string | null;
+  createdAt: string;
+}
+
+export interface WalletOperationPayload {
+  amount: number;
+  refType?: string;
+  refId?: number;
+  description?: string;
 }
 // --------------------
 
@@ -334,6 +497,7 @@ export type ShipmentStatus =
   | "SHIPPING"
   | "DELIVERING"
   | "DELIVERED"
+  | "COMPLETED"
   | "FAILED"
   | "RETURNED";
 

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import docker_test.com.dto.CancelShipmentByOosRequestDTO;
 import docker_test.com.dto.CancelShipmentByOosResponseDTO;
+import docker_test.com.dto.ConfirmReceivedResponseDTO;
 import docker_test.com.dto.ConfirmPackagedResponseDTO;
 import docker_test.com.dto.CreateAdjustmentRequestDTO;
 import docker_test.com.dto.CreateAdjustmentResponseDTO;
@@ -42,6 +43,11 @@ public class OrderShipmentController {
 	@PostMapping("/{shipmentId}/confirm-packaged")
 	public ResponseEntity<ConfirmPackagedResponseDTO> confirmPackaged(@PathVariable Long shipmentId) {
 		return ResponseEntity.ok(orderShipmentService.confirmPackagedAndRequestLogistics(shipmentId));
+	}
+
+	@PostMapping("/{shipmentId}/confirm-received")
+	public ResponseEntity<ConfirmReceivedResponseDTO> confirmReceived(@PathVariable Long shipmentId) {
+		return ResponseEntity.ok(orderShipmentService.confirmReceived(shipmentId));
 	}
 
 	@PostMapping("/{shipmentId}/adjustment-request")

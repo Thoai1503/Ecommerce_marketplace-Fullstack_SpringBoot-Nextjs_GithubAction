@@ -68,6 +68,12 @@ const ShipmentStatusConfig: Record<
     icon: <MapPin size={16} />,
     label: "Đã trả lại",
   },
+  COMPLETED: {
+    bg: "bg-green-100",
+    text: "text-green-600",
+    icon: <Check size={16} />,
+    label: "Đã hoàn thành",
+  },
 };
 
 export default function ShipmentCard({

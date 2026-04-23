@@ -37,7 +37,7 @@ public class OrderService {
     private final RedisTemplate<Object, Object> redisTemplate;
 
     private static final String ROLLBACK_TEST_FLAG = "SIMULATE_ROLLBACK";
-    private final int STOCK = 10;
+    private final int STOCK = 10;// Giả sử chỉ có 10 sản phẩm trong kho để bán
     private final WebClient webClient;
     private final String paymentServiceUrl;
 	

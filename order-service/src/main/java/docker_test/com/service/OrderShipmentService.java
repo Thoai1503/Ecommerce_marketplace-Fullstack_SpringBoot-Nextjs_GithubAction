@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
+        import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import docker_test.com.dto.ConfirmPackagedResponseDTO;
+import docker_test.com.dto.ConfirmReceivedResponseDTO;
 import docker_test.com.dto.CancelShipmentByOosRequestDTO;
 import docker_test.com.dto.CancelShipmentByOosResponseDTO;
 import docker_test.com.dto.CreateAdjustmentRequestDTO;
@@ -253,6 +255,41 @@ public class OrderShipmentService {
     }
 
     @Transactional
+    public ConfirmReceivedResponseDTO confirmReceived(Long shipmentId) {
+        OrderShipment shipment = orderShipmentRepository.findById(shipmentId)
+                .orElseThrow(() -> new RuntimeException("Shipment not found: " + shipmentId));
+
+        String currentStatus = shipment.getShippingStatus() == null
+                ? ""
+                : shipment.getShippingStatus().toUpperCase(Locale.ROOT);
+
+        if (!"DELIVERED".equals(currentStatus)) {
+            throw new RuntimeException("Only DELIVERED shipment can be confirmed as received");
+        }
+
+        shipment.setShippingStatus("COMPLETED");
+        orderShipmentRepository.save(shipment);
+
+        persistShipmentHistory(
+                shipment.getId(),
+                currentStatus,
+                "COMPLETED",
+                "buyer",
+                "buyer confirmed received"
+        );
+
+        updateOrderStatusFromShipments(shipment.getOrderId());
+
+        return new ConfirmReceivedResponseDTO(
+                shipment.getId(),
+                shipment.getOrderId(),
+                currentStatus,
+                shipment.getShippingStatus(),
+                "Shipment marked as COMPLETED"
+        );
+    }
+
+    @Transactional
     public CreateAdjustmentResponseDTO createAdjustmentRequest(Long shipmentId, CreateAdjustmentRequestDTO request) {
         if (request == null || request.items() == null || request.items().isEmpty()) {
             throw new RuntimeException("Adjustment items are required");
@@ -447,4 +484,43 @@ public class OrderShipmentService {
                         default -> null;
                 };
         }
+
+            private void persistShipmentHistory(
+                    Long shipmentId,
+                    String oldStatus,
+                    String newStatus,
+                    String changedBy,
+                    String note
+            ) {
+                OrderShipmentStatusHistory history = OrderShipmentStatusHistory.builder()
+                        .orderShipmentId(shipmentId)
+                        .oldStatus(oldStatus)
+                        .newStatus(newStatus)
+                        .changedAt(LocalDateTime.now())
+                        .changedBy(changedBy)
+                        .note(note)
+                        .build();
+                orderShipmentStatusHistoryRepository.save(history);
+            }
+
+            private void updateOrderStatusFromShipments(Long orderId) {
+                List<OrderShipment> shipments = orderShipmentRepository.findByOrderIdOrderByIdDesc(orderId);
+                if (shipments.isEmpty()) {
+                    return;
+                }
+
+                boolean allCompleted = shipments.stream()
+                        .allMatch(s -> "COMPLETED".equalsIgnoreCase(s.getShippingStatus()));
+
+                Order order = orderRepository.findById(orderId)
+                        .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+                if (allCompleted) {
+                    order.setOrderStatus("COMPLETED");
+                } else if (!"CANCELED".equalsIgnoreCase(order.getOrderStatus())) {
+                    order.setOrderStatus("SHIPPED");
+                }
+
+                orderRepository.save(order);
+            }
 }
