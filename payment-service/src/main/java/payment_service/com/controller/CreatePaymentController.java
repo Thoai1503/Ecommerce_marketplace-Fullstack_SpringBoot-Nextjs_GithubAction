@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,14 +40,18 @@ import java.util.Map;
 public class CreatePaymentController {
 
     private static final Logger log = LoggerFactory.getLogger(CreatePaymentController.class);
-
+    private final String frontendBaseUrl;
+    
     private final CreatePaymentUrlService createPaymentUrlService;
     private final ProcessPaymentCallbackService processPaymentCallbackService;
 
     public CreatePaymentController(CreatePaymentUrlService createPaymentUrlService,
-                                   ProcessPaymentCallbackService processPaymentCallbackService) {
+                                   ProcessPaymentCallbackService processPaymentCallbackService,
+                                   @Value("${return.view-url}") String frontendBaseUrl               
+    		) {
         this.createPaymentUrlService = createPaymentUrlService;
         this.processPaymentCallbackService = processPaymentCallbackService;
+        this.frontendBaseUrl = frontendBaseUrl;
     }
 
     /**
@@ -57,6 +62,7 @@ public class CreatePaymentController {
      * @return 200 with {@link CreatePaymentUrlResult}, or 400/500 on failure
      */
     @PostMapping("/create-url")
+    // The request body contains the payment provider, order ID, amount, and other details needed to create the payment URL.
     public ResponseEntity<String> createPaymentUrl(
             @Valid @RequestBody CreatePaymentUrlRequest request,
             HttpServletRequest httpServletRequest) {
@@ -113,7 +119,8 @@ public class CreatePaymentController {
 
         log.info("Payment callback result: orderId={}, success={}", result.getOrderId(), result.isSuccess());
 
-        return new RedirectView("http://localhost:3000/orders/" + result.getOrderId() + "?status=" + (result.isSuccess() ? "success" : "failure"));
+        //return new RedirectView("http://localhost:3000/orders/" + result.getOrderId() + "?status=" + (result.isSuccess() ? "success" : "failure"));
+        return new RedirectView(frontendBaseUrl + "/orders/" + result.getOrderId() + "?status=" + (result.isSuccess() ? "success" : "failure"));
     }
 
     private String resolveClientIp(HttpServletRequest httpRequest) {
