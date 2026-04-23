@@ -1230,7 +1230,7 @@ export default function UserOrderDetailPage() {
                                         {receiveActionStatus[shipment.id] ===
                                         "pending"
                                           ? "Dang xac nhan..."
-                                          : "Xac nhan da nhan hang"}
+                                          : "Xác nhận đã nhận hàng"}
                                       </button>
                                     ) : (
                                       <button
