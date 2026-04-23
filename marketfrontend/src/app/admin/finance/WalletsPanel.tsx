@@ -43,7 +43,7 @@ export default function WalletsPanel() {
           Quản lý ví người dùng
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Dữ liệu theo endpoint /api/v1/wallets/user/{userId}.
+          Dữ liệu theo endpoint /api/v1/wallets/user/{resolvedUserId}.
         </p>
       </div>
 
