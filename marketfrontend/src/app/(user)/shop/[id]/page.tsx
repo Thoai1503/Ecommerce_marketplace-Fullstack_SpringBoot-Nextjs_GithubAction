@@ -1,7 +1,9 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import ShopSidebar from "@/components/client/shop/ShopSidebar";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -9,32 +11,16 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export default function ShopPage() {
   const params = useParams();
   const shopId = params?.id;
-
+  const searchParams = useSearchParams();
   const [keyword, setKeyword] = useState("");
   const [shop, setShop] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<string[]>(["all"]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  // ===== PAGINATION =====
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
-
-  // ===== TIME =====
-  const timeAgo = (dateString?: string) => {
-    if (!dateString) return "--";
-
-    const now = new Date();
-    const date = new Date(dateString);
-    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (diff < 60) return "a few seconds ago";
-    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-    if (diff < 2592000) return `${Math.floor(diff / 86400)} days ago`;
-    if (diff < 31536000) return `${Math.floor(diff / 2592000)} months ago`;
-
-    return `${Math.floor(diff / 31536000)} years ago`;
-  };
+  const itemsPerPage = 15;
 
   // ===== FETCH =====
   useEffect(() => {
@@ -44,10 +30,11 @@ export default function ShopPage() {
       try {
         setLoading(true);
 
+        // ===== SHOP =====
         const shopRes = await fetch(`${API_URL}/shops/${shopId}`);
-        const shopJson = await shopRes.json();
-        setShop(shopJson);
+        setShop(await shopRes.json());
 
+        // ===== PRODUCTS =====
         const prodRes = await fetch(`${API_URL}/product/shop/${shopId}`);
         const prodJson = await prodRes.json();
 
@@ -58,6 +45,16 @@ export default function ShopPage() {
         else if (Array.isArray(prodJson?.products)) list = prodJson.products;
 
         setProducts(list);
+
+        // ===== CATEGORY (🔥 CHỈ HIỂN THỊ SIDEBAR) =====
+        const catRes = await fetch(
+          `${API_URL}/product/shop/${shopId}/categories`,
+        );
+        const catJson = await catRes.json();
+
+        const names = catJson.map((c: any) => c.category_name);
+
+        setCategories(["all", ...names]);
       } catch (e) {
         console.error(e);
         setProducts([]);
@@ -69,10 +66,10 @@ export default function ShopPage() {
     fetchData();
   }, [shopId]);
 
-  // ===== RESET PAGE KHI SEARCH =====
+  // ===== RESET PAGE =====
   useEffect(() => {
     setCurrentPage(1);
-  }, [keyword]);
+  }, [keyword, selectedCategory]);
 
   // ===== HELPERS =====
   const normalizeImage = (url?: string) => {
@@ -92,12 +89,19 @@ export default function ShopPage() {
   const formatPrice = (n?: number) =>
     new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
 
-  // ===== FILTER =====
-  const filteredProducts = products.filter((p) =>
-    p.product_name?.toLowerCase().includes(keyword.toLowerCase()),
-  );
+  // ===== FILTER (GIỮ NGUYÊN) =====
+  const filteredProducts = products.filter((p) => {
+    const matchKeyword = p.product_name
+      ?.toLowerCase()
+      .includes(keyword.toLowerCase());
 
-  // ===== PAGINATION LOGIC =====
+    const matchCategory =
+      selectedCategory === "all" || p.category_name === selectedCategory;
+
+    return matchKeyword && matchCategory;
+  });
+
+  // ===== PAGINATION =====
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
   const paginatedProducts = filteredProducts.slice(
@@ -144,7 +148,9 @@ export default function ShopPage() {
               <div>
                 <div className="text-light">Joined</div>
                 <div className="fw-bold text-warning">
-                  {timeAgo(shop?.created_at)}
+                  {shop?.created_at
+                    ? new Date(shop.created_at).toLocaleDateString()
+                    : "--"}
                 </div>
               </div>
             </div>
@@ -167,88 +173,125 @@ export default function ShopPage() {
         Find {filteredProducts.length} Products
       </div>
 
-      {/* ===== PRODUCTS ===== */}
-      {loading ? (
-        <div className="text-center py-5">Loading...</div>
-      ) : (
-        <>
-          <div className="row">
-            {paginatedProducts.map((p) => (
-              <div className="col-md-2 mb-4" key={p.id}>
-                <Link
-                  href={`/${p.product_slug}.p${p.id}?id=${p.id}`}
-                  className="text-decoration-none text-dark"
-                >
-                  <div className="card product-card h-100">
-                    <img
-                      src={normalizeImage(p.image_url)}
-                      className="card-img-top"
-                      style={{ height: 180, objectFit: "cover" }}
-                      onError={onImgError}
-                    />
+      {/* ===== MAIN LAYOUT ===== */}
+      <div className="row">
+        {/* SIDEBAR */}
+        <div className="col-md-2">
+          <ShopSidebar
+            categories={categories} // 🔥 từ API
+            selectedCategory={selectedCategory}
+            onChange={setSelectedCategory}
+          />
+        </div>
 
-                    <div className="card-body p-2">
-                      <div className="small text-truncate">
-                        {p.product_name}
-                      </div>
+        {/* PRODUCTS */}
+        <div className="col-md-10">
+          {loading ? (
+            <div className="text-center py-5">Loading...</div>
+          ) : (
+            <>
+              <div className="row">
+                {paginatedProducts.map((p) => (
+                  <div className="product-col mb-4" key={p.id}>
+                    <Link
+                      href={`/${p.product_slug}.p${p.id}?id=${p.id}`}
+                      className="text-decoration-none text-dark"
+                    >
+                      <div className="card product-card h-100">
+                        <img
+                          src={normalizeImage(p.image_url)}
+                          className="card-img-top"
+                          style={{ height: 180, objectFit: "cover" }}
+                          onError={onImgError}
+                        />
 
-                      <div className="text-danger fw-bold">
-                        {formatPrice(p.price)}
+                        <div className="card-body p-2">
+                          <div className="small text-truncate">
+                            {p.product_name}
+                          </div>
+
+                          <div className="text-danger fw-bold">
+                            {formatPrice(p.price)}
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    </Link>
                   </div>
-                </Link>
+                ))}
               </div>
-            ))}
-          </div>
 
-          {/* ===== PAGINATION UI ===== */}
-          {totalPages > 1 && (
-            <div className="d-flex justify-content-center mt-4 gap-2 flex-wrap">
-              <button
-                className="btn btn-outline-secondary btn-sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((p) => p - 1)}
-              >
-                ←
-              </button>
+              {/* PAGINATION */}
+              {totalPages > 1 && (
+                <div className="d-flex justify-content-center mt-4 gap-2 flex-wrap">
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => p - 1)}
+                  >
+                    ←
+                  </button>
 
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  className={`btn btn-sm ${
-                    currentPage === i + 1
-                      ? "btn-danger"
-                      : "btn-outline-secondary"
-                  }`}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <button
+                      key={i}
+                      className={`btn btn-sm ${
+                        currentPage === i + 1
+                          ? "btn-danger"
+                          : "btn-outline-secondary"
+                      }`}
+                      onClick={() => setCurrentPage(i + 1)}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
 
-              <button
-                className="btn btn-outline-secondary btn-sm"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((p) => p + 1)}
-              >
-                →
-              </button>
-            </div>
+                  <button
+                    className="btn btn-outline-secondary btn-sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                  >
+                    →
+                  </button>
+                </div>
+              )}
+            </>
           )}
-        </>
-      )}
+        </div>
+      </div>
 
-      {/* ===== CSS ===== */}
+      {/* CSS */}
       <style jsx>{`
         .shop-banner {
-          background: linear-gradient(135deg, #00c7f4, #0051ff);
+          background: linear-gradient(135deg, #1cd1f9, #0051ff);
           min-height: 140px;
         }
 
         .product-card:hover {
+          width: 110%;
           transform: translateY(-5px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .product-col {
+          width: 20%;
+        }
+
+        @media (max-width: 992px) {
+          .product-col {
+            width: 25%; /* tablet: 4 sp */
+          }
+        }
+
+        @media (max-width: 768px) {
+          .product-col {
+            width: 50%; /* mobile: 2 sp */
+          }
+        }
+
+        @media (max-width: 480px) {
+          .product-col {
+            width: 100%; /* mobile nhỏ: 1 sp */
+          }
         }
       `}</style>
     </div>

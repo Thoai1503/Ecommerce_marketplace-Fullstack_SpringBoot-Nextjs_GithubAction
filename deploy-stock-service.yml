@@ -1,10 +1,10 @@
-name: Deploy order-service
+name: Deploy stock-service
 
 on:
   push:
     branches: ["main"]
     paths:
-      - "order-service/**"
+      - "stock-service/**"
       - "Marketplace-platform/**"
 
 jobs:
@@ -21,13 +21,13 @@ jobs:
           distribution: "temurin"
           cache: maven
 
-      - name: Build Marketplace-platform (shared dependency)
+      - name: Build Marketplace-platform (shared dependency classes)
         working-directory: Marketplace-platform
-        run: sh mvnw -DskipTests install
-      
-      - name: Build order-service JAR
-        working-directory: order-service
-        run: sh mvnw -DskipTests package
+        run: ./mvnw -DskipTests install
+
+      - name: Build stock-service JAR
+        working-directory: stock-service
+        run: ./mvnw -DskipTests package
 
       - name: Login Docker Hub
         uses: docker/login-action@v3
@@ -41,11 +41,11 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
-          context: ./order-service
+          context: ./stock-service
           push: true
           tags: |
-            thoaimanhlong/order-service:latest
-            thoaimanhlong/order-service:${{ github.sha }}
+            thoaimanhlong/stock-service:latest
+            thoaimanhlong/stock-service:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -60,7 +60,7 @@ jobs:
 
             cd ${{ secrets.VPS_APP_DIR }}
 
-            SERVICE="order-service"
+            SERVICE="stock-service"
             echo "Deploy service: ${SERVICE}"
 
             if docker compose config --services | grep -x "${SERVICE}" >/dev/null 2>&1; then
