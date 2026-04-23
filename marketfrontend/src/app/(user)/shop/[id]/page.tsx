@@ -20,7 +20,7 @@ export default function ShopPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const itemsPerPage = 15;
 
   // ===== FETCH =====
   useEffect(() => {
@@ -192,7 +192,7 @@ export default function ShopPage() {
             <>
               <div className="row">
                 {paginatedProducts.map((p) => (
-                  <div className="col-md-2 mb-4" key={p.id}>
+                  <div className="product-col mb-4" key={p.id}>
                     <Link
                       href={`/${p.product_slug}.p${p.id}?id=${p.id}`}
                       className="text-decoration-none text-dark"
@@ -270,6 +270,28 @@ export default function ShopPage() {
           width: 110%;
           transform: translateY(-5px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .product-col {
+          width: 20%;
+        }
+
+        @media (max-width: 992px) {
+          .product-col {
+            width: 25%; /* tablet: 4 sp */
+          }
+        }
+
+        @media (max-width: 768px) {
+          .product-col {
+            width: 50%; /* mobile: 2 sp */
+          }
+        }
+
+        @media (max-width: 480px) {
+          .product-col {
+            width: 100%; /* mobile nhỏ: 1 sp */
+          }
         }
       `}</style>
     </div>

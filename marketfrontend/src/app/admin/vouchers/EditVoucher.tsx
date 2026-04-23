@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { z } from "zod";
 import ToastComponent, { ToastType } from "@/components/ui/Toast";
+import { useBrands } from "@/hooks/admin/useBrands";
 
 const schema = z
   .object({
@@ -55,7 +56,7 @@ const schema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["discountPercent"],
-        message: "Phan tram phai trong khoang 1..100",
+        message: "The percentage should be in the range of 1 to 100.",
       });
     }
     if (
@@ -65,7 +66,7 @@ const schema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["discountAmount"],
-        message: "Gia tri giam phai > 0",
+        message: "Decreasing value must be > 0.",
       });
     }
     if (
@@ -74,14 +75,14 @@ const schema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["claimEndAt"],
-        message: "claimEndAt phai sau claimStartAt",
+        message: "claimEndAt must be after claimStartAt",
       });
     }
     if (new Date(v.validTo).getTime() < new Date(v.validFrom).getTime()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["validTo"],
-        message: "validTo phai >= validFrom",
+        message: "validTo must be >= validFrom",
       });
     }
   });
@@ -106,6 +107,8 @@ export default function EditVoucher() {
     updateVoucher,
     isSaving,
   } = useVoucherDetail(id || "");
+
+  const { brands = [] } = useBrands();
 
   const [toast, setToast] = useState<{
     message: string;
@@ -179,20 +182,51 @@ export default function EditVoucher() {
   }, [isEdit, voucher]);
 
   const save = async () => {
+    const toNullableNumber = (v: any) =>
+      v === "" || v === null ? null : Number(v);
     const payload = {
       ...form,
+      claimStartAt: form.claimStartAt + ":00",
+      claimEndAt: form.claimEndAt + ":00",
+      validFrom: form.validFrom + ":00",
+      validTo: form.validTo + ":00",
+
       code: String(form.code).toUpperCase().trim(),
       title: String(form.title).trim(),
+
+      issuerId:
+        form.issuerType === "PLATFORM"
+          ? null
+          : !form.issuerId
+            ? null
+            : Number(form.issuerId),
+
       discountPercent:
         form.discountType === "PERCENT"
-          ? Number(form.discountPercent || 0)
+          ? toNullableNumber(form.discountPercent)
           : null,
+
       discountAmount:
-        form.discountType === "FIXED" ? Number(form.discountAmount || 0) : null,
-      minOrderValue: Number(form.minOrderValue || 0),
+        form.discountType === "FIXED"
+          ? toNullableNumber(form.discountAmount)
+          : null,
+
+      maxDiscountAmount:
+        form.discountType === "PERCENT"
+          ? toNullableNumber(form.maxDiscountAmount)
+          : null,
+
+      minOrderValue: form.minOrderValue === "" ? 0 : Number(form.minOrderValue),
       totalQuota: Number(form.totalQuota || 0),
       perUserQuota: Number(form.perUserQuota || 1),
+
+      claimedCount: 0,
+      redeemedCount: 0,
+      createdBy: 1,
     };
+    console.log("TYPE discountPercent:", typeof payload.discountPercent);
+    console.log("TYPE maxDiscountAmount:", typeof payload.maxDiscountAmount);
+    console.log("PAYLOAD:", payload);
 
     const parsed = schema.safeParse(payload);
     if (!parsed.success) {
@@ -201,21 +235,21 @@ export default function EditVoucher() {
         map[String(i.path[0])] = i.message;
       });
       setErrors(map);
-      setToast({ message: "Vui long kiem tra form", type: "error" });
+      setToast({ message: "Please check the form.", type: "error" });
       return;
     }
 
     try {
       if (isEdit) {
         await updateVoucher(payload);
-        setToast({ message: "Cap nhat voucher thanh cong", type: "success" });
+        setToast({ message: "Voucher updated successfully.", type: "success" });
       } else {
         await createVoucher(payload);
-        setToast({ message: "Tao voucher thanh cong", type: "success" });
+        setToast({ message: "Voucher created successfully.", type: "success" });
       }
       setTimeout(() => router.push("/admin/vouchers"), 700);
     } catch {
-      setToast({ message: "Khong the luu voucher", type: "error" });
+      setToast({ message: "Failed to save voucher.", type: "error" });
     }
   };
 
@@ -247,7 +281,7 @@ export default function EditVoucher() {
                 {isEdit ? "Edit Voucher" : "New Voucher"}
               </h1>
               <p className="text-sm text-slate-500">
-                Cau hinh voucher theo schema Voucher V2
+                Configure vouchers according to the Voucher V2 schema.
               </p>
             </div>
           </div>
@@ -265,7 +299,7 @@ export default function EditVoucher() {
               disabled={isSaving}
               className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm flex items-center gap-2 disabled:opacity-50 shadow-sm hover:bg-blue-700"
             >
-              <Save size={16} /> {isSaving ? "Dang luu..." : "Luu"}
+              <Save size={16} /> {isSaving ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
@@ -274,7 +308,7 @@ export default function EditVoucher() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white border border-slate-200 rounded-2xl p-4">
           <p className="text-xs uppercase font-bold text-slate-500">
-            Loai voucher
+            Voucher type
           </p>
           <p className="text-sm font-black text-slate-800 mt-2 flex items-center gap-2">
             <Ticket size={16} className="text-blue-600" /> {form.discountType}
@@ -282,7 +316,7 @@ export default function EditVoucher() {
         </div>
         <div className="bg-white border border-slate-200 rounded-2xl p-4">
           <p className="text-xs uppercase font-bold text-slate-500">
-            Trang thai
+            Status
           </p>
           <p className="text-sm font-black text-slate-800 mt-2 flex items-center gap-2">
             <Shield size={16} className="text-emerald-600" /> {form.status}
@@ -290,11 +324,11 @@ export default function EditVoucher() {
         </div>
         <div className="bg-white border border-slate-200 rounded-2xl p-4">
           <p className="text-xs uppercase font-bold text-slate-500">
-            Khung thoi gian
+            Timeline
           </p>
           <p className="text-sm font-black text-slate-800 mt-2 flex items-center gap-2">
             <CalendarClock size={16} className="text-indigo-600" />
-            {form.claimStartAt ? "Da cau hinh" : "Chua dat"}
+            {form.claimStartAt ? "Configured" : "Not configured"}
           </p>
         </div>
       </div>
@@ -303,7 +337,7 @@ export default function EditVoucher() {
         <div className="bg-white border border-cyan-200 rounded-2xl p-5 space-y-4 shadow-sm">
           <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
             <Tag size={15} className="text-cyan-600" />
-            Thong tin co ban
+            Basic Information
           </h3>
           <label className="text-[11px] uppercase tracking-wide font-bold text-slate-500">
             Voucher code
@@ -318,7 +352,7 @@ export default function EditVoucher() {
             <p className="text-xs text-rose-600">{errors.code}</p>
           )}
           <label className="text-[11px] uppercase tracking-wide font-bold text-slate-500 flex items-center gap-1">
-            <FileText size={12} /> Ten voucher
+            <FileText size={12} /> Voucher Title
           </label>
           <input
             className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-cyan-400 focus:outline-none"
@@ -354,28 +388,39 @@ export default function EditVoucher() {
         <div className="bg-white border border-emerald-200 rounded-2xl p-5 space-y-4 shadow-sm">
           <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
             <Store size={15} className="text-emerald-600" />
-            Issuer va status
+            Issuer and Status
           </h3>
           <select
             className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-emerald-400 focus:outline-none"
             value={form.issuerType}
-            onChange={(e) =>
+            onChange={(e) => {
+              const value = e.target.value as VoucherIssuerType;
+
               setForm({
                 ...form,
-                issuerType: e.target.value as VoucherIssuerType,
-              })
-            }
+                issuerType: value,
+                issuerId: value === "PLATFORM" ? "" : form.issuerId,
+              });
+            }}
           >
             <option value="PLATFORM">PLATFORM</option>
-            <option value="SHOP">SHOP</option>
             <option value="BRAND">BRAND</option>
           </select>
-          <input
-            className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-emerald-400 focus:outline-none"
-            placeholder="Issuer ID (optional)"
-            value={form.issuerId}
-            onChange={(e) => setForm({ ...form, issuerId: e.target.value })}
-          />
+
+          {form.issuerType === "BRAND" && (
+            <select
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-emerald-400 focus:outline-none"
+              value={form.issuerId || ""}
+              onChange={(e) => setForm({ ...form, issuerId: e.target.value })}
+            >
+              <option value="">Select Brand</option>
+              {brands.map((b: { id: number; name: string }) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          )}
           <select
             className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-emerald-400 focus:outline-none"
             value={form.status}
@@ -404,6 +449,11 @@ export default function EditVoucher() {
           <h3 className="text-sm font-black text-slate-700 flex items-center gap-2">
             <Coins size={15} className="text-amber-600" /> Discount setup
           </h3>
+
+          {/* Discount Type */}
+          <label className="text-xs font-bold text-slate-500">
+            Discount Type
+          </label>
           <select
             className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
             value={form.discountType}
@@ -419,67 +469,115 @@ export default function EditVoucher() {
             <option value="FREE_SHIPPING">FREE_SHIPPING</option>
             <option value="GIFT_ITEM">GIFT_ITEM</option>
           </select>
+
+          {/* Discount Percent */}
           {form.discountType === "PERCENT" && (
-            <input
-              type="number"
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
-              value={form.discountPercent ?? ""}
-              onChange={(e) =>
-                setForm({ ...form, discountPercent: Number(e.target.value) })
-              }
-              placeholder="discount_percent"
-            />
+            <>
+              <label className="text-xs font-bold text-slate-500">
+                Discount Percent (%)
+              </label>
+              <input
+                type="number"
+                value={form.discountPercent ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    discountPercent:
+                      e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
+              />
+            </>
           )}
+
+          {/* Discount Amount */}
           {form.discountType === "FIXED" && (
-            <input
-              type="number"
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
-              value={form.discountAmount ?? ""}
-              onChange={(e) =>
-                setForm({ ...form, discountAmount: Number(e.target.value) })
-              }
-              placeholder="discount_amount"
-            />
+            <>
+              <label className="text-xs font-bold text-slate-500">
+                Discount Amount
+              </label>
+              <input
+                type="number"
+                value={form.discountAmount ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    discountAmount:
+                      e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
+              />
+            </>
           )}
+
+          {form.discountType === "PERCENT" && (
+            <>
+              <label className="text-xs font-bold text-slate-500">
+                Max Discount Amount
+              </label>
+              <input
+                type="number"
+                value={form.maxDiscountAmount ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    maxDiscountAmount:
+                      e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
+              />
+            </>
+          )}
+
+          {/* Min Order */}
+          <label className="text-xs font-bold text-slate-500">
+            Min Order Value
+          </label>
           <input
             type="number"
-            className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
-            value={form.maxDiscountAmount ?? ""}
+            value={form.minOrderValue}
             onChange={(e) =>
               setForm({
                 ...form,
-                maxDiscountAmount:
-                  e.target.value === "" ? null : Number(e.target.value),
+                minOrderValue: e.target.value,
               })
             }
-            placeholder="max_discount_amount"
+            className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
           />
+
+          {/* Total Quota */}
+          <label className="text-xs font-bold text-slate-500">
+            Total Quota
+          </label>
           <input
             type="number"
-            className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
-            value={form.minOrderValue}
-            onChange={(e) =>
-              setForm({ ...form, minOrderValue: Number(e.target.value) })
-            }
-            placeholder="min_order_value"
-          />
-          <input
-            type="number"
-            className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
             value={form.totalQuota}
             onChange={(e) =>
-              setForm({ ...form, totalQuota: Number(e.target.value) })
+              setForm({
+                ...form,
+                totalQuota: e.target.value,
+              })
             }
-            placeholder="total_quota"
+            className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
           />
+
+          {/* Per User */}
+          <label className="text-xs font-bold text-slate-500">
+            Per User Quota
+          </label>
           <input
             type="number"
-            className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
             value={form.perUserQuota}
             onChange={(e) =>
-              setForm({ ...form, perUserQuota: Number(e.target.value) })
+              setForm({
+                ...form,
+                perUserQuota: e.target.value,
+              })
             }
-            placeholder="per_user_quota"
+            className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-amber-400 focus:outline-none"
           />
         </div>
 

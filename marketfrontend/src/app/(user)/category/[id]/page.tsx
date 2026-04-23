@@ -71,7 +71,7 @@ export default async function CategoryPage({
     if (currentOrder) query.append("order", currentOrder);
 
     query.append("page", currentPage);
-    query.append("limit", "12");
+    query.append("limit", "15");
 
     const productRes = await fetch(
       `${INTERNAL_API}/api/categories/${categoryId}/products?${query.toString()}`,
@@ -103,13 +103,13 @@ export default async function CategoryPage({
           <SortBar categoryId={categoryId} />
 
           {/* PRODUCT LIST */}
-          <div className="row g-3">
+          <div className="d-flex flex-wrap">
             {products.length === 0 && (
               <div className="text-muted">Không có sản phẩm</div>
             )}
 
             {products.map((p: any) => (
-              <div key={p.id} className="col-6 col-md-4 col-lg-3 col-xl-2">
+              <div key={p.id} className="product-col">
                 <Link
                   href={`/${p.product_slug}.p${p.id}?id=${p.id}`}
                   className="text-decoration-none text-dark"
