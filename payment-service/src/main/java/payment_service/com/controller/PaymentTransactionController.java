@@ -13,7 +13,7 @@ import java.util.List;
 public class PaymentTransactionController {
     
     private final PaymentTransactionService transactionService;
-    
+    // ================= CREATE =================
     @PostMapping
     public ResponseEntity<PaymentTransaction> createTransaction(@RequestBody PaymentTransaction transaction) {
         PaymentTransaction created = transactionService.createTransaction(transaction);
