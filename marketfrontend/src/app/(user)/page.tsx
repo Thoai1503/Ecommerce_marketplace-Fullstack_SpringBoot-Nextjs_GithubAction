@@ -75,13 +75,17 @@ export default async function Home() {
             { image: "/image/freeship.jpg", text: "Freeship" },
             { image: "/image/flashsale.png", text: "Flash Sale" },
             { image: "/image/mal.png", text: "Mall" },
-            { image: "/image/voucher.png", text: "Mã Giảm Giá" },
-            { image: "/image/all.png", text: "Tất Cả" },
+            {
+              image: "/image/voucher.png",
+              text: "Discount code",
+              href: "/voucher",
+            },
           ].map((item, idx) => (
-            <div
+            <Link
               key={idx}
+              href={item.href ?? "#"}
               className="text-center flex-shrink-0"
-              style={{ width: "80px" }}
+              style={{ width: "80px", textDecoration: "none" }}
             >
               <div
                 className="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto mb-2 shadow-sm"
@@ -99,12 +103,12 @@ export default async function Home() {
                 />
               </div>
               <small className="d-block text-muted">{item.text}</small>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
       {/* Danh mục sản phẩm */}
-      <h5 className="fw-bold mb-3 mt-5">DANH MỤC</h5>
+      <h5 className="fw-bold mb-3 mt-5">Categories</h5>
       <div className="row g-3 g-md-4">
         {parentCategories.map((cat: any, idx: number) => (
           <div key={idx} className="col-4 col-md-3 col-lg-2">
