@@ -4,8 +4,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 import payment_service.com.entity.PaymentTransaction;
+import payment_service.com.entity.PaymentStatusHistory;
+import payment_service.com.dto.PaymentStatusHistoryResponse;
 import payment_service.com.service.PaymentTransactionService;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/payments/transactions")
@@ -55,5 +58,24 @@ public class PaymentTransactionController {
             @RequestParam(required = false) Long actorId) {
         PaymentTransaction transaction = transactionService.updateStatus(id, status, reason, changedBy, actorId);
         return ResponseEntity.ok(transaction);
+    }
+    
+    @GetMapping("/{transactionId}/history")
+    public ResponseEntity<List<PaymentStatusHistoryResponse>> getTransactionHistory(@PathVariable Long transactionId) {
+        List<PaymentStatusHistory> history = transactionService.getTransactionHistory(transactionId);
+        List<PaymentStatusHistoryResponse> response = history.stream()
+                .map(item -> PaymentStatusHistoryResponse.builder()
+                        .id(item.getId())
+                        .transactionId(item.getTransaction().getId())
+                        .fromStatus(item.getFromStatus())
+                        .toStatus(item.getToStatus())
+                        .changedBy(item.getChangedBy())
+                        .actorId(item.getActorId())
+                        .reason(item.getReason())
+                        .gatewayData(item.getGatewayData())
+                        .createdAt(item.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 }

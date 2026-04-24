@@ -5,18 +5,23 @@ import {
   getDisputesByUserId,
   getPaymentTransactionByCode,
   getPaymentTransactionByOrderId,
+  getRevenueReconciliation,
+  getRevenueSnapshotSummary,
+  getRevenueSnapshots,
   getRefundByCode,
   getRefundsByStatus,
   getRefundsByUserId,
   getSettlementByCode,
   getSettlementsByStatus,
   getShopSettlements,
+  getTransactionStatusHistory,
   getUserPaymentTransactions,
   getWalletByUserId,
   getWalletHistory,
   searchPaymentTransactions,
 } from "@/service/finance";
 import {
+  PaymentRevenueFilters,
   PaymentTxnStatus,
   PaymentTxnType,
   RefundStatus,
@@ -46,6 +51,33 @@ export const financeQuery = {
     queryOptions({
       queryKey: ["admin", "finance", "transactions", "user", userId],
       queryFn: () => getUserPaymentTransactions(userId),
+    }),
+  transactionHistoryByTxnId: (transactionId: number) =>
+    queryOptions({
+      queryKey: ["admin", "finance", "transactions", "history", transactionId],
+      queryFn: () => getTransactionStatusHistory(transactionId),
+    }),
+
+  revenueSnapshots: (filters?: PaymentRevenueFilters) =>
+    queryOptions({
+      queryKey: ["admin", "finance", "revenue-snapshots", "list", filters],
+      queryFn: () => getRevenueSnapshots(filters),
+    }),
+  revenueSnapshotSummary: (filters?: PaymentRevenueFilters) =>
+    queryOptions({
+      queryKey: ["admin", "finance", "revenue-snapshots", "summary", filters],
+      queryFn: () => getRevenueSnapshotSummary(filters),
+    }),
+  revenueReconciliation: (filters?: PaymentRevenueFilters) =>
+    queryOptions({
+      queryKey: [
+        "admin",
+        "finance",
+        "revenue-snapshots",
+        "reconciliation",
+        filters,
+      ],
+      queryFn: () => getRevenueReconciliation(filters),
     }),
 
   refundsByStatus: (status: RefundStatus) =>

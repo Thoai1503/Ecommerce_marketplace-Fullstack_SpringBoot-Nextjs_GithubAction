@@ -332,6 +332,77 @@ export interface TransactionStatusUpdatePayload {
   actorId?: number;
 }
 
+export interface PaymentStatusHistory {
+  id: number;
+  transactionId: number;
+  fromStatus: string | null; // NULL = first creation
+  toStatus: PaymentTxnStatus;
+  changedBy: "USER" | "SYSTEM" | "GATEWAY" | "ADMIN" | "WEBHOOK";
+  actorId?: number | null;
+  reason?: string | null;
+  gatewayData?: Record<string, any> | null;
+  createdAt: string;
+}
+
+export interface PaymentRevenueSnapshotAdmin {
+  id: number;
+  transactionId: number;
+  txnCode: string;
+  txnType: PaymentTxnType | string;
+  currency: string;
+  recognizedAt: string;
+  grossAmount: number;
+  discountAmount: number;
+  feeAmount: number;
+  netAmount: number;
+  cumulativeSuccessCount: number;
+  cumulativeGrossAmount: number;
+  cumulativeDiscountAmount: number;
+  cumulativeFeeAmount: number;
+  cumulativeNetAmount: number;
+  createdAt: string;
+  orderId?: number | null;
+  orderNumber?: string | null;
+  paymentMethod?: string | null;
+  transactionStatus?: PaymentTxnStatus | string | null;
+}
+
+export interface PaymentRevenueSummaryAdmin {
+  txnType?: string | null;
+  fromTime?: string | null;
+  toTime?: string | null;
+  successCount: number;
+  grossAmount: number;
+  discountAmount: number;
+  feeAmount: number;
+  netAmount: number;
+  latestRecognizedAt?: string | null;
+}
+
+export interface PaymentRevenueReconciliationAdmin {
+  txnType?: string | null;
+  filteredSuccessTransactionCount: number;
+  filteredSnapshotCount: number;
+  missingSnapshotCount: number;
+  invalidSnapshotCount: number;
+  overallSuccessTransactionCount: number;
+  overallSnapshotCount: number;
+  cumulativeCountGap: number;
+  cumulativeGrossGap: number;
+  cumulativeDiscountGap: number;
+  cumulativeFeeGap: number;
+  cumulativeNetGap: number;
+  latestSnapshot?: PaymentRevenueSnapshotAdmin | null;
+  missingTransactions: PaymentTransaction[];
+  invalidSnapshots: PaymentRevenueSnapshotAdmin[];
+}
+
+export interface PaymentRevenueFilters {
+  txnType?: string;
+  fromTime?: string;
+  toTime?: string;
+}
+
 export type RefundStatus =
   | "REQUESTED"
   | "APPROVED"
