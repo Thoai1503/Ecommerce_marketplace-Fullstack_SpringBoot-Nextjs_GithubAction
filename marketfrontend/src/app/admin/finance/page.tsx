@@ -109,6 +109,14 @@ export default function FinanceOverviewPage() {
               label="Quản lý giao dịch"
             />
             <QuickLink
+              href="/admin/finance/revenue-snapshots"
+              label="Revenue snapshot"
+            />
+            <QuickLink
+              href="/admin/finance/reconciliation"
+              label="Reconciliation"
+            />
+            <QuickLink
               href="/admin/finance/refunds"
               label="Quản lý hoàn tiền"
             />

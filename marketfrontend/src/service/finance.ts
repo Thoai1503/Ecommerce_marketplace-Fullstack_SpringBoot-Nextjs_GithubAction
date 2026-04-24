@@ -2,6 +2,11 @@ import http from "@/lib/http";
 import {
   DisputeResolvePayload,
   PaymentDisputeAdmin,
+  PaymentRevenueFilters,
+  PaymentRevenueReconciliationAdmin,
+  PaymentRevenueSnapshotAdmin,
+  PaymentStatusHistory,
+  PaymentRevenueSummaryAdmin,
   PaymentTransaction,
   PaymentTxnStatus,
   PaymentTxnType,
@@ -18,6 +23,12 @@ import {
 
 const PAYMENT_BASE = "/api/payments";
 const PAYMENT_V1_BASE = "/api/v1";
+
+const revenueParams = (filters?: PaymentRevenueFilters) => ({
+  txnType: filters?.txnType || undefined,
+  fromTime: filters?.fromTime || undefined,
+  toTime: filters?.toTime || undefined,
+});
 
 export const searchPaymentTransactions = async (
   txnType: PaymentTxnType,
@@ -68,6 +79,45 @@ export const updatePaymentTransactionStatus = async (
         changedBy: payload.changedBy,
         actorId: payload.actorId,
       },
+    },
+  );
+  return data;
+};
+
+export const getTransactionStatusHistory = async (
+  transactionId: number,
+): Promise<PaymentStatusHistory[]> => {
+  const { data } = await http.get(
+    `${PAYMENT_BASE}/transactions/${transactionId}/history`,
+  );
+  return data ?? [];
+};
+
+export const getRevenueSnapshots = async (
+  filters?: PaymentRevenueFilters,
+): Promise<PaymentRevenueSnapshotAdmin[]> => {
+  const { data } = await http.get(`${PAYMENT_BASE}/revenue-snapshots`, {
+    params: revenueParams(filters),
+  });
+  return data ?? [];
+};
+
+export const getRevenueSnapshotSummary = async (
+  filters?: PaymentRevenueFilters,
+): Promise<PaymentRevenueSummaryAdmin> => {
+  const { data } = await http.get(`${PAYMENT_BASE}/revenue-snapshots/summary`, {
+    params: revenueParams(filters),
+  });
+  return data;
+};
+
+export const getRevenueReconciliation = async (
+  filters?: PaymentRevenueFilters,
+): Promise<PaymentRevenueReconciliationAdmin> => {
+  const { data } = await http.get(
+    `${PAYMENT_BASE}/revenue-snapshots/reconciliation`,
+    {
+      params: revenueParams(filters),
     },
   );
   return data;

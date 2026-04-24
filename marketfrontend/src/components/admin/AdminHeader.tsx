@@ -13,6 +13,9 @@ import {
   History,
   LogOut,
   LayoutDashboard,
+  BarChart3,
+  ShieldCheck,
+  Wallet,
 } from "lucide-react";
 import NotificationsDropdown from "./NotificationsDropdown";
 import ToastComponent, { ToastType } from "../../components/ui/Toast";
@@ -22,6 +25,29 @@ interface AdminHeaderProps {
 }
 
 type Theme = "light" | "dark" | "system";
+
+const financeQuickLinks = [
+  {
+    label: "Overview",
+    path: "/admin/finance",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "Revenue Snapshot",
+    path: "/admin/finance/revenue-snapshots",
+    icon: BarChart3,
+  },
+  {
+    label: "Reconciliation",
+    path: "/admin/finance/reconciliation",
+    icon: ShieldCheck,
+  },
+  {
+    label: "Transactions",
+    path: "/admin/finance/transactions",
+    icon: Wallet,
+  },
+];
 
 const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
   const router = useRouter();
@@ -140,13 +166,15 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
     { id: "system", label: "System", icon: <Monitor size={18} /> },
   ];
 
+  const isFinancePage = pathname.startsWith("/admin/finance");
+
   return (
-    <header className="h-24 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-6 lg:px-10 flex items-center justify-between sticky top-0 z-40 transition-all">
+    <header className="min-h-24 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 px-6 lg:px-10 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40 transition-all">
       {toast && (
         <ToastComponent toast={toast} onClose={(id) => setToast(null)} />
       )}
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-6 min-w-0">
         <button
           onClick={onMenuClick}
           className="lg:hidden p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-500 border-0 bg-transparent transition-all"
@@ -162,6 +190,30 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
             Chủ Nhật, 15 tháng 2, 2026
           </span>
         </div>
+
+        {isFinancePage && (
+          <div className="hidden xl:flex items-center gap-2 ml-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/60 px-2 py-2">
+            <span className="px-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+              Điều phối
+            </span>
+            {financeQuickLinks.map((item) => {
+              const Icon = item.icon;
+              const active = pathname === item.path;
+
+              return (
+                <button
+                  key={item.path}
+                  type="button"
+                  onClick={() => navigateTo(item.path)}
+                  className={`flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold transition-all border-0 ${active ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "bg-transparent text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700"}`}
+                >
+                  <Icon size={15} />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3 lg:gap-5">

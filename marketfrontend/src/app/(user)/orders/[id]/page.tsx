@@ -326,6 +326,11 @@ const formatDate = (value: string) =>
     hour12: false,
   });
 
+type ReviewDraft = {
+  rating: number;
+  comment: string;
+};
+
 const stepNumberBase: CSSProperties = {
   width: 24,
   height: 24,
@@ -470,6 +475,65 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 8,
     padding: 14,
   },
+  modalBackdrop: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(15,23,42,0.52)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    zIndex: 1050,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 880,
+    maxHeight: "88vh",
+    overflow: "hidden",
+    background: "white",
+    borderRadius: 18,
+    boxShadow: "0 24px 70px rgba(15,23,42,0.22)",
+    border: "1px solid rgba(226,232,240,0.9)",
+  },
+  modalHeader: {
+    padding: "18px 22px",
+    borderBottom: "1px solid #e2e8f0",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 16,
+  },
+  modalBody: {
+    padding: 22,
+    overflowY: "auto",
+    maxHeight: "calc(88vh - 82px)",
+  },
+  reviewItemCard: {
+    border: "1px solid #e2e8f0",
+    borderRadius: 14,
+    padding: 16,
+    background: "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)",
+  },
+  starButton: {
+    border: "none",
+    background: "transparent",
+    padding: 0,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+  },
+  reviewTextarea: {
+    width: "100%",
+    minHeight: 92,
+    borderRadius: 10,
+    border: "1px solid #cbd5e1",
+    padding: 12,
+    fontSize: 13,
+    color: "#0f172a",
+    resize: "vertical",
+    outline: "none",
+  },
 };
 
 export default function UserOrderDetailPage() {
@@ -491,6 +555,77 @@ export default function UserOrderDetailPage() {
   const [receiveActionMessage, setReceiveActionMessage] = useState<
     Record<string, string>
   >({});
+  const [reviewModalShipmentId, setReviewModalShipmentId] = useState<
+    string | null
+  >(null);
+  const [shipmentReviewDrafts, setShipmentReviewDrafts] = useState<
+    Record<string, Record<string, ReviewDraft>>
+  >({});
+  const [reviewActionStatus, setReviewActionStatus] = useState<
+    Record<string, "idle" | "pending" | "submitted">
+  >({});
+  const [reviewActionMessage, setReviewActionMessage] = useState<
+    Record<string, string>
+  >({});
+
+  const activeReviewShipment = useMemo(
+    () =>
+      order?.shipments?.find(
+        (shipment) => shipment.id === reviewModalShipmentId,
+      ) || null,
+    [order, reviewModalShipmentId],
+  );
+
+  const openReviewModal = (shipmentId: string) => {
+    const shipment = order?.shipments?.find((item) => item.id === shipmentId);
+    if (!shipment) return;
+
+    setShipmentReviewDrafts((prev) => {
+      const currentDrafts = prev[shipmentId] || {};
+      return {
+        ...prev,
+        [shipmentId]: shipment.items.reduce<Record<string, ReviewDraft>>(
+          (acc, item) => {
+            acc[item.id] = currentDrafts[item.id] || {
+              rating: 5,
+              comment: "",
+            };
+            return acc;
+          },
+          {},
+        ),
+      };
+    });
+
+    setReviewModalShipmentId(shipmentId);
+  };
+
+  const closeReviewModal = () => {
+    setReviewModalShipmentId(null);
+  };
+
+  const updateReviewDraft = (
+    shipmentId: string,
+    itemId: string,
+    patch: Partial<ReviewDraft>,
+  ) => {
+    const baseDraft: ReviewDraft = {
+      rating: 5,
+      comment: "",
+    };
+
+    setShipmentReviewDrafts((prev) => ({
+      ...prev,
+      [shipmentId]: {
+        ...(prev[shipmentId] || {}),
+        [itemId]: {
+          ...baseDraft,
+          ...(prev[shipmentId]?.[itemId] || baseDraft),
+          ...patch,
+        },
+      },
+    }));
+  };
 
   const markShipmentAsCompletedLocal = (shipmentId: string, note: string) => {
     setOrder((prev) => {
@@ -498,10 +633,8 @@ export default function UserOrderDetailPage() {
 
       const now = new Date().toISOString();
       const targetShipment = prev.shipments?.find((s) => s.id === shipmentId);
-
-      return {
-        ...prev,
-        shipments: prev.shipments?.map((shipment) => {
+      const nextShipments: Order["shipments"] = prev.shipments?.map(
+        (shipment) => {
           if (shipment.id !== shipmentId) return shipment;
 
           const alreadyCompleted = (shipment.statusHistory || []).some(
@@ -510,20 +643,32 @@ export default function UserOrderDetailPage() {
 
           return {
             ...shipment,
-            shipping_status: "COMPLETED",
+            shipping_status: "COMPLETED" as const,
             updated_at: now,
             statusHistory: alreadyCompleted
               ? shipment.statusHistory
               : [
                   ...(shipment.statusHistory || []),
                   {
-                    status: "COMPLETED",
+                    status: "COMPLETED" as const,
                     description: note,
                     updatedAt: now,
                   },
                 ],
           };
-        }),
+        },
+      );
+      const allShipmentsCompleted =
+        !!nextShipments?.length &&
+        nextShipments.every(
+          (shipment) => shipment.shipping_status === "COMPLETED",
+        );
+
+      return {
+        ...prev,
+        status: allShipmentsCompleted ? "COMPLETED" : prev.status,
+        updatedAt: now,
+        shipments: nextShipments,
         logs: [
           ...(prev.logs || []),
           {
@@ -601,10 +746,82 @@ export default function UserOrderDetailPage() {
         shipmentId,
         "Nguoi mua da xac nhan da nhan hang",
       );
+      openReviewModal(shipmentId);
       setReceiveActionStatus((prev) => ({
         ...prev,
         [shipmentId]: "idle",
       }));
+    }
+  };
+
+  const handleSubmitShipmentReview = async () => {
+    if (!activeReviewShipment) return;
+
+    const shipmentId = activeReviewShipment.id;
+    const drafts = shipmentReviewDrafts[shipmentId] || {};
+    const reviews = activeReviewShipment.items.map((item) => ({
+      orderItemId: item.id,
+      productName: item.productName,
+      rating: Math.min(Math.max(drafts[item.id]?.rating || 5, 1), 5),
+      comment: String(drafts[item.id]?.comment || "").trim(),
+    }));
+
+    setReviewActionStatus((prev) => ({
+      ...prev,
+      [shipmentId]: "pending",
+    }));
+
+    let submittedByApi = false;
+
+    const attempts = [
+      {
+        path: `/api/orders/${id}/shipments/${shipmentId}/reviews`,
+        body: { orderId: id, shipmentId, reviews },
+      },
+      {
+        path: `/api/orders/shipments/${shipmentId}/reviews`,
+        body: { orderId: id, shipmentId, reviews },
+      },
+      {
+        path: `/api/reviews`,
+        body: { orderId: id, shipmentId, reviews },
+      },
+    ];
+
+    try {
+      for (const attempt of attempts) {
+        const response = await fetch(`${API_URL}${attempt.path}`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(attempt.body),
+        });
+
+        if (response.ok) {
+          submittedByApi = true;
+          break;
+        }
+      }
+
+      setReviewActionMessage((prev) => ({
+        ...prev,
+        [shipmentId]: submittedByApi
+          ? "Danh gia cua ban da duoc gui cho cac san pham trong kien hang."
+          : "Da luu tam noi dung danh gia tren giao dien. Can noi endpoint backend de luu chinh thuc.",
+      }));
+    } catch (error) {
+      console.error("Submit shipment review failed:", error);
+      setReviewActionMessage((prev) => ({
+        ...prev,
+        [shipmentId]:
+          "Da luu tam noi dung danh gia tren giao dien. Can noi endpoint backend de luu chinh thuc.",
+      }));
+    } finally {
+      setReviewActionStatus((prev) => ({
+        ...prev,
+        [shipmentId]: "submitted",
+      }));
+      closeReviewModal();
     }
   };
 
@@ -987,1049 +1204,1304 @@ export default function UserOrderDetailPage() {
   }
 
   return (
-    <main className="flex-grow-1 py-4 py-md-5">
-      <div className="container-xl px-3 px-md-4">
-        <section style={styles.cardActive} className="mb-4">
-          <div className="d-flex flex-wrap align-items-start justify-content-between gap-3">
-            <div>
-              <h2
-                style={{ fontWeight: 800, fontSize: "1.35rem" }}
-                className="mb-1"
+    <>
+      <main className="flex-grow-1 py-4 py-md-5">
+        <div className="container-xl px-3 px-md-4">
+          <section style={styles.cardActive} className="mb-4">
+            <div className="d-flex flex-wrap align-items-start justify-content-between gap-3">
+              <div>
+                <h2
+                  style={{ fontWeight: 800, fontSize: "1.35rem" }}
+                  className="mb-1"
+                >
+                  Chi tiet don hang {order.orderCode}
+                </h2>
+                <p className="text-muted mb-0" style={{ fontSize: 13 }}>
+                  Theo doi tien trinh don hang va thong tin giao nhan cua ban.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="btn btn-light border d-inline-flex align-items-center gap-2"
               >
-                Chi tiet don hang {order.orderCode}
-              </h2>
-              <p className="text-muted mb-0" style={{ fontSize: 13 }}>
-                Theo doi tien trinh don hang va thong tin giao nhan cua ban.
-              </p>
+                <ArrowLeft size={16} /> Quay lai
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="btn btn-light border d-inline-flex align-items-center gap-2"
-            >
-              <ArrowLeft size={16} /> Quay lai
-            </button>
-          </div>
 
-          <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
-            <span className="badge text-bg-light border text-dark px-3 py-2">
-              Ma don: {order.orderCode}
-            </span>
-            <span className="badge text-bg-light border text-dark px-3 py-2">
-              Trang thai don hang
-            </span>
-            <span className={`badge px-3 py-2 ${statusChipClass}`}>
-              {orderStatusLabel[order.status]}
-            </span>
-            <span
-              className={`badge px-3 py-2 ${order.paymentStatus === "PAID" ? "bg-success-subtle text-success" : "bg-warning-subtle text-warning"}`}
-            >
-              {order.paymentStatus === "PAID"
-                ? "Da thanh toan"
-                : "Chua thanh toan"}
-            </span>
-          </div>
-        </section>
+            <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
+              <span className="badge text-bg-light border text-dark px-3 py-2">
+                Ma don: {order.orderCode}
+              </span>
+              <span className="badge text-bg-light border text-dark px-3 py-2">
+                Trang thai don hang
+              </span>
+              <span className={`badge px-3 py-2 ${statusChipClass}`}>
+                {orderStatusLabel[order.status]}
+              </span>
+              <span
+                className={`badge px-3 py-2 ${order.paymentStatus === "PAID" ? "bg-success-subtle text-success" : "bg-warning-subtle text-warning"}`}
+              >
+                {order.paymentStatus === "PAID"
+                  ? "Da thanh toan"
+                  : "Chua thanh toan"}
+              </span>
+            </div>
+          </section>
 
-        <div className="row g-4 align-items-start">
-          <div className="col-12 col-lg-7">
-            <div className="d-flex flex-column gap-3">
-              <section style={styles.cardCompleted}>
-                <div className="d-flex gap-3">
-                  <div style={styles.stepDone}>
-                    <Check size={12} strokeWidth={3} />
-                  </div>
-                  <div className="flex-grow-1">
-                    <h3
-                      style={{ fontSize: 13, fontWeight: 700 }}
-                      className="mb-2"
-                    >
-                      San pham trong don
-                    </h3>
+          <div className="row g-4 align-items-start">
+            <div className="col-12 col-lg-7">
+              <div className="d-flex flex-column gap-3">
+                <section style={styles.cardCompleted}>
+                  <div className="d-flex gap-3">
+                    <div style={styles.stepDone}>
+                      <Check size={12} strokeWidth={3} />
+                    </div>
+                    <div className="flex-grow-1">
+                      <h3
+                        style={{ fontSize: 13, fontWeight: 700 }}
+                        className="mb-2"
+                      >
+                        San pham trong don
+                      </h3>
 
-                    {order.items?.map((item, index) => (
-                      <div key={item.id}>
-                        <div className="d-flex gap-3 py-2">
-                          <img
-                            src={item.productImage}
-                            alt={item.productName}
-                            style={styles.productImg}
-                          />
-                          <div className="flex-grow-1 d-flex flex-column justify-content-center">
-                            <h4
-                              style={{
-                                fontSize: 13,
-                                fontWeight: 700,
-                                lineHeight: 1.4,
-                                color: "#1e293b",
-                              }}
-                              className="mb-1"
-                            >
-                              {item.productName}
-                            </h4>
-                            <p
-                              className="text-muted mb-2"
-                              style={{ fontSize: 11 }}
-                            >
-                              SKU: {item.sku}
-                              {item.variant ? ` | ${item.variant}` : ""}
-                            </p>
-                            <div className="d-flex align-items-center justify-content-between">
-                              <span
+                      {order.items?.map((item, index) => (
+                        <div key={item.id}>
+                          <div className="d-flex gap-3 py-2">
+                            <img
+                              src={item.productImage}
+                              alt={item.productName}
+                              style={styles.productImg}
+                            />
+                            <div className="flex-grow-1 d-flex flex-column justify-content-center">
+                              <h4
                                 style={{
-                                  fontSize: 12,
+                                  fontSize: 13,
+                                  fontWeight: 700,
+                                  lineHeight: 1.4,
+                                  color: "#1e293b",
+                                }}
+                                className="mb-1"
+                              >
+                                {item.productName}
+                              </h4>
+                              <p
+                                className="text-muted mb-2"
+                                style={{ fontSize: 11 }}
+                              >
+                                SKU: {item.sku}
+                                {item.variant ? ` | ${item.variant}` : ""}
+                              </p>
+                              <div className="d-flex align-items-center justify-content-between">
+                                <span
+                                  style={{
+                                    fontSize: 12,
+                                    fontWeight: 800,
+                                    color: "#137fec",
+                                  }}
+                                >
+                                  {formatMoney(item.price)}
+                                </span>
+                                <span style={styles.qtyBadge}>
+                                  So luong:{" "}
+                                  {String(item.quantity).padStart(2, "0")}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {index < (order.items?.length || 0) - 1 && (
+                            <hr
+                              className="my-3"
+                              style={{ borderColor: "#f1f5f9" }}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+
+                <section style={styles.cardActive}>
+                  <div className="d-flex gap-3">
+                    <div style={styles.stepActive}>2</div>
+                    <div className="flex-grow-1">
+                      <h3
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.03em",
+                        }}
+                        className="mb-3"
+                      >
+                        Van chuyen ({order.shipments?.length || 0} kien)
+                      </h3>
+
+                      <div className="d-flex flex-column gap-3">
+                        {order.shipments?.map((shipment) => {
+                          const currentStep = shipmentStepOrder.indexOf(
+                            shipment.shipping_status,
+                          );
+                          const adjustmentRequest = shipment.adjustment_request;
+
+                          return (
+                            <div key={shipment.id} style={styles.shipmentItem}>
+                              <div style={styles.shipmentHead}>
+                                <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                  <p
+                                    className="mb-1 fw-bold"
+                                    style={{ fontSize: 13 }}
+                                  >
+                                    {shipment.shopName}
+                                  </p>
+                                  {adjustmentRequest && (
+                                    <span
+                                      style={{
+                                        fontSize: 10,
+                                        fontWeight: 700,
+                                        padding: "4px 8px",
+                                        borderRadius: 999,
+                                        background:
+                                          adjustmentRequest.status ===
+                                          "PENDING_BUYER"
+                                            ? "#fef3c7"
+                                            : adjustmentRequest.status ===
+                                                "ACCEPTED_BY_BUYER"
+                                              ? "#dcfce7"
+                                              : adjustmentRequest.status ===
+                                                  "REJECTED_BY_BUYER"
+                                                ? "#fee2e2"
+                                                : "#e2e8f0",
+                                        color:
+                                          adjustmentRequest.status ===
+                                          "PENDING_BUYER"
+                                            ? "#92400e"
+                                            : adjustmentRequest.status ===
+                                                "ACCEPTED_BY_BUYER"
+                                              ? "#166534"
+                                              : adjustmentRequest.status ===
+                                                  "REJECTED_BY_BUYER"
+                                                ? "#b91c1c"
+                                                : "#475569",
+                                      }}
+                                    >
+                                      {adjustmentRequest.status ===
+                                      "PENDING_BUYER"
+                                        ? "Yêu cầu chỉnh sửa"
+                                        : adjustmentRequest.status ===
+                                            "ACCEPTED_BY_BUYER"
+                                          ? "Đã chấp nhận"
+                                          : adjustmentRequest.status ===
+                                              "REJECTED_BY_BUYER"
+                                            ? "Đã từ chối"
+                                            : "Đã điều chỉnh"}
+                                    </span>
+                                  )}
+                                </div>
+                                <p
+                                  className="mb-0 text-muted"
+                                  style={{ fontSize: 11 }}
+                                >
+                                  Ma van don:{" "}
+                                  {shipment.tracking_number || "Dang cap nhat"}
+                                </p>
+                              </div>
+
+                              <div style={{ padding: "14px 16px" }}>
+                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                  <div className="d-flex flex-wrap gap-2">
+                                    {shipmentStepOrder.map((step, idx) => {
+                                      const done = currentStep >= idx;
+                                      return (
+                                        <span
+                                          key={`${shipment.id}-${step}`}
+                                          className="badge rounded-pill px-3 py-2"
+                                          style={
+                                            done
+                                              ? styles.timelineChipDone
+                                              : styles.timelineChipPending
+                                          }
+                                        >
+                                          {shipmentStepLabel[step]}
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+
+                                  {(shipment.shipping_status === "DELIVERED" ||
+                                    shipment.shipping_status ===
+                                      "COMPLETED") && (
+                                    <div className="d-flex align-items-center gap-2 ms-auto">
+                                      {shipment.shipping_status ===
+                                      "DELIVERED" ? (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleConfirmReceived(shipment.id)
+                                          }
+                                          disabled={
+                                            receiveActionStatus[shipment.id] ===
+                                            "pending"
+                                          }
+                                          className="btn btn-success btn-sm"
+                                        >
+                                          {receiveActionStatus[shipment.id] ===
+                                          "pending"
+                                            ? "Dang xac nhan..."
+                                            : "Xác nhận đã nhận hàng"}
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            openReviewModal(shipment.id)
+                                          }
+                                          className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1"
+                                        >
+                                          <Star size={14} />
+                                          {reviewActionStatus[shipment.id] ===
+                                          "submitted"
+                                            ? "Xem lai danh gia"
+                                            : "Đánh giá sản phẩm"}
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {shipment.shipping_status === "DELIVERED" &&
+                                  receiveActionMessage[shipment.id] && (
+                                    <p
+                                      className="text-secondary mb-3"
+                                      style={{ fontSize: 11 }}
+                                    >
+                                      {receiveActionMessage[shipment.id]}
+                                    </p>
+                                  )}
+
+                                {shipment.shipping_status === "COMPLETED" &&
+                                  reviewActionMessage[shipment.id] && (
+                                    <p
+                                      className="text-secondary mb-3"
+                                      style={{ fontSize: 11 }}
+                                    >
+                                      {reviewActionMessage[shipment.id]}
+                                    </p>
+                                  )}
+
+                                {/* Adjustment Request Alert */}
+                                {adjustmentRequest && (
+                                  <div
+                                    style={{
+                                      background:
+                                        adjustmentRequest.status ===
+                                        "PENDING_BUYER"
+                                          ? "rgba(245, 158, 11, 0.08)"
+                                          : adjustmentRequest.status ===
+                                              "ACCEPTED_BY_BUYER"
+                                            ? "rgba(34, 197, 94, 0.08)"
+                                            : adjustmentRequest.status ===
+                                                "REJECTED_BY_BUYER"
+                                              ? "rgba(239, 68, 68, 0.08)"
+                                              : "rgba(107, 114, 128, 0.08)",
+                                      border:
+                                        adjustmentRequest.status ===
+                                        "PENDING_BUYER"
+                                          ? "1px solid #fbbf24"
+                                          : adjustmentRequest.status ===
+                                              "ACCEPTED_BY_BUYER"
+                                            ? "1px solid #22c55e"
+                                            : adjustmentRequest.status ===
+                                                "REJECTED_BY_BUYER"
+                                              ? "1px solid #ef4444"
+                                              : "1px solid #9ca3af",
+                                      borderRadius: 8,
+                                      padding: 14,
+                                      marginBottom: 16,
+                                    }}
+                                  >
+                                    <div className="d-flex gap-3 align-items-start mb-3">
+                                      <div
+                                        style={{
+                                          background:
+                                            adjustmentRequest.status ===
+                                            "PENDING_BUYER"
+                                              ? "#fbbf24"
+                                              : adjustmentRequest.status ===
+                                                  "ACCEPTED_BY_BUYER"
+                                                ? "#22c55e"
+                                                : adjustmentRequest.status ===
+                                                    "REJECTED_BY_BUYER"
+                                                  ? "#ef4444"
+                                                  : "#9ca3af",
+                                          width: 24,
+                                          height: 24,
+                                          borderRadius: "50%",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          flexShrink: 0,
+                                        }}
+                                      >
+                                        {adjustmentRequest.status ===
+                                        "ACCEPTED_BY_BUYER" ? (
+                                          <Check
+                                            size={14}
+                                            color="white"
+                                            strokeWidth={3}
+                                          />
+                                        ) : adjustmentRequest.status ===
+                                          "REJECTED_BY_BUYER" ? (
+                                          <span
+                                            style={{
+                                              color: "white",
+                                              fontSize: 14,
+                                              fontWeight: "bold",
+                                            }}
+                                          >
+                                            ✕
+                                          </span>
+                                        ) : (
+                                          <Info
+                                            size={14}
+                                            color="white"
+                                            strokeWidth={2}
+                                          />
+                                        )}
+                                      </div>
+                                      <div className="flex-grow-1">
+                                        <p
+                                          className="fw-bold mb-1"
+                                          style={{
+                                            fontSize: 13,
+                                            color:
+                                              adjustmentRequest.status ===
+                                              "PENDING_BUYER"
+                                                ? "#92400e"
+                                                : adjustmentRequest.status ===
+                                                    "ACCEPTED_BY_BUYER"
+                                                  ? "#166534"
+                                                  : adjustmentRequest.status ===
+                                                      "REJECTED_BY_BUYER"
+                                                    ? "#991b1b"
+                                                    : "#374151",
+                                          }}
+                                        >
+                                          {adjustmentRequest.status ===
+                                          "PENDING_BUYER"
+                                            ? "Yêu cầu chỉnh sửa số lượng"
+                                            : adjustmentRequest.status ===
+                                                "ACCEPTED_BY_BUYER"
+                                              ? "Yêu cầu đã được chấp nhận"
+                                              : adjustmentRequest.status ===
+                                                  "REJECTED_BY_BUYER"
+                                                ? "Yêu cầu đã bị từ chối"
+                                                : "Yêu cầu chỉnh sửa hủy"}
+                                        </p>
+                                        <p
+                                          className="mb-2"
+                                          style={{
+                                            fontSize: 12,
+                                            color:
+                                              adjustmentRequest.status ===
+                                              "PENDING_BUYER"
+                                                ? "#b45309"
+                                                : adjustmentRequest.status ===
+                                                    "ACCEPTED_BY_BUYER"
+                                                  ? "#15803d"
+                                                  : adjustmentRequest.status ===
+                                                      "REJECTED_BY_BUYER"
+                                                    ? "#b91c1c"
+                                                    : "#6b7280",
+                                            lineHeight: 1.5,
+                                          }}
+                                        >
+                                          {adjustmentRequest.shop_reason ||
+                                            "Shop đã gửi yêu cầu chỉnh sửa số lượng"}
+                                        </p>
+                                        <div className="d-flex flex-wrap gap-2 mb-2">
+                                          <span
+                                            style={{
+                                              fontSize: 11,
+                                              fontWeight: 700,
+                                              background:
+                                                adjustmentRequest.status ===
+                                                "PENDING_BUYER"
+                                                  ? "#fef3c7"
+                                                  : "#f0fdf4",
+                                              color:
+                                                adjustmentRequest.status ===
+                                                "PENDING_BUYER"
+                                                  ? "#b45309"
+                                                  : "#166534",
+                                              padding: "4px 8px",
+                                              borderRadius: 4,
+                                            }}
+                                          >
+                                            Mã: {adjustmentRequest.request_code}
+                                          </span>
+                                          <span
+                                            style={{
+                                              fontSize: 11,
+                                              fontWeight: 700,
+                                              background:
+                                                adjustmentRequest.status ===
+                                                "PENDING_BUYER"
+                                                  ? "#fef3c7"
+                                                  : "#f0fdf4",
+                                              color:
+                                                adjustmentRequest.status ===
+                                                "PENDING_BUYER"
+                                                  ? "#b45309"
+                                                  : "#166534",
+                                              padding: "4px 8px",
+                                              borderRadius: 4,
+                                            }}
+                                          >
+                                            Chênh lệch:{" "}
+                                            {formatMoney(
+                                              adjustmentRequest.total_diff_amount,
+                                            )}
+                                          </span>
+                                          {adjustmentRequest.expires_at &&
+                                            adjustmentRequest.status ===
+                                              "PENDING_BUYER" && (
+                                              <span
+                                                style={{
+                                                  fontSize: 11,
+                                                  fontWeight: 700,
+                                                  background: "#fef3c7",
+                                                  color: "#b45309",
+                                                  padding: "4px 8px",
+                                                  borderRadius: 4,
+                                                }}
+                                              >
+                                                Hết hạn:{" "}
+                                                {formatDate(
+                                                  adjustmentRequest.expires_at,
+                                                )}
+                                              </span>
+                                            )}
+                                        </div>
+
+                                        {/* Adjustment Items Details */}
+                                        {adjustmentRequest.items &&
+                                          adjustmentRequest.items.length >
+                                            0 && (
+                                            <div
+                                              className="mb-3"
+                                              style={{
+                                                borderTop: "1px solid",
+                                                borderColor:
+                                                  adjustmentRequest.status ===
+                                                  "PENDING_BUYER"
+                                                    ? "#fbbf24"
+                                                    : "#22c55e",
+                                                paddingTop: 10,
+                                              }}
+                                            >
+                                              <p
+                                                style={{
+                                                  fontSize: 11,
+                                                  fontWeight: 700,
+                                                  textTransform: "uppercase",
+                                                  letterSpacing: "0.04em",
+                                                  marginBottom: 8,
+                                                }}
+                                              >
+                                                Chi tiết chỉnh sửa
+                                              </p>
+                                              <div className="d-flex flex-column gap-2">
+                                                {adjustmentRequest.items.map(
+                                                  (adjItem) => (
+                                                    <div
+                                                      key={adjItem.id}
+                                                      className="rounded-2 p-2"
+                                                      style={{
+                                                        background:
+                                                          adjustmentRequest.status ===
+                                                          "PENDING_BUYER"
+                                                            ? "rgba(251, 191, 36, 0.05)"
+                                                            : "rgba(34, 197, 94, 0.05)",
+                                                        border: "1px solid",
+                                                        borderColor:
+                                                          adjustmentRequest.status ===
+                                                          "PENDING_BUYER"
+                                                            ? "#fbbf24"
+                                                            : "#22c55e",
+                                                      }}
+                                                    >
+                                                      <div className="d-flex justify-content-between align-items-start mb-1">
+                                                        <span
+                                                          style={{
+                                                            fontSize: 12,
+                                                            fontWeight: 700,
+                                                          }}
+                                                        >
+                                                          {adjItem.product_name}
+                                                        </span>
+                                                        <span
+                                                          style={{
+                                                            fontSize: 11,
+                                                            fontWeight: 700,
+                                                            background:
+                                                              adjustmentRequest.status ===
+                                                              "PENDING_BUYER"
+                                                                ? "#fef3c7"
+                                                                : "#dcfce7",
+                                                            padding: "2px 6px",
+                                                            borderRadius: 3,
+                                                          }}
+                                                        >
+                                                          {adjItem.old_quantity}{" "}
+                                                          →{" "}
+                                                          {adjItem.new_quantity}
+                                                        </span>
+                                                      </div>
+                                                      <div
+                                                        className="d-flex justify-content-between"
+                                                        style={{ fontSize: 11 }}
+                                                      >
+                                                        <span className="text-muted">
+                                                          {formatMoney(
+                                                            adjItem.unit_price,
+                                                          )}
+                                                          /sp
+                                                        </span>
+                                                        <span className="fw-semibold">
+                                                          Chênh lệch:{" "}
+                                                          {formatMoney(
+                                                            adjItem.diff_total,
+                                                          )}
+                                                        </span>
+                                                      </div>
+                                                    </div>
+                                                  ),
+                                                )}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                        {/* Action Buttons */}
+                                        {adjustmentRequest?.status ===
+                                          "PENDING_BUYER" && (
+                                          <div
+                                            className="d-flex flex-column gap-2"
+                                            style={{ marginTop: 8 }}
+                                          >
+                                            <div className="d-flex gap-2 flex-wrap">
+                                              <button
+                                                type="button"
+                                                disabled={
+                                                  adjustmentActionStatus[
+                                                    shipment.id
+                                                  ] === "pending"
+                                                }
+                                                onClick={() =>
+                                                  handleAdjustmentDecision(
+                                                    shipment.id,
+                                                    adjustmentRequest.id,
+                                                    "accepted",
+                                                  )
+                                                }
+                                                style={{
+                                                  background:
+                                                    adjustmentActionStatus[
+                                                      shipment.id
+                                                    ] === "pending"
+                                                      ? "#94d3a2"
+                                                      : "#22c55e",
+                                                  color: "white",
+                                                  border: "none",
+                                                  borderRadius: 6,
+                                                  padding: "8px 16px",
+                                                  fontSize: 12,
+                                                  fontWeight: 700,
+                                                  cursor:
+                                                    adjustmentActionStatus[
+                                                      shipment.id
+                                                    ] === "pending"
+                                                      ? "not-allowed"
+                                                      : "pointer",
+                                                  transition: "all 0.25s ease",
+                                                  opacity:
+                                                    adjustmentActionStatus[
+                                                      shipment.id
+                                                    ] === "pending"
+                                                      ? 0.7
+                                                      : 1,
+                                                }}
+                                              >
+                                                ✓ Chấp nhận
+                                              </button>
+                                              <button
+                                                type="button"
+                                                disabled={
+                                                  adjustmentActionStatus[
+                                                    shipment.id
+                                                  ] === "pending"
+                                                }
+                                                onClick={() =>
+                                                  handleAdjustmentDecision(
+                                                    shipment.id,
+                                                    adjustmentRequest.id,
+                                                    "rejected",
+                                                  )
+                                                }
+                                                style={{
+                                                  background:
+                                                    adjustmentActionStatus[
+                                                      shipment.id
+                                                    ] === "pending"
+                                                      ? "#f5c2c7"
+                                                      : "white",
+                                                  color: "#ef4444",
+                                                  border: "1px solid #fca5a5",
+                                                  borderRadius: 6,
+                                                  padding: "8px 16px",
+                                                  fontSize: 12,
+                                                  fontWeight: 700,
+                                                  cursor:
+                                                    adjustmentActionStatus[
+                                                      shipment.id
+                                                    ] === "pending"
+                                                      ? "not-allowed"
+                                                      : "pointer",
+                                                  transition: "all 0.25s ease",
+                                                  opacity:
+                                                    adjustmentActionStatus[
+                                                      shipment.id
+                                                    ] === "pending"
+                                                      ? 0.7
+                                                      : 1,
+                                                }}
+                                              >
+                                                ✕ Từ chối
+                                              </button>
+                                            </div>
+                                            {adjustmentActionMessage[
+                                              shipment.id
+                                            ] && (
+                                              <p
+                                                className="mb-0"
+                                                style={{
+                                                  fontSize: 11,
+                                                  color: "#475569",
+                                                }}
+                                              >
+                                                {
+                                                  adjustmentActionMessage[
+                                                    shipment.id
+                                                  ]
+                                                }
+                                              </p>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                <div className="mb-3">
+                                  <p
+                                    className="mb-2 fw-bold text-uppercase"
+                                    style={{
+                                      fontSize: 11,
+                                      letterSpacing: "0.04em",
+                                    }}
+                                  >
+                                    San pham trong kien hang
+                                  </p>
+
+                                  {shipment.items &&
+                                  shipment.items.length > 0 ? (
+                                    <div className="d-flex flex-column gap-2">
+                                      {shipment.items.map((item) => (
+                                        <div
+                                          key={`${shipment.id}-item-${item.id}`}
+                                          className="d-flex gap-3 align-items-start rounded-3 border p-2"
+                                          style={{
+                                            borderColor: "#f1f5f9",
+                                            background: "#fff",
+                                          }}
+                                        >
+                                          <img
+                                            src={item.productImage}
+                                            alt={item.productName}
+                                            style={{
+                                              ...styles.productImg,
+                                              width: 56,
+                                              height: 56,
+                                            }}
+                                          />
+                                          <div className="flex-grow-1">
+                                            <p
+                                              className="mb-1 fw-semibold"
+                                              style={{
+                                                fontSize: 12,
+                                                lineHeight: 1.4,
+                                                color: "#1e293b",
+                                              }}
+                                            >
+                                              {item.productName}
+                                            </p>
+                                            <p
+                                              className="mb-1 text-muted"
+                                              style={{ fontSize: 11 }}
+                                            >
+                                              {item.variant
+                                                ? `${item.variant} | `
+                                                : ""}
+                                              SKU: {item.sku}
+                                            </p>
+                                            <div className="d-flex align-items-center justify-content-between gap-2">
+                                              <span
+                                                style={{
+                                                  fontSize: 12,
+                                                  fontWeight: 800,
+                                                  color: "#137fec",
+                                                }}
+                                              >
+                                                {formatMoney(item.price)}
+                                              </span>
+                                              <span style={styles.qtyBadge}>
+                                                So luong:{" "}
+                                                {String(item.quantity).padStart(
+                                                  2,
+                                                  "0",
+                                                )}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p
+                                      className="mb-0 text-muted"
+                                      style={{ fontSize: 11 }}
+                                    >
+                                      Chua co thong tin san pham cho kien hang
+                                      nay.
+                                    </p>
+                                  )}
+                                </div>
+
+                                {shipment.statusHistory &&
+                                  shipment.statusHistory.length > 0 && (
+                                    <ul className="mb-0 ps-3">
+                                      {shipment.statusHistory.map(
+                                        (history, index) => (
+                                          <li
+                                            key={`${shipment.id}-history-${index}`}
+                                            className="small mb-1"
+                                          >
+                                            <span className="fw-semibold">
+                                              {
+                                                shipmentStepLabel[
+                                                  history.status
+                                                ]
+                                              }
+                                              :
+                                            </span>{" "}
+                                            {history.description ||
+                                              "Cap nhat trang thai"}{" "}
+                                            -{" "}
+                                            <span className="text-secondary">
+                                              {formatDate(history.updatedAt)}
+                                            </span>
+                                          </li>
+                                        ),
+                                      )}
+                                    </ul>
+                                  )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section style={styles.cardDefault}>
+                  <h3
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "#475569",
+                    }}
+                    className="mb-3 d-flex align-items-center gap-2"
+                  >
+                    <Clock3 size={16} /> Lich su don hang
+                  </h3>
+                  <div className="d-flex flex-column gap-2">
+                    {order.logs?.map((log) => (
+                      <div
+                        key={log.id}
+                        className="d-flex flex-wrap align-items-center justify-content-between rounded-3 border px-3 py-2"
+                      >
+                        <div>
+                          <p
+                            className="mb-0 fw-semibold"
+                            style={{ fontSize: 13 }}
+                          >
+                            {log.note}
+                          </p>
+                          <p className="mb-0 text-secondary small">
+                            {log.action}
+                          </p>
+                        </div>
+                        <p className="mb-0 text-secondary small">
+                          {formatDate(log.createdAt)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <div className="col-12 col-lg-5">
+              <div style={{ position: "sticky", top: 72 }}>
+                <section style={styles.summaryCard}>
+                  <div
+                    style={styles.summaryHeader}
+                    className="d-flex justify-content-between align-items-center"
+                  >
+                    <h3
+                      style={{ fontWeight: 700, fontSize: 15 }}
+                      className="mb-0"
+                    >
+                      Tong ket don hang
+                    </h3>
+                    <span style={styles.itemsBadge}>
+                      {order.itemsCount} san pham
+                    </span>
+                  </div>
+
+                  <div className="p-4 d-flex flex-column gap-4">
+                    <div>
+                      <h5
+                        className="fw-bold mb-3 d-flex align-items-center gap-2"
+                        style={{ fontSize: 14 }}
+                      >
+                        <ReceiptText size={16} /> Thanh toan
+                      </h5>
+
+                      <div
+                        className="d-flex justify-content-between mb-2"
+                        style={{ fontSize: 12 }}
+                      >
+                        <span className="text-muted">Tam tinh</span>
+                        <span className="fw-semibold">
+                          {formatMoney(order.subtotalAmount)}
+                        </span>
+                      </div>
+                      <div
+                        className="d-flex justify-content-between mb-2"
+                        style={{ fontSize: 12 }}
+                      >
+                        <span className="text-muted">Giam gia</span>
+                        <span className="fw-semibold text-danger">
+                          -{formatMoney(order.discountAmount)}
+                        </span>
+                      </div>
+                      <div
+                        className="d-flex justify-content-between mb-2"
+                        style={{ fontSize: 12 }}
+                      >
+                        <span className="text-muted">Phi van chuyen</span>
+                        <span className="fw-semibold">
+                          {formatMoney(order.shippingAmount)}
+                        </span>
+                      </div>
+                      <div
+                        className="d-flex justify-content-between mb-3"
+                        style={{ fontSize: 12 }}
+                      >
+                        <span className="text-muted">Thue</span>
+                        <span className="fw-semibold">
+                          {formatMoney(order.taxAmount)}
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          borderTop: "1px dashed #e2e8f0",
+                          paddingTop: 14,
+                        }}
+                      >
+                        <div className="d-flex justify-content-between align-items-end">
+                          <span
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: "#475569",
+                            }}
+                          >
+                            Tong thanh toan
+                          </span>
+                          <div className="text-end">
+                            <p
+                              style={{
+                                fontSize: 24,
+                                fontWeight: 800,
+                                color: "#137fec",
+                                lineHeight: 1,
+                              }}
+                              className="mb-0"
+                            >
+                              {formatMoney(order.totalAmount)}
+                            </p>
+                            <p
+                              className="text-muted fst-italic mb-0"
+                              style={{ fontSize: 10 }}
+                            >
+                              Da bao gom VAT
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h5
+                        className="fw-bold mb-2 d-flex align-items-center gap-2"
+                        style={{ fontSize: 13 }}
+                      >
+                        <MapPin size={16} /> Thong tin nhan hang
+                      </h5>
+                      <p className="mb-1 fw-semibold" style={{ fontSize: 13 }}>
+                        {order.customerName}
+                      </p>
+                      <p
+                        className="mb-1 text-secondary"
+                        style={{ fontSize: 12 }}
+                      >
+                        {order.customerPhone}
+                      </p>
+                      <p
+                        className="mb-0 text-secondary"
+                        style={{ fontSize: 12 }}
+                      >
+                        {order.shippingAddress}
+                      </p>
+                    </div>
+
+                    <div>
+                      <h5
+                        className="fw-bold mb-2 d-flex align-items-center gap-2"
+                        style={{ fontSize: 13 }}
+                      >
+                        <CreditCard size={16} /> Giao dich
+                      </h5>
+                      <p
+                        className="mb-1 text-secondary"
+                        style={{ fontSize: 12 }}
+                      >
+                        Phuong thuc: <strong>{order.paymentMethod}</strong>
+                      </p>
+                      <p
+                        className="mb-0 text-secondary"
+                        style={{ fontSize: 12 }}
+                      >
+                        Ma giao dich:{" "}
+                        <strong>{order.transactionId || "Chua co"}</strong>
+                      </p>
+                    </div>
+
+                    <div className="d-grid gap-2">
+                      <button type="button" style={styles.btnOrder}>
+                        <span className="d-flex align-items-center gap-2">
+                          <Lock size={16} strokeWidth={2} /> THEO DOI VAN DON
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 9,
+                            fontWeight: 500,
+                            opacity: 0.85,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.08em",
+                          }}
+                        >
+                          Xem cap nhat moi nhat
+                        </span>
+                      </button>
+
+                      <button type="button" style={styles.btnSecondary}>
+                        <span className="d-inline-flex align-items-center gap-2">
+                          <Headset size={14} /> Lien he ho tro
+                        </span>
+                      </button>
+                    </div>
+
+                    <div
+                      className="d-flex align-items-center justify-content-center gap-4"
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: "#94a3b8",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.07em",
+                      }}
+                    >
+                      <div className="d-flex align-items-center gap-1">
+                        <ShieldCheck
+                          size={12}
+                          color="#22c55e"
+                          strokeWidth={2.5}
+                        />
+                        An toan
+                      </div>
+                      <div className="d-flex align-items-center gap-1">
+                        <BadgeCheck
+                          size={12}
+                          color="#22c55e"
+                          strokeWidth={2.5}
+                        />
+                        Xac thuc
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <div style={styles.infoNote} className="mt-3 d-flex gap-3">
+                  <Info
+                    size={18}
+                    className="text-muted flex-shrink-0"
+                    strokeWidth={1.8}
+                  />
+                  <p
+                    className="text-muted mb-0"
+                    style={{ fontSize: 11, lineHeight: 1.7 }}
+                  >
+                    Du lieu trang nay duoc lay tu API thuc te. Thong tin nhan
+                    hang, san pham, kien hang va lich su trang thai cua tung
+                    kien duoc cap nhat theo he thong don hang.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {activeReviewShipment && (
+        <div style={styles.modalBackdrop} onClick={closeReviewModal}>
+          <div
+            style={styles.modalCard}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={styles.modalHeader}>
+              <div>
+                <p
+                  className="mb-1"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "#137fec",
+                  }}
+                >
+                  Danh gia kien hang
+                </p>
+                <h3 className="mb-1" style={{ fontSize: 22, fontWeight: 800 }}>
+                  Ban da nhan duoc hang
+                </h3>
+                <p className="mb-0 text-muted" style={{ fontSize: 13 }}>
+                  Hay danh gia tung san pham trong kien{" "}
+                  {activeReviewShipment.tracking_number ||
+                    activeReviewShipment.id}
+                  .
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeReviewModal}
+                className="btn btn-light border"
+              >
+                Dong
+              </button>
+            </div>
+
+            <div style={styles.modalBody}>
+              <div className="d-flex flex-column gap-3">
+                {activeReviewShipment.items.map((item) => {
+                  const draft = shipmentReviewDrafts[activeReviewShipment.id]?.[
+                    item.id
+                  ] || {
+                    rating: 5,
+                    comment: "",
+                  };
+
+                  return (
+                    <div
+                      key={`${activeReviewShipment.id}-${item.id}`}
+                      style={styles.reviewItemCard}
+                    >
+                      <div className="d-flex gap-3 align-items-start">
+                        <img
+                          src={item.productImage}
+                          alt={item.productName}
+                          style={{
+                            ...styles.productImg,
+                            width: 68,
+                            height: 68,
+                          }}
+                        />
+                        <div className="flex-grow-1">
+                          <div className="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                            <div>
+                              <p
+                                className="mb-1"
+                                style={{
+                                  fontSize: 14,
+                                  fontWeight: 700,
+                                  color: "#0f172a",
+                                }}
+                              >
+                                {item.productName}
+                              </p>
+                              <p
+                                className="mb-0 text-muted"
+                                style={{ fontSize: 12 }}
+                              >
+                                {item.variant ? `${item.variant} | ` : ""}SKU:{" "}
+                                {item.sku}
+                              </p>
+                            </div>
+                            <div className="text-end">
+                              <p
+                                className="mb-1"
+                                style={{
+                                  fontSize: 13,
                                   fontWeight: 800,
                                   color: "#137fec",
                                 }}
                               >
                                 {formatMoney(item.price)}
-                              </span>
-                              <span style={styles.qtyBadge}>
-                                So luong:{" "}
-                                {String(item.quantity).padStart(2, "0")}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {index < (order.items?.length || 0) - 1 && (
-                          <hr
-                            className="my-3"
-                            style={{ borderColor: "#f1f5f9" }}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-
-              <section style={styles.cardActive}>
-                <div className="d-flex gap-3">
-                  <div style={styles.stepActive}>2</div>
-                  <div className="flex-grow-1">
-                    <h3
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.03em",
-                      }}
-                      className="mb-3"
-                    >
-                      Van chuyen ({order.shipments?.length || 0} kien)
-                    </h3>
-
-                    <div className="d-flex flex-column gap-3">
-                      {order.shipments?.map((shipment) => {
-                        const currentStep = shipmentStepOrder.indexOf(
-                          shipment.shipping_status,
-                        );
-                        const adjustmentRequest = shipment.adjustment_request;
-
-                        return (
-                          <div key={shipment.id} style={styles.shipmentItem}>
-                            <div style={styles.shipmentHead}>
-                              <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                <p
-                                  className="mb-1 fw-bold"
-                                  style={{ fontSize: 13 }}
-                                >
-                                  {shipment.shopName}
-                                </p>
-                                {adjustmentRequest && (
-                                  <span
-                                    style={{
-                                      fontSize: 10,
-                                      fontWeight: 700,
-                                      padding: "4px 8px",
-                                      borderRadius: 999,
-                                      background:
-                                        adjustmentRequest.status ===
-                                        "PENDING_BUYER"
-                                          ? "#fef3c7"
-                                          : adjustmentRequest.status ===
-                                              "ACCEPTED_BY_BUYER"
-                                            ? "#dcfce7"
-                                            : adjustmentRequest.status ===
-                                                "REJECTED_BY_BUYER"
-                                              ? "#fee2e2"
-                                              : "#e2e8f0",
-                                      color:
-                                        adjustmentRequest.status ===
-                                        "PENDING_BUYER"
-                                          ? "#92400e"
-                                          : adjustmentRequest.status ===
-                                              "ACCEPTED_BY_BUYER"
-                                            ? "#166534"
-                                            : adjustmentRequest.status ===
-                                                "REJECTED_BY_BUYER"
-                                              ? "#b91c1c"
-                                              : "#475569",
-                                    }}
-                                  >
-                                    {adjustmentRequest.status ===
-                                    "PENDING_BUYER"
-                                      ? "Yêu cầu chỉnh sửa"
-                                      : adjustmentRequest.status ===
-                                          "ACCEPTED_BY_BUYER"
-                                        ? "Đã chấp nhận"
-                                        : adjustmentRequest.status ===
-                                            "REJECTED_BY_BUYER"
-                                          ? "Đã từ chối"
-                                          : "Đã điều chỉnh"}
-                                  </span>
-                                )}
-                              </div>
-                              <p
-                                className="mb-0 text-muted"
-                                style={{ fontSize: 11 }}
-                              >
-                                Ma van don:{" "}
-                                {shipment.tracking_number || "Dang cap nhat"}
                               </p>
-                            </div>
-
-                            <div style={{ padding: "14px 16px" }}>
-                              <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                                <div className="d-flex flex-wrap gap-2">
-                                  {shipmentStepOrder.map((step, idx) => {
-                                    const done = currentStep >= idx;
-                                    return (
-                                      <span
-                                        key={`${shipment.id}-${step}`}
-                                        className="badge rounded-pill px-3 py-2"
-                                        style={
-                                          done
-                                            ? styles.timelineChipDone
-                                            : styles.timelineChipPending
-                                        }
-                                      >
-                                        {shipmentStepLabel[step]}
-                                      </span>
-                                    );
-                                  })}
-                                </div>
-
-                                {(shipment.shipping_status === "DELIVERED" ||
-                                  shipment.shipping_status === "COMPLETED") && (
-                                  <div className="d-flex align-items-center gap-2 ms-auto">
-                                    {shipment.shipping_status ===
-                                    "DELIVERED" ? (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          handleConfirmReceived(shipment.id)
-                                        }
-                                        disabled={
-                                          receiveActionStatus[shipment.id] ===
-                                          "pending"
-                                        }
-                                        className="btn btn-success btn-sm"
-                                      >
-                                        {receiveActionStatus[shipment.id] ===
-                                        "pending"
-                                          ? "Dang xac nhan..."
-                                          : "Xac nhan da nhan hang"}
-                                      </button>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1"
-                                      >
-                                        <Star size={14} />
-                                        Đánh giá sản phẩm
-                                      </button>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-
-                              {shipment.shipping_status === "DELIVERED" &&
-                                receiveActionMessage[shipment.id] && (
-                                  <p
-                                    className="text-secondary mb-3"
-                                    style={{ fontSize: 11 }}
-                                  >
-                                    {receiveActionMessage[shipment.id]}
-                                  </p>
-                                )}
-
-                              {/* Adjustment Request Alert */}
-                              {adjustmentRequest && (
-                                <div
-                                  style={{
-                                    background:
-                                      adjustmentRequest.status ===
-                                      "PENDING_BUYER"
-                                        ? "rgba(245, 158, 11, 0.08)"
-                                        : adjustmentRequest.status ===
-                                            "ACCEPTED_BY_BUYER"
-                                          ? "rgba(34, 197, 94, 0.08)"
-                                          : adjustmentRequest.status ===
-                                              "REJECTED_BY_BUYER"
-                                            ? "rgba(239, 68, 68, 0.08)"
-                                            : "rgba(107, 114, 128, 0.08)",
-                                    border:
-                                      adjustmentRequest.status ===
-                                      "PENDING_BUYER"
-                                        ? "1px solid #fbbf24"
-                                        : adjustmentRequest.status ===
-                                            "ACCEPTED_BY_BUYER"
-                                          ? "1px solid #22c55e"
-                                          : adjustmentRequest.status ===
-                                              "REJECTED_BY_BUYER"
-                                            ? "1px solid #ef4444"
-                                            : "1px solid #9ca3af",
-                                    borderRadius: 8,
-                                    padding: 14,
-                                    marginBottom: 16,
-                                  }}
-                                >
-                                  <div className="d-flex gap-3 align-items-start mb-3">
-                                    <div
-                                      style={{
-                                        background:
-                                          adjustmentRequest.status ===
-                                          "PENDING_BUYER"
-                                            ? "#fbbf24"
-                                            : adjustmentRequest.status ===
-                                                "ACCEPTED_BY_BUYER"
-                                              ? "#22c55e"
-                                              : adjustmentRequest.status ===
-                                                  "REJECTED_BY_BUYER"
-                                                ? "#ef4444"
-                                                : "#9ca3af",
-                                        width: 24,
-                                        height: 24,
-                                        borderRadius: "50%",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        flexShrink: 0,
-                                      }}
-                                    >
-                                      {adjustmentRequest.status ===
-                                      "ACCEPTED_BY_BUYER" ? (
-                                        <Check
-                                          size={14}
-                                          color="white"
-                                          strokeWidth={3}
-                                        />
-                                      ) : adjustmentRequest.status ===
-                                        "REJECTED_BY_BUYER" ? (
-                                        <span
-                                          style={{
-                                            color: "white",
-                                            fontSize: 14,
-                                            fontWeight: "bold",
-                                          }}
-                                        >
-                                          ✕
-                                        </span>
-                                      ) : (
-                                        <Info
-                                          size={14}
-                                          color="white"
-                                          strokeWidth={2}
-                                        />
-                                      )}
-                                    </div>
-                                    <div className="flex-grow-1">
-                                      <p
-                                        className="fw-bold mb-1"
-                                        style={{
-                                          fontSize: 13,
-                                          color:
-                                            adjustmentRequest.status ===
-                                            "PENDING_BUYER"
-                                              ? "#92400e"
-                                              : adjustmentRequest.status ===
-                                                  "ACCEPTED_BY_BUYER"
-                                                ? "#166534"
-                                                : adjustmentRequest.status ===
-                                                    "REJECTED_BY_BUYER"
-                                                  ? "#991b1b"
-                                                  : "#374151",
-                                        }}
-                                      >
-                                        {adjustmentRequest.status ===
-                                        "PENDING_BUYER"
-                                          ? "Yêu cầu chỉnh sửa số lượng"
-                                          : adjustmentRequest.status ===
-                                              "ACCEPTED_BY_BUYER"
-                                            ? "Yêu cầu đã được chấp nhận"
-                                            : adjustmentRequest.status ===
-                                                "REJECTED_BY_BUYER"
-                                              ? "Yêu cầu đã bị từ chối"
-                                              : "Yêu cầu chỉnh sửa hủy"}
-                                      </p>
-                                      <p
-                                        className="mb-2"
-                                        style={{
-                                          fontSize: 12,
-                                          color:
-                                            adjustmentRequest.status ===
-                                            "PENDING_BUYER"
-                                              ? "#b45309"
-                                              : adjustmentRequest.status ===
-                                                  "ACCEPTED_BY_BUYER"
-                                                ? "#15803d"
-                                                : adjustmentRequest.status ===
-                                                    "REJECTED_BY_BUYER"
-                                                  ? "#b91c1c"
-                                                  : "#6b7280",
-                                          lineHeight: 1.5,
-                                        }}
-                                      >
-                                        {adjustmentRequest.shop_reason ||
-                                          "Shop đã gửi yêu cầu chỉnh sửa số lượng"}
-                                      </p>
-                                      <div className="d-flex flex-wrap gap-2 mb-2">
-                                        <span
-                                          style={{
-                                            fontSize: 11,
-                                            fontWeight: 700,
-                                            background:
-                                              adjustmentRequest.status ===
-                                              "PENDING_BUYER"
-                                                ? "#fef3c7"
-                                                : "#f0fdf4",
-                                            color:
-                                              adjustmentRequest.status ===
-                                              "PENDING_BUYER"
-                                                ? "#b45309"
-                                                : "#166534",
-                                            padding: "4px 8px",
-                                            borderRadius: 4,
-                                          }}
-                                        >
-                                          Mã: {adjustmentRequest.request_code}
-                                        </span>
-                                        <span
-                                          style={{
-                                            fontSize: 11,
-                                            fontWeight: 700,
-                                            background:
-                                              adjustmentRequest.status ===
-                                              "PENDING_BUYER"
-                                                ? "#fef3c7"
-                                                : "#f0fdf4",
-                                            color:
-                                              adjustmentRequest.status ===
-                                              "PENDING_BUYER"
-                                                ? "#b45309"
-                                                : "#166534",
-                                            padding: "4px 8px",
-                                            borderRadius: 4,
-                                          }}
-                                        >
-                                          Chênh lệch:{" "}
-                                          {formatMoney(
-                                            adjustmentRequest.total_diff_amount,
-                                          )}
-                                        </span>
-                                        {adjustmentRequest.expires_at &&
-                                          adjustmentRequest.status ===
-                                            "PENDING_BUYER" && (
-                                            <span
-                                              style={{
-                                                fontSize: 11,
-                                                fontWeight: 700,
-                                                background: "#fef3c7",
-                                                color: "#b45309",
-                                                padding: "4px 8px",
-                                                borderRadius: 4,
-                                              }}
-                                            >
-                                              Hết hạn:{" "}
-                                              {formatDate(
-                                                adjustmentRequest.expires_at,
-                                              )}
-                                            </span>
-                                          )}
-                                      </div>
-
-                                      {/* Adjustment Items Details */}
-                                      {adjustmentRequest.items &&
-                                        adjustmentRequest.items.length > 0 && (
-                                          <div
-                                            className="mb-3"
-                                            style={{
-                                              borderTop: "1px solid",
-                                              borderColor:
-                                                adjustmentRequest.status ===
-                                                "PENDING_BUYER"
-                                                  ? "#fbbf24"
-                                                  : "#22c55e",
-                                              paddingTop: 10,
-                                            }}
-                                          >
-                                            <p
-                                              style={{
-                                                fontSize: 11,
-                                                fontWeight: 700,
-                                                textTransform: "uppercase",
-                                                letterSpacing: "0.04em",
-                                                marginBottom: 8,
-                                              }}
-                                            >
-                                              Chi tiết chỉnh sửa
-                                            </p>
-                                            <div className="d-flex flex-column gap-2">
-                                              {adjustmentRequest.items.map(
-                                                (adjItem) => (
-                                                  <div
-                                                    key={adjItem.id}
-                                                    className="rounded-2 p-2"
-                                                    style={{
-                                                      background:
-                                                        adjustmentRequest.status ===
-                                                        "PENDING_BUYER"
-                                                          ? "rgba(251, 191, 36, 0.05)"
-                                                          : "rgba(34, 197, 94, 0.05)",
-                                                      border: "1px solid",
-                                                      borderColor:
-                                                        adjustmentRequest.status ===
-                                                        "PENDING_BUYER"
-                                                          ? "#fbbf24"
-                                                          : "#22c55e",
-                                                    }}
-                                                  >
-                                                    <div className="d-flex justify-content-between align-items-start mb-1">
-                                                      <span
-                                                        style={{
-                                                          fontSize: 12,
-                                                          fontWeight: 700,
-                                                        }}
-                                                      >
-                                                        {adjItem.product_name}
-                                                      </span>
-                                                      <span
-                                                        style={{
-                                                          fontSize: 11,
-                                                          fontWeight: 700,
-                                                          background:
-                                                            adjustmentRequest.status ===
-                                                            "PENDING_BUYER"
-                                                              ? "#fef3c7"
-                                                              : "#dcfce7",
-                                                          padding: "2px 6px",
-                                                          borderRadius: 3,
-                                                        }}
-                                                      >
-                                                        {adjItem.old_quantity} →{" "}
-                                                        {adjItem.new_quantity}
-                                                      </span>
-                                                    </div>
-                                                    <div
-                                                      className="d-flex justify-content-between"
-                                                      style={{ fontSize: 11 }}
-                                                    >
-                                                      <span className="text-muted">
-                                                        {formatMoney(
-                                                          adjItem.unit_price,
-                                                        )}
-                                                        /sp
-                                                      </span>
-                                                      <span className="fw-semibold">
-                                                        Chênh lệch:{" "}
-                                                        {formatMoney(
-                                                          adjItem.diff_total,
-                                                        )}
-                                                      </span>
-                                                    </div>
-                                                  </div>
-                                                ),
-                                              )}
-                                            </div>
-                                          </div>
-                                        )}
-
-                                      {/* Action Buttons */}
-                                      {adjustmentRequest?.status ===
-                                        "PENDING_BUYER" && (
-                                        <div
-                                          className="d-flex flex-column gap-2"
-                                          style={{ marginTop: 8 }}
-                                        >
-                                          <div className="d-flex gap-2 flex-wrap">
-                                            <button
-                                              type="button"
-                                              disabled={
-                                                adjustmentActionStatus[
-                                                  shipment.id
-                                                ] === "pending"
-                                              }
-                                              onClick={() =>
-                                                handleAdjustmentDecision(
-                                                  shipment.id,
-                                                  adjustmentRequest.id,
-                                                  "accepted",
-                                                )
-                                              }
-                                              style={{
-                                                background:
-                                                  adjustmentActionStatus[
-                                                    shipment.id
-                                                  ] === "pending"
-                                                    ? "#94d3a2"
-                                                    : "#22c55e",
-                                                color: "white",
-                                                border: "none",
-                                                borderRadius: 6,
-                                                padding: "8px 16px",
-                                                fontSize: 12,
-                                                fontWeight: 700,
-                                                cursor:
-                                                  adjustmentActionStatus[
-                                                    shipment.id
-                                                  ] === "pending"
-                                                    ? "not-allowed"
-                                                    : "pointer",
-                                                transition: "all 0.25s ease",
-                                                opacity:
-                                                  adjustmentActionStatus[
-                                                    shipment.id
-                                                  ] === "pending"
-                                                    ? 0.7
-                                                    : 1,
-                                              }}
-                                            >
-                                              ✓ Chấp nhận
-                                            </button>
-                                            <button
-                                              type="button"
-                                              disabled={
-                                                adjustmentActionStatus[
-                                                  shipment.id
-                                                ] === "pending"
-                                              }
-                                              onClick={() =>
-                                                handleAdjustmentDecision(
-                                                  shipment.id,
-                                                  adjustmentRequest.id,
-                                                  "rejected",
-                                                )
-                                              }
-                                              style={{
-                                                background:
-                                                  adjustmentActionStatus[
-                                                    shipment.id
-                                                  ] === "pending"
-                                                    ? "#f5c2c7"
-                                                    : "white",
-                                                color: "#ef4444",
-                                                border: "1px solid #fca5a5",
-                                                borderRadius: 6,
-                                                padding: "8px 16px",
-                                                fontSize: 12,
-                                                fontWeight: 700,
-                                                cursor:
-                                                  adjustmentActionStatus[
-                                                    shipment.id
-                                                  ] === "pending"
-                                                    ? "not-allowed"
-                                                    : "pointer",
-                                                transition: "all 0.25s ease",
-                                                opacity:
-                                                  adjustmentActionStatus[
-                                                    shipment.id
-                                                  ] === "pending"
-                                                    ? 0.7
-                                                    : 1,
-                                              }}
-                                            >
-                                              ✕ Từ chối
-                                            </button>
-                                          </div>
-                                          {adjustmentActionMessage[
-                                            shipment.id
-                                          ] && (
-                                            <p
-                                              className="mb-0"
-                                              style={{
-                                                fontSize: 11,
-                                                color: "#475569",
-                                              }}
-                                            >
-                                              {
-                                                adjustmentActionMessage[
-                                                  shipment.id
-                                                ]
-                                              }
-                                            </p>
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="mb-3">
-                                <p
-                                  className="mb-2 fw-bold text-uppercase"
-                                  style={{
-                                    fontSize: 11,
-                                    letterSpacing: "0.04em",
-                                  }}
-                                >
-                                  San pham trong kien hang
-                                </p>
-
-                                {shipment.items && shipment.items.length > 0 ? (
-                                  <div className="d-flex flex-column gap-2">
-                                    {shipment.items.map((item) => (
-                                      <div
-                                        key={`${shipment.id}-item-${item.id}`}
-                                        className="d-flex gap-3 align-items-start rounded-3 border p-2"
-                                        style={{
-                                          borderColor: "#f1f5f9",
-                                          background: "#fff",
-                                        }}
-                                      >
-                                        <img
-                                          src={item.productImage}
-                                          alt={item.productName}
-                                          style={{
-                                            ...styles.productImg,
-                                            width: 56,
-                                            height: 56,
-                                          }}
-                                        />
-                                        <div className="flex-grow-1">
-                                          <p
-                                            className="mb-1 fw-semibold"
-                                            style={{
-                                              fontSize: 12,
-                                              lineHeight: 1.4,
-                                              color: "#1e293b",
-                                            }}
-                                          >
-                                            {item.productName}
-                                          </p>
-                                          <p
-                                            className="mb-1 text-muted"
-                                            style={{ fontSize: 11 }}
-                                          >
-                                            {item.variant
-                                              ? `${item.variant} | `
-                                              : ""}
-                                            SKU: {item.sku}
-                                          </p>
-                                          <div className="d-flex align-items-center justify-content-between gap-2">
-                                            <span
-                                              style={{
-                                                fontSize: 12,
-                                                fontWeight: 800,
-                                                color: "#137fec",
-                                              }}
-                                            >
-                                              {formatMoney(item.price)}
-                                            </span>
-                                            <span style={styles.qtyBadge}>
-                                              So luong:{" "}
-                                              {String(item.quantity).padStart(
-                                                2,
-                                                "0",
-                                              )}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p
-                                    className="mb-0 text-muted"
-                                    style={{ fontSize: 11 }}
-                                  >
-                                    Chua co thong tin san pham cho kien hang
-                                    nay.
-                                  </p>
-                                )}
-                              </div>
-
-                              {shipment.statusHistory &&
-                                shipment.statusHistory.length > 0 && (
-                                  <ul className="mb-0 ps-3">
-                                    {shipment.statusHistory.map(
-                                      (history, index) => (
-                                        <li
-                                          key={`${shipment.id}-history-${index}`}
-                                          className="small mb-1"
-                                        >
-                                          <span className="fw-semibold">
-                                            {shipmentStepLabel[history.status]}:
-                                          </span>{" "}
-                                          {history.description ||
-                                            "Cap nhat trang thai"}{" "}
-                                          -{" "}
-                                          <span className="text-secondary">
-                                            {formatDate(history.updatedAt)}
-                                          </span>
-                                        </li>
-                                      ),
-                                    )}
-                                  </ul>
-                                )}
+                              <span style={styles.qtyBadge}>
+                                SL: {item.quantity}
+                              </span>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </section>
 
-              <section style={styles.cardDefault}>
-                <h3
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    color: "#475569",
-                  }}
-                  className="mb-3 d-flex align-items-center gap-2"
-                >
-                  <Clock3 size={16} /> Lich su don hang
-                </h3>
-                <div className="d-flex flex-column gap-2">
-                  {order.logs?.map((log) => (
-                    <div
-                      key={log.id}
-                      className="d-flex flex-wrap align-items-center justify-content-between rounded-3 border px-3 py-2"
-                    >
-                      <div>
-                        <p
-                          className="mb-0 fw-semibold"
-                          style={{ fontSize: 13 }}
-                        >
-                          {log.note}
-                        </p>
-                        <p className="mb-0 text-secondary small">
-                          {log.action}
-                        </p>
-                      </div>
-                      <p className="mb-0 text-secondary small">
-                        {formatDate(log.createdAt)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-          </div>
+                          <div className="mb-3">
+                            <p
+                              className="mb-2"
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: "#334155",
+                              }}
+                            >
+                              Danh gia sao
+                            </p>
+                            <div className="d-flex align-items-center gap-2 flex-wrap">
+                              {[1, 2, 3, 4, 5].map((starValue) => {
+                                const active = draft.rating >= starValue;
+                                return (
+                                  <button
+                                    key={`${item.id}-star-${starValue}`}
+                                    type="button"
+                                    style={styles.starButton}
+                                    onClick={() =>
+                                      updateReviewDraft(
+                                        activeReviewShipment.id,
+                                        item.id,
+                                        {
+                                          rating: starValue,
+                                        },
+                                      )
+                                    }
+                                  >
+                                    <Star
+                                      size={22}
+                                      fill={active ? "#f59e0b" : "transparent"}
+                                      color={active ? "#f59e0b" : "#cbd5e1"}
+                                      strokeWidth={2}
+                                    />
+                                  </button>
+                                );
+                              })}
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  color: "#475569",
+                                }}
+                              >
+                                {draft.rating}/5 sao
+                              </span>
+                            </div>
+                          </div>
 
-          <div className="col-12 col-lg-5">
-            <div style={{ position: "sticky", top: 72 }}>
-              <section style={styles.summaryCard}>
-                <div
-                  style={styles.summaryHeader}
-                  className="d-flex justify-content-between align-items-center"
-                >
-                  <h3
-                    style={{ fontWeight: 700, fontSize: 15 }}
-                    className="mb-0"
-                  >
-                    Tong ket don hang
-                  </h3>
-                  <span style={styles.itemsBadge}>
-                    {order.itemsCount} san pham
-                  </span>
-                </div>
-
-                <div className="p-4 d-flex flex-column gap-4">
-                  <div>
-                    <h5
-                      className="fw-bold mb-3 d-flex align-items-center gap-2"
-                      style={{ fontSize: 14 }}
-                    >
-                      <ReceiptText size={16} /> Thanh toan
-                    </h5>
-
-                    <div
-                      className="d-flex justify-content-between mb-2"
-                      style={{ fontSize: 12 }}
-                    >
-                      <span className="text-muted">Tam tinh</span>
-                      <span className="fw-semibold">
-                        {formatMoney(order.subtotalAmount)}
-                      </span>
-                    </div>
-                    <div
-                      className="d-flex justify-content-between mb-2"
-                      style={{ fontSize: 12 }}
-                    >
-                      <span className="text-muted">Giam gia</span>
-                      <span className="fw-semibold text-danger">
-                        -{formatMoney(order.discountAmount)}
-                      </span>
-                    </div>
-                    <div
-                      className="d-flex justify-content-between mb-2"
-                      style={{ fontSize: 12 }}
-                    >
-                      <span className="text-muted">Phi van chuyen</span>
-                      <span className="fw-semibold">
-                        {formatMoney(order.shippingAmount)}
-                      </span>
-                    </div>
-                    <div
-                      className="d-flex justify-content-between mb-3"
-                      style={{ fontSize: 12 }}
-                    >
-                      <span className="text-muted">Thue</span>
-                      <span className="fw-semibold">
-                        {formatMoney(order.taxAmount)}
-                      </span>
-                    </div>
-
-                    <div
-                      style={{
-                        borderTop: "1px dashed #e2e8f0",
-                        paddingTop: 14,
-                      }}
-                    >
-                      <div className="d-flex justify-content-between align-items-end">
-                        <span
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: "#475569",
-                          }}
-                        >
-                          Tong thanh toan
-                        </span>
-                        <div className="text-end">
-                          <p
-                            style={{
-                              fontSize: 24,
-                              fontWeight: 800,
-                              color: "#137fec",
-                              lineHeight: 1,
-                            }}
-                            className="mb-0"
-                          >
-                            {formatMoney(order.totalAmount)}
-                          </p>
-                          <p
-                            className="text-muted fst-italic mb-0"
-                            style={{ fontSize: 10 }}
-                          >
-                            Da bao gom VAT
-                          </p>
+                          <div>
+                            <label
+                              className="mb-2 d-block"
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: "#334155",
+                              }}
+                            >
+                              Nhan xet cua ban
+                            </label>
+                            <textarea
+                              value={draft.comment}
+                              onChange={(event) =>
+                                updateReviewDraft(
+                                  activeReviewShipment.id,
+                                  item.id,
+                                  {
+                                    comment: event.target.value,
+                                  },
+                                )
+                              }
+                              style={styles.reviewTextarea}
+                              placeholder="Chat luong san pham, dong goi, giao hang..."
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  );
+                })}
+              </div>
 
-                  <div>
-                    <h5
-                      className="fw-bold mb-2 d-flex align-items-center gap-2"
-                      style={{ fontSize: 13 }}
-                    >
-                      <MapPin size={16} /> Thong tin nhan hang
-                    </h5>
-                    <p className="mb-1 fw-semibold" style={{ fontSize: 13 }}>
-                      {order.customerName}
-                    </p>
-                    <p className="mb-1 text-secondary" style={{ fontSize: 12 }}>
-                      {order.customerPhone}
-                    </p>
-                    <p className="mb-0 text-secondary" style={{ fontSize: 12 }}>
-                      {order.shippingAddress}
-                    </p>
-                  </div>
-
-                  <div>
-                    <h5
-                      className="fw-bold mb-2 d-flex align-items-center gap-2"
-                      style={{ fontSize: 13 }}
-                    >
-                      <CreditCard size={16} /> Giao dich
-                    </h5>
-                    <p className="mb-1 text-secondary" style={{ fontSize: 12 }}>
-                      Phuong thuc: <strong>{order.paymentMethod}</strong>
-                    </p>
-                    <p className="mb-0 text-secondary" style={{ fontSize: 12 }}>
-                      Ma giao dich:{" "}
-                      <strong>{order.transactionId || "Chua co"}</strong>
-                    </p>
-                  </div>
-
-                  <div className="d-grid gap-2">
-                    <button type="button" style={styles.btnOrder}>
-                      <span className="d-flex align-items-center gap-2">
-                        <Lock size={16} strokeWidth={2} /> THEO DOI VAN DON
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 500,
-                          opacity: 0.85,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.08em",
-                        }}
-                      >
-                        Xem cap nhat moi nhat
-                      </span>
-                    </button>
-
-                    <button type="button" style={styles.btnSecondary}>
-                      <span className="d-inline-flex align-items-center gap-2">
-                        <Headset size={14} /> Lien he ho tro
-                      </span>
-                    </button>
-                  </div>
-
-                  <div
-                    className="d-flex align-items-center justify-content-center gap-4"
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: "#94a3b8",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.07em",
-                    }}
-                  >
-                    <div className="d-flex align-items-center gap-1">
-                      <ShieldCheck
-                        size={12}
-                        color="#22c55e"
-                        strokeWidth={2.5}
-                      />
-                      An toan
-                    </div>
-                    <div className="d-flex align-items-center gap-1">
-                      <BadgeCheck size={12} color="#22c55e" strokeWidth={2.5} />
-                      Xac thuc
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <div style={styles.infoNote} className="mt-3 d-flex gap-3">
-                <Info
-                  size={18}
-                  className="text-muted flex-shrink-0"
-                  strokeWidth={1.8}
-                />
-                <p
-                  className="text-muted mb-0"
-                  style={{ fontSize: 11, lineHeight: 1.7 }}
+              <div className="d-flex flex-wrap justify-content-end gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={closeReviewModal}
+                  className="btn btn-light border px-4"
                 >
-                  Du lieu trang nay duoc lay tu API thuc te. Thong tin nhan
-                  hang, san pham, kien hang va lich su trang thai cua tung kien
-                  duoc cap nhat theo he thong don hang.
-                </p>
+                  De sau
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitShipmentReview}
+                  disabled={
+                    reviewActionStatus[activeReviewShipment.id] === "pending"
+                  }
+                  className="btn btn-primary px-4 d-inline-flex align-items-center gap-2"
+                >
+                  <Star size={15} />
+                  {reviewActionStatus[activeReviewShipment.id] === "pending"
+                    ? "Dang gui danh gia..."
+                    : "Gui danh gia"}
+                </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </main>
+      )}
+    </>
   );
 }
