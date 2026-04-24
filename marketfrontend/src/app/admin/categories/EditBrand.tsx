@@ -64,7 +64,8 @@ export default function EditBrand() {
       const form = new FormData();
       form.append("file", file);
 
-      const res = await fetch("/api/upload/brand", {
+      // Gọi API backend (Marketplace-platform) thay vì API local
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/upload/brand`, {
         method: "POST",
         body: form,
       });
