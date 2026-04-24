@@ -1,9 +1,16 @@
 package docker_test.com.models;
 
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "order_item")
 public final class OrderItem {
+	
+	@Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long orderItemId;
+	
     private long orderId;
     private long productId;
     private Long variantId;
