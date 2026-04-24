@@ -16,6 +16,7 @@ import {
 } from "@/service/finance";
 import {
   DisputeResolvePayload,
+  PaymentRevenueFilters,
   PaymentTxnStatus,
   PaymentTxnType,
   RefundStatus,
@@ -94,6 +95,44 @@ export const useTransactionAggregate = () => {
     transactions: allTransactions,
     isLoading: perTypeQueries.some((q) => q.isLoading),
     isError: perTypeQueries.some((q) => q.isError),
+  };
+};
+
+export const useTransactionDetail = (txnCode: string) => {
+  const queryClient = useQueryClient();
+  const detailQuery = useQuery(financeQuery.transactionByCode(txnCode));
+
+  const historyQuery = useQuery({
+    ...financeQuery.transactionHistoryByTxnId(detailQuery.data?.id ?? 0),
+    enabled: !!detailQuery.data?.id,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: number;
+      payload: TransactionStatusUpdatePayload;
+    }) => updatePaymentTransactionStatus(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "finance", "transactions"],
+      });
+    },
+  });
+
+  return {
+    transaction: detailQuery.data,
+    history: historyQuery.data ?? [],
+    isLoading: detailQuery.isLoading || historyQuery.isLoading,
+    isError: detailQuery.isError || historyQuery.isError,
+    refetch: () => {
+      detailQuery.refetch();
+      historyQuery.refetch();
+    },
+    updateStatus: updateMutation.mutateAsync,
+    isUpdatingStatus: updateMutation.isPending,
   };
 };
 
@@ -272,5 +311,32 @@ export const useFinanceOverview = () => {
     recentTransactions: allTransactions.slice(0, 8),
     isLoading: queries.some((q) => q.isLoading),
     isError: queries.some((q) => q.isError),
+  };
+};
+
+export const useRevenueSnapshots = (filters?: PaymentRevenueFilters) => {
+  const snapshotsQuery = useQuery(financeQuery.revenueSnapshots(filters));
+  const summaryQuery = useQuery(financeQuery.revenueSnapshotSummary(filters));
+
+  return {
+    snapshots: snapshotsQuery.data ?? [],
+    summary: summaryQuery.data,
+    isLoading: snapshotsQuery.isLoading || summaryQuery.isLoading,
+    isError: snapshotsQuery.isError || summaryQuery.isError,
+    refetch: () => {
+      snapshotsQuery.refetch();
+      summaryQuery.refetch();
+    },
+  };
+};
+
+export const useRevenueReconciliation = (filters?: PaymentRevenueFilters) => {
+  const query = useQuery(financeQuery.revenueReconciliation(filters));
+
+  return {
+    reconciliation: query.data,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
   };
 };

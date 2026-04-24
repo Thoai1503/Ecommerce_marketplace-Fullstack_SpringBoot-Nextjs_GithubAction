@@ -1,8 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { usePaymentTransactions } from "@/hooks/admin/useFinance";
+import { Eye } from "lucide-react";
+import {
+  usePaymentTransactions,
+  useTransactionDetail,
+} from "@/hooks/admin/useFinance";
 import { PaymentTxnStatus, PaymentTxnType } from "@/types/index";
+import { TransactionDetailModal } from "@/components/admin/finance/TransactionDetailModal";
+import { Button } from "@/components/ui/button";
 
 const TXN_TYPES: PaymentTxnType[] = [
   "ORDER_PAYMENT",
@@ -32,9 +38,18 @@ export default function TransactionsList() {
   const [selectedStatus, setSelectedStatus] =
     useState<PaymentTxnStatus>("PENDING");
   const [search, setSearch] = useState("");
+  const [selectedTxnCode, setSelectedTxnCode] = useState<string | null>(null);
 
   const { transactions, isLoading, updateStatus, isUpdatingStatus } =
     usePaymentTransactions(selectedType, selectedStatus);
+
+  const {
+    transaction: detailTransaction,
+    history,
+    isLoading: isLoadingDetail,
+    updateStatus: updateDetailStatus,
+    isUpdatingStatus: isUpdatingDetailStatus,
+  } = useTransactionDetail(selectedTxnCode || "");
 
   const filtered = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -52,6 +67,21 @@ export default function TransactionsList() {
       id,
       payload: {
         status,
+        changedBy: "ADMIN",
+      },
+    });
+  };
+
+  const handleDetailStatusChange = async (
+    status: PaymentTxnStatus,
+    reason?: string,
+  ) => {
+    if (!detailTransaction) return;
+    await updateDetailStatus({
+      id: detailTransaction.id,
+      payload: {
+        status,
+        reason,
         changedBy: "ADMIN",
       },
     });
@@ -118,24 +148,28 @@ export default function TransactionsList() {
                 <th className="text-right px-4 py-3">Net</th>
                 <th className="text-center px-4 py-3">Trạng thái</th>
                 <th className="text-center px-4 py-3">Cập nhật</th>
+                <th className="text-center px-4 py-3">Hành động</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td className="px-4 py-6 text-slate-400" colSpan={7}>
+                  <td className="px-4 py-6 text-slate-400" colSpan={8}>
                     Đang tải dữ liệu giao dịch...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-slate-400" colSpan={7}>
+                  <td className="px-4 py-6 text-slate-400" colSpan={8}>
                     Không có giao dịch phù hợp.
                   </td>
                 </tr>
               ) : (
                 filtered.map((tx) => (
-                  <tr key={tx.id} className="border-t border-slate-100">
+                  <tr
+                    key={tx.id}
+                    className="border-t border-slate-100 hover:bg-slate-50 transition-colors"
+                  >
                     <td className="px-4 py-3 font-mono text-xs">
                       {tx.txnCode}
                     </td>
@@ -171,6 +205,17 @@ export default function TransactionsList() {
                         ))}
                       </select>
                     </td>
+                    <td className="px-4 py-3 text-center">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedTxnCode(tx.txnCode)}
+                        className="flex items-center gap-1 h-8 px-3 text-xs"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        Xem chi tiết
+                      </Button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -178,6 +223,16 @@ export default function TransactionsList() {
           </table>
         </div>
       </div>
+
+      <TransactionDetailModal
+        transaction={detailTransaction}
+        history={history}
+        isOpen={!!selectedTxnCode}
+        onClose={() => setSelectedTxnCode(null)}
+        isLoading={isLoadingDetail}
+        onStatusChange={handleDetailStatusChange}
+        isUpdating={isUpdatingDetailStatus}
+      />
     </div>
   );
 }

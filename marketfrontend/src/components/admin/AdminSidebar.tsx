@@ -211,6 +211,16 @@ export default function AdminSidebar({
               active: pathname === "/admin/finance",
             },
             {
+              label: "Revenue Snapshot",
+              path: "/admin/finance/revenue-snapshots",
+              active: pathname === "/admin/finance/revenue-snapshots",
+            },
+            {
+              label: "Reconciliation",
+              path: "/admin/finance/reconciliation",
+              active: pathname === "/admin/finance/reconciliation",
+            },
+            {
               label: "Giao dịch",
               path: "/admin/finance/transactions",
               active: pathname === "/admin/finance/transactions",
