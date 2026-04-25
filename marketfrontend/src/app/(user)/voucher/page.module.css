@@ -1,0 +1,75 @@
+.voucherBanner {
+  animation: bannerFloat 4.6s ease-in-out infinite;
+}
+
+.voucherBanner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 38%,
+    rgba(255, 255, 255, 0.24) 50%,
+    transparent 62%,
+    transparent 100%
+  );
+  transform: translateX(-120%);
+  animation: bannerShine 5.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.voucherCard {
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease;
+}
+
+.voucherCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 40px rgba(16, 24, 40, 0.14);
+  border-color: rgba(255, 107, 107, 0.28) !important;
+}
+
+.voucherCard:hover .voucherSide {
+  filter: saturate(1.06) brightness(1.02);
+}
+
+.voucherSaveBtn {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.voucherSaveBtn:hover {
+  transform: translateY(-1px) scale(1.03);
+  filter: brightness(1.03);
+  box-shadow: 0 12px 24px rgba(224, 49, 49, 0.28) !important;
+}
+
+.voucherSaveBtn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+@keyframes bannerFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes bannerShine {
+  0%,
+  100% {
+    transform: translateX(-120%);
+  }
+  45%,
+  55% {
+    transform: translateX(120%);
+  }
+}
