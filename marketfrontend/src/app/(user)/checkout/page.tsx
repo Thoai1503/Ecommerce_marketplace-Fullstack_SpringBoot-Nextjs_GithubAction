@@ -20,7 +20,7 @@ const cityMap = { 202: "TP. Hồ Chí Minh", 1: "Hà Nội" };
 
 import { useQuery } from "@tanstack/react-query";
 import { message } from "antd";
-import { ADDRESS_KEY } from "@/helper/api";
+import { ADDRESS_KEY, PROVINCE_API } from "@/helper/api";
 import { calculateFeeOfLOGS } from "@/service/calculateFeeAPI";
 import { CalculateFeePayload } from "@/types";
 import { set } from "zod";
@@ -30,34 +30,30 @@ import { getUserInfoById, getUsersInfoByIds } from "@/service/userInfo";
 
 // Hàm fetch districts theo provinceId
 async function fetchDistrictsByProvince(provinceId: number) {
-  const res = await fetch(
-    "https://dev-online-gateway.ghn.vn/shiip/public-api/master-data/district",
-    {
-      method: "POST",
-      headers: {
-        token: ADDRESS_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ province_id: provinceId }),
+  if (!PROVINCE_API) return [];
+  const res = await fetch(`${PROVINCE_API}/district`, {
+    method: "POST",
+    headers: {
+      token: ADDRESS_KEY,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({ province_id: provinceId }),
+  });
   const data = await res.json();
   return data?.data || [];
 }
 
 // Hàm fetch wards theo districtId
 async function fetchWardsByDistrict(districtId: number) {
-  const res = await fetch(
-    "https://dev-online-gateway.ghn.vn/shiip/public-api/master-data/ward?district_id",
-    {
-      method: "POST",
-      headers: {
-        token: ADDRESS_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ district_id: districtId }),
+  if (!PROVINCE_API) return [];
+  const res = await fetch(`${PROVINCE_API}/ward?district_id`, {
+    method: "POST",
+    headers: {
+      token: ADDRESS_KEY,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({ district_id: districtId }),
+  });
   const data = await res.json();
   return data?.data || [];
 }

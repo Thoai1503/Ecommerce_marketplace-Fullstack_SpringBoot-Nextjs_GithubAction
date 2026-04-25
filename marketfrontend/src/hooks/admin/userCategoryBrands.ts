@@ -1,5 +1,8 @@
 // hooks/admin/useCategoryBrands.ts
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { API_URL } from "@/helper/api";
+
+const CATEGORY_BRAND_API_URL = `${API_URL}/api/category-brand`;
 
 export const useCategoryBrands = (categoryId: string) => {
   const qc = useQueryClient();
@@ -8,7 +11,7 @@ export const useCategoryBrands = (categoryId: string) => {
     queryKey: ["category-brands", categoryId],
     queryFn: async () => {
       const res = await fetch(
-        `http://localhost:8000/api/category-brand/category/${categoryId}`
+        `${CATEGORY_BRAND_API_URL}/category/${categoryId}`,
       );
       return res.json();
     },
