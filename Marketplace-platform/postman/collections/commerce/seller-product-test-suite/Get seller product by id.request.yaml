@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get seller product by id
+url: '{{baseUrl}}/seller/product/{{productId}}'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+order: 1776045000006

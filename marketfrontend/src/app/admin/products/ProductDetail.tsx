@@ -188,8 +188,8 @@ export default function ProductDetail() {
       )}
 
       <Breadcrumbs items={[
-        { label: 'Products', path: '/admin/products' },
-        { label: 'Details' }
+        { label: 'Sản phẩm', path: '/admin/products' },
+        { label: 'Chi tiết' }
       ]} />
 
       {/* Header Section */}

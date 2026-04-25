@@ -1,0 +1,113 @@
+$kind: http-request
+name: 'Cập nhật seller'
+method: PUT
+url: 'http://127.0.0.1:8001/admin/sellers/{{sellerId}}'
+order: 1776043672044
+headers:
+  - key: Content-Type
+    value: application/json
+auth:
+  type: noauth
+description: |-
+  Cập nhật thông tin seller theo ID.
+
+  **Path param:** `id` — ID của shop/seller
+
+  **Body fields (tất cả optional, chỉ gửi field cần update):**
+  - `brandTitle` — tên thương hiệu
+  - `location` — địa chỉ
+  - `logoUrl` — URL logo
+  - `email` — email chủ shop
+  - `phone` — số điện thoại
+  - `ownerName` — tên chủ shop
+  - `status` — PENDING | ACTIVE | BLOCKED | REJECTED
+
+  **Error cases:**
+  - 404 — Seller not found
+  - 400 — Update failed
+body:
+  type: json
+  content: |-
+    {
+      "brandTitle": "Shop Thời Trang A (Updated)",
+      "ownerName": "Nguyễn Văn B",
+      "phone": "0909999888",
+      "location": "456 Nguyễn Huệ, TP.HCM",
+      "logoUrl": "https://example.com/logo-new.png",
+      "status": "ACTIVE"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // ✅ TC-01: Status 200 OK
+      pm.test("TC-01: Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      // ✅ TC-02: Response là object
+      pm.test("TC-02: Response body is an object", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.be.an("object").and.not.an("array");
+      });
+
+      // ✅ TC-03: Có đủ fields bắt buộc
+      pm.test("TC-03: Response has required fields", function () {
+          const json = pm.response.json();
+          ["id", "accountCode", "brandTitle", "email", "status", "ownerName"].forEach(field => {
+              pm.expect(json).to.have.property(field);
+          });
+      });
+
+      // ✅ TC-04: brandTitle đã được cập nhật đúng
+      pm.test("TC-04: brandTitle is updated correctly", function () {
+          const json = pm.response.json();
+          const reqBody = JSON.parse(pm.request.body.raw);
+          if (reqBody.brandTitle) {
+              pm.expect(json.brandTitle).to.eql(reqBody.brandTitle);
+          }
+      });
+
+      // ✅ TC-05: status được cập nhật đúng
+      pm.test("TC-05: status is updated correctly", function () {
+          const json = pm.response.json();
+          const reqBody = JSON.parse(pm.request.body.raw);
+          if (reqBody.status) {
+              pm.expect(json.status).to.eql(reqBody.status);
+          }
+      });
+
+      // ✅ TC-06: status là giá trị hợp lệ
+      pm.test("TC-06: status is a valid value", function () {
+          const json = pm.response.json();
+          pm.expect(["PENDING", "ACTIVE", "REJECTED", "BLOCKED"]).to.include(json.status);
+      });
+
+      // ✅ TC-07: password KHÔNG được trả về
+      pm.test("TC-07: Password is NOT exposed in response", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.not.have.property("password");
+          pm.expect(json).to.not.have.property("passwordHash");
+      });
+
+      // ✅ TC-08: id không thay đổi sau update
+      pm.test("TC-08: id remains unchanged after update", function () {
+          const json = pm.response.json();
+          const requestedId = String(pm.collectionVariables.get("sellerId"));
+          pm.expect(String(json.id)).to.eql(requestedId);
+      });
+
+      // ✅ TC-09: Response time < 2000ms
+      pm.test("TC-09: Response time is less than 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      // ─── VALIDATE cases (đổi body để test) ───────────────────────────────
+      // ❌ VALIDATE-01: ID không tồn tại → 404
+      // URL: /admin/sellers/999999 → expect 404 "Seller not found"
+
+      // ❌ VALIDATE-02: status không hợp lệ → BE bỏ qua hoặc trả lỗi
+      // Body: { "status": "UNKNOWN_STATUS" }
+
+      // ❌ VALIDATE-03: Body rỗng → 200 nhưng không thay đổi gì
+      // Body: {}

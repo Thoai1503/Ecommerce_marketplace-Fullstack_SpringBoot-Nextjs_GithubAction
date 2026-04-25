@@ -1,14 +1,16 @@
 
 "use client";
 
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useProductDetail } from '@/hooks/admin/useProducts';
-import { Save, X, UploadCloud, ArrowLeft, DollarSign, Percent, Package, Tag, Layers, Sparkles, Wand2, Trash2 } from 'lucide-react';
-import { ProductStatus } from '@/types';
+import { useCategories } from '@/hooks/admin/useCategories';
+import { useSellers } from '@/hooks/admin/useSellers';
+import { useProductImageUpload } from '@/hooks/admin/useProductImageUpload';
+import { Save, X, UploadCloud, ArrowLeft, DollarSign, Percent, Package, Tag, Layers, Sparkles, Wand2, Trash2, Store, Loader2 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 import { FormSkeleton } from '@/components/ui/Skeleton';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
@@ -22,29 +24,65 @@ const productSchema = z.object({
   originalPrice: z.number().optional(),
   stock: z.number().min(0, "Tồn kho không được âm"),
   category: z.string().min(1, "Vui lòng chọn danh mục."),
+  sellerId: z.string().optional(),
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'HIDDEN']),
   attributes: z.record(z.string(), z.string()).optional(),
   images: z.array(z.string()).min(1, "Cần ít nhất 1 hình ảnh sản phẩm."),
+}).superRefine((data, ctx) => {
+  if (data.originalPrice !== undefined && data.originalPrice > 0 && data.originalPrice < data.price) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['originalPrice'],
+      message: 'Giá gốc phải lớn hơn hoặc bằng giá bán.',
+    });
+  }
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
+
+// Translate common backend errors to Vietnamese
+const extractErrorMessage = (e: any, fallback: string): string => {
+  const data = e?.response?.data;
+  if (typeof data === 'object' && data?.message) return data.message;
+  if (typeof data === 'string' && data) {
+    if (/SQLException|Duplicate entry|SQL/i.test(data)) {
+      return 'Dữ liệu bị trùng hoặc không hợp lệ.';
+    }
+    if (data === 'product_name is required') return 'Tên sản phẩm là bắt buộc.';
+    if (data === 'price is required and must be >= 0') return 'Giá bán là bắt buộc và phải lớn hơn 0.';
+    if (data === 'category_id is required') return 'Danh mục là bắt buộc.';
+    if (data === 'shop_id is required') return 'Nhà bán hàng là bắt buộc.';
+    if (data === 'Shop not found') return 'Không tìm thấy nhà bán hàng.';
+    if (data === 'Product not found') return 'Không tìm thấy sản phẩm.';
+    return data;
+  }
+  return e?.message || fallback;
+};
 
 export default function EditProductPage() {
   const router = useRouter();
   const params = useParams<{ id?: string }>();
   const id = params?.id;
   const isEditMode = !!id;
-  const { data: product, isLoading } = useProductDetail(id || '');
-  const { success, info, warning } = useToast();
-  
+  const { data: product, isLoading, createProduct, updateProduct, isSaving } = useProductDetail(id || '');
+  const { categories } = useCategories();
+  const { sellers } = useSellers();
+  const { success, info, warning, error } = useToast();
+
+  // Active sellers only
+  const activeSellers = useMemo(
+    () => (sellers || []).filter((s) => s.status === 'ACTIVE'),
+    [sellers],
+  );
+
   // RHF Setup
-  const { 
-    register, 
-    handleSubmit, 
-    setValue, 
-    watch, 
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
     reset,
-    formState: { errors, isSubmitting, isDirty } 
+    formState: { errors, isSubmitting, isDirty }
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -54,26 +92,38 @@ export default function EditProductPage() {
       price: 0,
       originalPrice: 0,
       stock: 0,
-      category: 'Điện thoại',
+      category: '',
+      sellerId: '',
       status: 'PENDING',
       attributes: {},
       images: [],
     }
   });
 
-  // Watch values for dynamic UI
   const watchedImages = watch('images');
   const watchedPrice = watch('price');
   const watchedOriginalPrice = watch('originalPrice');
   const watchedAttributes = (watch('attributes') || {}) as Record<string, string>;
   const watchedName = watch('name');
   const watchedCategory = watch('category');
+  const watchedSellerId = watch('sellerId');
 
-  // AI State
   const [isGeneratingDesc, setIsGeneratingDesc] = React.useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load Data
+  // Image upload hook
+  const imageUpload = useProductImageUpload({
+    onAppend: (urls) => {
+      setValue('images', [...watchedImages, ...urls], { shouldDirty: true, shouldValidate: true });
+    },
+    onToast: (msg, type) => {
+      if (type === 'success') success(msg);
+      else if (type === 'error') error(msg);
+      else if (type === 'warning') warning(msg);
+      else info(msg);
+    },
+  });
+
+  // Load product data
   useEffect(() => {
     if (product) {
       reset({
@@ -84,16 +134,16 @@ export default function EditProductPage() {
         originalPrice: product.originalPrice || 0,
         stock: product.stock,
         category: product.category,
+        sellerId: product.sellerId,
         status: product.status,
-        attributes: (product.attributes && Object.keys(product.attributes).length > 0) 
-          ? product.attributes 
+        attributes: (product.attributes && Object.keys(product.attributes).length > 0)
+          ? product.attributes
           : { 'Thương hiệu': '', 'Xuất xứ': '' },
         images: product.images,
       });
     }
   }, [product, reset]);
 
-  // Calculations
   const discountPercent = useMemo(() => {
     const original = Number(watchedOriginalPrice);
     const price = Number(watchedPrice);
@@ -103,12 +153,46 @@ export default function EditProductPage() {
     return 0;
   }, [watchedPrice, watchedOriginalPrice]);
 
-  // Handlers
   const onSubmit = async (data: ProductFormValues) => {
-    console.log("Valid Submission:", data);
-    // In real app: await updateProduct(id, data);
-    success("Đã cập nhật sản phẩm thành công!");
-    setTimeout(() => router.push('/admin/products'), 1000);
+    try {
+      if (!isEditMode && !data.sellerId) {
+        warning('Vui lòng chọn nhà bán hàng.');
+        return;
+      }
+
+      if (isEditMode && id) {
+        await updateProduct({
+          name: data.name,
+          sku: data.sku,
+          description: data.description,
+          price: data.price,
+          originalPrice: data.originalPrice,
+          stock: data.stock,
+          category: data.category,
+          status: data.status === 'DRAFT' ? 'PENDING' : data.status,
+          images: data.images,
+        });
+        success('Đã cập nhật sản phẩm thành công!');
+      } else {
+        await createProduct({
+          name: data.name,
+          sku: data.sku,
+          description: data.description,
+          price: data.price,
+          originalPrice: data.originalPrice,
+          stock: data.stock,
+          category: data.category,
+          sellerId: data.sellerId,
+          status: data.status === 'DRAFT' ? 'PENDING' : data.status,
+          images: data.images,
+        });
+        success('Đã tạo sản phẩm thành công!');
+      }
+      setTimeout(() => router.push('/admin/products'), 800);
+    } catch (e: any) {
+      console.error('[EditProduct] submit error:', e);
+      error(extractErrorMessage(e, 'Đã có lỗi xảy ra. Vui lòng thử lại.'));
+    }
   };
 
   const handleAttributeChange = (key: string, value: string) => {
@@ -126,61 +210,49 @@ export default function EditProductPage() {
     setValue('attributes', newAttributes, { shouldDirty: true });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const newImageUrls = Array.from(files).map((file: File) => URL.createObjectURL(file));
-      setValue('images', [...watchedImages, ...newImageUrls], { shouldDirty: true, shouldValidate: true });
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      info(`Đã thêm ${files.length} ảnh mới`);
-    }
-  };
-
   const handleRemoveImage = (indexToRemove: number) => {
     const newImages = watchedImages.filter((_, index) => index !== indexToRemove);
     setValue('images', newImages, { shouldDirty: true, shouldValidate: true });
   };
 
-  // AI Feature
   const handleGenerateDescription = () => {
     if (!watchedName) {
-      warning("Vui lòng nhập tên sản phẩm trước.");
+      warning('Vui lòng nhập tên sản phẩm trước.');
       return;
     }
-
     setIsGeneratingDesc(true);
     setTimeout(() => {
       const attrsText = Object.entries(watchedAttributes)
         .map(([k, v]) => `${k}: ${v}`)
         .join(', ');
-      
-      const generatedText = `✨ Trải nghiệm tuyệt vời cùng ${watchedName}!\n\n` +
-      `Sản phẩm thuộc dòng ${watchedCategory} cao cấp, được thiết kế tinh xảo. ` +
-      `${watchedName} nổi bật với hiệu năng vượt trội.\n\n` +
-      `🌟 Điểm nổi bật:\n` +
-      (attrsText ? `• ${attrsText.replace(/, /g, '\n• ')}\n` : `• Chất lượng đảm bảo chính hãng\n• Thiết kế hiện đại\n`) +
-      `• Giá trị vượt trội: ${Number(watchedPrice).toLocaleString()}₫\n` +
-      `\nMua ngay hôm nay!`;
-
+      const categoryName = categories.find((c) => c.id === watchedCategory)?.name || watchedCategory;
+      const generatedText = `Trải nghiệm tuyệt vời cùng ${watchedName}!\n\n` +
+        `Sản phẩm thuộc dòng ${categoryName} cao cấp, được thiết kế tinh xảo. ` +
+        `${watchedName} nổi bật với hiệu năng vượt trội.\n\n` +
+        `Điểm nổi bật:\n` +
+        (attrsText ? `- ${attrsText.replace(/, /g, '\n- ')}\n` : `- Chất lượng đảm bảo chính hãng\n- Thiết kế hiện đại\n`) +
+        `- Giá trị vượt trội: ${Number(watchedPrice).toLocaleString()}₫\n` +
+        `\nMua ngay hôm nay!`;
       setValue('description', generatedText, { shouldDirty: true });
       setIsGeneratingDesc(false);
-      success("Đã tạo nội dung xong!");
+      success('Đã tạo nội dung xong!');
     }, 1500);
   };
 
-  if (isLoading) return <FormSkeleton />;
+  const selectedSeller = activeSellers.find((s) => s.id === watchedSellerId);
+
+  if (isEditMode && isLoading) return <FormSkeleton />;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="p-6 lg:p-10 animate-in fade-in duration-500 max-w-5xl mx-auto pb-24 space-y-6">
       <Breadcrumbs items={[
-        { label: 'Products', path: '/admin/products' },
-        { label: isEditMode ? 'Edit Product' : 'New Product' }
+        { label: 'Sản phẩm', path: '/admin/products' },
+        { label: isEditMode ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới' }
       ]} />
 
-      {/* Header */}
       <div className="flex items-center justify-between sticky top-0 z-20 bg-[#f8fafc]/90 backdrop-blur py-4 -my-4 px-2">
          <div className="flex items-center gap-4">
-            <button 
+            <button
               type="button"
               onClick={() => router.push('/admin/products')}
               className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-slate-500"
@@ -193,38 +265,38 @@ export default function EditProductPage() {
             </div>
          </div>
          <div className="flex items-center gap-3">
-            <button 
+            <button
               type="button"
               onClick={() => router.push('/admin/products')}
               className="px-6 py-3 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all border-0 bg-transparent"
             >
               Hủy bỏ
             </button>
-            <button 
+            <button
               type="submit"
-              disabled={isSubmitting || !isDirty}
+              disabled={isSubmitting || isSaving || (isEditMode && !isDirty)}
               className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all border-0 disabled:opacity-50 disabled:shadow-none"
             >
-              <Save size={18} /> {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+              <Save size={18} /> {(isSubmitting || isSaving) ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Tạo sản phẩm')}
             </button>
          </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Left Column */}
         <div className="lg:col-span-2 space-y-8">
-          
+
           {/* General Info */}
           <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-6 space-y-6">
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <Layers size={16} /> Thông tin chung
             </h3>
-            
+
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Tên sản phẩm <span className="text-red-500">*</span></label>
-                <input 
+                <input
                   {...register('name')}
                   className={`w-full px-4 py-3 bg-white border rounded-xl focus:outline-none focus:ring-4 text-sm font-medium transition-shadow ${errors.name ? 'border-red-300 focus:ring-red-100' : 'border-slate-200 focus:ring-blue-500/10'}`}
                   placeholder="Nhập tên sản phẩm..."
@@ -236,7 +308,7 @@ export default function EditProductPage() {
                  <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700">Mã SKU <span className="text-red-500">*</span></label>
                     <div className="relative">
-                      <input 
+                      <input
                         {...register('sku')}
                         className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl focus:outline-none focus:ring-4 text-sm font-black uppercase tracking-wider ${errors.sku ? 'border-red-300 focus:ring-red-100' : 'border-slate-200 focus:ring-blue-500/10'}`}
                       />
@@ -246,26 +318,55 @@ export default function EditProductPage() {
                  </div>
 
                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Danh mục</label>
+                    <label className="text-sm font-bold text-slate-700">Danh mục <span className="text-red-500">*</span></label>
                     <div className="relative">
-                      <select 
+                      <select
                         {...register('category')}
-                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 text-sm font-bold appearance-none cursor-pointer"
+                        className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl focus:outline-none focus:ring-4 text-sm font-bold appearance-none cursor-pointer ${errors.category ? 'border-red-300 focus:ring-red-100' : 'border-slate-200 focus:ring-blue-500/10'}`}
                       >
-                        <option value="Điện thoại">Điện thoại</option>
-                        <option value="Laptop">Laptop</option>
-                        <option value="Phụ kiện">Phụ kiện</option>
-                        <option value="Thời trang">Thời trang</option>
+                        <option value="">-- Chọn danh mục --</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
                       </select>
                       <Layers className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     </div>
+                    {errors.category && <p className="text-xs text-red-500 font-bold">{errors.category.message}</p>}
                  </div>
+              </div>
+
+              {/* Seller selector */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Nhà bán hàng {!isEditMode && <span className="text-red-500">*</span>}</label>
+                {isEditMode ? (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600">
+                    <Store size={16} className="text-slate-400" />
+                    {product?.sellerName || '(Không xác định)'}
+                    <span className="ml-auto text-xs font-medium text-slate-400">Không thể đổi seller</span>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <select
+                      {...register('sellerId')}
+                      className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl focus:outline-none focus:ring-4 text-sm font-bold appearance-none cursor-pointer ${errors.sellerId ? 'border-red-300 focus:ring-red-100' : 'border-slate-200 focus:ring-blue-500/10'}`}
+                    >
+                      <option value="">-- Chọn nhà bán hàng --</option>
+                      {activeSellers.map((s) => (
+                        <option key={s.id} value={s.id}>{s.brandTitle}</option>
+                      ))}
+                    </select>
+                    <Store className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  </div>
+                )}
+                {selectedSeller && !isEditMode && (
+                  <p className="text-xs text-slate-500 font-medium">Email: {selectedSeller.email}</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                    <label className="text-sm font-bold text-slate-700">Mô tả sản phẩm</label>
-                   <button 
+                   <button
                       type="button"
                       onClick={handleGenerateDescription}
                       disabled={isGeneratingDesc}
@@ -275,7 +376,7 @@ export default function EditProductPage() {
                       {isGeneratingDesc ? 'AI đang viết...' : 'AI Magic Writer'}
                    </button>
                 </div>
-                <textarea 
+                <textarea
                   {...register('description')}
                   rows={8}
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 text-sm font-medium transition-shadow resize-none leading-relaxed"
@@ -294,18 +395,36 @@ export default function EditProductPage() {
                 <span className="text-xs font-bold text-slate-400">{watchedImages.length} hình ảnh</span>
              </div>
 
+             {imageUpload.isUploading && (
+                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-blue-500 h-full transition-all"
+                    style={{ width: `${imageUpload.uploadProgress}%` }}
+                  />
+                </div>
+             )}
+
              <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                <div onClick={() => fileInputRef.current?.click()} className="w-32 h-32 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-400 hover:text-blue-500 transition-all shrink-0 bg-slate-50">
-                   <UploadCloud size={24} className="mb-2" />
-                   <span className="text-xs font-bold uppercase">Thêm ảnh</span>
-                   <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" multiple accept="image/*" />
+                <div onClick={imageUpload.clickFileInput} className={`w-32 h-32 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center shrink-0 bg-slate-50 transition-all ${imageUpload.isUploading ? 'border-blue-300 text-blue-400 cursor-wait' : 'border-slate-300 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-500 cursor-pointer'}`}>
+                   {imageUpload.isUploading ? (
+                     <>
+                       <Loader2 size={24} className="mb-2 animate-spin" />
+                       <span className="text-xs font-bold uppercase">Đang tải...</span>
+                     </>
+                   ) : (
+                     <>
+                       <UploadCloud size={24} className="mb-2" />
+                       <span className="text-xs font-bold uppercase">Thêm ảnh</span>
+                     </>
+                   )}
+                   <input type="file" ref={imageUpload.fileInputRef} onChange={imageUpload.handleFileChange} className="hidden" multiple accept="image/*" />
                 </div>
 
                 {watchedImages.map((img, idx) => (
                   <div key={idx} className="relative w-32 h-32 shrink-0 rounded-2xl overflow-hidden border border-slate-200 group bg-white">
                     <img src={img} alt="" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                       <button 
+                       <button
                          type="button"
                          onClick={() => handleRemoveImage(idx)}
                          className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
@@ -327,11 +446,11 @@ export default function EditProductPage() {
                 </h3>
                 <button type="button" onClick={addAttribute} className="text-xs font-bold text-blue-600 hover:underline">+ Thêm thuộc tính</button>
              </div>
-             
+
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                {Object.entries(watchedAttributes).map(([key, value], idx) => (
                  <div key={idx} className="flex flex-col gap-1 p-3 bg-slate-50 rounded-xl border border-slate-100 relative group">
-                    <input 
+                    <input
                       className="bg-transparent text-xs font-bold text-slate-500 uppercase mb-1 outline-none border-b border-transparent focus:border-blue-300"
                       defaultValue={key}
                       onBlur={(e) => {
@@ -350,7 +469,7 @@ export default function EditProductPage() {
                       onChange={(e) => handleAttributeChange(key, e.target.value)}
                       className="w-full bg-white px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:border-blue-400"
                     />
-                    <button 
+                    <button
                       type="button"
                       onClick={() => removeAttribute(key)}
                       className="absolute top-2 right-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -374,20 +493,21 @@ export default function EditProductPage() {
                <div className="space-y-2">
                  <label className="text-xs font-bold text-slate-500 uppercase">Giá gốc</label>
                  <div className="relative">
-                   <input 
-                     type="number" 
+                   <input
+                     type="number"
                      {...register('originalPrice', { valueAsNumber: true })}
-                     className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 text-sm font-bold text-slate-500"
+                     className={`w-full pl-4 pr-10 py-3 bg-slate-50 border rounded-xl focus:outline-none focus:ring-4 text-sm font-bold text-slate-500 ${errors.originalPrice ? 'border-red-300 focus:ring-red-100' : 'border-slate-200 focus:ring-blue-500/10'}`}
                    />
                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₫</span>
                  </div>
+                 {errors.originalPrice && <p className="text-xs text-red-500 font-bold">{errors.originalPrice.message}</p>}
                </div>
 
                <div className="space-y-2">
                  <label className="text-xs font-bold text-slate-500 uppercase">Giá bán</label>
                  <div className="relative">
-                   <input 
-                     type="number" 
+                   <input
+                     type="number"
                      {...register('price', { valueAsNumber: true })}
                      className={`w-full pl-4 pr-10 py-3 bg-white border-2 rounded-xl focus:outline-none focus:ring-4 text-lg font-black text-blue-600 ${errors.price ? 'border-red-300 focus:ring-red-100' : 'border-blue-100 focus:ring-blue-500/10'}`}
                    />
@@ -408,8 +528,8 @@ export default function EditProductPage() {
                <div className="space-y-2">
                  <label className="text-xs font-bold text-slate-500 uppercase">Tồn kho</label>
                  <div className="relative">
-                   <input 
-                     type="number" 
+                   <input
+                     type="number"
                      {...register('stock', { valueAsNumber: true })}
                      className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 text-sm font-bold"
                    />
@@ -419,14 +539,13 @@ export default function EditProductPage() {
 
                <div className="space-y-2 pt-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Trạng thái</label>
-                  <select 
+                  <select
                     {...register('status')}
                     className="w-full pl-4 pr-10 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 text-sm font-bold appearance-none cursor-pointer"
                   >
-                    <option value="PENDING">⏳ Chờ duyệt</option>
-                    <option value="APPROVED">✅ Đang bán</option>
-                    <option value="DRAFT">📝 Bản nháp</option>
-                    <option value="HIDDEN">🔒 Đang ẩn</option>
+                    <option value="PENDING">Chờ duyệt</option>
+                    <option value="APPROVED">Đang bán</option>
+                    <option value="HIDDEN">Đang ẩn</option>
                   </select>
                </div>
             </div>

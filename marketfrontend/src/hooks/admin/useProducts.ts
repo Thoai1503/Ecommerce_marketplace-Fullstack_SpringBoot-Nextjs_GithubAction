@@ -1,14 +1,21 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getProducts, deleteProducts, approveProduct, rejectProduct, getProductById, duplicateProduct, updateProductStatus } from '@/service/products';
+import { getProducts, deleteProducts, approveProduct, rejectProduct, getProductById, duplicateProduct, updateProductStatus, createProduct, updateProduct, ProductPayload } from '@/service/products';
 import { Product, ProductStatus } from '@/types/index';
 
-export const useProducts = () => {
+interface UseProductsParams {
+  status?: string;
+  search?: string;
+  page?: number;
+  size?: number;
+}
+
+export const useProducts = (params?: UseProductsParams) => {
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['admin', 'products'],
-    queryFn: getProducts,
+    queryKey: ['admin', 'products', params],
+    queryFn: () => getProducts(params),
   });
 
   const deleteMutation = useMutation({
@@ -52,9 +59,34 @@ export const useProducts = () => {
 };
 
 export const useProductDetail = (id: string) => {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ['admin', 'products', id],
     queryFn: () => getProductById(id),
     enabled: !!id,
   });
+
+  const createMutation = useMutation({
+    mutationFn: (payload: ProductPayload) => createProduct(payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (payload: Partial<ProductPayload>) => updateProduct(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'products', id] });
+    },
+  });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
+    createProduct: createMutation.mutateAsync,
+    updateProduct: updateMutation.mutateAsync,
+    isSaving: createMutation.isPending || updateMutation.isPending,
+  };
 };

@@ -1,0 +1,85 @@
+$kind: http-request
+name: 'Tạo seller mới'
+method: POST
+url: 'http://127.0.0.1:8001/admin/sellers'
+order: 1776043672042
+headers:
+  - key: Content-Type
+    value: application/json
+auth:
+  type: noauth
+body:
+  type: json
+  content: |-
+    {
+      "email": "newseller@example.com",
+      "ownerName": "Nguyễn Văn A",
+      "brandTitle": "Shop Thời Trang A",
+      "phone": "0901234567",
+      "location": "123 Lê Lợi, TP.HCM",
+      "logoUrl": "https://example.com/logo.png",
+      "website": "https://shopA.vn",
+      "category": "Fashion",
+      "status": "PENDING",
+      "password": "Test@12345"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // ✅ TC-01: Status 201 Created
+      pm.test("TC-01: Status code is 201 Created", function () {
+          pm.response.to.have.status(201);
+      });
+
+      // ✅ TC-02: Response là object
+      pm.test("TC-02: Response body is an object", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.be.an("object").and.not.an("array");
+      });
+
+      // ✅ TC-03: Có đủ fields bắt buộc trong response
+      pm.test("TC-03: Response has required fields", function () {
+          const json = pm.response.json();
+          ["id", "accountCode", "brandTitle", "email", "status", "ownerName"].forEach(field => {
+              pm.expect(json).to.have.property(field);
+          });
+      });
+
+      // ✅ TC-04: email trong response khớp với email đã gửi
+      pm.test("TC-04: Returned email matches request email", function () {
+          const json = pm.response.json();
+          const reqBody = JSON.parse(pm.request.body.raw);
+          pm.expect(json.email).to.eql(reqBody.email);
+      });
+
+      // ✅ TC-05: status là giá trị hợp lệ
+      pm.test("TC-05: status is valid", function () {
+          const json = pm.response.json();
+          pm.expect(["PENDING", "ACTIVE", "REJECTED", "BLOCKED"]).to.include(json.status);
+      });
+
+      // ✅ TC-06: accountCode đúng format SE-XXXX
+      pm.test("TC-06: accountCode follows SE-XXXX format", function () {
+          const json = pm.response.json();
+          pm.expect(json.accountCode).to.match(/^SE-\d{4}$/);
+      });
+
+      // ✅ TC-07: password KHÔNG được trả về trong response
+      pm.test("TC-07: Password is NOT exposed in response", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.not.have.property("password");
+          pm.expect(json).to.not.have.property("passwordHash");
+      });
+
+      // ✅ TC-08: Lưu sellerId mới tạo để dùng cho các test sau
+      if (pm.response.code === 201) {
+          const json = pm.response.json();
+          pm.collectionVariables.set("newSellerId", json.id);
+          console.log("Saved newSellerId:", json.id);
+      }
+
+      // ✅ TC-09: Response time < 2000ms
+      pm.test("TC-09: Response time is less than 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });

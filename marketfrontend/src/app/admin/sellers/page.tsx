@@ -4,9 +4,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSellers } from '../../../hooks/admin/useSellers';
-import { 
-  Search, Plus, Filter, Trash2, Edit3, Eye, Ban, CheckCircle, 
-  MapPin, ShoppingBag, DollarSign, LayoutGrid, List, AlertTriangle, Lock, Unlock, Mail, Phone
+import {
+  Search, Plus, Filter, Trash2, Edit3, Eye, Ban, CheckCircle,
+  MapPin, ShoppingBag, DollarSign, LayoutGrid, List, AlertTriangle, Lock, Unlock, Mail, Phone,
+  ThumbsUp, ThumbsDown, X, Clock, ShieldCheck
 } from 'lucide-react';
 import { SellerStatus } from '../../../types/index';
 import ToastComponent, { ToastType } from '../../../components/ui/Toast';
@@ -19,14 +20,62 @@ const StatusConfig: Record<SellerStatus, { label: string; color: string; bgColor
   ACTIVE: { label: 'Hoạt động', color: 'text-green-700', bgColor: 'bg-green-50', icon: <CheckCircle size={14} /> },
   PENDING: { label: 'Chờ duyệt', color: 'text-amber-700', bgColor: 'bg-amber-50', icon: <AlertTriangle size={14} /> },
   BLOCKED: { label: 'Đã khóa', color: 'text-red-700', bgColor: 'bg-red-50', icon: <Lock size={14} /> },
+  REJECTED: { label: 'Đã từ chối', color: 'text-rose-700', bgColor: 'bg-rose-50', icon: <Ban size={14} /> },
 };
+
+// Fallback để phòng trường hợp backend trả status lạ (null, "UNKNOWN", viết thường, ...)
+const DEFAULT_STATUS_CONFIG = { label: 'N/A', color: 'text-slate-500', bgColor: 'bg-slate-100', icon: <AlertTriangle size={14} /> };
+const getStatusConfig = (status: SellerStatus | string | null | undefined) => {
+  if (!status) return DEFAULT_STATUS_CONFIG;
+  const key = String(status).toUpperCase() as SellerStatus;
+  return StatusConfig[key] ?? DEFAULT_STATUS_CONFIG;
+};
+
+// Tính SLA cho shop PENDING (cam kết duyệt trong 24h)
+// Returns { hoursWaited, label, color, bgColor, pulse }
+const getSLA = (createdAt?: string | null) => {
+  if (!createdAt) return { hoursWaited: 0, label: 'Vừa đăng ký', color: 'text-emerald-700', bgColor: 'bg-emerald-50', pulse: false };
+  const ms = Date.now() - new Date(createdAt).getTime();
+  const hours = Math.max(0, Math.floor(ms / 36e5));
+  let label = '';
+  if (hours < 1) {
+    const mins = Math.max(0, Math.floor(ms / 60000));
+    label = `Đã chờ ${mins} phút`;
+  } else if (hours < 24) {
+    label = `Đã chờ ${hours} giờ`;
+  } else {
+    const days = Math.floor(hours / 24);
+    label = `Đã chờ ${days} ngày`;
+  }
+  if (hours >= 24) return { hoursWaited: hours, label: `${label} · QUÁ HẠN`, color: 'text-red-700', bgColor: 'bg-red-50 border border-red-200', pulse: true };
+  if (hours >= 6) return { hoursWaited: hours, label, color: 'text-amber-700', bgColor: 'bg-amber-50', pulse: false };
+  return { hoursWaited: hours, label, color: 'text-emerald-700', bgColor: 'bg-emerald-50', pulse: false };
+};
+
+// VN phone regex check
+const isValidVNPhone = (phone?: string) => !!phone && /^(0|\+84)(3|5|7|8|9)\d{8}$/.test(phone.trim());
+
+// Row trong modal Approve preview
+const InfoRow = ({ icon, label, value, ok, warnText }: { icon: React.ReactNode; label: string; value: string; ok?: boolean; warnText?: string }) => (
+  <div className="flex items-start gap-2 text-xs">
+    <div className={`${ok ? 'text-emerald-600' : 'text-amber-600'} shrink-0 mt-0.5`}>{icon}</div>
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-1.5">
+        <span className="text-slate-500 font-bold uppercase tracking-wide text-[10px]">{label}</span>
+        {ok ? <ShieldCheck size={11} className="text-emerald-500" /> : <AlertTriangle size={11} className="text-amber-500" />}
+      </div>
+      <p className="text-sm text-slate-800 font-semibold truncate">{value}</p>
+      {warnText && <p className="text-[10px] text-amber-700 font-medium">{warnText}</p>}
+    </div>
+  </div>
+);
 
 const ITEMS_PER_PAGE_GRID = 8;
 const ITEMS_PER_PAGE_TABLE = 10;
 
 export default function SellersPage() {
   const router = useRouter();
-  const { sellers, isLoading, deleteSellers, updateStatus, isDeleting } = useSellers();
+  const { sellers, isLoading, deleteSellers, updateStatus, isDeleting, approveSeller, rejectSeller, blockSeller, unblockSeller, isApproving, isRejecting, isBlocking, isUnblocking } = useSellers();
   
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,8 +85,10 @@ export default function SellersPage() {
   const [toast, setToast] = useState<{ id: string; message: string; type: ToastType } | null>(null);
 
   // Modal States
-  const [blockModal, setBlockModal] = useState<{ isOpen: boolean; id: string; name: string; isBlocked: boolean }>({ isOpen: false, id: '', name: '', isBlocked: false });
+  const [blockModal, setBlockModal] = useState<{ isOpen: boolean; id: string; name: string; isBlocked: boolean; productCount: number; pendingOrderCount: number }>({ isOpen: false, id: '', name: '', isBlocked: false, productCount: 0, pendingOrderCount: 0 });
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; ids: string[]; name?: string }>({ isOpen: false, ids: [] });
+  const [rejectModal, setRejectModal] = useState<{ isOpen: boolean; id: string; name: string; reason: string }>({ isOpen: false, id: '', name: '', reason: '' });
+  const [approveModal, setApproveModal] = useState<{ isOpen: boolean; id: string; seller: any }>({ isOpen: false, id: '', seller: null });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -76,22 +127,30 @@ export default function SellersPage() {
   );
 
   // --- HANDLERS ---
-  const handleBlockClick = (e: React.MouseEvent, id: string, name: string, status: SellerStatus) => {
+  const handleBlockClick = (e: React.MouseEvent, id: string, name: string, status: SellerStatus, productCount = 0, pendingOrderCount = 0) => {
     e.stopPropagation();
     const isBlocked = status === 'BLOCKED';
-    setBlockModal({ isOpen: true, id, name, isBlocked });
+    setBlockModal({ isOpen: true, id, name, isBlocked, productCount, pendingOrderCount });
   };
 
-  const confirmBlock = async () => {
-    const { id, isBlocked } = blockModal;
-    const newStatus = isBlocked ? 'ACTIVE' : 'BLOCKED';
-    const action = isBlocked ? 'bỏ chặn' : 'chặn';
+  const confirmBlock = async (reason?: string) => {
+    const { id, isBlocked, name } = blockModal;
     try {
-      await updateStatus({ id, status: newStatus });
-      setToast({ id: Date.now().toString(), message: `Đã ${action} nhà bán hàng thành công.`, type: 'success' });
+      if (isBlocked) {
+        await unblockSeller(id);
+        setToast({ id: Date.now().toString(), message: `Đã mở khóa "${name}".`, type: 'success' });
+      } else {
+        if (!reason || !reason.trim()) {
+          setToast({ id: Date.now().toString(), message: 'Vui lòng nhập lý do khóa.', type: 'error' });
+          return;
+        }
+        await blockSeller({ id, reason: reason.trim() });
+        setToast({ id: Date.now().toString(), message: `Đã khóa "${name}". Email thông báo đã được gửi.`, type: 'success' });
+      }
       setBlockModal({ ...blockModal, isOpen: false });
-    } catch (err) {
-      setToast({ id: Date.now().toString(), message: `Lỗi khi ${action} nhà bán hàng.`, type: 'error' });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data || `Lỗi khi ${isBlocked ? 'mở khóa' : 'khóa'} nhà bán hàng.`;
+      setToast({ id: Date.now().toString(), message: typeof msg === 'string' ? msg : 'Thao tác thất bại.', type: 'error' });
     }
   };
 
@@ -108,6 +167,45 @@ export default function SellersPage() {
       setSelectedIds([]);
     } catch (err) {
       setToast({ id: Date.now().toString(), message: 'Lỗi khi xóa nhà bán hàng.', type: 'error' });
+    }
+  };
+
+  // --- APPROVE / REJECT HANDLERS ---
+  const handleApproveClick = (e: React.MouseEvent, seller: any) => {
+    e.stopPropagation();
+    setApproveModal({ isOpen: true, id: seller.id, seller });
+  };
+
+  const confirmApprove = async () => {
+    const { id, seller } = approveModal;
+    if (!id || !seller) return;
+    try {
+      await approveSeller(id);
+      setToast({ id: Date.now().toString(), message: `Đã duyệt "${seller.brandTitle}". Email thông báo đã được gửi.`, type: 'success' });
+      setApproveModal({ isOpen: false, id: '', seller: null });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data || 'Duyệt thất bại.';
+      setToast({ id: Date.now().toString(), message: typeof msg === 'string' ? msg : 'Duyệt thất bại.', type: 'error' });
+    }
+  };
+
+  const handleRejectClick = (e: React.MouseEvent, id: string, name: string) => {
+    e.stopPropagation();
+    setRejectModal({ isOpen: true, id, name, reason: '' });
+  };
+
+  const confirmReject = async () => {
+    if (!rejectModal.reason.trim()) {
+      setToast({ id: Date.now().toString(), message: 'Vui lòng nhập lý do từ chối.', type: 'error' });
+      return;
+    }
+    try {
+      await rejectSeller({ id: rejectModal.id, reason: rejectModal.reason.trim() });
+      setToast({ id: Date.now().toString(), message: `Đã từ chối "${rejectModal.name}".`, type: 'success' });
+      setRejectModal({ isOpen: false, id: '', name: '', reason: '' });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.response?.data || 'Từ chối thất bại.';
+      setToast({ id: Date.now().toString(), message: typeof msg === 'string' ? msg : 'Từ chối thất bại.', type: 'error' });
     }
   };
 
@@ -128,14 +226,17 @@ export default function SellersPage() {
       {toast && <ToastComponent toast={toast} onClose={(id) => setToast(null)} />}
       
       {/* Modals */}
-      <BlockSellerModal 
+      <BlockSellerModal
         isOpen={blockModal.isOpen}
         onClose={() => setBlockModal({ ...blockModal, isOpen: false })}
         onConfirm={confirmBlock}
         sellerName={blockModal.name}
         isBlocked={blockModal.isBlocked}
+        productCount={blockModal.productCount}
+        pendingOrderCount={blockModal.pendingOrderCount}
+        isSubmitting={isBlocking || isUnblocking}
       />
-      <DeleteSellerModal 
+      <DeleteSellerModal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
         onConfirm={confirmDelete}
@@ -143,11 +244,136 @@ export default function SellersPage() {
         count={deleteModal.ids.length}
       />
 
+      {/* Reject Modal (inline) */}
+      {rejectModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4" onClick={() => setRejectModal({ ...rejectModal, isOpen: false })}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-rose-100 rounded-lg text-rose-600">
+                  <ThumbsDown size={20} />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-800">Từ chối seller</h3>
+                  <p className="text-xs text-slate-500 font-medium">{rejectModal.name}</p>
+                </div>
+              </div>
+              <button onClick={() => setRejectModal({ ...rejectModal, isOpen: false })} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 block">
+                Lý do từ chối <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={rejectModal.reason}
+                onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
+                rows={4}
+                placeholder="VD: Thiếu giấy phép kinh doanh, thông tin không chính xác..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-400 text-sm resize-none"
+                autoFocus
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Lý do này sẽ được lưu vào hồ sơ seller.</p>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setRejectModal({ ...rejectModal, isOpen: false })}
+                className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border-0 bg-transparent"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={isRejecting || !rejectModal.reason.trim()}
+                className="px-4 py-2 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg transition-colors disabled:opacity-50 border-0 flex items-center gap-2"
+              >
+                {isRejecting ? (
+                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>Đang xử lý...</>
+                ) : (
+                  <><ThumbsDown size={14} /> Từ chối</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approve Modal với preview thông tin */}
+      {approveModal.isOpen && approveModal.seller && (() => {
+        const s = approveModal.seller;
+        const sla = getSLA(s.createdAt);
+        const phoneValid = isValidVNPhone(s.phone);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4" onClick={() => setApproveModal({ isOpen: false, id: '', seller: null })}>
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-start justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-green-100 rounded-xl text-green-600">
+                    <ThumbsUp size={22} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-slate-800 text-base">Duyệt nhà bán hàng</h3>
+                    <p className="text-xs text-slate-500 font-medium">Xác nhận thông tin trước khi duyệt</p>
+                  </div>
+                </div>
+                <button onClick={() => setApproveModal({ isOpen: false, id: '', seller: null })} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3 mb-5 bg-slate-50 border border-slate-100 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <img src={s.logoUrl} alt="" className="w-12 h-12 rounded-xl border border-slate-200 object-cover" />
+                  <div>
+                    <p className="text-sm font-black text-slate-800">{s.brandTitle}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">{s.category} · {s.accountCode}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 pt-2 border-t border-slate-200">
+                  <InfoRow icon={<Mail size={14} />} label="Email" value={s.email} ok />
+                  <InfoRow icon={<Phone size={14} />} label="SĐT" value={s.phone || 'Chưa có'} ok={phoneValid} warnText={!phoneValid ? 'Format VN không hợp lệ' : undefined} />
+                  <InfoRow icon={<Clock size={14} />} label="SLA" value={sla.label} ok={sla.hoursWaited < 24} warnText={sla.hoursWaited >= 24 ? 'Quá hạn cam kết 24h' : undefined} />
+                  {s.location && <InfoRow icon={<MapPin size={14} />} label="Địa chỉ" value={s.location} ok />}
+                </div>
+              </div>
+
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-800 font-medium leading-relaxed">
+                <strong>Lưu ý:</strong> Sau khi duyệt, seller sẽ nhận email thông báo và có thể đăng nhập để đăng sản phẩm.
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setApproveModal({ isOpen: false, id: '', seller: null })}
+                  className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors border-0 bg-transparent"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={confirmApprove}
+                  disabled={isApproving}
+                  className="px-4 py-2 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 border-0 flex items-center gap-2"
+                >
+                  {isApproving ? (
+                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>Đang xử lý...</>
+                  ) : (
+                    <><ThumbsUp size={14} /> Xác nhận duyệt</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
-             🏪 Nhà bán hàng (Sellers)
+             🏪 Nhà bán hàng
           </h1>
           <p className="text-sm text-slate-500 font-medium">Quản lý tất cả đối tác bán hàng trong hệ thống.</p>
         </div>
@@ -172,7 +398,7 @@ export default function SellersPage() {
              onClick={() => router.push('/admin/sellers/new')}
              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 border-0"
            >
-             <Plus size={16} /> Thêm Seller
+             <Plus size={16} /> Thêm nhà bán hàng
            </button>
         </div>
       </div>
@@ -215,18 +441,46 @@ export default function SellersPage() {
               />
             </div>
             
-            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-               {['ALL', 'PENDING', 'ACTIVE', 'BLOCKED'].map((tab) => (
-                 <button
-                   key={tab}
-                   onClick={() => setActiveTab(tab as any)}
-                   className={`px-3 py-2 text-xs font-bold rounded-lg transition-all border-0 ${activeTab === tab ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                 >
-                   {tab === 'ALL' ? 'Tất cả' : StatusConfig[tab as SellerStatus].label}
-                 </button>
-               ))}
-            </div>
           </div>
+        </div>
+
+        {/* STATUS TABS với count — đặt phía trên grid content để nổi bật */}
+        <div className="px-6 pt-4 pb-2 bg-white border-b border-slate-100 flex flex-wrap gap-2">
+          {([
+            { key: 'ALL',      label: 'Tất cả',     count: stats.total,   color: 'slate' },
+            { key: 'PENDING',  label: 'Chờ duyệt',  count: stats.pending, color: 'amber' },
+            { key: 'ACTIVE',   label: 'Đã duyệt',   count: stats.active,  color: 'green' },
+            { key: 'REJECTED', label: 'Đã từ chối', count: sellers.filter(s => s.status === 'REJECTED').length, color: 'rose' },
+            { key: 'BLOCKED',  label: 'Đã khóa',    count: stats.blocked, color: 'red' },
+          ] as const).map(tab => {
+            const isActive = activeTab === tab.key;
+            const baseColors = isActive
+              ? (tab.color === 'amber' ? 'bg-amber-500 text-white border-amber-500'
+                : tab.color === 'green' ? 'bg-green-600 text-white border-green-600'
+                : tab.color === 'rose'  ? 'bg-rose-600 text-white border-rose-600'
+                : tab.color === 'red'   ? 'bg-red-600 text-white border-red-600'
+                : 'bg-slate-800 text-white border-slate-800')
+              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50';
+            const countColors = isActive
+              ? 'bg-white/20 text-white'
+              : (tab.color === 'amber' ? 'bg-amber-100 text-amber-700'
+                : tab.color === 'green' ? 'bg-green-100 text-green-700'
+                : tab.color === 'rose'  ? 'bg-rose-100 text-rose-700'
+                : tab.color === 'red'   ? 'bg-red-100 text-red-700'
+                : 'bg-slate-100 text-slate-700');
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl border transition-all ${baseColors} ${tab.key === 'PENDING' && tab.count > 0 && !isActive ? 'ring-2 ring-amber-200' : ''}`}
+              >
+                {tab.label}
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-black ${countColors}`}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
         
         {/* Title Bar */}
@@ -263,9 +517,11 @@ export default function SellersPage() {
                            <div className="w-16 h-16 rounded-full border border-slate-100 overflow-hidden bg-slate-50 group-hover:shadow-md transition-shadow">
                              <img src={seller.logoUrl} alt={seller.brandTitle} className="w-full h-full object-cover" />
                            </div>
-                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${StatusConfig[seller.status].bgColor} ${StatusConfig[seller.status].color}`}>
-                              {StatusConfig[seller.status].icon} {StatusConfig[seller.status].label}
+                           {(() => { const cfg = getStatusConfig(seller.status); return (
+                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${cfg.bgColor} ${cfg.color}`}>
+                              {cfg.icon} {cfg.label}
                            </span>
+                           ); })()}
                         </div>
                         
                         <div className="mb-4">
@@ -276,50 +532,100 @@ export default function SellersPage() {
                            </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2 py-3 border-t border-slate-100 mb-4">
-                           <div className="text-center">
-                              <p className="text-[10px] text-slate-400 font-bold uppercase">Sản phẩm</p>
-                              <p className="text-sm font-black text-slate-800">{seller.totalProducts}</p>
-                           </div>
-                           <div className="text-center border-l border-slate-100">
-                              <p className="text-[10px] text-slate-400 font-bold uppercase">Đơn hàng</p>
-                              <p className="text-sm font-black text-slate-800">{seller.totalOrders}</p>
-                           </div>
-                           <div className="text-center border-l border-slate-100">
-                              <p className="text-[10px] text-slate-400 font-bold uppercase">Doanh thu</p>
-                              <p className="text-sm font-black text-slate-800">{(seller.totalRevenue / 1000000).toFixed(0)}M</p>
-                           </div>
-                        </div>
+                        {seller.status === 'PENDING' ? (
+                          // PENDING: hiển thị thông tin cần để duyệt + SLA badge
+                          <div className="py-3 border-t border-slate-100 mb-4 space-y-2">
+                            {(() => { const sla = getSLA(seller.createdAt); return (
+                              <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-bold ${sla.bgColor} ${sla.color} ${sla.pulse ? 'animate-pulse' : ''}`}>
+                                <Clock size={12} /> {sla.label}
+                              </div>
+                            ); })()}
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-600 font-medium truncate" title={seller.email}>
+                              <Mail size={12} className="text-emerald-500 shrink-0" />
+                              <span className="truncate">{seller.email}</span>
+                              <ShieldCheck size={12} className="text-emerald-500 shrink-0" />
+                            </div>
+                            <div className={`flex items-center gap-1.5 text-[11px] font-medium ${isValidVNPhone(seller.phone) ? 'text-slate-600' : 'text-amber-700'}`}>
+                              <Phone size={12} className="shrink-0" />
+                              <span className="truncate">{seller.phone || 'Chưa có SĐT'}</span>
+                              {!isValidVNPhone(seller.phone) && <AlertTriangle size={12} className="text-amber-500 shrink-0" />}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-3 gap-2 py-3 border-t border-slate-100 mb-4">
+                             <div className="text-center">
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Sản phẩm</p>
+                                <p className="text-sm font-black text-slate-800">{seller.totalProducts}</p>
+                             </div>
+                             <div className="text-center border-l border-slate-100">
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Đơn hàng</p>
+                                <p className="text-sm font-black text-slate-800">{seller.totalOrders}</p>
+                             </div>
+                             <div className="text-center border-l border-slate-100">
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Doanh thu</p>
+                                <p className="text-sm font-black text-slate-800">{(seller.totalRevenue / 1000000).toFixed(0)}M</p>
+                             </div>
+                          </div>
+                        )}
 
-                        <div className="mt-auto flex gap-2 pt-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">
-                           <button 
-                             onClick={(e) => { e.stopPropagation(); router.push(`/admin/sellers/${seller.id}`); }}
-                             className="flex-1 py-2 text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border-0"
-                           >
-                             Xem
-                           </button>
-                           <button 
-                             onClick={(e) => { e.stopPropagation(); router.push(`/admin/sellers/${seller.id}/edit`); }}
-                             className="flex-1 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border-0"
-                           >
-                             Sửa
-                           </button>
-                           {seller.status === 'BLOCKED' ? (
-                              <button 
-                                onClick={(e) => handleBlockClick(e, seller.id, seller.brandTitle, seller.status)}
-                                className="p-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg border-0"
-                                title="Mở khóa"
-                              >
-                                <Unlock size={14} />
-                              </button>
+                        <div className="mt-auto flex gap-2 pt-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300 flex-wrap">
+                           {seller.status === 'PENDING' ? (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); router.push(`/admin/sellers/${seller.id}`); }}
+                                  className="flex-1 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors border-0 flex items-center justify-center gap-1"
+                                  title="Xem hồ sơ"
+                                >
+                                  <Eye size={12} /> Xem
+                                </button>
+                                <button
+                                  onClick={(e) => handleApproveClick(e, seller)}
+                                  disabled={isApproving}
+                                  className="flex-1 py-2 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors border-0 flex items-center justify-center gap-1 disabled:opacity-50"
+                                  title="Duyệt"
+                                >
+                                  <ThumbsUp size={12} /> Duyệt
+                                </button>
+                                <button
+                                  onClick={(e) => handleRejectClick(e, seller.id, seller.brandTitle)}
+                                  className="flex-1 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors border-0 flex items-center justify-center gap-1"
+                                  title="Từ chối"
+                                >
+                                  <ThumbsDown size={12} /> Từ chối
+                                </button>
+                              </>
                            ) : (
-                              <button 
-                                onClick={(e) => handleBlockClick(e, seller.id, seller.brandTitle, seller.status)}
-                                className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border-0"
-                                title="Khóa"
-                              >
-                                <Ban size={14} />
-                              </button>
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); router.push(`/admin/sellers/${seller.id}`); }}
+                                  className="flex-1 py-2 text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border-0"
+                                >
+                                  Xem
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); router.push(`/admin/sellers/${seller.id}/edit`); }}
+                                  className="flex-1 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border-0"
+                                >
+                                  Sửa
+                                </button>
+                                {seller.status === 'BLOCKED' ? (
+                                   <button
+                                     onClick={(e) => handleBlockClick(e, seller.id, seller.brandTitle, seller.status, seller.totalProducts, seller.totalOrders)}
+                                     className="p-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg border-0"
+                                     title="Mở khóa"
+                                   >
+                                     <Unlock size={14} />
+                                   </button>
+                                ) : (
+                                   <button
+                                     onClick={(e) => handleBlockClick(e, seller.id, seller.brandTitle, seller.status, seller.totalProducts, seller.totalOrders)}
+                                     className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border-0"
+                                     title="Khóa"
+                                   >
+                                     <Ban size={14} />
+                                   </button>
+                                )}
+                              </>
                            )}
                         </div>
                      </div>
@@ -377,21 +683,45 @@ export default function SellersPage() {
                                   </div>
                                </td>
                                <td className="px-6 py-4 text-center">
-                                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${StatusConfig[seller.status].bgColor} ${StatusConfig[seller.status].color}`}>
-                                     {StatusConfig[seller.status].label}
+                                  {(() => { const cfg = getStatusConfig(seller.status); return (
+                                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${cfg.bgColor} ${cfg.color}`}>
+                                     {cfg.label}
                                   </span>
+                                  ); })()}
                                </td>
                                <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
                                   <div className="flex items-center justify-end gap-1">
+                                     {seller.status === 'PENDING' && (
+                                        <>
+                                          <button
+                                            onClick={(e) => handleApproveClick(e, seller)}
+                                            disabled={isApproving}
+                                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors border-0 bg-transparent disabled:opacity-50"
+                                            title="Duyệt seller"
+                                          >
+                                            <ThumbsUp size={16} />
+                                          </button>
+                                          <button
+                                            onClick={(e) => handleRejectClick(e, seller.id, seller.brandTitle)}
+                                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border-0 bg-transparent"
+                                            title="Từ chối"
+                                          >
+                                            <ThumbsDown size={16} />
+                                          </button>
+                                          <div className="w-px h-5 bg-slate-200 mx-1" />
+                                        </>
+                                     )}
                                      <button onClick={() => router.push(`/admin/sellers/${seller.id}`)} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg transition-colors border-0 bg-transparent" title="Xem chi tiết"><Eye size={16} /></button>
                                      <button onClick={() => router.push(`/admin/sellers/${seller.id}/edit`)} className="p-2 text-slate-400 hover:text-amber-600 rounded-lg transition-colors border-0 bg-transparent" title="Chỉnh sửa"><Edit3 size={16} /></button>
-                                     <button 
-                                       onClick={(e) => handleBlockClick(e, seller.id, seller.brandTitle, seller.status)}
-                                       className={`p-2 rounded-lg transition-colors border-0 bg-transparent ${seller.status === 'BLOCKED' ? 'text-green-500 hover:bg-green-50' : 'text-red-400 hover:text-red-600 hover:bg-red-50'}`}
-                                       title={seller.status === 'BLOCKED' ? "Mở khóa" : "Khóa tài khoản"}
-                                     >
-                                        {seller.status === 'BLOCKED' ? <Unlock size={16} /> : <Ban size={16} />}
-                                     </button>
+                                     {seller.status !== 'PENDING' && (
+                                        <button
+                                          onClick={(e) => handleBlockClick(e, seller.id, seller.brandTitle, seller.status, seller.totalProducts, seller.totalOrders)}
+                                          className={`p-2 rounded-lg transition-colors border-0 bg-transparent ${seller.status === 'BLOCKED' ? 'text-green-500 hover:bg-green-50' : 'text-red-400 hover:text-red-600 hover:bg-red-50'}`}
+                                          title={seller.status === 'BLOCKED' ? "Mở khóa" : "Khóa tài khoản"}
+                                        >
+                                          {seller.status === 'BLOCKED' ? <Unlock size={16} /> : <Ban size={16} />}
+                                        </button>
+                                     )}
                                   </div>
                                </td>
                             </tr>

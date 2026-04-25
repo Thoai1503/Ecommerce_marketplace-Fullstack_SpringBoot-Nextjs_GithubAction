@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getOrderById } from "../../../service/orders";
-import { Order, OrderStatus, ItemStatus } from "../../../types/index";
+import { useOrderDetail } from "@/hooks/admin/useOrders";
+import { Order, OrderStatus, ItemStatus, ShipmentStatus } from "../../../types/index";
+import { useToast } from "@/context/ToastContext";
 import {
   ChevronLeft,
   Package,
@@ -213,8 +214,15 @@ export default function OrderDetailsPage() {
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
+  const toastCtx = useToast();
+  const {
+    order,
+    isLoading: loading,
+    refetch,
+    cancelOrder,
+    refundOrder,
+    updateShipmentStatus,
+  } = useOrderDetail(id);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditItemsOpen, setIsEditItemsOpen] = useState(false);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
@@ -222,20 +230,65 @@ export default function OrderDetailsPage() {
     message: string;
     type: ToastType;
   } | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [showRefundDialog, setShowRefundDialog] = useState(false);
+  const [refundAmount, setRefundAmount] = useState<string>("");
+  const [refundReason, setRefundReason] = useState("");
 
   const fetchOrder = useCallback(() => {
-    if (id) {
-      setLoading(true);
-      getOrderById(id).then((data) => {
-        setOrder(data);
-        setLoading(false);
-      });
-    }
-  }, [id]);
+    refetch();
+  }, [refetch]);
 
-  useEffect(() => {
-    fetchOrder();
-  }, [fetchOrder]);
+  const handleCancel = async () => {
+    if (!cancelReason.trim()) {
+      toastCtx.error("Vui lòng nhập lý do hủy đơn");
+      return;
+    }
+    try {
+      await cancelOrder(cancelReason.trim());
+      toastCtx.success("Đã hủy đơn hàng");
+      setShowCancelDialog(false);
+      setCancelReason("");
+    } catch (e: any) {
+      toastCtx.error(e?.message || "Hủy đơn thất bại");
+    }
+  };
+
+  const handleRefund = async () => {
+    const amt = Number(refundAmount);
+    if (!amt || amt <= 0) {
+      toastCtx.error("Số tiền hoàn không hợp lệ");
+      return;
+    }
+    if (!refundReason.trim()) {
+      toastCtx.error("Vui lòng nhập lý do hoàn tiền");
+      return;
+    }
+    try {
+      await refundOrder({ amount: amt, reason: refundReason.trim() });
+      toastCtx.success("Đã hoàn tiền cho đơn hàng");
+      setShowRefundDialog(false);
+      setRefundAmount("");
+      setRefundReason("");
+    } catch (e: any) {
+      toastCtx.error(e?.message || "Hoàn tiền thất bại");
+    }
+  };
+
+  const handleShipmentStatusUpdate = async (shipmentId: string) => {
+    const next = window.prompt(
+      "Cập nhật trạng thái kiện hàng (PENDING/CONFIRMED/PICKED_UP/SHIPPING/DELIVERING/DELIVERED/FAILED/RETURNED):",
+      "CONFIRMED",
+    );
+    if (!next) return;
+    try {
+      await updateShipmentStatus({ shipmentId, status: next.toUpperCase() as ShipmentStatus });
+      toastCtx.success("Đã cập nhật trạng thái kiện hàng");
+    } catch (e: any) {
+      toastCtx.error(e?.message || "Cập nhật thất bại");
+    }
+  };
 
   const toggleSelectItem = (itemId: string) => {
     setSelectedItemIds((prev) =>
@@ -614,13 +667,7 @@ export default function OrderDetailsPage() {
                     <ShipmentCard
                       key={shipment.id}
                       shipment={shipment}
-                      onStatusUpdate={(id) => {
-                        setToast({
-                          message: `Cập nhật kiện hàng ${id}`,
-                          type: "info",
-                        });
-                        // TODO: Implement shipment status update modal
-                      }}
+                      onStatusUpdate={(sid) => handleShipmentStatusUpdate(sid)}
                     />
                   ))}
                 </div>
@@ -775,11 +822,22 @@ export default function OrderDetailsPage() {
             >
               Update Status
             </button>
-            <button className="w-full py-3.5 bg-white/10 hover:bg-red-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all border-0">
+            <button
+              onClick={() => setShowCancelDialog(true)}
+              disabled={["CANCELED", "COMPLETED", "REFUNDED"].includes(order.status)}
+              className="w-full py-3.5 bg-white/10 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all border-0"
+            >
               Cancel Order
             </button>
-            <button className="w-full py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all border-0 opacity-50 cursor-not-allowed">
-              Refund (Phase 2)
+            <button
+              onClick={() => {
+                setRefundAmount(String(order.totalAmount));
+                setShowRefundDialog(true);
+              }}
+              disabled={!["COMPLETED", "CANCELED"].includes(order.status)}
+              className="w-full py-3.5 bg-white/5 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all border-0"
+            >
+              Refund
             </button>
           </div>
         </div>
@@ -789,7 +847,85 @@ export default function OrderDetailsPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         order={order}
+        onSuccess={() => fetchOrder()}
       />
+
+      {showCancelDialog && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <h3 className="text-lg font-bold text-slate-800">Hủy đơn hàng</h3>
+            <p className="text-sm text-slate-500">
+              Vui lòng nhập lý do hủy đơn hàng <strong>{order.orderCode}</strong>. Hành động này
+              không thể hoàn tác.
+            </p>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Nhập lý do hủy..."
+              rows={3}
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm"
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowCancelDialog(false)}
+                className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={handleCancel}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl"
+              >
+                Xác nhận hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRefundDialog && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <h3 className="text-lg font-bold text-slate-800">Hoàn tiền đơn hàng</h3>
+            <p className="text-sm text-slate-500">
+              Đơn <strong>{order.orderCode}</strong> — tổng tiền {order.totalAmount.toLocaleString()}₫.
+            </p>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-600 uppercase">Số tiền hoàn (₫)</label>
+              <input
+                type="number"
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-600 uppercase">Lý do</label>
+              <textarea
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm"
+                placeholder="Nhập lý do hoàn tiền..."
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowRefundDialog(false)}
+                className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={handleRefund}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl"
+              >
+                Xác nhận hoàn tiền
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {isEditItemsOpen && (
         <EditItemsModal
           isOpen={isEditItemsOpen}

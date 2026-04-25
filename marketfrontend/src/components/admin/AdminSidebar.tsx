@@ -168,7 +168,27 @@ export default function AdminSidebar({
   onCloseMobile,
 }: AdminSidebarProps) {
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+  const [pendingSellerCount, setPendingSellerCount] = useState<number>(0);
   const pathname = usePathname();
+
+  // Đếm shop PENDING để hiện badge trên menu "Nhà bán hàng"
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const { getSellers } = await import("@/service/sellers");
+        const list = await getSellers();
+        if (!cancelled) {
+          setPendingSellerCount(list.filter((s: any) => s.status === "PENDING").length);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    load();
+    const interval = setInterval(load, 60000); // refresh mỗi phút
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [pathname]);
 
   // Auto-expand parent menu when a child is active
   useEffect(() => {
@@ -198,7 +218,7 @@ export default function AdminSidebar({
       items: [
         { label: "Sản phẩm", path: "/admin/products", icon: <Package /> },
         { label: "Khách hàng", path: "/admin/customers", icon: <Users /> },
-        { label: "Nhà bán hàng", path: "/admin/sellers", icon: <Store /> },
+        { label: "Nhà bán hàng", path: "/admin/sellers", icon: <Store />, badge: pendingSellerCount > 0 ? pendingSellerCount : undefined },
         { label: "Mã giảm giá", path: "/admin/coupons", icon: <Ticket /> },
         {
           label: "Tài chính",
@@ -216,7 +236,7 @@ export default function AdminSidebar({
               active: pathname === "/admin/finance/transactions",
             },
             {
-              label: "Thanh toán Seller",
+              label: "Thanh toán nhà bán hàng",
               path: "/admin/finance/payments",
               active: pathname === "/admin/finance/payments",
             },

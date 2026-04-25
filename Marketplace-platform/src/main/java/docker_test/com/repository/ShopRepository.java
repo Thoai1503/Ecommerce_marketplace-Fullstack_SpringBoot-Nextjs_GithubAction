@@ -44,8 +44,9 @@ public class ShopRepository implements IRepositories<Shop> {
              rating, total_products, total_orders,
              response_rate, response_time,
              is_verified, is_active,
+             status, category, website,
              created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         try (Connection con = dbConnection.getConn();
@@ -56,20 +57,23 @@ public class ShopRepository implements IRepositories<Shop> {
             ps.setString(3, item.getShop_description());
             ps.setString(4, item.getShop_logo());
             ps.setString(5, item.getShop_banner());
-            ps.setString(6, item.getBusiness_license());
-            ps.setString(7, item.getTax_code());
+            ps.setString(6, item.getBusiness_license() != null ? item.getBusiness_license() : "");
+            ps.setString(7, item.getTax_code() != null ? item.getTax_code() : "");
 
-            ps.setDouble(8, item.getRating());
+            ps.setDouble(8, item.getRating() != null ? item.getRating() : 0.0);
             ps.setInt(9, item.getTotal_products());
             ps.setInt(10, item.getTotal_orders());
 
-            ps.setDouble(11, item.getResponse_rate());
+            ps.setDouble(11, item.getResponse_rate() != null ? item.getResponse_rate() : 0.0);
             ps.setInt(12, item.getResponse_time());
 
             ps.setInt(13, item.getIs_verified());
             ps.setInt(14, item.getIs_active());
-            ps.setTimestamp(15, java.sql.Timestamp.valueOf(item.getCreated_at()));
-            ps.setTimestamp(16, java.sql.Timestamp.valueOf(item.getUpdated_at()));
+            ps.setString(15, item.getStatus() != null ? item.getStatus() : "PENDING");
+            ps.setString(16, item.getCategory() != null ? item.getCategory() : "General");
+            ps.setString(17, item.getWebsite());
+            ps.setTimestamp(18, java.sql.Timestamp.valueOf(item.getCreated_at() != null ? item.getCreated_at() : java.time.LocalDateTime.now()));
+            ps.setTimestamp(19, java.sql.Timestamp.valueOf(item.getUpdated_at() != null ? item.getUpdated_at() : java.time.LocalDateTime.now()));
 
             int rows = ps.executeUpdate();
 
@@ -100,8 +104,13 @@ public class ShopRepository implements IRepositories<Shop> {
                 tax_code = ?,
                 is_verified = ?,
                 is_active = ?,
+                status = ?,
+                rejection_reason = ?,
+                block_reason = ?,
+                category = ?,
+                website = ?,
                 updated_at = ?
-            WHERE shop_id = ?
+            WHERE id = ?
         """;
 
         try (Connection con = dbConnection.getConn();
@@ -115,8 +124,13 @@ public class ShopRepository implements IRepositories<Shop> {
             ps.setString(6, item.getTax_code());
             ps.setInt(7, item.getIs_verified());
             ps.setInt(8, item.getIs_active());
-            ps.setTimestamp(9, java.sql.Timestamp.valueOf(LocalDateTime.now()));
-            ps.setLong(10, item.getId());
+            ps.setString(9, item.getStatus());
+            ps.setString(10, item.getRejection_reason());
+            ps.setString(11, item.getBlock_reason());
+            ps.setString(12, item.getCategory());
+            ps.setString(13, item.getWebsite());
+            ps.setTimestamp(14, java.sql.Timestamp.valueOf(LocalDateTime.now()));
+            ps.setLong(15, item.getId());
 
             return ps.executeUpdate() > 0 ? item : null;
 
@@ -131,7 +145,7 @@ public class ShopRepository implements IRepositories<Shop> {
 
     public boolean Delete(Shop item) {
 
-        String sql = "DELETE FROM shop WHERE shop_id = ?";
+        String sql = "DELETE FROM shop WHERE id = ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -150,7 +164,7 @@ public class ShopRepository implements IRepositories<Shop> {
     @Override
     public Shop GetById(int id) {
 
-        String sql = "SELECT * FROM shop WHERE shop_id = ?";
+        String sql = "SELECT * FROM shop WHERE id = ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -214,4 +228,45 @@ public class ShopRepository implements IRepositories<Shop> {
 		// TODO Auto-generated method stub
 		return false;
 	}
+
+    /* ================= REVENUE ================= */
+    // Tổng doanh thu từ các đơn hàng đã giao thành công (DELIVERED)
+    public double getTotalRevenue(long shopId) {
+        String sql = """
+            SELECT COALESCE(SUM(oi.total_price), 0)
+            FROM order_item oi
+            JOIN orders o ON oi.order_id = o.id
+            WHERE oi.shop_id = ?
+              AND o.order_status = 'DELIVERED'
+        """;
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, shopId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getDouble(1);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return 0;
+    }
+
+    /* ================= REVIEW COUNT ================= */
+    // Tổng số đánh giá cho tất cả sản phẩm của shop
+    public int getReviewCount(long shopId) {
+        String sql = """
+            SELECT COUNT(pr.id)
+            FROM product_review pr
+            JOIN product p ON pr.product_id = p.id
+            WHERE p.shop_id = ?
+        """;
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, shopId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return 0;
+    }
 }

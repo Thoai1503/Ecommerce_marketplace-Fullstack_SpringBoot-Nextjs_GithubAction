@@ -18,6 +18,11 @@ public final class Shop {
 	private int response_time;
 	private int is_verified;
 	private int is_active;
+	private String status; // PENDING | ACTIVE | REJECTED | BLOCKED
+	private String rejection_reason;
+	private String block_reason;
+	private String category;
+	private String website;
 	private LocalDateTime created_at;
 	private LocalDateTime updated_at;
 
@@ -193,4 +198,18 @@ public final class Shop {
 		this.updated_at = updated_at;
 	}
 
+	public String getStatus() { return status; }
+	public void setStatus(String status) { this.status = status; }
+
+	public String getRejection_reason() { return rejection_reason; }
+	public void setRejection_reason(String rejection_reason) { this.rejection_reason = rejection_reason; }
+
+	public String getBlock_reason() { return block_reason; }
+	public void setBlock_reason(String block_reason) { this.block_reason = block_reason; }
+
+	public String getCategory() { return category; }
+	public void setCategory(String category) { this.category = category; }
+
+	public String getWebsite() { return website; }
+	public void setWebsite(String website) { this.website = website; }
 }

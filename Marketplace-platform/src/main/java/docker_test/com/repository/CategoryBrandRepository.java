@@ -18,6 +18,8 @@ public class CategoryBrandRepository implements IRepositories<CategoryBrand> {
 		return instance;
 	}
 
+	private final DBConnection dbConnection = DBConnection.getInstance();
+
 	private CategoryBrandRepository() {
 	}
 
@@ -32,7 +34,7 @@ public class CategoryBrandRepository implements IRepositories<CategoryBrand> {
 		List<CategoryBrand> list = new ArrayList<>();
 		String sql = "SELECT * FROM category_brand";
 
-		try (Connection conn = DBConnection.getConn();
+		try (Connection conn = dbConnection.getConn();
 				PreparedStatement ps = conn.prepareStatement(sql);
 				ResultSet rs = ps.executeQuery()) {
 
@@ -52,7 +54,7 @@ public class CategoryBrandRepository implements IRepositories<CategoryBrand> {
 	public CategoryBrand GetById(int id) {
 		String sql = "SELECT * FROM category_brand WHERE id = ?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
 			ps.setInt(1, id);
 
@@ -73,7 +75,7 @@ public class CategoryBrandRepository implements IRepositories<CategoryBrand> {
 	public CategoryBrand Create(CategoryBrand item) throws SQLException {
 		String sql = "INSERT INTO category_brand (category_id, brand_id, status) VALUES (?, ?, ?)";
 
-		try (Connection conn = DBConnection.getConn();
+		try (Connection conn = dbConnection.getConn();
 				PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
 			ps.setInt(1, item.getCategory_id());
@@ -99,7 +101,7 @@ public class CategoryBrandRepository implements IRepositories<CategoryBrand> {
 	public CategoryBrand Update(CategoryBrand item) {
 		String sql = "UPDATE category_brand SET category_id=?, brand_id=?, status=? WHERE id=?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
 			ps.setInt(1, item.getCategory_id());
 			ps.setInt(2, item.getBrand_id());
@@ -123,7 +125,7 @@ public class CategoryBrandRepository implements IRepositories<CategoryBrand> {
 	public boolean Delete(int id) {
 		String sql = "DELETE FROM category_brand WHERE id = ?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
 			ps.setInt(1, id);
 			return ps.executeUpdate() > 0;
@@ -139,7 +141,7 @@ public class CategoryBrandRepository implements IRepositories<CategoryBrand> {
 	public boolean ToggleStatus(int id) {
 		String sql = "UPDATE category_brand SET status = CASE WHEN status = 1 THEN 0 ELSE 1 END WHERE id = ?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
 			ps.setInt(1, id);
 			return ps.executeUpdate() > 0;
@@ -155,7 +157,7 @@ public class CategoryBrandRepository implements IRepositories<CategoryBrand> {
 		String sql = "SELECT * FROM category_brand WHERE category_id = ?";
 		List<CategoryBrand> list = new ArrayList<>();
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
 			ps.setInt(1, categoryId);
 

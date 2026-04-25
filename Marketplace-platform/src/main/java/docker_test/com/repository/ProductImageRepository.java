@@ -64,7 +64,14 @@ public class ProductImageRepository implements IRepositories<ProductImage> {
 
 	@Override
 	public boolean Delete(int id) {
-		// TODO Auto-generated method stub
+		String sql = "DELETE FROM product_image WHERE id = ?";
+		try (Connection con = dbConnection.getConn();
+			 PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setInt(1, id);
+			return ps.executeUpdate() > 0;
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 		return false;
 	}
 
@@ -104,7 +111,25 @@ public class ProductImageRepository implements IRepositories<ProductImage> {
 	}
 	@Override
 	public ProductImage GetById(int id) {
-		// TODO Auto-generated method stub
+		String sql = "SELECT * FROM product_image WHERE id = ?";
+		try (Connection con = dbConnection.getConn();
+			 PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setInt(1, id);
+			ResultSet rs = ps.executeQuery();
+			if (rs.next()) {
+				ProductImage img = new ProductImage();
+				img.setId(rs.getInt("id"));
+				img.setProductId(rs.getInt("product_id"));
+				img.setImageUrl(rs.getString("image_url"));
+				img.setDisplayOrder(rs.getInt("display_order"));
+				img.setThumbnail(rs.getInt("is_thumbnail"));
+				var ts = rs.getTimestamp("created_at");
+				if (ts != null) img.setCreatedAt(ts.toLocalDateTime());
+				return img;
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 		return null;
 	}
 

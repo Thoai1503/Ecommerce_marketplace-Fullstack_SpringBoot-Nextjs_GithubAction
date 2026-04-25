@@ -17,7 +17,7 @@ export type ProductStatus =
   | "HIDDEN";
 export type ItemStatus = "Ready" | "Packaging" | "Out of Stock";
 export type CustomerStatus = "ACTIVE" | "BANNED" | "INACTIVE";
-export type SellerStatus = "ACTIVE" | "BLOCKED" | "PENDING";
+export type SellerStatus = "ACTIVE" | "BLOCKED" | "PENDING" | "REJECTED";
 
 // --- USER MANAGEMENT TYPES ---
 export type UserRole = "USER" | "SELLER" | "ADMIN";

@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get product variants by product id
+url: '{{baseUrl}}/seller/product-variant/product/{{productId}}'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+order: 1776045000010

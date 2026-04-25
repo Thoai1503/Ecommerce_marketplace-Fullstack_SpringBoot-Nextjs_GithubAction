@@ -9,10 +9,15 @@ import org.springframework.web.bind.annotation.*;
 
 import docker_test.com.dto.LoginRequest;
 import docker_test.com.dto.RegisterRequest;
+import docker_test.com.models.Shop;
 import docker_test.com.models.User;
+import docker_test.com.repository.ShopRepository;
 import docker_test.com.repository.UserRepository;
 import docker_test.com.utils.PasswordUtil;
 import jakarta.servlet.http.HttpServletResponse;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/users")
@@ -21,8 +26,48 @@ public class UserController {
 
     private final UserRepository userRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private docker_test.com.services.DisposableEmailService disposableEmail;
+
     public UserController() {
         this.userRepository = UserRepository.Instance();
+    }
+
+    /* ================= CHECK EMAIL EXISTS ================= */
+    // GET http://localhost:8001/users/exists?email=xxx@yyy.zz
+    // Trả: { exists, disposable }
+    @GetMapping("/exists")
+    public ResponseEntity<?> existsByEmail(@RequestParam String email) {
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", "Email là bắt buộc"));
+        }
+        String normalized = email.trim().toLowerCase();
+        boolean disposable = disposableEmail.isDisposable(normalized);
+        boolean exists = userRepository.existsByEmail(normalized);
+        return ResponseEntity.ok(java.util.Map.of(
+                "exists", exists,
+                "disposable", disposable
+        ));
+    }
+
+    /* ================= CHECK PHONE EXISTS ================= */
+    // GET /users/phone-exists?phone=0912xxxxxx
+    @GetMapping("/phone-exists")
+    public ResponseEntity<?> existsByPhone(@RequestParam String phone) {
+        if (phone == null || phone.isBlank()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", "Số điện thoại là bắt buộc"));
+        }
+        // Chuẩn hoá: bỏ khoảng trắng, +84 → 0
+        String normalized = phone.replaceAll("\\s+", "");
+        if (normalized.startsWith("+84")) normalized = "0" + normalized.substring(3);
+        if (normalized.startsWith("84") && normalized.length() == 11) normalized = "0" + normalized.substring(2);
+
+        if (!normalized.matches("^0[35789][0-9]{8}$")) {
+            return ResponseEntity.ok(java.util.Map.of("exists", false, "invalid", true));
+        }
+
+        boolean exists = userRepository.existsByPhone(normalized);
+        return ResponseEntity.ok(java.util.Map.of("exists", exists, "phone", normalized));
     }
 
     /* ================= GET ALL USERS ================= */
@@ -85,13 +130,9 @@ public class UserController {
             );
 
             User created = userRepository.Create(user);
-
-            // ❌ không trả password
             created.setPasswordHash(null);
 
-            return ResponseEntity
-                    .status(HttpStatus.CREATED)
-                    .body(created);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -143,7 +184,26 @@ public class UserController {
 
         // ❌ không trả password
         user.setPasswordHash(null);
-        
+
+        // ✅ Nếu là seller → kèm thông tin shop status để frontend redirect đúng
+        Map<String, Object> extra = new HashMap<>();
+        extra.put("user", user);
+        if ("seller".equalsIgnoreCase(user.getUserType())) {
+            Shop shop = ShopRepository.Instance().GetByUserId(user.getId().intValue());
+            if (shop != null) {
+                Map<String, Object> shopInfo = new HashMap<>();
+                shopInfo.put("id", shop.getId());
+                shopInfo.put("shopName", shop.getShop_name());
+                shopInfo.put("status", shop.getStatus() != null ? shop.getStatus() : "PENDING");
+                shopInfo.put("category", shop.getCategory());
+                shopInfo.put("location", shop.getShop_description());
+                shopInfo.put("logoUrl", shop.getShop_logo());
+                shopInfo.put("website", shop.getWebsite());
+                shopInfo.put("rejectionReason", shop.getRejection_reason());
+                extra.put("shop", shopInfo);
+            }
+        }
+
         ResponseCookie roleCookie = ResponseCookie.from("role", user.getUserType())
     		    .httpOnly(true)
     		    .secure(false)          // requires HTTPS
@@ -160,9 +220,9 @@ public class UserController {
         		    .sameSite("Lax")
         		    .build();
         		response.addHeader("Set-Cookie", userCookie.toString());
-        
-        
-        return ResponseEntity.ok(user);
+
+
+        return ResponseEntity.ok(extra);
     }
 
     /* ================= DELETE USER ================= */

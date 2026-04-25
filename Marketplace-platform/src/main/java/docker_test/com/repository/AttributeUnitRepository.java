@@ -18,6 +18,8 @@ public class AttributeUnitRepository {
 		return instance;
 	}
 
+	private final DBConnection dbConnection = DBConnection.getInstance();
+
 	private AttributeUnitRepository() {
 	}
 
@@ -26,7 +28,7 @@ public class AttributeUnitRepository {
 		List<AttributeUnit> list = new ArrayList<>();
 		String sql = "SELECT * FROM attribute_unit";
 
-		try (Connection conn = DBConnection.getConn();
+		try (Connection conn = dbConnection.getConn();
 				PreparedStatement ps = conn.prepareStatement(sql);
 				ResultSet rs = ps.executeQuery()) {
 			while (rs.next()) {
@@ -42,7 +44,7 @@ public class AttributeUnitRepository {
 	public AttributeUnit GetById(int id) {
 		String sql = "SELECT * FROM attribute_unit WHERE id = ?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 			ps.setInt(1, id);
 			ResultSet rs = ps.executeQuery();
 
@@ -61,7 +63,7 @@ public class AttributeUnitRepository {
 		List<AttributeUnit> list = new ArrayList<>();
 		String sql = "SELECT * FROM attribute_unit WHERE attribute_id = ?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 			ps.setInt(1, attributeId);
 			ResultSet rs = ps.executeQuery();
 
@@ -80,7 +82,7 @@ public class AttributeUnitRepository {
 
 		String sql = "INSERT INTO attribute_unit(attribute_id, unit_id, status) VALUES (?, ?, ?)";
 
-		try (Connection conn = DBConnection.getConn();
+		try (Connection conn = dbConnection.getConn();
 				PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 			ps.setInt(1, item.getAttribute_id());
 			ps.setInt(2, item.getUnit_id());
@@ -104,7 +106,7 @@ public class AttributeUnitRepository {
 	public boolean Update(AttributeUnit item) {
 		String sql = "UPDATE attribute_unit SET attribute_id = ?, unit_id = ?, status = ? WHERE id = ?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 			ps.setInt(1, item.getAttribute_id());
 			ps.setInt(2, item.getUnit_id());
 			ps.setInt(3, item.getStatus());
@@ -123,7 +125,7 @@ public class AttributeUnitRepository {
 	public boolean Delete(int id) {
 		String sql = "DELETE FROM attribute_unit WHERE id = ?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 			ps.setInt(1, id);
 			return ps.executeUpdate() > 0;
 

@@ -210,8 +210,12 @@ export async function middleware(request: NextRequest) {
   //   return NextResponse.redirect(new URL("/", request.url));
   // }
 
+  // Forward pathname để server components có thể đọc
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+
   // Xử lý response
-  const response = NextResponse.next();
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
 
   // Tính thời gian xử lý
   const endTime = Date.now();

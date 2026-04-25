@@ -11,7 +11,6 @@ import {
   Clock, Ban, MapPin, Check, FileText, Filter, History, ShoppingBag, ChevronRight
 } from 'lucide-react';
 import { OrderStatus, PaymentStatus } from '@/types';
-import { updateOrderStatus } from '@/service/orders';
 import { OrderTableSkeleton, Skeleton } from '@/components/ui/Skeleton';
 import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import ConfirmationModal, { ModalVariant } from '@/components/ui/ConfirmationModal';
@@ -39,15 +38,37 @@ const PaymentConfig: Record<PaymentStatus, { label: string; color: string; bgCol
 
 export default function OrdersPage() {
   const router = useRouter();
-  const { orders, isLoading, isError, refetch } = useOrders();
   const toast = useToast();
-  
+
   const [activeTab, setActiveTab] = useState<'ALL' | OrderStatus>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  // Debounce search input (300ms)
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // FE uses CANCELED, BE expects CANCELLED — translate when sending status filter
+  const beStatusFilter = activeTab === 'ALL'
+    ? undefined
+    : activeTab === 'CANCELED' ? 'CANCELLED' : activeTab;
+
+  const { orders, total, totalPages, statusStats, isLoading, isError, refetch, updateStatus, cancelOrder } = useOrders({
+    status: beStatusFilter,
+    search: debouncedSearch || undefined,
+    dateFrom: startDate || undefined,
+    dateTo: endDate || undefined,
+    page: currentPage,
+    size: ITEMS_PER_PAGE,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  });
 
   // Modal State
   const [modalConfig, setModalConfig] = useState<{
@@ -66,49 +87,30 @@ export default function OrdersPage() {
     onConfirm: () => {},
   });
 
+  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, searchQuery, startDate, endDate]);
+  }, [activeTab, debouncedSearch, startDate, endDate]);
 
-  // Calculate Pending Stats for Banner
-  const pendingOrders = useMemo(() => orders.filter(o => o.status === 'PENDING'), [orders]);
-  const pendingCount = pendingOrders.length;
-  const pendingTotal = useMemo(() => pendingOrders.reduce((sum, o) => sum + o.totalAmount, 0), [pendingOrders]);
-
+  // Stats from server-side statusStats (BE uses CANCELLED — map to FE CANCELED)
   const stats = useMemo(() => {
-    const s: Record<string, number> = { ALL: orders.length };
+    const s: Record<string, number> = { ALL: total };
     Object.keys(StatusConfig).forEach(status => {
-      s[status] = orders.filter(o => o.status === status).length;
+      const beKey = status === 'CANCELED' ? 'CANCELLED' : status;
+      s[status] = statusStats[beKey] ?? 0;
     });
     return s;
-  }, [orders]);
+  }, [statusStats, total]);
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
-      const matchTab = activeTab === 'ALL' || order.status === activeTab;
-      const matchSearch = order.orderCode.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          order.customerName.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      let matchDate = true;
-      if (startDate || endDate) {
-        const orderDate = new Date(order.createdAt).setHours(0,0,0,0);
-        if (startDate) {
-          matchDate = matchDate && orderDate >= new Date(startDate).setHours(0,0,0,0);
-        }
-        if (endDate) {
-          matchDate = matchDate && orderDate <= new Date(endDate).setHours(0,0,0,0);
-        }
-      }
-
-      return matchTab && matchSearch && matchDate;
-    });
-  }, [orders, activeTab, searchQuery, startDate, endDate]);
-
-  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
-  const paginatedOrders = filteredOrders.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+  const pendingCount = stats['PENDING'] ?? 0;
+  // pendingTotal not available without extra endpoint — sum visible page as best-effort
+  const pendingTotal = useMemo(
+    () => orders.filter(o => o.status === 'PENDING').reduce((sum, o) => sum + o.totalAmount, 0),
+    [orders],
   );
+
+  // Server already returns paginated, filtered data
+  const paginatedOrders = orders;
 
   const toggleSelectAll = () => {
     if (selectedOrders.length === paginatedOrders.length && paginatedOrders.length > 0) {
@@ -139,11 +141,22 @@ export default function OrdersPage() {
       "Duyệt đơn hàng hàng loạt?",
       `Bạn có chắc chắn muốn duyệt ${selectedOrders.length} đơn hàng đã chọn?`,
       async () => {
-        await new Promise(r => setTimeout(r, 500));
-        toast.success(`Đã phê duyệt thành công ${selectedOrders.length} đơn hàng!`);
-        setSelectedOrders([]);
-        refetch();
-        setModalConfig(prev => ({...prev, isOpen: false}));
+        try {
+          const ids = [...selectedOrders];
+          const results = await Promise.allSettled(
+            ids.map((id) => updateStatus({ id, status: 'CONFIRMED' as OrderStatus }))
+          );
+          const ok = results.filter((r) => r.status === 'fulfilled').length;
+          const fail = results.length - ok;
+          if (ok > 0) toast.success(`Đã phê duyệt thành công ${ok} đơn hàng!`);
+          if (fail > 0) toast.error(`${fail} đơn hàng không thể duyệt (sai trạng thái).`);
+          setSelectedOrders([]);
+          refetch();
+        } catch (e: any) {
+          toast.error(e?.message || 'Duyệt đơn hàng thất bại');
+        } finally {
+          setModalConfig(prev => ({...prev, isOpen: false}));
+        }
       },
       'success',
       'Duyệt ngay'
@@ -156,12 +169,19 @@ export default function OrdersPage() {
       isCancel ? "Hủy đơn hàng?" : "Cập nhật trạng thái?",
       isCancel ? "Hành động này không thể hoàn tác. Bạn có chắc chắn?" : `Chuyển trạng thái đơn hàng sang ${status}?`,
       async () => {
-        const success = await updateOrderStatus(id, status);
-        if (success) {
+        try {
+          if (status === 'CANCELED') {
+            await cancelOrder({ id, reason: 'Hủy bởi quản trị viên' });
+          } else {
+            await updateStatus({ id, status });
+          }
           toast.success(`Cập nhật trạng thái thành công: ${status}`);
           refetch();
+        } catch (e: any) {
+          toast.error(e?.message || 'Cập nhật trạng thái thất bại');
+        } finally {
+          setModalConfig(prev => ({...prev, isOpen: false}));
         }
-        setModalConfig(prev => ({...prev, isOpen: false}));
       },
       isCancel ? 'danger' : 'info',
       isCancel ? 'Hủy đơn' : 'Cập nhật'
@@ -252,7 +272,7 @@ export default function OrdersPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex flex-col">
               <h3 className="text-lg font-black text-slate-800">🛒 Order Management</h3>
-              <p className="text-xs text-slate-400 font-medium">Hiển thị {filteredOrders.length} đơn hàng</p>
+              <p className="text-xs text-slate-400 font-medium">Hiển thị {orders.length} / {total} đơn hàng</p>
             </div>
             
             {selectedOrders.length > 0 ? (
@@ -321,7 +341,7 @@ export default function OrdersPage() {
            <div className="p-20">
               <ErrorState type="error" actionLabel="Thử lại" onAction={() => refetch()} />
            </div>
-        ) : filteredOrders.length === 0 ? (
+        ) : orders.length === 0 ? (
            <EmptyState 
               title="Không tìm thấy đơn hàng"
               description="Thử thay đổi bộ lọc, từ khóa hoặc kiểm tra khoảng thời gian."
@@ -484,7 +504,7 @@ export default function OrdersPage() {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              totalItems={filteredOrders.length}
+              totalItems={total}
               itemsPerPage={ITEMS_PER_PAGE}
             />
           </>

@@ -16,7 +16,7 @@ const RoleUX: Record<UserRole, { label: string; description: string; icon: any; 
     bg: 'bg-slate-50'
   },
   SELLER: { 
-    label: 'Đối tác bán hàng (Seller)', 
+    label: 'Đối tác bán hàng (Nhà bán hàng)',
     description: 'Quản lý sản phẩm, đơn hàng & doanh thu.',
     icon: <ShoppingBag size={20} />,
     color: 'text-blue-600',
@@ -128,7 +128,7 @@ export const ChangeRoleModal = ({ isOpen, onClose, onConfirm, user, isProcessing
           {selectedRole === 'SELLER' && user.role !== 'SELLER' && !error && (
              <div className="mt-4 p-3 bg-amber-50 text-amber-700 text-xs font-medium rounded-xl flex gap-2 items-start border border-amber-100">
                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-               <span>Lưu ý: Vui lòng đảm bảo người dùng đã hoàn tất xác minh KYC (CCCD/SĐT) trước khi nâng cấp lên Seller.</span>
+               <span>Lưu ý: Vui lòng đảm bảo người dùng đã hoàn tất xác minh KYC (CCCD/SĐT) trước khi nâng cấp lên Nhà bán hàng.</span>
              </div>
           )}
         </div>

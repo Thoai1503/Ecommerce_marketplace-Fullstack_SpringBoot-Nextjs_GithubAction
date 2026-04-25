@@ -19,6 +19,8 @@ public class CategoryAttributeRepository {
 		return instance;
 	}
 
+	private final DBConnection dbConnection = DBConnection.getInstance();
+
 	private CategoryAttributeRepository() {
 	}
 
@@ -26,7 +28,7 @@ public class CategoryAttributeRepository {
 		List<CategoryAttribute> list = new ArrayList<>();
 		String sql = "SELECT * FROM category_attribute";
 
-		try (Connection conn = DBConnection.getConn();
+		try (Connection conn = dbConnection.getConn();
 				PreparedStatement ps = conn.prepareStatement(sql);
 				ResultSet rs = ps.executeQuery()) {
 
@@ -44,7 +46,7 @@ public class CategoryAttributeRepository {
 	public CategoryAttribute GetById(int id) {
 		String sql = "SELECT * FROM category_attribute WHERE id = ?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
 			ps.setInt(1, id);
 			ResultSet rs = ps.executeQuery();
@@ -64,7 +66,7 @@ public class CategoryAttributeRepository {
 		List<CategoryAttribute> list = new ArrayList<>();
 		String sql = "SELECT * FROM category_attribute WHERE category_id = ?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
 			ps.setLong(1, categoryId);
 			ResultSet rs = ps.executeQuery();
@@ -84,7 +86,7 @@ public class CategoryAttributeRepository {
 
 		// check duplicate
 		String checkSql = "SELECT id FROM category_attribute WHERE category_id = ? AND attribute_id = ?";
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(checkSql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(checkSql)) {
 
 			ps.setLong(1, item.getCategoryId());
 			ps.setInt(2, item.getAttributeId());
@@ -97,7 +99,7 @@ public class CategoryAttributeRepository {
 
 		String sql = "INSERT INTO category_attribute (category_id, attribute_id, status) VALUES (?, ?, ?)";
 
-		try (Connection conn = DBConnection.getConn();
+		try (Connection conn = dbConnection.getConn();
 				PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
 			ps.setLong(1, item.getCategoryId());
@@ -122,7 +124,7 @@ public class CategoryAttributeRepository {
 
 		String sql = "UPDATE category_attribute SET category_id = ?, attribute_id = ?, status = ? WHERE id = ?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
 			ps.setLong(1, item.getCategoryId());
 			ps.setInt(2, item.getAttributeId());
@@ -142,7 +144,7 @@ public class CategoryAttributeRepository {
 	public boolean Delete(int id) {
 		String sql = "DELETE FROM category_attribute WHERE id = ?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
 			ps.setInt(1, id);
 			return ps.executeUpdate() > 0;
@@ -157,7 +159,7 @@ public class CategoryAttributeRepository {
 	public boolean Exists(long categoryId, long attributeId) {
 		String sql = "SELECT COUNT(*) FROM category_attribute WHERE category_id=? AND attribute_id=?";
 
-		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+		try (Connection conn = dbConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
 			ps.setLong(1, categoryId);
 			ps.setLong(2, attributeId);

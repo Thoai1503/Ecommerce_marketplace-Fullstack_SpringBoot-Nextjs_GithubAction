@@ -1,0 +1,10 @@
+$kind: http-request
+name: Create product variant
+url: '{{baseUrl}}/seller/product-variant'
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Content-Type
+    value: application/json
+order: 1776045000011

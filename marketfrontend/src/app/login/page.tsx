@@ -79,17 +79,32 @@ const LoginForm = () => {
         return;
       }
 
-      const user = JSON.parse(text);
+      const body = JSON.parse(text);
+      // Backend có thể trả về {user, shop} (seller) hoặc User (compat)
+      const user = body.user || body;
+      const shop = body.shop;
 
-      // Lưu thông tin user ở client
+      // Lưu thông tin user + shop ở client
       localStorage.setItem("user", JSON.stringify(user));
+      if (shop) {
+        localStorage.setItem("shop", JSON.stringify(shop));
+      } else {
+        localStorage.removeItem("shop");
+      }
 
-      // Đặt cookie token để middleware có thể đọc và cho phép truy cập /admin, /seller,...
-      // Hiện tại middleware chỉ kiểm tra có token hay không, chưa verify nội dung
-      // Nên chỉ cần giá trị bất kỳ (có thể thay bằng user.token nếu backend trả về)
       document.cookie = `token=${(user as any).token || "logged-in"}; path=/; max-age=${
         60 * 60 * 24
       }; SameSite=Lax`;
+
+      // Seller có shop PENDING/REJECTED → redirect về trang pending
+      if (user.userType === "seller" && shop) {
+        if (shop.status === "PENDING" || shop.status === "REJECTED") {
+          window.location.href = `/seller/pending?email=${encodeURIComponent(
+            user.email || ""
+          )}`;
+          return;
+        }
+      }
 
       // Sau khi login thành công, điều hướng về trang mong muốn (nếu có ?redirect=...)
       window.location.href = redirectPath;

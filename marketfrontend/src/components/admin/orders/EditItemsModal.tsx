@@ -3,7 +3,8 @@
 import React, { useState, useMemo } from "react";
 import { X, Minus, Plus, Trash2, Save, ShoppingBag } from "lucide-react";
 import { Order, OrderItem } from "@/types/index";
-// import { updateOrderItems } from '@/service/orders';
+import { useUpdateOrderItems } from "@/hooks/admin/useOrders";
+import { useToast } from "@/context/ToastContext";
 
 interface EditItemsModalProps {
   isOpen: boolean;
@@ -12,6 +13,17 @@ interface EditItemsModalProps {
   onSuccess: () => void;
 }
 
+// Translate common backend errors to Vietnamese
+const extractErrorMessage = (e: any, fallback: string): string => {
+  const data = e?.response?.data;
+  if (typeof data === "object" && data?.message) return data.message;
+  if (typeof data === "string" && data) {
+    if (/SQLException|SQL|java\./i.test(data)) return fallback;
+    return data;
+  }
+  return e?.message || fallback;
+};
+
 export default function EditItemsModal({
   isOpen,
   onClose,
@@ -19,7 +31,9 @@ export default function EditItemsModal({
   onSuccess,
 }: EditItemsModalProps) {
   const [items, setItems] = useState<OrderItem[]>(order.items || []);
-  const [isSaving, setIsSaving] = useState(false);
+  const toast = useToast();
+  const updateItemsMutation = useUpdateOrderItems();
+  const isSaving = updateItemsMutation.isPending;
 
   // Tính toán lại tổng tiền khi items thay đổi
   const subtotal = useMemo(() => {
@@ -42,21 +56,43 @@ export default function EditItemsModal({
 
   const removeItem = (id: string) => {
     if (items.length <= 1) {
-      alert("Đơn hàng phải có ít nhất 1 sản phẩm.");
+      toast.error("Đơn hàng phải có ít nhất 1 sản phẩm.");
       return;
     }
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // const handleSave = async () => {
-  //   setIsSaving(true);
-  //   const success = await updateOrderItems(order.id, items, subtotal);
-  //   if (success) {
-  //     onSuccess();
-  //     onClose();
-  //   }
-  //   setIsSaving(false);
-  // };
+  const handleSave = async () => {
+    if (isSaving) return;
+    if (!items.length) {
+      toast.error("Đơn hàng phải có ít nhất 1 sản phẩm.");
+      return;
+    }
+    for (const it of items) {
+      if (!it.quantity || it.quantity < 1) {
+        toast.error(`Số lượng "${it.productName}" phải >= 1.`);
+        return;
+      }
+    }
+
+    try {
+      await updateItemsMutation.mutateAsync({
+        id: order.id,
+        items: items.map((it: any) => ({
+          itemId: it.id,
+          productId: it.productId ?? it.product_id ?? it.id,
+          variantId: it.variantId ?? it.variant_id ?? null,
+          quantity: it.quantity,
+          price: it.price,
+        })),
+      });
+      toast.success("Cập nhật sản phẩm đơn hàng thành công!");
+      onSuccess();
+      onClose();
+    } catch (e: any) {
+      toast.error(extractErrorMessage(e, "Cập nhật sản phẩm đơn hàng thất bại"));
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -100,7 +136,6 @@ export default function EditItemsModal({
                 </div>
 
                 <div className="flex items-center gap-6">
-                  {/* Quantity Controller */}
                   <div className="flex items-center bg-white rounded-xl border border-slate-200 p-1">
                     <button
                       onClick={() => updateQuantity(item.id, -1)}
@@ -119,14 +154,12 @@ export default function EditItemsModal({
                     </button>
                   </div>
 
-                  {/* Subtotal for item */}
                   <div className="w-24 text-right">
                     <p className="text-sm font-black text-slate-900">
                       {(item.price * item.quantity).toLocaleString()}₫
                     </p>
                   </div>
 
-                  {/* Remove Button */}
                   <button
                     onClick={() => removeItem(item.id)}
                     className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border-0 bg-transparent"
@@ -152,14 +185,15 @@ export default function EditItemsModal({
           <div className="flex items-center justify-end gap-3">
             <button
               onClick={onClose}
-              className="px-6 py-3 text-sm font-bold text-slate-500 hover:bg-slate-200 rounded-xl transition-all border-0 bg-transparent"
+              disabled={isSaving}
+              className="px-6 py-3 text-sm font-bold text-slate-500 hover:bg-slate-200 rounded-xl transition-all border-0 bg-transparent disabled:opacity-50"
             >
               Hủy bỏ
             </button>
             <button
-              // onClick={handleSave}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-2xl shadow-lg shadow-blue-500/20 transition-all border-0 disabled:opacity-50"
+              onClick={handleSave}
+              disabled={isSaving || items.length === 0}
+              className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-2xl shadow-lg shadow-blue-500/20 transition-all border-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? (
                 "Đang cập nhật..."

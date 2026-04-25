@@ -1,14 +1,14 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getSellers, getSellerById, createSeller, updateSeller, deleteSellers, toggleSellerStatus } from '@/service/sellers';
-import { SellerStatus } from '@/types/index';
+import { getSellers, getSellerById, createSeller, updateSeller, deleteSellers, toggleSellerStatus, approveSeller, rejectSeller, blockSeller, unblockSeller, reopenSeller } from '@/service/sellers';
+import { Seller, SellerStatus } from '@/types/index';
 
 export const useSellers = () => {
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery<Seller[]>({
     queryKey: ['admin', 'sellers'],
-    queryFn: getSellers,
+    queryFn: () => getSellers(),
   });
 
   const deleteMutation = useMutation({
@@ -25,6 +25,38 @@ export const useSellers = () => {
     },
   });
 
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => approveSeller(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers', 'detail'] });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => rejectSeller(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers', 'detail'] });
+    },
+  });
+
+  const blockMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => blockSeller(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers', 'detail'] });
+    },
+  });
+
+  const unblockMutation = useMutation({
+    mutationFn: (id: string) => unblockSeller(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers', 'detail'] });
+    },
+  });
+
   return {
     sellers: data || [],
     isLoading,
@@ -33,6 +65,14 @@ export const useSellers = () => {
     deleteSellers: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
     updateStatus: statusMutation.mutateAsync,
+    approveSeller: approveMutation.mutateAsync,
+    rejectSeller: rejectMutation.mutateAsync,
+    blockSeller: blockMutation.mutateAsync,
+    unblockSeller: unblockMutation.mutateAsync,
+    isApproving: approveMutation.isPending,
+    isRejecting: rejectMutation.isPending,
+    isBlocking: blockMutation.isPending,
+    isUnblocking: unblockMutation.isPending,
   };
 };
 
@@ -58,6 +98,46 @@ export const useSellerDetail = (id: string) => {
     },
   });
 
+  const approveMutation = useMutation({
+    mutationFn: () => approveSeller(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers', 'detail', id] });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (reason: string) => rejectSeller(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers', 'detail', id] });
+    },
+  });
+
+  const blockMutation = useMutation({
+    mutationFn: (reason: string) => blockSeller(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers', 'detail', id] });
+    },
+  });
+
+  const unblockMutation = useMutation({
+    mutationFn: () => unblockSeller(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers', 'detail', id] });
+    },
+  });
+
+  const reopenMutation = useMutation({
+    mutationFn: () => reopenSeller(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers', 'detail', id] });
+    },
+  });
+
   return {
     seller: query.data,
     isLoading: query.isLoading,
@@ -65,6 +145,16 @@ export const useSellerDetail = (id: string) => {
     refetch: query.refetch,
     createSeller: createMutation.mutateAsync,
     updateSeller: updateMutation.mutateAsync,
+    approveSeller: approveMutation.mutateAsync,
+    rejectSeller: rejectMutation.mutateAsync,
+    blockSeller: blockMutation.mutateAsync,
+    unblockSeller: unblockMutation.mutateAsync,
+    reopenSeller: reopenMutation.mutateAsync,
     isSaving: createMutation.isPending || updateMutation.isPending,
+    isApproving: approveMutation.isPending,
+    isRejecting: rejectMutation.isPending,
+    isBlocking: blockMutation.isPending,
+    isUnblocking: unblockMutation.isPending,
+    isReopening: reopenMutation.isPending,
   };
 };

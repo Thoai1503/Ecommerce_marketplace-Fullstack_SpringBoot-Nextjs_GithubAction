@@ -37,6 +37,11 @@ public class ShopMapper implements RowMapper<Shop> {
 
         shop.setIs_verified(rs.getInt("is_verified"));
         shop.setIs_active(rs.getInt("is_active"));
+        shop.setStatus(rs.getString("status"));
+        shop.setRejection_reason(rs.getString("rejection_reason"));
+        try { shop.setBlock_reason(rs.getString("block_reason")); } catch (SQLException ignore) {}
+        shop.setCategory(rs.getString("category"));
+        shop.setWebsite(rs.getString("website"));
 
         if (rs.getTimestamp("created_at") != null) {
             shop.setCreated_at(rs.getTimestamp("created_at").toLocalDateTime());

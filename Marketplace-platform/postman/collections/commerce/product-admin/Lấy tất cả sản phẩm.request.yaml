@@ -1,0 +1,5 @@
+$kind: http-request
+name: Lấy tất cả sản phẩm
+url: ""
+method: GET
+order: 1776043672040

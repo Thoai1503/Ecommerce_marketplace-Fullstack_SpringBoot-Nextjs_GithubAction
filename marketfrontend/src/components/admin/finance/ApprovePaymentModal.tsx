@@ -56,7 +56,7 @@ export default function ApprovePaymentModal({ isOpen, onClose, onConfirm, paymen
 
           <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg flex items-center gap-2 text-left w-full">
             <AlertCircle size={16} className="shrink-0" />
-            Hệ thống sẽ ghi nhận thanh toán và gửi thông báo cho Seller.
+            Hệ thống sẽ ghi nhận thanh toán và gửi thông báo cho nhà bán hàng.
           </p>
         </div>
 

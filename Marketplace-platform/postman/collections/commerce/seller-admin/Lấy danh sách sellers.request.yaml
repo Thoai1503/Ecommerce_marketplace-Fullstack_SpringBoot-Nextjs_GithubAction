@@ -1,0 +1,83 @@
+$kind: http-request
+name: 'Lấy danh sách sellers'
+method: GET
+url: 'http://127.0.0.1:8001/admin/sellers'
+order: 1776043672041
+headers:
+  - key: Content-Type
+    value: application/json
+auth:
+  type: noauth
+description: |-
+  Lấy toàn bộ danh sách sellers (shops) trong hệ thống.
+
+  **Response fields:**
+  - id, accountCode (SE-XXXX), brandTitle, category, website
+  - location, email, phone, logoUrl, status (PENDING/ACTIVE/REJECTED/BLOCKED)
+  - createdAt, ownerName, totalProducts, totalOrders, totalRevenue, rating, reviewCount
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // ✅ TC-01: Status 200 OK
+      pm.test("TC-01: Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      // ✅ TC-02: Response là array
+      pm.test("TC-02: Response body is an array", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.be.an("array");
+      });
+
+      // ✅ TC-03: Mỗi seller có đủ fields bắt buộc
+      pm.test("TC-03: Each seller has required fields", function () {
+          const json = pm.response.json();
+          if (json.length > 0) {
+              const seller = json[0];
+              pm.expect(seller).to.have.property("id");
+              pm.expect(seller).to.have.property("accountCode");
+              pm.expect(seller).to.have.property("brandTitle");
+              pm.expect(seller).to.have.property("status");
+              pm.expect(seller).to.have.property("email");
+              pm.expect(seller).to.have.property("ownerName");
+          }
+      });
+
+      // ✅ TC-04: accountCode đúng format SE-XXXX
+      pm.test("TC-04: accountCode follows SE-XXXX format", function () {
+          const json = pm.response.json();
+          if (json.length > 0) {
+              pm.expect(json[0].accountCode).to.match(/^SE-\d{4}$/);
+          }
+      });
+
+      // ✅ TC-05: status chỉ nhận giá trị hợp lệ
+      pm.test("TC-05: status values are valid", function () {
+          const json = pm.response.json();
+          const validStatuses = ["PENDING", "ACTIVE", "REJECTED", "BLOCKED"];
+          json.forEach(seller => {
+              pm.expect(validStatuses).to.include(seller.status);
+          });
+      });
+
+      // ✅ TC-06: totalRevenue, rating là số
+      pm.test("TC-06: Numeric fields are numbers", function () {
+          const json = pm.response.json();
+          if (json.length > 0) {
+              pm.expect(json[0].totalRevenue).to.be.a("number");
+              pm.expect(json[0].rating).to.be.a("number");
+          }
+      });
+
+      // ✅ TC-07: Response time < 2000ms
+      pm.test("TC-07: Response time is less than 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      // Lưu seller id đầu tiên để dùng cho các test sau
+      const json = pm.response.json();
+      if (json && json.length > 0) {
+          pm.collectionVariables.set("sellerId", json[0].id);
+          console.log("Saved sellerId:", json[0].id);
+      }

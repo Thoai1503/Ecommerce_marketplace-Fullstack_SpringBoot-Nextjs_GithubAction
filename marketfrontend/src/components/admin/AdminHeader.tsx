@@ -19,7 +19,19 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
   const [isThemeOpen, setIsThemeOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [toast, setToast] = useState<{ id: string; message: string; type: ToastType } | null>(null);
-  
+  const [currentDate, setCurrentDate] = useState<string>('');
+
+  // Format ngày hiện tại (client-side, tránh hydration mismatch)
+  useEffect(() => {
+    const d = new Date();
+    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const dow = days[d.getDay()];
+    const dd = d.getDate();
+    const mm = d.getMonth() + 1;
+    const yy = d.getFullYear();
+    setCurrentDate(`${dow}, ${dd} tháng ${mm}, ${yy}`);
+  }, []);
+
   const themeDropdownRef = useRef<HTMLDivElement>(null);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -127,7 +139,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
             {getPageTitle(pathname)}
           </h1>
           <span className="text-[13px] font-medium text-slate-400 mt-0.5">
-            Chủ Nhật, 15 tháng 2, 2026
+            {currentDate || '\u00A0'}
           </span>
         </div>
       </div>

@@ -1,0 +1,64 @@
+$kind: http-request
+name: 'Đổi status seller'
+method: PATCH
+url: 'http://127.0.0.1:8001/admin/sellers/{{sellerId}}/status'
+order: 1776043672045
+headers:
+  - key: Content-Type
+    value: application/json
+auth:
+  type: noauth
+description: |-
+  Thay đổi status của seller (ACTIVE / BLOCKED / PENDING).
+
+  **Path param:** `id` — ID của shop/seller
+
+  **Body fields:**
+  - `status` *(required)* — ACTIVE | BLOCKED | PENDING | REJECTED
+
+  **Logic BE:**
+  - ACTIVE → is_active=1, is_verified=1, user.isActive=1
+  - PENDING → is_active=1, is_verified=0, user.isActive=1
+  - BLOCKED/REJECTED → is_active=0, user.isActive=0
+
+  **Error cases:**
+  - 400 — status is required
+  - 404 — Seller not found
+body:
+  type: json
+  content: |-
+    {
+      "status": "ACTIVE"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // ✅ TC-01: Status 200 OK
+      pm.test("TC-01: Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      // ✅ TC-02: Response trả về true
+      pm.test("TC-02: Response body is true", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.eql(true);
+      });
+
+      // ✅ TC-03: Response time < 2000ms
+      pm.test("TC-03: Response time is less than 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      // ─── VALIDATE cases (đổi body/URL để test) ───────────────────────────
+      // ❌ VALIDATE-01: Thiếu field status → 400
+      // Body: {} → expect 400 "status is required"
+
+      // ❌ VALIDATE-02: ID không tồn tại → 404
+      // URL: /admin/sellers/999999/status → expect 404 "Seller not found"
+
+      // ❌ VALIDATE-03: status không hợp lệ → BE bỏ qua (không lỗi)
+      // Body: { "status": "INVALID_VALUE" }
+
+      // ❌ VALIDATE-04: Body null/rỗng → 400
+      // Body: (empty) → expect 400

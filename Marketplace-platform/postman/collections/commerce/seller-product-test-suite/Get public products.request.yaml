@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get public products
+url: '{{baseUrl}}/product'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+order: 1776045000001

@@ -29,4 +29,13 @@ public class ShopController {
         var result = shopRepository.Create(item);
         return ResponseEntity.ok(result);
     }
+
+    @GetMapping("/by-user/{userId}")
+    public ResponseEntity<?> getByUserId(@PathVariable int userId) {
+        Shop shop = shopRepository.GetByUserId(userId);
+        if (shop == null) {
+            return ResponseEntity.status(404).body("Shop not found");
+        }
+        return ResponseEntity.ok(shop);
+    }
 }

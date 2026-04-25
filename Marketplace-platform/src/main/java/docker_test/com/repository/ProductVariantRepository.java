@@ -29,7 +29,14 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 
 	@Override
 	public boolean Delete(int id) {
-		// TODO Auto-generated method stub
+		String sql = "UPDATE product_variant SET is_active = 0 WHERE id = ?";
+		try (Connection con = dbConnection.getConn();
+			 PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setInt(1, id);
+			return ps.executeUpdate() > 0;
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 		return false;
 	}
 	public List<ProductVariant> GetByProductId(int productId) {
@@ -83,7 +90,30 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 
 	@Override
 	public ProductVariant Update(ProductVariant item) {
-		// TODO Auto-generated method stub
+		String sql = """
+			UPDATE product_variant SET
+				variant_name = COALESCE(?, variant_name),
+				sku          = COALESCE(?, sku),
+				price        = COALESCE(?, price),
+				stock_quantity = COALESCE(?, stock_quantity),
+				image_url    = COALESCE(?, image_url),
+				is_active    = COALESCE(?, is_active)
+			WHERE id = ?
+		""";
+		try (Connection con = dbConnection.getConn();
+			 PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setString(1, item.getVariant_name());
+			ps.setString(2, item.getSku());
+			ps.setObject(3, item.getPrice());
+			ps.setObject(4, item.getStock_quantity());
+			ps.setString(5, item.getImage_url());
+			ps.setObject(6, item.isActive());
+			ps.setInt(7, item.getId());
+			int rows = ps.executeUpdate();
+			if (rows > 0) return GetById(item.getId());
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 		return null;
 	}
 
@@ -95,7 +125,26 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 
 	@Override
 	public ProductVariant GetById(int id) {
-		// TODO Auto-generated method stub
+		String sql = "SELECT * FROM product_variant WHERE id = ?";
+		try (Connection con = dbConnection.getConn();
+			 PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setInt(1, id);
+			ResultSet rs = ps.executeQuery();
+			if (rs.next()) {
+				ProductVariant v = new ProductVariant();
+				v.setVariant_id(rs.getInt("id"));
+				v.setProduct_id(rs.getInt("product_id"));
+				v.setVariant_name(rs.getString("variant_name"));
+				v.setSku(rs.getString("sku"));
+				v.setPrice(rs.getDouble("price"));
+				v.setStock_quantity(rs.getInt("stock_quantity"));
+				v.setImage_url(rs.getString("image_url"));
+				v.setActive(rs.getInt("is_active"));
+				return v;
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 		return null;
 	}
 

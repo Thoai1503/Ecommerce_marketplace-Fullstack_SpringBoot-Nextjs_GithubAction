@@ -1,0 +1,72 @@
+$kind: http-request
+name: 'Duyệt seller'
+method: PATCH
+url: 'http://127.0.0.1:8001/admin/sellers/{{sellerId}}/approve'
+order: 1776043672046
+headers:
+  - key: Content-Type
+    value: application/json
+auth:
+  type: noauth
+description: |-
+  Duyệt seller PENDING → ACTIVE. Không cần body.
+
+  **Path param:** `id` — ID của shop/seller
+
+  **Logic BE:**
+  - Set status = ACTIVE
+  - is_active=1, is_verified=1, user.isActive=1
+  - Xóa rejection_reason
+
+  **Error cases:**
+  - 404 — Seller not found
+  - 400 — Approve failed (lỗi DB)
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // ✅ TC-01: Status 200 OK
+      pm.test("TC-01: Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      // ✅ TC-02: Response là object seller
+      pm.test("TC-02: Response body is a seller object", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.be.an("object").and.not.an("array");
+      });
+
+      // ✅ TC-03: status đã được set thành ACTIVE
+      pm.test("TC-03: Seller status is now ACTIVE", function () {
+          const json = pm.response.json();
+          pm.expect(json.status).to.eql("ACTIVE");
+      });
+
+      // ✅ TC-04: Có đủ fields bắt buộc
+      pm.test("TC-04: Response has required fields", function () {
+          const json = pm.response.json();
+          ["id", "accountCode", "brandTitle", "email", "status", "ownerName"].forEach(field => {
+              pm.expect(json).to.have.property(field);
+          });
+      });
+
+      // ✅ TC-05: id khớp với sellerId đã approve
+      pm.test("TC-05: Returned id matches requested sellerId", function () {
+          const json = pm.response.json();
+          const requestedId = String(pm.collectionVariables.get("sellerId"));
+          pm.expect(String(json.id)).to.eql(requestedId);
+      });
+
+      // ✅ TC-06: Response time < 2000ms
+      pm.test("TC-06: Response time is less than 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      // ─── VALIDATE cases ───────────────────────────────────────────────────
+      // ❌ VALIDATE-01: ID không tồn tại → 404
+      // URL: /admin/sellers/999999/approve → expect 404 "Seller not found"
+
+      // ❌ VALIDATE-02: Approve seller đã ACTIVE → vẫn 200 (idempotent)
+      // Gọi lại lần 2 → expect 200, status vẫn ACTIVE
+
+      // ❌ VALIDATE-03: Approve seller đã BLOCKED → 200, status chuyển ACTIVE

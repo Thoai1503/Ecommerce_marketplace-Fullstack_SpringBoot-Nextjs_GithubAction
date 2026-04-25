@@ -1,79 +1,37 @@
 package docker_test.com.configs;
 
-
-import java.io.InputStream;
 import java.sql.Connection;
-import java.util.Properties;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
+import javax.sql.DataSource;
 
-
+/**
+ * DB connection singleton.
+ * DataSource is injected by DBConnectionInitializer (@PostConstruct) at Spring startup.
+ */
 public final class DBConnection {
 
-    private static DBConnection instance;
-    private static final Properties props = new Properties();
-    private static HikariDataSource dataSource;
-
-    private static String getEnvOrProp(String envKey, String propKey) {
-        String env = System.getenv(envKey);
-        if (env != null && !env.isBlank()) {
-            return env;
-        }
-        return props.getProperty(propKey);
-    }
-
-    static {
-        try {
-            // 🔥 Lấy profile hiện tại (dev, prod,...)
-            String profile = System.getProperty("spring.profiles.active");
-            if (profile == null) {
-                profile = System.getenv("SPRING_PROFILES_ACTIVE");
-            }
-            if (profile == null) {
-                profile = "local";
-            }
-            String fileName = "application-" + profile + ".properties";
-            InputStream input = DBConnection.class.getClassLoader().getResourceAsStream(fileName);
-            // fallback
-            if (input == null) {
-                input = DBConnection.class.getClassLoader().getResourceAsStream("application.properties");
-            }
-            if (input == null) {
-                throw new RuntimeException("❌ Không tìm thấy file config nào!");
-            }
-            props.load(input);
-
-            // HikariCP configuration
-            HikariConfig config = new HikariConfig();
-            config.setJdbcUrl("jdbc:mysql://" + getEnvOrProp("DB_HOST", "mysql.host") + ":" + getEnvOrProp("DB_PORT", "mysql.port") + "/" + getEnvOrProp("DB_NAME", "mysql.database") + "?useSSL=true&requireSSL=true");
-            config.setUsername(getEnvOrProp("DB_USER", "mysql.username"));
-            config.setPassword(getEnvOrProp("DB_PASSWORD", "mysql.password"));
-            config.addDataSourceProperty("cachePrepStmts", "true");
-            config.addDataSourceProperty("prepStmtCacheSize", "250");
-            config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-            config.setMaximumPoolSize(10); // You can adjust pool size as needed
-            dataSource = new HikariDataSource(config);
-        } catch (Exception e) {
-            throw new RuntimeException("❌ Lỗi load DB config hoặc HikariCP", e);
-        }
-    }
+    private static final DBConnection INSTANCE = new DBConnection();
+    private DataSource dataSource;
 
     private DBConnection() {}
 
     public static DBConnection getInstance() {
-        if (instance == null) {
-            instance = new DBConnection();
-        }
-        return instance;
+        return INSTANCE;
     }
 
-    public static Connection getConn() {
+    /** Called by DBConnectionInitializer to wire Spring's DataSource into this singleton. */
+    public void setDataSource(DataSource ds) {
+        this.dataSource = ds;
+    }
+
+    public Connection getConn() {
         try {
-            System.out.println("✅ Getting connection from HikariCP pool");
+            if (dataSource == null) {
+                throw new IllegalStateException(
+                    "DataSource not initialized. DBConnectionInitializer may not have run.");
+            }
             return dataSource.getConnection();
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new RuntimeException("DBConnection.getConn() failed: " + e.getMessage(), e);
         }
     }
 }

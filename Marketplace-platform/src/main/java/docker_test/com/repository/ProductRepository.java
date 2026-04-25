@@ -80,13 +80,50 @@ public class ProductRepository implements IRepositories<Product> {
 
 	@Override
 	public Product Update(Product item) {
-		// TODO Auto-generated method stub
+		String sql = """
+			UPDATE product SET
+				is_active = ?,
+				product_name = COALESCE(?, product_name),
+				description = COALESCE(?, description),
+				price = COALESCE(?, price),
+				original_price = COALESCE(?, original_price),
+				stock_quantity = COALESCE(?, stock_quantity),
+				category_id = COALESCE(?, category_id),
+				reject_reason = ?
+			WHERE id = ?
+		""";
+		try (Connection con = dbConnection.getConn();
+			 PreparedStatement ps = con.prepareStatement(sql)) {
+
+			ps.setInt(1, item.getIs_active() != null ? item.getIs_active() : 2);
+			ps.setString(2, item.getProduct_name());
+			ps.setString(3, item.getDescription());
+			ps.setObject(4, item.getPrice());
+			ps.setObject(5, item.getOriginal_price());
+			ps.setObject(6, item.getStock_quantity());
+			ps.setObject(7, item.getCategory_id());
+			ps.setString(8, item.getReject_reason());
+			ps.setInt(9, item.getId());
+
+			int rows = ps.executeUpdate();
+			if (rows > 0) return GetById(item.getId());
+			System.err.println("[ProductRepository.Update] 0 rows affected for id=" + item.getId());
+		} catch (Exception e) {
+			throw new RuntimeException("[ProductRepository.Update] failed: " + e.getMessage(), e);
+		}
 		return null;
 	}
 
 	@Override
 	public boolean Delete(int id) {
-		// TODO Auto-generated method stub
+		String sql = "UPDATE product SET is_active = 0 WHERE id = ?";
+		try (Connection con = dbConnection.getConn();
+			 PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setInt(1, id);
+			return ps.executeUpdate() > 0;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		return false;
 	}
 
@@ -112,6 +149,7 @@ SELECT
     p.height,
     p.brand,
     p.is_active,
+    p.reject_reason,
     p.created_at,
     p.updated_at,
     (
@@ -159,11 +197,21 @@ WHERE p.id = ?;
 	            while (rs.next()) {
 	                Product product = new Product();
 	                product.setId(rs.getInt("id"));
-	                
-	                product.setProduct_name(rs.getString("product_name"));	
+	                product.setShop_id(rs.getInt("shop_id"));
+	                product.setCategory_id(rs.getInt("category_id"));
+	                product.setProduct_name(rs.getString("product_name"));
 	                product.setProduct_slug(rs.getString("product_slug"));
-	            //    product.setImage_url(rs.getString("image_url"));
+	                product.setDescription(rs.getString("description"));
 	                product.setPrice(rs.getDouble("price"));
+	                product.setOriginal_price(rs.getDouble("original_price"));
+	                product.setStock_quantity(rs.getInt("stock_quantity"));
+	                product.setSold_count(rs.getInt("sold_count"));
+	                product.setRating(rs.getDouble("rating"));
+	                product.setReview_count(rs.getInt("review_count"));
+	                product.setIs_active(rs.getInt("is_active"));
+	                try { product.setReject_reason(rs.getString("reject_reason")); } catch (Exception ignore) { /* column may be absent pre-migration */ }
+	                var ts = rs.getTimestamp("created_at");
+	                if (ts != null) product.setCreated_at(ts.toLocalDateTime());
 	                
 	                // Lấy JSON dưới dạng String
 	                String variantsJson = rs.getString("variants");
@@ -213,34 +261,68 @@ WHERE p.id = ?;
 	public List<Product> GetAll() {
 		System.out.print("Get all..");
 		List<Product> list = new ArrayList<Product>();
-		String sql = "SELECT \r\n"
-				+ "    p.*,\r\n"
-				+ "    pi.image_url\r\n"
-				+ "FROM product p\r\n"
-				+ "LEFT JOIN product_image pi ON p.id = pi.product_id \r\n"
-				+ "    AND pi.id = (\r\n"
-				+ "        SELECT MIN(id) \r\n"
-				+ "        FROM product_image \r\n"
-				+ "        WHERE product_id = p.id\r\n"
-				+ "    )";
+		String sql = """
+			SELECT
+			    p.id, p.shop_id, p.category_id, p.product_name, p.product_slug,
+			    p.description, p.price, p.original_price, p.stock_quantity,
+			    p.is_active, p.reject_reason, p.created_at,
+			    s.shop_name AS shop_name,
+			    (
+			        SELECT pi.image_url FROM product_image pi
+			        WHERE pi.product_id = p.id
+			        ORDER BY pi.display_order ASC, pi.id ASC LIMIT 1
+			    ) AS image_url,
+			    (
+			        SELECT JSON_ARRAYAGG(
+			            JSON_OBJECT(
+			                'id', pi2.id,
+			                'image_url', pi2.image_url,
+			                'display_order', pi2.display_order,
+			                'is_thumbnail', pi2.is_thumbnail
+			            )
+			        )
+			        FROM product_image pi2 WHERE pi2.product_id = p.id
+			    ) AS images
+			FROM product p
+			LEFT JOIN shop s ON s.id = p.shop_id
+			ORDER BY p.id DESC
+			""";
 		System.out.print("GetAll..");
 		try (Connection con = dbConnection.getConn();
 				PreparedStatement ps = con.prepareStatement(sql)){
-	
+
 			  ResultSet rs =	ps.executeQuery();
+			  ObjectMapper mapper = new ObjectMapper();
 			  while (rs.next()) {
 		          Product image = new Product();
 		          image.setId(rs.getInt("id"));
 		          image.setProduct_name(rs.getString("product_name"));
 		          image.setProduct_slug(rs.getString("product_slug"));
-		          image.setCategory_id(1);
-		          image.setShop_id(0);
+		          image.setCategory_id(rs.getInt("category_id"));
+		          image.setShop_id(rs.getInt("shop_id"));
 		          image.setPrice(rs.getDouble("price"));
 		          image.setOriginal_price(rs.getDouble("original_price"));
-		          image.setProduct_name(rs.getString("product_name"));
+		          image.setStock_quantity(rs.getInt("stock_quantity"));
+		          image.setIs_active(rs.getInt("is_active"));
+		          image.setDescription(rs.getString("description"));
 		          image.setImage_url(rs.getString("image_url"));
-		          image.setCreated_at(rs.getTimestamp("created_at").toLocalDateTime());
-		             list.add(image);
+		          try { image.setReject_reason(rs.getString("reject_reason")); } catch (Exception ignore) {}
+		          try { image.setShop_name(rs.getString("shop_name")); } catch (Exception ignore) {}
+		          var ts = rs.getTimestamp("created_at");
+		          if (ts != null) image.setCreated_at(ts.toLocalDateTime());
+		          String imagesJson = rs.getString("images");
+		          if (imagesJson != null && !imagesJson.equals("[]")) {
+		              try {
+		                  List<ProductImage> images = mapper.readValue(
+		                      imagesJson,
+		                      mapper.getTypeFactory().constructCollectionType(List.class, ProductImage.class)
+		                  );
+		                  image.setImages(images);
+		              } catch (Exception ex) { image.setImages(new ArrayList<>()); }
+		          } else {
+		              image.setImages(new ArrayList<>());
+		          }
+		          list.add(image);
 		      }
 			  return list;
 			

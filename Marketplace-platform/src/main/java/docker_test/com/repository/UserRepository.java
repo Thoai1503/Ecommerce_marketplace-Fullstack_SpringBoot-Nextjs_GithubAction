@@ -177,6 +177,20 @@ public class UserRepository implements IRepositories<User> {
 
     /* ================= EXTRA ================= */
 
+    public boolean updatePasswordHash(long userId, String newHash) {
+        String sql = "UPDATE user SET password_hash = ?, updated_at = ? WHERE id = ?";
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, newHash);
+            ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setLong(3, userId);
+            return ps.executeUpdate() > 0;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+    }
+
     public boolean existsByEmail(String email) {
 
         String sql = "SELECT 1 FROM user WHERE email = ? LIMIT 1";
@@ -193,6 +207,18 @@ public class UserRepository implements IRepositories<User> {
         return false;
     }
     
+    public boolean existsByPhone(String phone) {
+        String sql = "SELECT 1 FROM user WHERE phone = ? LIMIT 1";
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, phone);
+            return ps.executeQuery().next();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     public User findByEmail(String email) {
 
         String sql = "SELECT * FROM user WHERE email = ? LIMIT 1";

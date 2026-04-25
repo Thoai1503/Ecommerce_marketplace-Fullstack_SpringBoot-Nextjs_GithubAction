@@ -48,7 +48,7 @@
 - [ ] FE: `/admin/unit` (list + form create/edit).
 - [ ] Tích hợp chọn unit trong form sản phẩm/seller product.
 
-#### 8. Products Management
+#### 8. Products Management 
 
 - [ ] API: List/Detail/Update/Approve/Reject sản phẩm (từ seller).
 - [ ] FE: `/admin/products` (list + filter theo status).

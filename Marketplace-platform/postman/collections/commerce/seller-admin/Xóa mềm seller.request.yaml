@@ -1,0 +1,52 @@
+$kind: http-request
+name: 'Xóa mềm seller'
+method: DELETE
+url: 'http://127.0.0.1:8001/admin/sellers/{{sellerId}}'
+order: 1776043672048
+headers:
+  - key: Content-Type
+    value: application/json
+auth:
+  type: noauth
+description: |-
+  Xóa mềm (soft delete) seller theo ID. Không xóa vật lý khỏi DB.
+
+  **Path param:** `id` — ID của shop/seller
+
+  **Logic BE:**
+  - Set status = BLOCKED, is_active = 0, user.isActive = 0
+  - Đây là soft delete: dữ liệu vẫn còn trong DB
+  - Dữ liệu vẫn còn trong DB để audit
+
+  **Error cases:**
+  - 404 — Seller not found
+  - 400 — Delete failed (lỗi DB)
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // ✅ TC-01: Status 200 OK
+      pm.test("TC-01: Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      // ✅ TC-02: Response body là true (soft delete thành công)
+      pm.test("TC-02: Response body is true", function () {
+          const json = pm.response.json();
+          pm.expect(json).to.eql(true);
+      });
+
+      // ✅ TC-03: Response time < 2000ms
+      pm.test("TC-03: Response time is less than 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      // ─── VALIDATE cases ───────────────────────────────────────────────────
+      // ❌ VALIDATE-01: ID không tồn tại → 404
+      // URL: /admin/sellers/999999 → expect 404 "Seller not found"
+
+      // ❌ VALIDATE-02: ID không phải số → 400
+      // URL: /admin/sellers/abc → expect 400
+
+      // ❌ VALIDATE-03: Xóa seller đã xóa rồi → 404
+      // Gọi lại lần 2 → expect 404 "Seller not found"

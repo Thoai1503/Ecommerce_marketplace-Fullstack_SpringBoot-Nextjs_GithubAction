@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get seller shop by user id
+url: '{{baseUrl}}/seller/shop/user/{{userId}}'
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+order: 1776045000003

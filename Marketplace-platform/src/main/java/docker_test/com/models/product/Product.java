@@ -212,8 +212,22 @@ public final class Product {
 	private List<ProductImage> images;
 	
     private Integer is_active=1;
+    private String reject_reason;
+    private String shop_name; // joined from shop table for listing
+
+    public String getShop_name() { return shop_name; }
+    public void setShop_name(String shop_name) { this.shop_name = shop_name; }
+
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
+
+    public String getReject_reason() {
+        return reject_reason;
+    }
+
+    public void setReject_reason(String reject_reason) {
+        this.reject_reason = reject_reason;
+    }
 
     public Product() {
         this.stock_quantity = 0;

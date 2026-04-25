@@ -15,6 +15,8 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -153,10 +155,23 @@ public class ProductImageController {
 	}
 	
 	
+	// GET /seller/product-image/product/{id} — lấy ảnh theo product
 	@GetMapping("/product/{id}")
-	private ResponseEntity getByProductId(@PathVariable Integer id) {
-      var  repositori = ((ProductImageRepository) repositories).GetByProductId(id);
-        return ResponseEntity.ok(repositori);
+	public ResponseEntity<?> getByProductId(@PathVariable Integer id) {
+		var list = ((ProductImageRepository) repositories).GetByProductId(id);
+		return ResponseEntity.ok(list);
 	}
-	
+
+	// DELETE /seller/product-image/{id} — xóa ảnh theo id
+	@DeleteMapping("/{id}")
+	public ResponseEntity<?> delete(@PathVariable Integer id) {
+		var existing = ((ProductImageRepository) repositories).GetById(id);
+		if (existing == null)
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Image not found");
+
+		boolean deleted = ((ProductImageRepository) repositories).Delete(id);
+		if (!deleted)
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Delete image failed");
+		return ResponseEntity.ok(true);
+	}
 }

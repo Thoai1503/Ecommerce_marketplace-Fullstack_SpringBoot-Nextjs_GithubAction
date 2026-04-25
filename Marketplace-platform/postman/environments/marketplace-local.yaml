@@ -1,0 +1,24 @@
+$kind: environment
+name: marketplace-local
+values:
+  - key: baseUrl
+    value: 'http://localhost:8080'
+    enabled: true
+  - key: userId
+    value: '1'
+    enabled: true
+  - key: shopId
+    value: '1'
+    enabled: true
+  - key: productId
+    value: '1'
+    enabled: true
+  - key: categoryId
+    value: '1'
+    enabled: true
+  - key: variantId
+    value: '1'
+    enabled: true
+  - key: timestamp
+    value: '1744716759'
+    enabled: true
