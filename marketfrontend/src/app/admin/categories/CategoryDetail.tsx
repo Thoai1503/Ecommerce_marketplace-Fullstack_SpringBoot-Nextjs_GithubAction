@@ -33,6 +33,7 @@ import CreateValueModal from "@/components/admin/value/CreateValueModal";
 import SelectBrandModal from "@/components/admin/brands/SelectBrandModal";
 import { useBrands } from "@/hooks/admin/useBrands";
 import { useCategoryBrands } from "@/hooks/admin/userCategoryBrands";
+import { API_URL } from "@/helper/api";
 
 const StatusConfig: Record<
   CategoryStatus,
@@ -423,7 +424,7 @@ export default function CategoryDetail() {
                             if (!ok) return;
 
                             await fetch(
-                              `http://localhost:8000/api/category-brand/${b.categoryBrandId}`,
+                              `${API_URL}/api/category-brand/${b.categoryBrandId}`,
                               { method: "DELETE" },
                             );
 
@@ -739,7 +740,7 @@ export default function CategoryDetail() {
 
             await Promise.all(
               ids.map((brandId) =>
-                fetch("http://localhost:8000/api/category-brand", {
+                fetch(`${API_URL}/api/category-brand`, {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",
