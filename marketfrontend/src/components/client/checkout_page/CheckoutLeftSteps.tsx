@@ -17,7 +17,7 @@ import {
 } from "@/components/client/checkout_page/types";
 import type { Address } from "@/components/client/checkout_page/types";
 
-type PaymentMethod = "cod" | "VNPAY" | "BANK";
+type PaymentMethod = "COD" | "VNPAY" | "BANK";
 
 const PAYMENT_OPTIONS: {
   id: PaymentMethod;
@@ -26,7 +26,7 @@ const PAYMENT_OPTIONS: {
   icon: React.ReactNode;
 }[] = [
   {
-    id: "cod",
+    id: "COD",
     label: "Thanh toán khi nhận hàng (COD)",
     description: "Trả tiền mặt khi nhận hàng tại nhà.",
     icon: <Banknote size={24} color="#22c55e" strokeWidth={1.5} />,
@@ -90,7 +90,7 @@ export default function CheckoutLeftSteps({
   onPaymentMethodChange,
 }: CheckoutLeftStepsProps) {
   const [selectedPayment, setSelectedPayment] =
-    React.useState<PaymentMethod>("cod");
+    React.useState<PaymentMethod>("COD");
   const hasAddress = Boolean(defaultAddress) && addresses.length > 0;
 
   const handleSelectPayment = (method: PaymentMethod) => {

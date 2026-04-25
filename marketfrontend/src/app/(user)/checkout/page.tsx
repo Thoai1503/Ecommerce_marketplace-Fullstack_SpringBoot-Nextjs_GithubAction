@@ -815,7 +815,7 @@ export default function CheckoutPage() {
           ...prev,
           orderId: dt.id,
         }));
-        if (paymentInfo.method !== "cod") {
+        if (paymentInfo.method !== "COD") {
           //checkOut({ ...paymentInfo, orderId: dt.id });
           window.location.href = `${dt.paymentUrl}`; // Chuyển hướng đến cổng thanh toán VNPAY
         } else {

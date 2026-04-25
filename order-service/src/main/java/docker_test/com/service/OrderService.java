@@ -1,6 +1,7 @@
 package docker_test.com.service;
 
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -123,28 +124,34 @@ public class OrderService {
         String paymentCreateUrl = resolvePaymentCreateUrl();
         log.info("Calling payment service URL: {}", paymentCreateUrl);
 
-        String paymentUrl = webClient.post()
-            .uri(paymentCreateUrl)
-				.bodyValue(Map.of(
-						"orderId", saved.getId(),
-						"amount", saved.getFinalAmount(),
-						"paymentProvider", saved.getPaymentMethod(),
-						"orderInfo", "Payment for order " + saved.getOrderNumber(),
-						"ipAddress", "10.0.0.0.1",
-						"orderType", "ecommerce"
-						
-						
-				))
-				.retrieve()
-                .bodyToMono(String.class)
-				.block();
-        System.out.println("Payment url response: " + paymentUrl);
+        String paymentUrl = null;
+        if(
+        		//saved.getPaymentMethod().trim().toUpperCase()!="COD"
+        		 !"COD".equalsIgnoreCase(saved.getPaymentMethod())
+        		) {
+        	log.info("Order {} has payment method {}. Proceeding to generate payment URL.", saved.getId(), saved.getPaymentMethod());
+			log.info("Order {} requires online payment. Initiating payment URL generation.", saved.getId());
+			 paymentUrl = webClient.post()
+					.uri(paymentCreateUrl)
+					.bodyValue(Map.of(
+							"orderId", saved.getId(),
+							"amount", saved.getFinalAmount(),
+							"paymentProvider", saved.getPaymentMethod(),
+							"orderInfo", "Payment for order " + saved.getOrderNumber(),
+							"ipAddress", "10.0.0.0.1",
+							"orderType", "ecommerce"))
+					.retrieve()
+					.bodyToMono(String.class)
+					.block();
+			System.out.println("Payment url response: " + paymentUrl);
+		} else {
+			log.info("Order {} is Cash on Delivery. Skipping payment URL generation.", saved.getId());
+		}
 
         try {
             eventPublisher.publish(dto);
          dto.getOrders_items().forEach(item -> {
-        	// OrderItem orderItem = buildItem(item, saved.getId());
-        	 eventPublisher.publishStockUpdate(item);
+          	 eventPublisher.publishStockUpdate(item);
          });
             log.info("Order event published successfully for orderId={}", saved.getId());
         } catch (Exception e) {
@@ -163,9 +170,11 @@ public class OrderService {
                 responseDTO.setPaymentUrl(paymentUrl);
                 return responseDTO;
             } else {
+            //	Arrays.sort(paymentUrl == null ? new String[]{} : new String[]{paymentUrl});
                 log.warn("Payment URL generation failed for orderId={}. Response: {}", saved.getId(), paymentUrl);
                 saved.setPaymentStatus("FAILED");
                 orderRepository.save(saved);
+                responseDTO.setPaymentUrl("http:103.90.225.130:4000/orders/" + saved.getId());
                 // Depending on business rules, you might want to throw an exception here to rollback the order creation
                 // throw new RuntimeException("Payment failed for orderId=" + saved.getId());
             }
