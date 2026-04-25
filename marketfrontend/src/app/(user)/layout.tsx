@@ -93,7 +93,7 @@ export default async function UserLayout({
                       <ShoppingBag size={22} className="text-white" />
                     </div>
                     <h1 className="fs-4 fw-bold mb-0 d-none d-md-block">
-                      E-commerce platform
+                      Nexamart
                     </h1>
                   </a>
                 </div>
