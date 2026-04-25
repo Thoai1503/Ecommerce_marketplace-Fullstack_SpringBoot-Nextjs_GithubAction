@@ -8,6 +8,7 @@ import { Editor } from "@tinymce/tinymce-react";
 import { Upload } from "antd";
 import React, { use, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { UPLOAD_API_URL } from "@/helper/api";
 interface ProductFormData {
   name: string;
   category: string;
@@ -533,7 +534,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                               "undo redo | bold italic | alignleft aligncenter alignright | image media link code",
 
                             // URL API backend để nhận file upload
-                            images_upload_url: "http://localhost:5000/upload",
+                            images_upload_url: `${UPLOAD_API_URL}/upload`,
 
                             // Custom handler nếu muốn tự điều khiển upload
                             images_upload_handler: async (
@@ -553,7 +554,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                                   "form data: " + JSON.stringify(formData),
                                 );
                                 const response = await fetch(
-                                  "http://localhost:5000/upload",
+                                  `${UPLOAD_API_URL}/upload`,
                                   {
                                     method: "POST",
                                     body: formData,
@@ -561,7 +562,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                                 );
 
                                 const json = await response.json();
-                                // giả sử backend trả về { url: "http://localhost:5000/uploads/abc.png" }
+                                // giả sử backend trả về { url: "https://files.example.com/uploads/abc.png" }
                                 const imageUrl = json.url;
 
                                 // TinyMCE yêu cầu success(URL string)

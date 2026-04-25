@@ -1,7 +1,7 @@
 import { API_URL } from "@/helper/api";
 import { Unit } from "@/types";
 
-//const API_URL = "http://localhost:8000/api/unit";
+// Legacy hardcoded API URL removed; use API_URL from helper.
 
 // ================= GET ALL =================
 export const getUnits = async (): Promise<Unit[]> => {

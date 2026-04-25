@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useBrands } from "@/hooks/admin/useBrands";
 import { generateSlug } from "@/service/brands";
 import { ChevronLeft, Save, UploadCloud } from "lucide-react";
+import { API_URL } from "@/helper/api";
 
 export default function EditBrand() {
   const router = useRouter();
@@ -65,7 +66,7 @@ export default function EditBrand() {
       form.append("file", file);
 
       // Gọi API backend (Marketplace-platform) thay vì API local
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/upload/brand`, {
+      const res = await fetch(`${API_URL}/api/upload/brand`, {
         method: "POST",
         body: form,
       });

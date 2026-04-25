@@ -5,8 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import ShopSidebar from "@/components/client/shop/ShopSidebar";
 import Link from "next/link";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { API_URL } from "@/helper/api";
 
 export default function ShopPage() {
   const params = useParams();
