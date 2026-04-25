@@ -154,7 +154,7 @@ export default function CategoryDetail() {
     setOpenValueModal(true);
   };
   const addAttributeUnit = async (attributeId: number, unitId: number) => {
-    const res = await fetch("http://localhost:8000/api/attribute-unit", {
+    const res = await fetch(`${API_URL}/api/attribute-unit`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
