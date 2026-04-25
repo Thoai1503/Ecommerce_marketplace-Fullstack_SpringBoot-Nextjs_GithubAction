@@ -9,6 +9,7 @@ import { useAddImageSeller, useAddProductSeller } from "@/feature/seller/hooks";
 import CategorySelectorModal from "@/feature/seller/components/CategorySelectorModal";
 import { useSellerSideBarContext } from "@/context/SellerSideBarContext";
 import EditProductForm from "@/components/seller/add_product_page/EditProductForm";
+import { UPLOAD_API_URL } from "@/helper/api";
 
 interface ProductFormData {
   name: string;
@@ -561,7 +562,7 @@ const AddProductForm: React.FC = () => {
                               "undo redo | bold italic | alignleft aligncenter alignright | image media link code",
 
                             // URL API backend để nhận file upload
-                            images_upload_url: "http://localhost:5000/upload",
+                            images_upload_url: `${UPLOAD_API_URL}/upload`,
 
                             // Custom handler nếu muốn tự điều khiển upload
                             images_upload_handler: async (
@@ -581,7 +582,7 @@ const AddProductForm: React.FC = () => {
                                   "form data: " + JSON.stringify(formData),
                                 );
                                 const response = await fetch(
-                                  "http://localhost:5000/upload",
+                                  `${UPLOAD_API_URL}/upload`,
                                   {
                                     method: "POST",
                                     body: formData,
@@ -589,7 +590,7 @@ const AddProductForm: React.FC = () => {
                                 );
 
                                 const json = await response.json();
-                                // giả sử backend trả về { url: "http://localhost:5000/uploads/abc.png" }
+                                // giả sử backend trả về { url: "https://files.example.com/uploads/abc.png" }
                                 const imageUrl = json.url;
 
                                 // TinyMCE yêu cầu success(URL string)

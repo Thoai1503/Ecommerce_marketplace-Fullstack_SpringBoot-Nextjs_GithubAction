@@ -1,7 +1,5 @@
 import { API_URL } from "@/helper/api";
 
-const BASE_URL = "http://localhost:8000/api/brands";
-
 export const getBrandById = async (id: number) => {
   const res = await fetch(`${API_URL}/api/brands/${id}`);
   if (!res.ok) throw new Error("Brand not found");
