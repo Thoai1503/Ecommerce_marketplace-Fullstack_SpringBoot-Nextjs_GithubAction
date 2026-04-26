@@ -1,6 +1,5 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import HeaderAuth from "@/components/HeaderAuth";
 import { cookies } from "next/headers";
@@ -12,16 +11,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RootPrivider } from "@/components/context/RootProvider";
 import Link from "next/link";
 import CartIconWithCount from "@/components/CartIconWithCount";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Sàn TMĐT - Trang chủ",

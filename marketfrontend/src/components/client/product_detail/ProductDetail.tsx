@@ -316,7 +316,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                         "/assets/images/ecommerce/product-1.jpg"
                                       }
                                       alt={
-                                        variant.variantName ||
+                                        variant.name ||
                                         variant.sku ||
                                         data.product_name ||
                                         "Product variant"

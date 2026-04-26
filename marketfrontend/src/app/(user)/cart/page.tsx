@@ -31,29 +31,6 @@ type PreLoginCartItem = {
   quantity: number;
 };
 
-type OwnedVoucher = {
-  id: number;
-  code: string;
-  title: string;
-  description?: string | null;
-  discountType?: string | null;
-  discountPercent?: number | null;
-  discountAmount?: number | null;
-  maxDiscountAmount?: number | null;
-  minOrderValue?: number | null;
-  validTo?: string | null;
-  claimEndAt?: string | null;
-  issuerType?: string | null;
-  status: string;
-  claimedAt?: string | null;
-};
-
-type VoucherAvailability = {
-  voucher: OwnedVoucher;
-  isEligible: boolean;
-  reason: string | null;
-};
-
 const resolveProductId = (item: any): number | null => {
   return (
     item?.guestProductId ??
@@ -76,84 +53,6 @@ const resolveVariantId = (item: any): number | null => {
   );
 };
 
-const formatDate = (value?: string | null) => {
-  if (!value) return "No expiry";
-  return new Date(value).toLocaleDateString("vi-VN");
-};
-
-const normalizeVoucherNumber = (value: unknown) => {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const getVoucherLabel = (voucher: OwnedVoucher) => {
-  const type = String(voucher.discountType ?? "").toUpperCase();
-
-  if (type === "PERCENT") {
-    return `Save ${normalizeVoucherNumber(voucher.discountPercent)}%`;
-  }
-
-  if (type === "FIXED") {
-    return `Save ${normalizeVoucherNumber(voucher.discountAmount).toLocaleString("vi-VN")}d`;
-  }
-
-  if (type === "FREE_SHIPPING") {
-    return "Free shipping";
-  }
-
-  if (type === "GIFT_ITEM") {
-    return "Gift item";
-  }
-
-  return voucher.title;
-};
-
-const getVoucherAvailability = (
-  voucher: OwnedVoucher,
-  subtotal: number,
-): VoucherAvailability => {
-  const status = String(voucher.status ?? "").toUpperCase();
-  if (status && status !== "CLAIMED") {
-    return {
-      voucher,
-      isEligible: false,
-      reason: "Da su dung hoac khong kha dung",
-      
-    };
-  }
-
-  const now = Date.now();
-  if (voucher.validTo && new Date(voucher.validTo).getTime() < now) {
-    return {
-      voucher,
-      isEligible: false,
-      reason: "Da het han",
-    };
-  }
-
-  if (subtotal <= 0) {
-    return {
-      voucher,
-      isEligible: false,
-      reason: "Chon san pham de dung voucher",
-    };
-  }
-
-  const minOrderValue = normalizeVoucherNumber(voucher.minOrderValue);
-  if (minOrderValue > 0 && subtotal < minOrderValue) {
-    return {
-      voucher,
-      isEligible: false,
-      reason: `Min. order ${minOrderValue.toLocaleString("vi-VN")}d`,
-    };
-  }
-
-  return {
-    voucher,
-    isEligible: true,
-    reason: null,
-  };
-};
 
 const ShoppingCart: React.FC = () => {
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
@@ -170,13 +69,6 @@ const ShoppingCart: React.FC = () => {
   // Track items đang được update/delete để disable tương tác
   const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
   const [stockWarning, setStockWarning] = useState<Record<number, string>>({});
-  const [ownedVouchers, setOwnedVouchers] = useState<OwnedVoucher[]>([]);
-  const [voucherLoading, setVoucherLoading] = useState(false);
-  const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(
-    null,
-  );
-  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
-  const [draftVoucherId, setDraftVoucherId] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -398,94 +290,7 @@ const ShoppingCart: React.FC = () => {
     }
   }, [isError, status]);
 
-  const shippingFee = 35000;
-
-  useEffect(() => {
-    if (!userId) {
-      setOwnedVouchers([]);
-      setSelectedVoucherId(null);
-      return;
-    }
-
-    const loadOwnedVouchers = async () => {
-      setVoucherLoading(true);
-
-      try {
-        const [userVouchersRes, vouchersRes] = await Promise.all([
-          fetch(`${API_URL}/api/user-vouchers/user/${userId}`, {
-            credentials: "include",
-            cache: "no-store",
-          }),
-          fetch(`${API_URL}/api/vouchers`, {
-            credentials: "include",
-            cache: "no-store",
-          }),
-        ]);
-
-        if (!userVouchersRes.ok || !vouchersRes.ok) {
-          throw new Error("Failed to load vouchers");
-        }
-
-        const [userVouchersJson, vouchersJson] = await Promise.all([
-          userVouchersRes.json(),
-          vouchersRes.json(),
-        ]);
-
-        const userVouchers = Array.isArray(userVouchersJson)
-          ? userVouchersJson
-          : [];
-        const vouchers = Array.isArray(vouchersJson) ? vouchersJson : [];
-        const voucherMap = new Map(
-          vouchers.map((voucher: any) => [Number(voucher.id), voucher]),
-        );
-
-        const merged = userVouchers
-          .map((item: any) => {
-            const voucher = voucherMap.get(
-              Number(item.voucherId ?? item.voucher_id),
-            );
-            if (!voucher) return null;
-
-            return {
-              id: Number(voucher.id),
-              code: voucher.code,
-              title: voucher.title,
-              description: voucher.description,
-              discountType: voucher.discountType ?? voucher.discount_type,
-              discountPercent:
-                voucher.discountPercent ?? voucher.discount_percent,
-              discountAmount:
-                voucher.discountAmount ?? voucher.discount_amount,
-              maxDiscountAmount:
-                voucher.maxDiscountAmount ?? voucher.max_discount_amount,
-              minOrderValue: voucher.minOrderValue ?? voucher.min_order_value,
-              validTo: voucher.validTo ?? voucher.valid_to,
-              claimEndAt: voucher.claimEndAt ?? voucher.claim_end_at,
-              issuerType: voucher.issuerType ?? voucher.issuer_type,
-              status: item.status,
-              claimedAt: item.claimedAt ?? item.claimed_at,
-            } satisfies OwnedVoucher;
-          })
-          .filter((item: OwnedVoucher | null): item is OwnedVoucher =>
-            Boolean(item),
-          )
-          .sort((a, b) => {
-            const left = a.claimedAt ? new Date(a.claimedAt).getTime() : 0;
-            const right = b.claimedAt ? new Date(b.claimedAt).getTime() : 0;
-            return right - left;
-          });
-
-        setOwnedVouchers(merged);
-      } catch (error) {
-        console.error("Load cart vouchers error:", error);
-        setOwnedVouchers([]);
-      } finally {
-        setVoucherLoading(false);
-      }
-    };
-
-    loadOwnedVouchers();
-  }, [userId]);
+  const shippingFee: number = 35000;
 
   const syncGuestCartLocalStorage = (nextItems: CartStateItem[]) => {
     if (typeof window === "undefined") return;
@@ -555,53 +360,6 @@ const ShoppingCart: React.FC = () => {
   const selectedCount = enrichedCartItems.filter(
     (item) => item.selected,
   ).length;
-
-  const voucherAvailabilityList = useMemo(() => {
-    const subtotal = calculateSubtotal();
-    return ownedVouchers.map((voucher) =>
-      getVoucherAvailability(voucher, subtotal),
-    );
-  }, [ownedVouchers, enrichedCartItems]);
-
-  const usableVouchers = useMemo(
-    () =>
-      voucherAvailabilityList
-        .filter((item) => item.isEligible)
-        .map((item) => item.voucher),
-    [voucherAvailabilityList],
-  );
-
-  useEffect(() => {
-    if (!selectedVoucherId) return;
-
-    const stillUsable = usableVouchers.some(
-      (voucher) => voucher.id === selectedVoucherId,
-    );
-
-    if (!stillUsable) {
-      setSelectedVoucherId(null);
-    }
-  }, [selectedVoucherId, usableVouchers]);
-
-  useEffect(() => {
-    if (isVoucherModalOpen) {
-      setDraftVoucherId(selectedVoucherId);
-    }
-  }, [isVoucherModalOpen, selectedVoucherId]);
-
-  const openVoucherModal = () => {
-    setDraftVoucherId(selectedVoucherId);
-    setIsVoucherModalOpen(true);
-  };
-
-  const closeVoucherModal = () => {
-    setIsVoucherModalOpen(false);
-  };
-
-  const applySelectedVoucher = () => {
-    setSelectedVoucherId(draftVoucherId);
-    setIsVoucherModalOpen(false);
-  };
 
   // ===== Checkbox logic =====
   const isAllSelected =
@@ -1129,43 +887,6 @@ const ShoppingCart: React.FC = () => {
               </div>
             </div>
 
-            {/* Voucher Card */}
-            <div className="card shadow-sm mb-3">
-              <div className="card-body">
-                <h6 className="text-uppercase text-muted small fw-bold mb-3 d-flex align-items-center gap-2">
-                  <i className="bi bi-tag"></i>
-                  Promotion vouchers
-                </h6>
-                {!isLoggedIn && (
-                  <div className="alert alert-light small mb-0">
-                    Sign in to view your available vouchers.
-                  </div>
-                )}
-
-                {isLoggedIn && (
-                  <>
-                    {voucherLoading && (
-                      <div className="text-muted small">
-                        Loading vouchers...
-                      </div>
-                    )}
-
-                    {!voucherLoading && ownedVouchers.length === 0 && (
-                      <div className="alert alert-light small mb-0">
-                        You do not have any vouchers yet.
-                      </div>
-                    )}
-
-                    {!voucherLoading && ownedVouchers.length > 0 && (
-                      <div className="alert alert-light small mb-0">
-                        Voucher selection is available at checkout.
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
             {/* Payment Summary */}
             <div className="card shadow-sm mb-3">
               <div className="card-body">
@@ -1175,12 +896,6 @@ const ShoppingCart: React.FC = () => {
                   </span>
                   <span className="fw-semibold">
                     {formatCurrency(calculateSubtotal())}
-                  </span>
-                </div>
-                <div className="d-flex justify-content-between mb-3">
-                  <span className="text-muted small">Giảm giá voucher</span>
-                  <span className="fw-semibold text-success">
-                    - {formatCurrency(0)}
                   </span>
                 </div>
                 <div className="d-flex justify-content-between mb-3">

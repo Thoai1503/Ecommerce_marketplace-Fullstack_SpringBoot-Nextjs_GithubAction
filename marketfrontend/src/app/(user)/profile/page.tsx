@@ -124,8 +124,8 @@ export default function ProfilePage() {
           vouchers.map((voucher: any) => [Number(voucher.id), voucher]),
         );
 
-        const merged = userVouchers
-          .map((item: any) => {
+        const mappedVouchers: Array<OwnedVoucher | null> = userVouchers.map(
+          (item: any) => {
             const voucher = voucherMap.get(Number(item.voucherId ?? item.voucher_id));
             if (!voucher) return null;
 
@@ -143,8 +143,11 @@ export default function ProfilePage() {
               status: item.status,
               claimedAt: item.claimedAt ?? item.claimed_at,
             } satisfies OwnedVoucher;
-          })
-          .filter((item: OwnedVoucher | null): item is OwnedVoucher => Boolean(item))
+          },
+        );
+
+        const merged: OwnedVoucher[] = mappedVouchers
+          .filter((item): item is OwnedVoucher => item !== null)
           .sort((a, b) => {
             const left = a.claimedAt ? new Date(a.claimedAt).getTime() : 0;
             const right = b.claimedAt ? new Date(b.claimedAt).getTime() : 0;
