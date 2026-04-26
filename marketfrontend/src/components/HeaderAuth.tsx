@@ -52,11 +52,7 @@ export default function HeaderAuth() {
     const cart = localStorage.getItem("cart");
     if (cart) {
       const items = JSON.parse(cart);
-      const total = items.reduce(
-        (sum: number, item: any) => sum + item.quantity,
-        0,
-      );
-      setCartCount(total);
+      setCartCount(Array.isArray(items) ? items.length : 0);
     }
   }, []);
 

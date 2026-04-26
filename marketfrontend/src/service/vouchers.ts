@@ -6,6 +6,8 @@ import {
   VoucherAuditEvent,
   VoucherRedemptionEvent,
   VoucherRulesPayload,
+  VoucherScopeRule,
+  VoucherSegmentRule,
   VoucherStatus,
 } from "@/types";
 import { API_URL } from "@/helper/api";
@@ -79,16 +81,101 @@ export const getVoucherAdminStats = async (): Promise<VoucherAdminStats> => {
   };
 };
 
-// ================= RULES (chưa có backend) =================
-export const getVoucherRules = async (): Promise<VoucherRulesPayload> => {
-  return { scopeRules: [], segmentRules: [] };
+const normalizeScopeRule = (rule: any): VoucherScopeRule => ({
+  id: String(rule?.id ?? ""),
+  voucherId: String(rule?.voucherId ?? rule?.voucher_id ?? ""),
+  scopeType: rule?.scopeType ?? rule?.scope_type ?? "CATEGORY",
+  scopeId: Number(rule?.scopeId ?? rule?.scope_id ?? 0),
+  includeExclude:
+    rule?.includeExclude ?? rule?.include_exclude ?? "INCLUDE",
+  createdAt:
+    rule?.createdAt ?? rule?.created_at ?? new Date().toISOString(),
+});
+
+const normalizeSegmentRule = (rule: any): VoucherSegmentRule => ({
+  id: String(rule?.id ?? ""),
+  voucherId: String(rule?.voucherId ?? rule?.voucher_id ?? ""),
+  segmentType: rule?.segmentType ?? rule?.segment_type ?? "NEW_USER",
+  segmentValue: rule?.segmentValue ?? rule?.segment_value ?? null,
+});
+
+const toScopeApiPayload = (voucherId: string, rule: VoucherScopeRule) => ({
+  voucherId: Number(voucherId),
+  scopeType: rule.scopeType,
+  scopeId: Number(rule.scopeId || 0),
+  includeExclude: rule.includeExclude,
+});
+
+const toSegmentApiPayload = (voucherId: string, rule: VoucherSegmentRule) => ({
+  voucherId: Number(voucherId),
+  segmentType: rule.segmentType,
+  segmentValue: rule.segmentValue || null,
+});
+
+// ================= RULES =================
+export const getVoucherRules = async (
+  voucherId: string,
+): Promise<VoucherRulesPayload> => {
+  const [scopeRes, segmentRes] = await Promise.all([
+    axios.get(`${API_URL}/api/voucher-scope-rules/voucher/${voucherId}`),
+    axios.get(`${API_URL}/api/voucher-segment-rules/voucher/${voucherId}`),
+  ]);
+
+  return {
+    scopeRules: Array.isArray(scopeRes.data)
+      ? scopeRes.data.map(normalizeScopeRule)
+      : [],
+    segmentRules: Array.isArray(segmentRes.data)
+      ? segmentRes.data.map(normalizeSegmentRule)
+      : [],
+  };
 };
 
 export const saveVoucherRules = async (
   voucherId: string,
   payload: VoucherRulesPayload,
 ): Promise<VoucherRulesPayload> => {
-  return payload;
+  await axios.delete(`${API_URL}/api/voucher-scope-rules/voucher/${voucherId}`);
+
+  const currentSegments = await axios.get(
+    `${API_URL}/api/voucher-segment-rules/voucher/${voucherId}`,
+  );
+
+  if (Array.isArray(currentSegments.data)) {
+    await Promise.all(
+      currentSegments.data.map((rule: any) =>
+        axios.delete(`${API_URL}/api/voucher-segment-rules/${rule.id}`),
+      ),
+    );
+  }
+
+  const [scopeRules, segmentRules] = await Promise.all([
+    Promise.all(
+      payload.scopeRules.map((rule) =>
+        axios
+          .post(
+            `${API_URL}/api/voucher-scope-rules`,
+            toScopeApiPayload(voucherId, rule),
+          )
+          .then((res) => normalizeScopeRule(res.data)),
+      ),
+    ),
+    Promise.all(
+      payload.segmentRules.map((rule) =>
+        axios
+          .post(
+            `${API_URL}/api/voucher-segment-rules`,
+            toSegmentApiPayload(voucherId, rule),
+          )
+          .then((res) => normalizeSegmentRule(res.data)),
+      ),
+    ),
+  ]);
+
+  return {
+    scopeRules,
+    segmentRules,
+  };
 };
 
 // ================= REDEMPTION (tạm mock) =================

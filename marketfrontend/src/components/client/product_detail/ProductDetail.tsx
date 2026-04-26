@@ -67,6 +67,10 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
 
   const handleAddToCart = (cart: ICart) => {
     if (!userId) {
+      const notifyCartUpdated = () => {
+        window.dispatchEvent(new Event("cart-updated"));
+      };
+
       if (selectedVariant === null) {
         message.warning("Vui lòng chọn phân loại sản phẩm");
         return;
@@ -84,6 +88,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
         if (existingItemIndex !== -1) {
           preLoginCart[existingItemIndex].quantity += cart.quantity;
           localStorage.setItem("preLoginCart", JSON.stringify(preLoginCart));
+          notifyCartUpdated();
           message.success(
             "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
           );
@@ -91,6 +96,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
         } else {
           const pushedItem = [...preLoginCart, cart];
           localStorage.setItem("preLoginCart", JSON.stringify(pushedItem));
+          notifyCartUpdated();
           message.success(
             "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
           );
@@ -100,6 +106,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
       preLoginCart.push(cart);
 
       localStorage.setItem("preLoginCart", JSON.stringify(preLoginCart));
+      notifyCartUpdated();
 
       message.success(
         "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
@@ -118,6 +125,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
     addToCart(cart, {
       onSuccess: (data) => {
         console.log("Added to cart:", data);
+        window.dispatchEvent(new Event("cart-updated"));
         message.success("Thêm vào giỏ hàng thành công");
       },
       onError: (error) => {
@@ -307,7 +315,12 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                         variant.image_url ||
                                         "/assets/images/ecommerce/product-1.jpg"
                                       }
-                                      alt={variant.name}
+                                      alt={
+                                        variant.variantName ||
+                                        variant.sku ||
+                                        data.product_name ||
+                                        "Product variant"
+                                      }
                                       width={80}
                                       height={80}
                                       className="img-fluid rounded mb-2"

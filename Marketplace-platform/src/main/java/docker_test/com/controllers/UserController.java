@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import docker_test.com.dto.LoginRequest;
+import docker_test.com.dto.LoginResponse;
 import docker_test.com.dto.RegisterRequest;
 import docker_test.com.models.User;
 import docker_test.com.repository.UserRepository;
@@ -170,6 +171,10 @@ public class UserController {
 
         // ❌ không trả password
         user.setPasswordHash(null);
+        if (user.getId() == null) {
+            user.setId(userRepository.findUserIdByEmail(req.getEmail()));
+        }
+        Long resolvedUserId = user.getId();
         
         ResponseCookie roleCookie = ResponseCookie.from("role", user.getUserType())
     		    .httpOnly(true)
@@ -179,7 +184,7 @@ public class UserController {
     		    .sameSite("Lax")
     		    .build();
     		response.addHeader("Set-Cookie", roleCookie.toString());
-            ResponseCookie userCookie = ResponseCookie.from("user", String.valueOf(user.getId()))
+            ResponseCookie userCookie = ResponseCookie.from("user", String.valueOf(resolvedUserId))
         		    .httpOnly(true)
         		    .secure(false)          // requires HTTPS
         		    .path("/")
@@ -188,8 +193,14 @@ public class UserController {
         		    .build();
         		response.addHeader("Set-Cookie", userCookie.toString());
         
-        
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(
+            new LoginResponse(
+                resolvedUserId,
+                user.getEmail(),
+                user.getFullName(),
+                user.getUserType()
+            )
+        );
     }
 
     /* ================= DELETE USER ================= */
@@ -234,7 +245,23 @@ public class UserController {
             existing.setGender(req.getGender());
         }
 
+        // 🔍 Kiểm tra trùng phone (nếu có thay đổi)
+        if (req.getPhone() != null && !req.getPhone().isEmpty()) {
+            User phoneUser = userRepository.findByPhone(req.getPhone());
+            if (phoneUser != null && !phoneUser.getId().equals(existing.getId())) {
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body("Số điện thoại đã được sử dụng");
+            }
+        }
+
         User updated = userRepository.Update(existing);
+
+        if (updated == null) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Cập nhật thất bại");
+        }
 
         // ❌ KHÔNG TRẢ PASSWORD
         updated.setPasswordHash(null);

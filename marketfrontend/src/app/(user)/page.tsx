@@ -7,6 +7,7 @@ import { IProduct } from "@/validators/product";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import AllProduct from "@/components/client/home_page/AllProduct";
+import CategoryCarousel from "@/components/client/home_page/CategoryCarousel";
 import styles from "./page.module.css";
 // import { useHomePage } from "@/feature/client/hook";
 
@@ -62,8 +63,8 @@ export default async function Home() {
       {/* Hero Banner */}
       <div className={styles.heroBanner}>
         <div className={styles.heroContent}>
-          <h1 className={styles.heroTitle}>Khám phá</h1>
-          <p className={styles.heroSubtitle}>Sản phẩm chất lượng - Giá tốt nhất</p>
+          <h1 className={styles.heroTitle}>Discover</h1>
+          <p className={styles.heroSubtitle}>High-quality products - Best prices</p>
         </div>
         <div className={styles.heroOverlay}></div>
       </div>
@@ -108,31 +109,7 @@ export default async function Home() {
               Danh mục
             </h2>
           </div>
-          <div className={styles.categoryGrid}>
-            {parentCategories.map((cat: any, idx: number) => (
-              <Link
-                key={idx}
-                href={`/category/${cat.id}`}
-                className={styles.categoryCard}
-              >
-                <div
-                  className={styles.categoryIconWrap}
-                  style={{ backgroundColor: cat.color || "#f8f9fa" }}
-                >
-                  {cat.category_icon && (
-                    <img
-                      src={cat.category_icon}
-                      alt={cat.category_name}
-                      className={styles.categoryIcon}
-                    />
-                  )}
-                </div>
-                <span className={styles.categoryName}>
-                  {cat.category_name}
-                </span>
-              </Link>
-            ))}
-          </div>
+          <CategoryCarousel categories={parentCategories} />
         </section>
 
         {/* Flash Sale Section */}

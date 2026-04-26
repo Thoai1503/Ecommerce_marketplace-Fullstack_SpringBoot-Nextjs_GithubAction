@@ -20,7 +20,7 @@ const cityMap = { 202: "TP. Hồ Chí Minh", 1: "Hà Nội" };
 
 import { useQuery } from "@tanstack/react-query";
 import { message } from "antd";
-import { ADDRESS_KEY, PROVINCE_API } from "@/helper/api";
+import { ADDRESS_KEY, API_URL, PROVINCE_API } from "@/helper/api";
 import { calculateFeeOfLOGS } from "@/service/calculateFeeAPI";
 import { CalculateFeePayload } from "@/types";
 import { set } from "zod";
@@ -86,10 +86,90 @@ export function useWardName(districtId: number, wardCode: number) {
   });
 }
 
+type OwnedVoucher = {
+  id: number;
+  code: string;
+  title: string;
+  description?: string | null;
+  discountType?: string | null;
+  discountPercent?: number | null;
+  discountAmount?: number | null;
+  maxDiscountAmount?: number | null;
+  minOrderValue?: number | null;
+  validTo?: string | null;
+  claimEndAt?: string | null;
+  issuerType?: string | null;
+  status: string;
+  claimedAt?: string | null;
+};
+
+type VoucherAvailability = {
+  voucher: OwnedVoucher;
+  isEligible: boolean;
+  reason: string | null;
+};
+
+const normalizeVoucherNumber = (value: unknown) => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getVoucherAvailability = (
+  voucher: OwnedVoucher,
+  subtotal: number,
+): VoucherAvailability => {
+  const status = String(voucher.status ?? "").toUpperCase();
+  if (status && status !== "CLAIMED") {
+    return {
+      voucher,
+      isEligible: false,
+      reason: "Already used or unavailable",
+    };
+  }
+
+  const now = Date.now();
+  if (voucher.validTo && new Date(voucher.validTo).getTime() < now) {
+    return {
+      voucher,
+      isEligible: false,
+      reason: "Expired",
+    };
+  }
+
+  if (subtotal <= 0) {
+    return {
+      voucher,
+      isEligible: false,
+      reason: "Select products to use vouchers",
+    };
+  }
+
+  const minOrderValue = normalizeVoucherNumber(voucher.minOrderValue);
+  if (minOrderValue > 0 && subtotal < minOrderValue) {
+    return {
+      voucher,
+      isEligible: false,
+      reason: `Min. order ${minOrderValue.toLocaleString("vi-VN")}d`,
+    };
+  }
+
+  return {
+    voucher,
+    isEligible: true,
+    reason: null,
+  };
+};
+
 export default function CheckoutPage() {
   const { userId } = useUserAuth();
   const { data: addressesQuery } = useAddresses(userId || 0);
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const [ownedVouchers, setOwnedVouchers] = useState<OwnedVoucher[]>([]);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(
+    null,
+  );
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   useEffect(() => {
     async function mapAddresses() {
@@ -147,9 +227,18 @@ export default function CheckoutPage() {
     mapAddresses();
   }, [addressesQuery]);
   const { checkOut } = useCheckoutPage();
-  const cartItems = localStorage.getItem("selectedCartItems")
-    ? (JSON.parse(localStorage.getItem("selectedCartItems")!) as CartItem[])
-    : [];
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const raw = localStorage.getItem("selectedCartItems");
+      setCartItems(raw ? (JSON.parse(raw) as CartItem[]) : []);
+    } catch (error) {
+      console.error("Failed to read selectedCartItems:", error);
+      setCartItems([]);
+    }
+  }, []);
 
   // Group cart items by shop
   const groupedByShop = useMemo(() => {
@@ -253,15 +342,6 @@ export default function CheckoutPage() {
   const isAnyShippingFeeLoading =
     Object.values(shippingFeeLoading).some(Boolean);
 
-  // Đồng bộ paymentInfo.amount mỗi khi phí ship thay đổi
-  useEffect(() => {
-    setPaymentInfo((prev: any) => ({
-      ...prev,
-      amount: calculateSubtotal() + calculateTotalShippingFee(),
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shippingFees, shippingSelections]);
-
   // Tính tổng tiền sản phẩm
   const calculateSubtotal = () => {
     return cartItems.reduce(
@@ -269,8 +349,173 @@ export default function CheckoutPage() {
       0,
     );
   };
+
+  useEffect(() => {
+    if (!userId) {
+      setOwnedVouchers([]);
+      setSelectedVoucherId(null);
+      return;
+    }
+
+    const loadOwnedVouchers = async () => {
+      setVoucherLoading(true);
+
+      try {
+        const [userVouchersRes, vouchersRes] = await Promise.all([
+          fetch(`${API_URL}/api/user-vouchers/user/${userId}`, {
+            credentials: "include",
+            cache: "no-store",
+          }),
+          fetch(`${API_URL}/api/vouchers`, {
+            credentials: "include",
+            cache: "no-store",
+          }),
+        ]);
+
+        if (!userVouchersRes.ok || !vouchersRes.ok) {
+          throw new Error("Failed to load vouchers");
+        }
+
+        const [userVouchersJson, vouchersJson] = await Promise.all([
+          userVouchersRes.json(),
+          vouchersRes.json(),
+        ]);
+
+        const userVouchers = Array.isArray(userVouchersJson)
+          ? userVouchersJson
+          : [];
+        const vouchers = Array.isArray(vouchersJson) ? vouchersJson : [];
+        const voucherMap = new Map(
+          vouchers.map((voucher: any) => [Number(voucher.id), voucher]),
+        );
+
+        const merged = userVouchers
+          .map((item: any) => {
+            const voucher = voucherMap.get(
+              Number(item.voucherId ?? item.voucher_id),
+            );
+            if (!voucher) return null;
+
+            return {
+              id: Number(voucher.id),
+              code: voucher.code,
+              title: voucher.title,
+              description: voucher.description,
+              discountType: voucher.discountType ?? voucher.discount_type,
+              discountPercent:
+                voucher.discountPercent ?? voucher.discount_percent,
+              discountAmount:
+                voucher.discountAmount ?? voucher.discount_amount,
+              maxDiscountAmount:
+                voucher.maxDiscountAmount ?? voucher.max_discount_amount,
+              minOrderValue: voucher.minOrderValue ?? voucher.min_order_value,
+              validTo: voucher.validTo ?? voucher.valid_to,
+              claimEndAt: voucher.claimEndAt ?? voucher.claim_end_at,
+              issuerType: voucher.issuerType ?? voucher.issuer_type,
+              status: item.status,
+              claimedAt: item.claimedAt ?? item.claimed_at,
+            } satisfies OwnedVoucher;
+          })
+          .filter((item: OwnedVoucher | null): item is OwnedVoucher =>
+            Boolean(item),
+          )
+          .sort((a, b) => {
+            const left = a.claimedAt ? new Date(a.claimedAt).getTime() : 0;
+            const right = b.claimedAt ? new Date(b.claimedAt).getTime() : 0;
+            return right - left;
+          });
+
+        setOwnedVouchers(merged);
+      } catch (error) {
+        console.error("Load checkout vouchers error:", error);
+        setOwnedVouchers([]);
+      } finally {
+        setVoucherLoading(false);
+      }
+    };
+
+    loadOwnedVouchers();
+  }, [userId]);
+
+  const voucherAvailabilityList = useMemo(() => {
+    const subtotal = calculateSubtotal();
+    return ownedVouchers.map((voucher) =>
+      getVoucherAvailability(voucher, subtotal),
+    );
+  }, [ownedVouchers, cartItems]);
+
+  const selectedVoucher = ownedVouchers.find(
+    (voucher) => voucher.id === selectedVoucherId,
+  );
+
+  const voucherDiscount = useMemo(() => {
+    if (!selectedVoucher) return 0;
+
+    const subtotal = calculateSubtotal();
+    const minOrderValue = normalizeVoucherNumber(selectedVoucher.minOrderValue);
+    if (minOrderValue > 0 && subtotal < minOrderValue) {
+      return 0;
+    }
+
+    const type = String(selectedVoucher.discountType ?? "").toUpperCase();
+
+    if (type === "FIXED") {
+      return Math.min(
+        subtotal,
+        normalizeVoucherNumber(selectedVoucher.discountAmount),
+      );
+    }
+
+    if (type === "PERCENT") {
+      const rawDiscount =
+        (subtotal * normalizeVoucherNumber(selectedVoucher.discountPercent)) /
+        100;
+      const maxDiscount = normalizeVoucherNumber(
+        selectedVoucher.maxDiscountAmount,
+      );
+
+      return Math.min(
+        subtotal,
+        maxDiscount > 0 ? Math.min(rawDiscount, maxDiscount) : rawDiscount,
+      );
+    }
+
+    return 0;
+  }, [selectedVoucher, cartItems]);
+
+  const effectiveShippingFee = useMemo(() => {
+    if (!selectedVoucher) return calculateTotalShippingFee();
+
+    const subtotal = calculateSubtotal();
+    const minOrderValue = normalizeVoucherNumber(selectedVoucher.minOrderValue);
+    if (minOrderValue > 0 && subtotal < minOrderValue) {
+      return calculateTotalShippingFee();
+    }
+
+    return String(selectedVoucher.discountType ?? "").toUpperCase() ===
+      "FREE_SHIPPING"
+      ? 0
+      : calculateTotalShippingFee();
+  }, [selectedVoucher, shippingFees, shippingSelections, cartItems]);
+
+  const finalTotal = Math.max(
+    0,
+    calculateSubtotal() - voucherDiscount + effectiveShippingFee,
+  );
+
+  useEffect(() => {
+    if (!selectedVoucherId) return;
+
+    const stillUsable = voucherAvailabilityList.some(
+      (item) => item.isEligible && item.voucher.id === selectedVoucherId,
+    );
+
+    if (!stillUsable) {
+      setSelectedVoucherId(null);
+    }
+  }, [selectedVoucherId, voucherAvailabilityList]);
   const [paymentInfo, setPaymentInfo] = useState<any>({
-    amount: calculateSubtotal() + calculateTotalShippingFee(),
+    amount: finalTotal,
     orderId: Date.now(),
 
     user_id: 1,
@@ -278,6 +523,15 @@ export default function CheckoutPage() {
     bankCode: "NCB",
     orderInfo: "Thanh toán đơn hàng #123456" + Date.now(),
   });
+
+  // Đồng bộ paymentInfo.amount mỗi khi phí ship hoặc voucher thay đổi
+  useEffect(() => {
+    setPaymentInfo((prev: any) => ({
+      ...prev,
+      amount: finalTotal,
+    }));
+  }, [finalTotal]);
+
   const stepNumberBase: React.CSSProperties = {
     width: 24,
     height: 24,
@@ -711,14 +965,21 @@ export default function CheckoutPage() {
           shop_id: shopId,
           shipmentId: 0,
           shipmentCode: `SHIP-${baseTrackingSeed}-${index + 1}`,
-          shipping_fee:
-            getShippingFeeForShop(shopId, shippingSelections[shopId]) || 0,
+      shipping_fee:
+            String(selectedVoucher?.discountType ?? "").toUpperCase() ===
+              "FREE_SHIPPING"
+              ? 0
+              : getShippingFeeForShop(shopId, shippingSelections[shopId]) || 0,
           total_amount:
             shopCartItems.reduce(
               (sum, item) =>
                 sum + (item.productVariant?.price || 0) * item.quantity,
               0,
-            ) + getShippingFeeForShop(shopId, shippingSelections[shopId]),
+            ) +
+            (String(selectedVoucher?.discountType ?? "").toUpperCase() ===
+            "FREE_SHIPPING"
+              ? 0
+              : getShippingFeeForShop(shopId, shippingSelections[shopId])),
           carrier_name: "LOG",
           tracking_number: `TRK-${baseTrackingSeed}-${shopId}`,
           shipping_status: "PENDING",
@@ -793,9 +1054,9 @@ export default function CheckoutPage() {
       total_price: calculateSubtotal(),
       payment_method: paymentInfo.method || "unknown",
       address_id: selectedAddressId || 0,
-      shipping_fee: calculateTotalShippingFee(),
-      discount_amount: 0,
-      final_amount: calculateSubtotal() + calculateTotalShippingFee(),
+      shipping_fee: effectiveShippingFee,
+      discount_amount: voucherDiscount,
+      final_amount: finalTotal,
       orders_items: orderItems,
       order_shipment: ordersShipment,
       note: "",
@@ -863,10 +1124,17 @@ export default function CheckoutPage() {
             styles={styles}
             cartItemsLength={cartItems.length}
             subtotal={calculateSubtotal()}
-            shippingFee={calculateTotalShippingFee()}
+            shippingFee={effectiveShippingFee}
             isShippingFeeLoading={isAnyShippingFeeLoading}
-            total={calculateSubtotal() + calculateTotalShippingFee()}
+            voucherDiscount={voucherDiscount}
+            total={finalTotal}
             formatCurrency={formatCurrency}
+            ownedVouchers={ownedVouchers}
+            voucherAvailabilityList={voucherAvailabilityList}
+            selectedVoucher={selectedVoucher}
+            selectedVoucherId={selectedVoucherId}
+            setSelectedVoucherId={setSelectedVoucherId}
+            voucherLoading={voucherLoading}
             onOrder={handleOrder}
           />
         </div>

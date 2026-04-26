@@ -15,11 +15,11 @@ public final class UserMapper implements IMapper<User> {
     public User RowMap(ResultSet rs) {
         User user = new User();
         try {
-            user.setId(rs.getLong(StringValue.USER_ID_COL));
+        	Object idVal = rs.getObject("id");
+        	user.setId(idVal != null ? ((Number) idVal).longValue() : null);
             user.setEmail(rs.getString(StringValue.USER_EMAIL_COL));
             user.setPhone(rs.getString(StringValue.USER_PHONE_COL));
             user.setPasswordHash(rs.getString(StringValue.USER_PASSWORD_COL));
-            user.setUserType(StringValue.USER_TYPE_COL);
             user.setFullName(rs.getString(StringValue.USER_FULLNAME_COL));
             user.setAvatarUrl(rs.getString(StringValue.USER_AVATAR_COL));
 

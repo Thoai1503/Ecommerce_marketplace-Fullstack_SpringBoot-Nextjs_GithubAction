@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { INTERNAL_API } from "@/helper/api";
 import { AdminVoucher } from "@/types";
+import VoucherClaimButton from "@/components/client/voucher/VoucherClaimButton";
 import styles from "./page.module.css";
 
 const formatDate = (value?: string | null) => {
@@ -478,9 +479,15 @@ export default async function VoucherPage() {
                                       Exp: {formatDate(voucher.validTo)}
                                     </div>
 
-                                    <button
+                                    <VoucherClaimButton
+                                      voucherId={Number(voucher.id)}
+                                      voucherCode={voucher.code}
+                                      voucherStatus={voucher.status}
+                                      claimStartAt={voucher.claimStartAt}
+                                      claimEndAt={voucher.claimEndAt}
+                                      totalQuota={voucher.totalQuota}
+                                      claimedCount={voucher.claimedCount}
                                       className={`${styles.voucherSaveBtn} btn text-white fw-semibold px-3 py-1`}
-                                      type="button"
                                       style={{
                                         background:
                                           "linear-gradient(135deg, #ff6b6b 0%, #e03131 100%)",
@@ -488,9 +495,7 @@ export default async function VoucherPage() {
                                         fontSize: "0.82rem",
                                         boxShadow: "0 8px 18px rgba(224, 49, 49, 0.22)",
                                       }}
-                                    >
-                                      Save
-                                    </button>
+                                    />
                                   </div>
                                 </div>
                               </div>

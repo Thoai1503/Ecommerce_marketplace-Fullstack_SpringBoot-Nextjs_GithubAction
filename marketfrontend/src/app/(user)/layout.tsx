@@ -5,12 +5,13 @@ import Script from "next/script";
 import HeaderAuth from "@/components/HeaderAuth";
 import { cookies } from "next/headers";
 import { UserAuthProvider } from "@/context/UserAuthContext";
-import { ShoppingBag, Search, ShoppingCart, Share2 } from "lucide-react";
+import { ShoppingBag, Search } from "lucide-react";
 
 import CustomProgressBar from "@/components/common/CustomProgressBar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RootPrivider } from "@/components/context/RootProvider";
 import Link from "next/link";
+import CartIconWithCount from "@/components/CartIconWithCount";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,8 +33,10 @@ export default async function UserLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const role = (await cookies()).get("role")?.value;
-  const id = Number((await cookies()).get("user")?.value.toString());
+  const cookieStore = await cookies();
+  const role = cookieStore.get("role")?.value;
+  const rawUserId = cookieStore.get("user")?.value;
+  const id = rawUserId ? Number(rawUserId) : 0;
   console.log("User role: " + role);
   console.log("User id: " + id);
   const queryCLient = new QueryClient();
@@ -113,14 +116,7 @@ export default async function UserLayout({
                 </div>
 
                 {/* Cart */}
-                <Link href="/cart" className="col-auto">
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: "28px", cursor: "pointer" }}
-                  >
-                    shopping_cart
-                  </span>
-                </Link>
+                <CartIconWithCount />
               </div>
             </div>
           </header>
