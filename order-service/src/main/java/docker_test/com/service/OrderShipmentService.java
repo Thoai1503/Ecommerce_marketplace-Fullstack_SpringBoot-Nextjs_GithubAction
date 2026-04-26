@@ -29,7 +29,7 @@ import docker_test.com.models.OrderShipment;
 import docker_test.com.model.OrderShipmentStatusHistory;
 import docker_test.com.model.ShipmentAdjustmentItem;
 import docker_test.com.model.ShipmentAdjustmentRequest;
-import docker_test.com.repository.OrderRepository;
+import docker_test.com.repository.OrdersRepository;
 import docker_test.com.repository.OrderItemRepository;
 import docker_test.com.repository.OrderShipmentRepository;
 import docker_test.com.repository.OrderShipmentStatusHistoryRepository;
@@ -43,7 +43,7 @@ public class OrderShipmentService {
     private final OrderShipmentRepository orderShipmentRepository;
     private final OrderItemRepository orderItemRepository;
         private final OrderShipmentStatusHistoryRepository orderShipmentStatusHistoryRepository;
-        private final OrderRepository orderRepository;
+        private final OrdersRepository orderRepository;
         private final ShipmentAdjustmentRequestRepository shipmentAdjustmentRequestRepository;
         private final ShipmentAdjustmentItemRepository shipmentAdjustmentItemRepository;
         private final WebClient webClient;
@@ -54,7 +54,7 @@ public class OrderShipmentService {
     public OrderShipmentService(OrderShipmentRepository orderShipmentRepository,
                                                                 OrderItemRepository orderItemRepository,
                                                                 OrderShipmentStatusHistoryRepository orderShipmentStatusHistoryRepository,
-                                                                OrderRepository orderRepository,
+                                                                OrdersRepository orderRepository,
                                                                 ShipmentAdjustmentRequestRepository shipmentAdjustmentRequestRepository,
                                                                 ShipmentAdjustmentItemRepository shipmentAdjustmentItemRepository,
                                                                 WebClient webClient) {

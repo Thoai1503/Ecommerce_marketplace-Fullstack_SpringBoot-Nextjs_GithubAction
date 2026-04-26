@@ -29,7 +29,7 @@ import docker_test.com.model.OrderItem;
 import docker_test.com.models.OrderShipment;
 import docker_test.com.publisher.OrderEventPublisher;
 import docker_test.com.repository.OrderItemRepository;
-import docker_test.com.repository.OrderRepository;
+import docker_test.com.repository.OrdersRepository;
 import docker_test.com.repository.OrderShipmentRepository;
 import docker_test.com.dto.*;
 
@@ -46,12 +46,12 @@ public class OrderService {
 	
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
-    private final OrderRepository orderRepository;
+    private final OrdersRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderEventPublisher eventPublisher;
     private final OrderShipmentRepository orderShipmentRepository;
 
-    public OrderService(OrderRepository orderRepository,
+    public OrderService(OrdersRepository orderRepository,
                         OrderItemRepository orderItemRepository,
                         OrderEventPublisher eventPublisher,
                         OrderShipmentRepository orderShipmentRepository     ,
