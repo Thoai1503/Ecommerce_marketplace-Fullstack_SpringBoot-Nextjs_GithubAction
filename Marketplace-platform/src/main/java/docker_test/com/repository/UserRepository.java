@@ -97,7 +97,7 @@ public class UserRepository implements IRepositories<User> {
     @Override
     public List<User> GetAll() {
 
-        String sql = "SELECT * FROM user";
+    	String sql = "SELECT * FROM `user`";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql);
@@ -109,6 +109,30 @@ public class UserRepository implements IRepositories<User> {
             e.printStackTrace();
         }
         return List.of();
+    }
+
+    /* ================= FIND BY PHONE ================= */
+    public User findByPhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        
+        String sql = "SELECT * FROM `user` WHERE phone = ?";
+        
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            
+            ps.setString(1, phone);
+            ResultSet rs = ps.executeQuery();
+            
+            if (rs.next()) {
+                return mapper.RowMap(rs);
+            }
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     /* ================= UPDATE ================= */
@@ -138,16 +162,27 @@ public class UserRepository implements IRepositories<User> {
                 ps.setNull(5, Types.DATE);
             }
 
-            ps.setString(6, item.getGender());
+            // Xử lý null cho gender
+            if (item.getGender() != null && !item.getGender().isEmpty()) {
+                ps.setString(6, item.getGender());
+            } else {
+                ps.setNull(6, Types.VARCHAR);
+            }
+
             ps.setString(7, item.getUserType());
             ps.setInt(8, item.getIsVerified());
             ps.setInt(9, item.getIsActive());
             ps.setTimestamp(10, Timestamp.valueOf(LocalDateTime.now()));
             ps.setLong(11, item.getId());
 
-            return ps.executeUpdate() > 0 ? item : null;
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                return item;
+            }
 
-        } catch (Exception e) {
+        } catch (SQLException e) {
+            // Log chi tiết lỗi
+            System.err.println("Update user error: " + e.getMessage());
             e.printStackTrace();
         }
         return null;
@@ -225,6 +260,27 @@ public class UserRepository implements IRepositories<User> {
 
             if (rs.next()) {
                 return mapper.RowMap(rs);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public Long findUserIdByEmail(String email) {
+
+        String sql = "SELECT id FROM user WHERE email = ? LIMIT 1";
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, email);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                Object idVal = rs.getObject("id");
+                return idVal != null ? ((Number) idVal).longValue() : null;
             }
 
         } catch (Exception e) {

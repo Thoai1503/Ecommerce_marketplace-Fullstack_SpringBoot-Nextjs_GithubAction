@@ -6,6 +6,25 @@ import { useSearchParams } from "next/navigation";
 import { API_URL } from "@/helper/api";
 
 const LoginForm = () => {
+  const normalizeRoleForCookie = (user: any) => {
+    const rawRole = String(
+      user?.role ?? user?.userType ?? user?.type ?? "buyer",
+    ).toLowerCase();
+
+    if (rawRole === "seller") return "seller";
+    if (rawRole === "both") return "both";
+    if (rawRole === "admin") return "admin";
+    return "buyer";
+  };
+
+  const getUserId = (user: any) => {
+    const value = Number(user?.id ?? user?.userId ?? user?.user_id ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  };
+
+  const getFullName = (user: any) =>
+    user?.fullName ?? user?.name ?? user?.email ?? "User";
+
   useEffect(() => {
     //Debug api
     console.log("API_URL:", API_URL);
@@ -80,14 +99,27 @@ const LoginForm = () => {
       }
 
       const user = JSON.parse(text);
+      const roleCookie = normalizeRoleForCookie(user);
+      const userId = getUserId(user);
+      const normalizedUser = {
+        ...user,
+        id: userId,
+        fullName: getFullName(user),
+      };
 
       // Lưu thông tin user ở client
-      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
 
       // Đặt cookie token để middleware có thể đọc và cho phép truy cập /admin, /seller,...
       // Hiện tại middleware chỉ kiểm tra có token hay không, chưa verify nội dung
       // Nên chỉ cần giá trị bất kỳ (có thể thay bằng user.token nếu backend trả về)
       document.cookie = `token=${(user as any).token || "logged-in"}; path=/; max-age=${
+        60 * 60 * 24
+      }; SameSite=Lax`;
+      document.cookie = `role=${roleCookie}; path=/; max-age=${
+        60 * 60 * 24
+      }; SameSite=Lax`;
+      document.cookie = `user=${userId}; path=/; max-age=${
         60 * 60 * 24
       }; SameSite=Lax`;
 

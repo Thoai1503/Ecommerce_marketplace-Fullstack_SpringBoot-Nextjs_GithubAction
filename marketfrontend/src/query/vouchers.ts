@@ -34,7 +34,7 @@ export const vouchersQuery = {
   rules: (id: string) =>
     queryOptions({
       queryKey: ["admin", "voucher-rules", id],
-      queryFn: () => getVoucherRules(),
+      queryFn: () => getVoucherRules(id),
       enabled: !!id,
     }),
   redemptions: (id: string) =>
