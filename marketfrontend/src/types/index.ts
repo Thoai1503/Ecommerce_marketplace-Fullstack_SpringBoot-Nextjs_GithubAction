@@ -716,6 +716,7 @@ export interface Order {
   shippingAmount: number;
   taxAmount: number;
   itemsCount: number;
+  shipmentsCount?: number;
   paymentStatus: PaymentStatus;
   paymentMethod: string;
   transactionId: string;

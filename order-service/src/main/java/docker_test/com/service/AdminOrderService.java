@@ -3,23 +3,25 @@ package docker_test.com.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import docker_test.com.dto.AdminOrderListItemDTO;
 import docker_test.com.dto.OrderPageResponse;
 import docker_test.com.model.Order;
-import docker_test.com.repository.OrderRepository;
+import docker_test.com.repository.OrdersRepository;
 
 @Service
 public class AdminOrderService {
 
-    private final OrderRepository orderRepository;
+    private final OrdersRepository orderRepository;
 
-    public AdminOrderService(OrderRepository orderRepository) {
+    public AdminOrderService(OrdersRepository orderRepository) {
         this.orderRepository = orderRepository;
     }
 
-    public OrderPageResponse getAdminOrders(
+    public OrderPageResponse<AdminOrderListItemDTO> getAdminOrders(
             Long userId,
             LocalDateTime startDate,
             LocalDateTime endDate,
@@ -31,7 +33,7 @@ public class AdminOrderService {
             int page,
             int size
     ) {
-        List<Order> orders = orderRepository.findAllWithPagination(
+            List<AdminOrderListItemDTO> orders = orderRepository.findAllAdminOrdersWithCustomer(
                 userId,
                 startDate,
                 endDate,
@@ -42,7 +44,7 @@ public class AdminOrderService {
                 sortOrder,
                 page,
                 size
-        );
+            ).stream().map(AdminOrderListItemDTO::fromProjection).collect(Collectors.toList());
 
         int totalRecords = orderRepository.countOrders(
                 userId,
@@ -58,7 +60,7 @@ public class AdminOrderService {
         Map<String, Integer> statusStats = orderRepository.countByStatus();
         Double pendingAmount = orderRepository.getPendingTotalAmount();
 
-        return new OrderPageResponse(
+        return new OrderPageResponse<>(
                 orders,
                 totalRecords,
                 totalPages,
