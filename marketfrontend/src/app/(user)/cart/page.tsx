@@ -53,6 +53,7 @@ const resolveVariantId = (item: any): number | null => {
   );
 };
 
+
 const ShoppingCart: React.FC = () => {
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { userId } = useUserAuth();
@@ -289,9 +290,7 @@ const ShoppingCart: React.FC = () => {
     }
   }, [isError, status]);
 
-  const [voucher, setVoucher] = useState("");
-  const discount = 50000;
-  const shippingFee = 35000;
+  const shippingFee: number = 35000;
 
   const syncGuestCartLocalStorage = (nextItems: CartStateItem[]) => {
     if (typeof window === "undefined") return;
@@ -313,6 +312,7 @@ const ShoppingCart: React.FC = () => {
 
     localStorage.setItem("preLoginCart", JSON.stringify(payload));
     setPreLoginCart(payload);
+    window.dispatchEvent(new Event("cart-updated"));
   };
 
   const formatCurrency = (amount: number) => {
@@ -354,7 +354,7 @@ const ShoppingCart: React.FC = () => {
   };
 
   const calculateTotal = () => {
-    return calculateSubtotal() - discount + shippingFee;
+    return Math.max(0, calculateSubtotal() + shippingFee);
   };
 
   const selectedCount = enrichedCartItems.filter(
@@ -453,6 +453,7 @@ const ShoppingCart: React.FC = () => {
     setUpdatingItems((prev) => new Set(prev).add(itemId));
     try {
       await Cart.updateCartItem(itemId, newQty);
+      window.dispatchEvent(new Event("cart-updated"));
     } catch {
       // Rollback on error
       setCartItems((prev) =>
@@ -501,6 +502,7 @@ const ShoppingCart: React.FC = () => {
     });
     try {
       await Cart.deleteCartItem(itemId);
+      window.dispatchEvent(new Event("cart-updated"));
     } catch {
       // Restore item on error
       if (snapshot) {
@@ -885,26 +887,6 @@ const ShoppingCart: React.FC = () => {
               </div>
             </div>
 
-            {/* Voucher Card */}
-            <div className="card shadow-sm mb-3">
-              <div className="card-body">
-                <h6 className="text-uppercase text-muted small fw-bold mb-3 d-flex align-items-center gap-2">
-                  <i className="bi bi-tag"></i>
-                  Voucher khuyến mãi
-                </h6>
-                <div className="input-group">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Nhập mã giảm giá..."
-                    value={voucher}
-                    onChange={(e) => setVoucher(e.target.value)}
-                  />
-                  <button className="btn btn-primary">Áp dụng</button>
-                </div>
-              </div>
-            </div>
-
             {/* Payment Summary */}
             <div className="card shadow-sm mb-3">
               <div className="card-body">
@@ -917,23 +899,19 @@ const ShoppingCart: React.FC = () => {
                   </span>
                 </div>
                 <div className="d-flex justify-content-between mb-3">
-                  <span className="text-muted small">Giảm giá voucher</span>
-                  <span className="fw-semibold text-success">
-                    - {formatCurrency(discount)}
-                  </span>
-                </div>
-                <div className="d-flex justify-content-between mb-3">
                   <span className="text-muted small">Phí vận chuyển</span>
                   <div className="text-end">
                     <div className="fw-semibold">
                       {formatCurrency(shippingFee)}
                     </div>
-                    <span
-                      className="badge bg-success"
-                      style={{ fontSize: "9px" }}
-                    >
-                      MIỄN PHÍ VẬN CHUYỂN
-                    </span>
+                    {shippingFee === 0 && (
+                      <span
+                        className="badge bg-success"
+                        style={{ fontSize: "9px" }}
+                      >
+                        MIỄN PHÍ VẬN CHUYỂN
+                      </span>
+                    )}
                   </div>
                 </div>
                 <hr className="border-dashed" />

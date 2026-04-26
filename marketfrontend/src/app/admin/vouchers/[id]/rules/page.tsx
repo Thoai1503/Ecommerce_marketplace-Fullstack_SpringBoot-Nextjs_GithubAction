@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useVoucherRules } from "@/hooks/admin/useVouchers";
+import { API_URL } from "@/helper/api";
 import {
   VoucherRulesPayload,
   VoucherScopeRule,
@@ -39,6 +40,25 @@ const segmentTypes = [
   "FIRST_ORDER",
 ] as const;
 
+type ScopeOption = {
+  id: number;
+  label: string;
+};
+
+const paymentMethodOptions: ScopeOption[] = [
+  { id: 1, label: "COD" },
+  { id: 2, label: "VNPay" },
+  { id: 3, label: "Momo" },
+  { id: 4, label: "ZaloPay" },
+];
+
+const shippingMethodOptions: ScopeOption[] = [
+  { id: 1, label: "Giao hang tiet kiem" },
+  { id: 2, label: "Giao hang nhanh" },
+  { id: 3, label: "Hoa toc" },
+  { id: 4, label: "Nhan tai cua hang" },
+];
+
 const emptyScope = (voucherId: string): VoucherScopeRule => ({
   id: "",
   voucherId,
@@ -66,12 +86,100 @@ export default function VoucherRuleBuilderPage() {
     scopeRules: [],
     segmentRules: [],
   });
+  const [scopeOptions, setScopeOptions] = useState<
+    Record<string, ScopeOption[]>
+  >({
+    SHOP: [],
+    CATEGORY: [],
+    PRODUCT: [],
+    BRAND: [],
+    PAYMENT_METHOD: paymentMethodOptions,
+    SHIPPING_METHOD: shippingMethodOptions,
+  });
 
   useEffect(() => {
     if (rules) {
       setForm(rules);
     }
   }, [rules]);
+
+  useEffect(() => {
+    const loadScopeOptions = async () => {
+      try {
+        const [brandsRes, categoriesRes, productsRes, shopsRes] =
+          await Promise.all([
+            fetch(`${API_URL}/api/brands`),
+            fetch(`${API_URL}/api/categories`),
+            fetch(`${API_URL}/product`),
+            fetch(`${API_URL}/shops`),
+          ]);
+
+        const [brandsJson, categoriesJson, productsJson, shopsJson] =
+          await Promise.all([
+            brandsRes.json(),
+            categoriesRes.json(),
+            productsRes.json(),
+            shopsRes.json(),
+          ]);
+
+        const brands = Array.isArray(brandsJson) ? brandsJson : [];
+        const categories = Array.isArray(categoriesJson) ? categoriesJson : [];
+        const products = Array.isArray(productsJson)
+          ? productsJson
+          : Array.isArray(productsJson?.data)
+            ? productsJson.data
+            : [];
+        const shops = Array.isArray(shopsJson) ? shopsJson : [];
+
+        setScopeOptions({
+          SHOP: shops.map((shop: any) => ({
+            id: Number(shop.id),
+            label: shop.shop_name || `Shop #${shop.id}`,
+          })),
+          CATEGORY: categories.map((category: any) => ({
+            id: Number(category.id),
+            label: category.category_name || `Category #${category.id}`,
+          })),
+          PRODUCT: products.map((product: any) => ({
+            id: Number(product.id),
+            label: product.product_name || `Product #${product.id}`,
+          })),
+          BRAND: brands.map((brand: any) => ({
+            id: Number(brand.id),
+            label: brand.name || `Brand #${brand.id}`,
+          })),
+          PAYMENT_METHOD: paymentMethodOptions,
+          SHIPPING_METHOD: shippingMethodOptions,
+        });
+      } catch (error) {
+        console.error("Load scope options failed", error);
+      }
+    };
+
+    loadScopeOptions();
+  }, []);
+
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      scopeRules: prev.scopeRules.map((rule) => {
+        const options = getScopeOptionsByType(rule.scopeType);
+
+        if (options.length === 0) return rule;
+
+        const hasCurrent = options.some(
+          (option) => Number(option.id) === Number(rule.scopeId),
+        );
+
+        if (hasCurrent) return rule;
+
+        return {
+          ...rule,
+          scopeId: options[0].id,
+        };
+      }),
+    }));
+  }, [scopeOptions]);
 
   const addScope = () => {
     setForm((prev) => ({
@@ -93,6 +201,62 @@ export default function VoucherRuleBuilderPage() {
       next[index] = { ...next[index], ...patch };
       return { ...prev, scopeRules: next };
     });
+  };
+
+  const getScopeOptionsByType = (
+    scopeType: VoucherScopeRule["scopeType"],
+  ): ScopeOption[] => {
+    return scopeOptions[scopeType] || [];
+  };
+
+  const updateScopeType = (
+    index: number,
+    scopeType: VoucherScopeRule["scopeType"],
+  ) => {
+    const options = getScopeOptionsByType(scopeType);
+
+    updateScope(index, {
+      scopeType,
+      scopeId: options.length > 0 ? options[0].id : 0,
+    });
+  };
+
+  const renderScopeIdField = (rule: VoucherScopeRule, index: number) => {
+    const options = getScopeOptionsByType(rule.scopeType);
+
+    if (options.length > 0) {
+      return (
+        <select
+          className="px-3 py-2 rounded-xl border border-slate-200 text-sm"
+          value={rule.scopeId}
+          onChange={(e) =>
+            updateScope(index, {
+              scopeId: Number(e.target.value || 0),
+            })
+          }
+        >
+          {options.map((option) => (
+            <option key={`${rule.scopeType}-${option.id}`} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    return (
+      <input
+        type="number"
+        className="px-3 py-2 rounded-xl border border-slate-200 text-sm"
+        value={rule.scopeId}
+        onChange={(e) =>
+          updateScope(index, {
+            scopeId: Number(e.target.value || 0),
+          })
+        }
+        placeholder="scope_id"
+      />
+    );
   };
 
   const updateSegment = (index: number, patch: Partial<VoucherSegmentRule>) => {
@@ -225,10 +389,10 @@ export default function VoucherRuleBuilderPage() {
                       className="px-3 py-2 rounded-xl border border-slate-200 text-sm"
                       value={rule.scopeType}
                       onChange={(e) =>
-                        updateScope(idx, {
-                          scopeType: e.target
-                            .value as VoucherScopeRule["scopeType"],
-                        })
+                        updateScopeType(
+                          idx,
+                          e.target.value as VoucherScopeRule["scopeType"],
+                        )
                       }
                     >
                       {scopeTypes.map((type) => (
@@ -237,17 +401,7 @@ export default function VoucherRuleBuilderPage() {
                         </option>
                       ))}
                     </select>
-                    <input
-                      type="number"
-                      className="px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                      value={rule.scopeId}
-                      onChange={(e) =>
-                        updateScope(idx, {
-                          scopeId: Number(e.target.value || 0),
-                        })
-                      }
-                      placeholder="scope_id"
-                    />
+                    {renderScopeIdField(rule, idx)}
                     <select
                       className="px-3 py-2 rounded-xl border border-slate-200 text-sm"
                       value={rule.includeExclude}

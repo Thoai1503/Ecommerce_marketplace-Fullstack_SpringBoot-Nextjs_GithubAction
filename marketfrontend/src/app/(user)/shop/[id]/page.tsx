@@ -112,43 +112,57 @@ export default function ShopPage() {
     <div className="container my-4">
       {/* ===== HEADER ===== */}
       <div className="shop-header-wrapper mb-4">
-        <div className="shop-banner position-relative text-white p-4 rounded">
+        <div className="shop-banner position-relative text-white p-4 rounded-4">
           <div className="d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center gap-3">
-              <img
-                src={normalizeImage(shop?.shop_logo)}
-                width={80}
-                height={80}
-                className="rounded-circle border border-white"
-                onError={onImgError}
-              />
+            <div className="d-flex align-items-center gap-4">
+              <div className="shop-avatar-wrapper">
+                <img
+                  src={normalizeImage(shop?.shop_logo)}
+                  width={100}
+                  height={100}
+                  className="rounded-circle border border-3 border-white shadow-lg"
+                  onError={onImgError}
+                />
+                <div className="online-indicator"></div>
+              </div>
 
               <div>
-                <h5 className="mb-1 fw-bold">
+                <h4 className="mb-2 fw-bold text-white">
                   {shop?.shop_name || "Loading..."}
-                </h5>
-                <small className="text-light">Online recently</small>
+                </h4>
+                <div className="d-flex align-items-center gap-2">
+                  <span className="badge bg-white text-primary px-3 py-1 rounded-pill">
+                    <i className="bi bi-clock me-1"></i>
+                    Online recently
+                  </span>
+                  <span className="badge bg-warning text-dark px-3 py-1 rounded-pill">
+                    <i className="bi bi-star-fill me-1"></i>
+                    {shop?.rating || 0}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="d-flex gap-5 text-end small">
-              <div>
-                <div className="text-light">Products</div>
-                <div className="fw-bold text-warning">
+            <div className="d-flex gap-4 text-end">
+              <div className="shop-stat">
+                <div className="text-white-50 small">Products</div>
+                <div className="fw-bold text-white fs-5">
                   {filteredProducts.length}
                 </div>
               </div>
 
-              <div>
-                <div className="text-light">Ratings</div>
-                <div className="fw-bold text-warning">{shop?.rating || 0}</div>
+              <div className="shop-stat">
+                <div className="text-white-50 small">Followers</div>
+                <div className="fw-bold text-white fs-5">
+                  {shop?.followers || 0}
+                </div>
               </div>
 
-              <div>
-                <div className="text-light">Joined</div>
-                <div className="fw-bold text-warning">
+              <div className="shop-stat">
+                <div className="text-white-50 small">Joined</div>
+                <div className="fw-bold text-white fs-5">
                   {shop?.created_at
-                    ? new Date(shop.created_at).toLocaleDateString()
+                    ? new Date(shop.created_at).getFullYear()
                     : "--"}
                 </div>
               </div>
@@ -158,18 +172,32 @@ export default function ShopPage() {
       </div>
 
       {/* ===== SEARCH ===== */}
-      <div className="mb-3">
-        <input
-          type="text"
-          className="form-control"
-          placeholder="Find products in the shop..."
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-        />
+      <div className="mb-4">
+        <div className="search-wrapper position-relative">
+          <input
+            type="text"
+            className="form-control search-input"
+            placeholder="Find products in the shop..."
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
+          <i className="bi bi-search search-icon"></i>
+        </div>
       </div>
 
-      <div className="mb-2 small text-muted">
-        Find {filteredProducts.length} Products
+      <div className="mb-3 d-flex justify-content-between align-items-center">
+        <span className="text-muted">
+          <i className="bi bi-collection me-2"></i>
+          Find {filteredProducts.length} Products
+        </span>
+        <div className="d-flex gap-2">
+          <select className="form-select form-select-sm border-0 shadow-sm" style={{width: 'auto'}}>
+            <option>Sort by: Newest</option>
+            <option>Price: Low to High</option>
+            <option>Price: High to Low</option>
+            <option>Best Selling</option>
+          </select>
+        </div>
       </div>
 
       {/* ===== MAIN LAYOUT ===== */}
