@@ -1,3 +1,5 @@
+<img width="1471" height="414" alt="Screenshot 2026-04-26 225224" src="https://github.com/user-attachments/assets/f73da96c-92b3-44c8-8aba-003cb1d6a60f" />
+<img width="1471" height="414" alt="Screenshot 2026-04-26 225224" src="https://github.com/user-attachments/assets/f0c7c64f-6eb2-4448-a7a2-7e472c851349" />
 # Thoai1503-project
 
 
@@ -21,6 +23,7 @@ git push -uf origin main
 ```
 
 ## Integrate with your tools
+<img width="1471" height="414" alt="Screenshot 2026-04-26 225224" src="https://github.com/user-attachments/assets/55f3c9fd-ad45-4e15-8ac5-65897499f3e1" />
 
 * [Set up project integrations](https://gitlab.com/thoai1503-group/Thoai1503-project/-/settings/integrations)
 
