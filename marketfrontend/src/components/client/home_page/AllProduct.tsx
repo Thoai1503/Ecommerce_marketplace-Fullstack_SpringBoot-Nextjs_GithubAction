@@ -8,6 +8,12 @@ import styles from "./AllProduct.module.css";
 interface AllProductProps {
   products: Partial<IProduct>[];
 }
+
+const formatCurrency = (value?: number) => {
+  const amount = Number(value ?? 0);
+  return `${amount.toLocaleString("vi-VN")}đ`;
+};
+
 const AllProduct = ({ products }: AllProductProps) => {
   const [data, setData] = React.useState<Partial<IProduct>[]>([]);
   React.useEffect(() => {
@@ -43,8 +49,12 @@ const AllProduct = ({ products }: AllProductProps) => {
               {item.product_name}
             </span>
             <div className={styles.priceWrap}>
-              <span className={styles.currentPrice}>{item.price}₫</span>
-              <span className={styles.oldPrice}>{item.original_price}₫</span>
+              <span className={styles.currentPrice}>
+                {formatCurrency(item.price)}
+              </span>
+              <span className={styles.oldPrice}>
+                {formatCurrency(item.original_price)}
+              </span>
             </div>
           </div>
         </Link>

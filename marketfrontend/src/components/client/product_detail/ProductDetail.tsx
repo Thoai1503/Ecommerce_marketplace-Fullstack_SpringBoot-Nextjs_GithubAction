@@ -70,6 +70,16 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
 
   const displayImage = hoveredImage || mainImage;
 
+  if (isOwnShopProduct) {
+    return (
+      <div className="container py-5">
+        <div className="alert alert-info rounded-4 border-0 shadow-sm">
+          Sản phẩm của chính shop bạn không hiển thị ở giao diện mua hàng khi đang đăng nhập bằng tài khoản này.
+        </div>
+      </div>
+    );
+  }
+
   const handleAddToCart = (cart: ICart) => {
     if (isOwnShopProduct) {
       message.warning("Bạn không thể mua sản phẩm của chính shop mình.");

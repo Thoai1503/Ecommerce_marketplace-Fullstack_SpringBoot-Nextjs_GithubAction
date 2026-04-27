@@ -170,6 +170,7 @@ public class CategoryController {
 			StringBuilder sql = new StringBuilder("""
 					    SELECT
 					        p.id,
+					        p.shop_id,
 					        p.product_name,
 					        p.product_slug,
 					        p.price,
@@ -183,6 +184,7 @@ public class CategoryController {
 					        ) AS image
 					    FROM product p
 					    WHERE 1=1
+					    AND p.is_active = 1
 					""");
 
 			List<Object> params = new ArrayList<>();

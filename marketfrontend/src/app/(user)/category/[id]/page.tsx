@@ -5,6 +5,38 @@ import { INTERNAL_API } from "@/helper/api";
 import CategorySidebar from "@/components/client/category/CategorySidebar";
 import Link from "next/link";
 import SortBar from "@/components/client/category/SortBar";
+import { cookies } from "next/headers";
+
+const unwrapCollection = (payload: any): any[] => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.content)) return payload.content;
+  if (Array.isArray(payload?.results)) return payload.results;
+  if (Array.isArray(payload?.result)) return payload.result;
+  return [];
+};
+
+const getOwnShopId = async (): Promise<number | null> => {
+  const cookieStore = await cookies();
+  const userId = Number(cookieStore.get("user")?.value ?? 0);
+
+  if (!userId) return null;
+
+  try {
+    const res = await fetch(`${INTERNAL_API}/seller/shop/user/${userId}`, {
+      cache: "no-store",
+    });
+
+    if (!res.ok) return null;
+
+    const shop = await res.json();
+    const shopId = Number(shop?.id ?? shop?.shop_id ?? 0);
+    return shopId > 0 ? shopId : null;
+  } catch {
+    return null;
+  }
+};
 
 export default async function CategoryPage({
   params,
@@ -37,6 +69,8 @@ export default async function CategoryPage({
   let categories: any[] = [];
   let brands: any[] = [];
   let products: any[] = [];
+  const ownShopId = await getOwnShopId();
+  const ownProductIds = new Set<number>();
 
   try {
     // ===== CATEGORY =====
@@ -73,12 +107,39 @@ export default async function CategoryPage({
     query.append("page", currentPage);
     query.append("limit", "15");
 
-    const productRes = await fetch(
-      `${INTERNAL_API}/api/categories/${categoryId}/products?${query.toString()}`,
-      { cache: "no-store" },
-    );
+    const requests: Promise<Response>[] = [
+      fetch(`${INTERNAL_API}/api/categories/${categoryId}/products?${query.toString()}`, {
+        cache: "no-store",
+      }),
+    ];
 
-    products = await productRes.json();
+    if (ownShopId) {
+      requests.push(
+        fetch(`${INTERNAL_API}/seller/product/shop/${ownShopId}`, {
+          cache: "no-store",
+        }),
+      );
+    }
+
+    const [productRes, ownProductsRes] = await Promise.all(requests);
+    const rawProducts = await productRes.json();
+
+    if (ownProductsRes?.ok) {
+      const ownProductsPayload = await ownProductsRes.json();
+      unwrapCollection(ownProductsPayload).forEach((product) => {
+        const id = Number(product?.id ?? 0);
+        if (id > 0) ownProductIds.add(id);
+      });
+    }
+
+    products = unwrapCollection(rawProducts).filter((product) => {
+      const productId = Number(product?.id ?? 0);
+      const productShopId = Number(product?.shop_id ?? 0);
+
+      if (!ownShopId) return true;
+      if (productShopId > 0) return productShopId !== ownShopId;
+      return !ownProductIds.has(productId);
+    });
   } catch (error) {
     console.error(error);
     return <div>Error loading data</div>;
