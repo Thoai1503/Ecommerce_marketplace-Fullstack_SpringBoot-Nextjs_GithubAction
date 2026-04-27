@@ -136,6 +136,8 @@ public class OrderController {
 		response.put("paymentStatus", order.getPaymentStatus());
 		response.put("orderStatus", order.getOrderStatus());
 		response.put("trackingNumber", order.getTrackingNumber());
+		response.put("returnStatusSummary", order.getReturnStatusSummary());
+		response.put("lastReturnRequestId", order.getLastReturnRequestId());
 		response.put("items", items);
 		response.put("shipments", shipments);
 		return ResponseEntity.ok(response);

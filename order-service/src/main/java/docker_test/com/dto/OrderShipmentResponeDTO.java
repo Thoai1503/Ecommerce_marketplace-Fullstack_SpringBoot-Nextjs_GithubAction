@@ -15,6 +15,7 @@ public record OrderShipmentResponeDTO(
 	        String businessStatus,
 	        Boolean adjustmentRequired,
 	        Long latestAdjustmentRequestId,
+	        String returnStatusSummary,
 	        OrderInfoDTO order,
 	        RecipientInfoDTO recipient,
 	        List<OrderItemInfoDTO> items,

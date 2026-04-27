@@ -114,6 +114,7 @@ public class OrderShipmentService {
                 shipment.getBusinessStatus(),
                 shipment.getAdjustmentRequired(),
                 shipment.getLatestAdjustmentRequestId(),
+                shipment.getReturnStatusSummary(),
                 new OrderShipmentResponeDTO.OrderInfoDTO(
                         row.getOrderNumber(),
                         row.getUserId(),

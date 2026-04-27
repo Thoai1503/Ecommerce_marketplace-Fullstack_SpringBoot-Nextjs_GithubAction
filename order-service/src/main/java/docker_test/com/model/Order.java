@@ -65,4 +65,11 @@ public class Order {
       
       @Column(name = "tracking_number", nullable = true)
       private String trackingNumber;
+      
+      @Column(name ="last_return_request_id")
+      private Long lastReturnRequestId;
+      
+      @Column(name = "return_status_summary")
+      @Enumerated(EnumType.STRING)
+      private ReturnStatusSummary returnStatusSummary;
 }
