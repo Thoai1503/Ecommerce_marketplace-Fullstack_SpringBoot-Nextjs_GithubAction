@@ -21,13 +21,13 @@ import docker_test.com.OrderGatewayApplication.LeftJoinSimulation.JoinResult;
 //import docker_test.com.models.Cart;
 
 @SpringBootApplication
-//@ComponentScan(
-//    basePackages = "docker_test.com",
-//    excludeFilters = @ComponentScan.Filter(
-//        type = FilterType.REGEX,
-//        pattern = "docker_test\\.com\\.controllers\\..*"
-//    )
-//)
+@ComponentScan(
+    basePackages = "docker_test.com",
+    excludeFilters = @ComponentScan.Filter(
+        type = FilterType.REGEX,
+        pattern = "docker_test\\.com\\.controllers\\..*"
+    )
+)
 //@EnableDiscoveryClient
 public class OrderGatewayApplication {
     @Bean

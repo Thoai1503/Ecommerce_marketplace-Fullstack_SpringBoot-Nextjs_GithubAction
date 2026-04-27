@@ -5,23 +5,28 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import docker_test.com.dto.OrderDTO;
+import docker_test.com.dto.OrderPageResponse;
 import docker_test.com.dto.OrderResponeDTO;
 import docker_test.com.dto.RecipientDTO;
+import docker_test.com.dto.AdminOrderListItemDTO;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
 import docker_test.com.models.OrderShipment;
 import docker_test.com.repository.OrderItemRepository;
-import docker_test.com.repository.OrderRepository;
+import docker_test.com.repository.OrdersRepository;
 import docker_test.com.repository.OrderShipmentRepository;
+import docker_test.com.service.AdminOrderService;
 import docker_test.com.service.OrderService;
 import jakarta.validation.Valid;
 
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,92 +42,74 @@ public class OrderController {
 // 	}
 
     private final OrderService orderService;
-	private final OrderRepository orderRepository;
+	private final OrdersRepository orderRepository;
 	private final OrderItemRepository orderItemRepository;
 	private final OrderShipmentRepository orderShipmentRepository;
+	
+	    private final AdminOrderService adminOrderService;
 
 	public OrderController(OrderService orderService,
-						   OrderRepository orderRepository,
+						   OrdersRepository orderRepository,
 						   OrderItemRepository orderItemRepository,
-						   OrderShipmentRepository orderShipmentRepository) {
+						   OrderShipmentRepository orderShipmentRepository,
+						   AdminOrderService adminOrderService) {
         this.orderService = orderService;
 		this.orderRepository = orderRepository;
 		this.orderItemRepository = orderItemRepository;
 		this.orderShipmentRepository = orderShipmentRepository;
+		this.adminOrderService = adminOrderService;
     }
- 	
-//	@PostMapping("")
-//	public String placeOrder(@RequestBody OrderDTO order) {
-//		System.out.println("Received order: " + order.getName() + ", Price: " + order.getTotal_price()) ;
-//		var list = order.getOrders_items();
-//		
-//		var grououpedByShop = list.stream().collect(Collectors.groupingBy(OrderItemDTO::getShop_id));
-//	    	grououpedByShop.forEach((shopId, items) -> {
-//	            System.out.println("Shop ID: " + shopId);
-//	            items.forEach(item -> {
-//	                System.out.println("  Product ID: " + item.getProduct_id() + ", Quantity: " + item.getQuantity() + ", Price: " + item.getPrice() + ", Product Name: " + item.getProduct_name() + ", Variant Name: " + item.getVariant_name());
-//	            });
-//	        });
-//	    	;
-//		 grououpedByShop.entrySet().forEach(entry -> {
-//	            Integer shopId = entry.getKey();
-//	            System.out.println("Shop ID: " + shopId);
-//	            entry.getValue().forEach(item -> {
-//	                System.out.println("  Product ID: " + item.getProduct_id() + ", Quantity: " + item.getQuantity() + ", Price: " + item.getPrice() + ", Product Name: " + item.getProduct_name() + ", Variant Name: " + item.getVariant_name());
-//	            });
-//	     });
-//
-//		
-//		
-//		System.out.println("Grouped Order Items by Shop ID:" + grououpedByShop.toString());
-//		
-//		
-//		
-//		
-//		
-//		for(var item : list) {
-//			System.out.println("Order Item - Product ID: " + item.getProduct_id() + ", Quantity: " + item.getQuantity() + ", Price: " + item.getPrice() + ", Shop ID: " + item.getShop_id() + ", Product Name: " + item.getProduct_name() + ", Variant Name: " + item.getVariant_name());
-//		}
-//		//sdsds
-//		
-//		 OrderCreatedEvent orderEvent = new OrderCreatedEvent();
-//		 orderEvent.setRecipient(order.getRecipient());
-//		 orderEvent.setStatus("PENDING");
-//		 orderEvent.setMessage("order status is in pending state");
-//		 orderEvent.setOrder(order);
-//		 
-//		System.out.println("Sending order event to Kafka: " + orderEvent.getMessage()); 
-//		 orderProducer.sendMessage(orderEvent);
-//		return "Order placed successfully ...";
-//	}
 	
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)           // return 201, not 200
-    public ResponseEntity<OrderResponeDTO> placeOrder(@Valid @RequestBody OrderDTO dto) {
-    	RecipientDTO recipient = dto.getRecipient();
-    	System.out.println("Received order for recipient: " + recipient.getName() + ", Phone: " + recipient.getPhone());
-        dto.getOrder_shipment().forEach(shipment -> {
-			System.out.println("Shipment :" + shipment.toString());
-		});
-    	try {
-    		
-    		
-    	OrderResponeDTO saved = orderService.placeOrder(dto);
-    	System.out.println("Order placed successfully : " + saved.toString());
-    	return ResponseEntity
-    			.status(HttpStatus.CREATED)
-    			.body(saved);
-    	}
-        catch (Exception e) {
-			System.err.println("Error placing order: " + e.getMessage());
-			
-			//return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-			//giúp tôi trả về cả message lỗi trong response body
-			return ResponseEntity
-					.status(HttpStatus.INTERNAL_SERVER_ERROR)
-					.body(new OrderResponeDTO(null, null, "Failed to place order: " + e.getMessage()));
-		}
-    }
+	  @PostMapping("/create")
+	    public ResponseEntity<?> create(@RequestBody Order item) {
+	        try {
+	            return ResponseEntity.ok(orderRepository.save(item));
+	        } catch (Exception e) {
+	            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	                    .body(java.util.Map.of("message", "Create order failed", "error", e.getMessage()));
+	        }
+	    }
+
+	    @GetMapping("")
+	    public OrderPageResponse<AdminOrderListItemDTO> getOrders(
+	            @RequestParam(required = false) Long userId,
+	            @RequestParam(required = false) String startDate,
+	            @RequestParam(required = false) String endDate,
+	            @RequestParam(required = false) Double minAmount,
+	            @RequestParam(required = false) Double maxAmount,
+	            @RequestParam(defaultValue = "all") String status,
+	            @RequestParam(defaultValue = "date") String sortBy,
+	            @RequestParam(defaultValue = "desc") String sortOrder,
+	            @RequestParam(defaultValue = "1") int page,
+	            @RequestParam(defaultValue = "10") int size
+	    ) {
+
+	        LocalDateTime start = startDate != null ? LocalDateTime.parse(startDate) : null;
+	        LocalDateTime end = endDate != null ? LocalDateTime.parse(endDate) : null;
+
+	        return adminOrderService.getAdminOrders(
+	                userId,
+	                start,
+	                end,
+	                minAmount,
+	                maxAmount,
+	                status,
+	                sortBy,
+	                sortOrder,
+	                page,
+	                size
+	        );
+	    }
+
+//	    @GetMapping("/{id}")
+//	    public ResponseEntity<?> getOrderById(@PathVariable Long id) {
+//	        Order order = adminOrderService.getAdminOrderById(id);
+//	        if (order == null) {
+//	            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+//	                    .body(java.util.Map.of("message", "Order not found", "id", id));
+//	        }
+//	        return ResponseEntity.ok(order);
+//	    }
 
 	@GetMapping("/{id}")
 	public ResponseEntity<?> getOrderById(@PathVariable Long id) {
@@ -149,6 +136,8 @@ public class OrderController {
 		response.put("paymentStatus", order.getPaymentStatus());
 		response.put("orderStatus", order.getOrderStatus());
 		response.put("trackingNumber", order.getTrackingNumber());
+		response.put("returnStatusSummary", order.getReturnStatusSummary());
+		response.put("lastReturnRequestId", order.getLastReturnRequestId());
 		response.put("items", items);
 		response.put("shipments", shipments);
 		return ResponseEntity.ok(response);

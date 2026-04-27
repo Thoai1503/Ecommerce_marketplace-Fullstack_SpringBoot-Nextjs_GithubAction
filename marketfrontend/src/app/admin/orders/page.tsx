@@ -24,7 +24,13 @@ import {
   Filter,
   History,
   ShoppingBag,
+  Package,
   ChevronRight,
+  CreditCard,
+  Wallet,
+  Smartphone,
+  Landmark,
+  Banknote,
 } from "lucide-react";
 import { OrderStatus, PaymentStatus } from "@/types";
 import { updateOrderStatus } from "@/service/orders";
@@ -87,6 +93,65 @@ const StatusConfig: Record<
     icon: <XCircle size={12} />,
   },
 };
+
+// Payment Method config – maps DB paymentMethod value to icon + label
+const PaymentMethodConfig: Record<
+  string,
+  { label: string; icon: React.ReactNode; color: string; bgColor: string }
+> = {
+  COD: {
+    label: "COD",
+    icon: <Truck size={11} />,
+    color: "text-amber-700",
+    bgColor: "bg-amber-50",
+  },
+  VNPAY: {
+    label: "VNPay",
+    icon: <CreditCard size={11} />,
+    color: "text-blue-700",
+    bgColor: "bg-blue-50",
+  },
+  MOMO: {
+    label: "MoMo",
+    icon: <Smartphone size={11} />,
+    color: "text-pink-700",
+    bgColor: "bg-pink-50",
+  },
+  ZALOPAY: {
+    label: "ZaloPay",
+    icon: <Wallet size={11} />,
+    color: "text-cyan-700",
+    bgColor: "bg-cyan-50",
+  },
+  BANK_TRANSFER: {
+    label: "Chuyển khoản",
+    icon: <Landmark size={11} />,
+    color: "text-green-700",
+    bgColor: "bg-green-50",
+  },
+  CREDIT_CARD: {
+    label: "Thẻ tín dụng",
+    icon: <CreditCard size={11} />,
+    color: "text-purple-700",
+    bgColor: "bg-purple-50",
+  },
+};
+
+const defaultPaymentMethodConfig = {
+  label: "Khác",
+  icon: <Banknote size={11} />,
+  color: "text-slate-600",
+  bgColor: "bg-slate-100",
+};
+
+function getPaymentMethodConfig(method?: string | null) {
+  if (!method) return defaultPaymentMethodConfig;
+  // Normalize: uppercase + trim, also handle lowercase variants like "VNPay" → "VNPAY"
+  const key = method.trim().toUpperCase().replace(/[\s-]/g, "_");
+  return (
+    PaymentMethodConfig[key] ?? { ...defaultPaymentMethodConfig, label: method }
+  );
+}
 
 const PaymentConfig: Record<
   PaymentStatus,
@@ -544,9 +609,22 @@ function OrdersPageContent() {
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-sm text-slate-700">
-                        {order.orderCode}
-                      </span>
+                      <div>
+                        <span className="font-mono font-bold text-sm text-slate-700">
+                          {order.orderCode}
+                        </span>
+                        <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-0.5">
+                          <Package size={10} />
+                          <span>
+                            {(
+                              order.shipmentsCount ??
+                              order.itemsCount ??
+                              0
+                            ).toLocaleString()}{" "}
+                            kiện hàng
+                          </span>
+                        </div>
+                      </div>
                       <span className="text-[10px] text-slate-400">
                         •{" "}
                         {new Date(order.createdAt).toLocaleDateString("vi-VN")}
@@ -582,6 +660,16 @@ function OrdersPageContent() {
                       <p className="text-sm font-black text-slate-900">
                         {order.totalAmount.toLocaleString()}₫
                       </p>
+                      {(() => {
+                        const pm = getPaymentMethodConfig(order.paymentMethod);
+                        return (
+                          <span
+                            className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${pm.bgColor} ${pm.color}`}
+                          >
+                            {pm.icon} {pm.label}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <div className="flex items-center gap-2">
                       {order.status === "PENDING" && (
@@ -669,7 +757,20 @@ function OrdersPageContent() {
                         className="px-4 py-4 font-black text-slate-800 text-sm hover:text-blue-600 cursor-pointer"
                         onClick={() => router.push(`/admin/orders/${order.id}`)}
                       >
-                        {order.orderCode}
+                        <div>
+                          <div>{order.orderCode}</div>
+                          <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 mt-0.5 normal-case tracking-normal">
+                            <Package size={10} />
+                            <span>
+                              {(
+                                order.shipmentsCount ??
+                                order.itemsCount ??
+                                0
+                              ).toLocaleString()}{" "}
+                              kiện hàng
+                            </span>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
@@ -681,8 +782,22 @@ function OrdersPageContent() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-right font-black text-slate-900 text-sm">
-                        {order.totalAmount.toLocaleString()}₫
+                      <td className="px-4 py-4 text-right">
+                        <span className="block font-black text-slate-900 text-sm">
+                          {order.totalAmount.toLocaleString()}₫
+                        </span>
+                        {(() => {
+                          const pm = getPaymentMethodConfig(
+                            order.paymentMethod,
+                          );
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${pm.bgColor} ${pm.color}`}
+                            >
+                              {pm.icon} {pm.label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-4 text-center">
                         <span

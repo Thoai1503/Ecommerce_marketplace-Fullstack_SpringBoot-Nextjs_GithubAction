@@ -27,15 +27,24 @@ const colors = {
 // Hàm format thời gian log
 function getFormattedDateTime(): string {
   const now = new Date();
-  const day = String(now.getDate()).padStart(2, "0");
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const year = now.getFullYear();
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  const seconds = String(now.getSeconds()).padStart(2, "0");
+
+  // Format theo timezone Việt Nam
+  const vnTime = new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  const parts = Object.fromEntries(vnTime.map((p) => [p.type, p.value]));
+
   const milliseconds = String(now.getMilliseconds()).padStart(3, "0");
 
-  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+  return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}:${parts.second}.${milliseconds}`;
 }
 
 // Hàm lấy màu theo HTTP method

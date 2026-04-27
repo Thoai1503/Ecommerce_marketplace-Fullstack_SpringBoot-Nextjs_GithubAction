@@ -1,3 +1,4 @@
+
 # Thoai1503-project
 
 
@@ -21,6 +22,7 @@ git push -uf origin main
 ```
 
 ## Integrate with your tools
+<img width="1471" height="414" alt="Screenshot 2026-04-26 225224" src="https://github.com/user-attachments/assets/55f3c9fd-ad45-4e15-8ac5-65897499f3e1" />
 
 * [Set up project integrations](https://gitlab.com/thoai1503-group/Thoai1503-project/-/settings/integrations)
 

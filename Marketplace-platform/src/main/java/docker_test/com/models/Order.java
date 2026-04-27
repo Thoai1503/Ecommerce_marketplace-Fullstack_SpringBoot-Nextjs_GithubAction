@@ -23,6 +23,11 @@ public final class Order {
     private LocalDateTime delivered_at;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
+    // Enriched fields (joined from user + order_item tables)
+    private String customer_name;
+    private String customer_email;
+    private String customer_phone;
+    private int items_count;
 
     public Order() {
         this.shipping_fee = 0.0;
@@ -121,4 +126,16 @@ public final class Order {
     
     public LocalDateTime getUpdatedAt() { return updated_at; }
     public void setUpdatedAt(LocalDateTime updated_at) { this.updated_at = updated_at; }
+
+    public String getCustomerName() { return customer_name; }
+    public void setCustomerName(String customer_name) { this.customer_name = customer_name; }
+
+    public String getCustomerEmail() { return customer_email; }
+    public void setCustomerEmail(String customer_email) { this.customer_email = customer_email; }
+
+    public String getCustomerPhone() { return customer_phone; }
+    public void setCustomerPhone(String customer_phone) { this.customer_phone = customer_phone; }
+
+    public int getItemsCount() { return items_count; }
+    public void setItemsCount(int items_count) { this.items_count = items_count; }
 }

@@ -25,6 +25,8 @@ import {
   ShipmentStatus,
 } from "@/types";
 import { API_URL } from "@/helper/api";
+import ReturnRequestModal, { ReturnRequestDraft } from "./ReturnRequestModal";
+import { useUserAuth } from "@/context/UserAuthContext";
 
 const orderStatusLabel: Record<Order["status"], string> = {
   PENDING: "Cho xac nhan",
@@ -97,6 +99,7 @@ const normalizeShipmentStatus = (
     IN_TRANSIT: "SHIPPING",
     DELIVERING: "DELIVERING",
     OUT_FOR_DELIVERY: "DELIVERING",
+    DELIVERD: "DELIVERED",
     DELIVERED: "DELIVERED",
     COMPLETED: "COMPLETED",
     FAILED: "FAILED",
@@ -540,6 +543,7 @@ export default function UserOrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = String(params?.id || "");
+  const { userId } = useUserAuth();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -567,6 +571,24 @@ export default function UserOrderDetailPage() {
   const [reviewActionMessage, setReviewActionMessage] = useState<
     Record<string, string>
   >({});
+  const [returnModalShipmentId, setReturnModalShipmentId] = useState<
+    string | null
+  >(null);
+  const [returnRequestDrafts, setReturnRequestDrafts] = useState<
+    Record<string, ReturnRequestDraft>
+  >({});
+  const [returnActionStatus, setReturnActionStatus] = useState<
+    Record<string, "idle" | "pending" | "submitted">
+  >({});
+
+  const [returnActionMessage, setReturnActionMessage] = useState<
+    Record<string, string>
+  >({});
+
+  // State for viewing return request media modal
+  const [viewReturnMediaShipmentId, setViewReturnMediaShipmentId] = useState<
+    string | null
+  >(null);
 
   const activeReviewShipment = useMemo(
     () =>
@@ -574,6 +596,14 @@ export default function UserOrderDetailPage() {
         (shipment) => shipment.id === reviewModalShipmentId,
       ) || null,
     [order, reviewModalShipmentId],
+  );
+
+  const activeReturnShipment = useMemo(
+    () =>
+      order?.shipments?.find(
+        (shipment) => shipment.id === returnModalShipmentId,
+      ) || null,
+    [order, returnModalShipmentId],
   );
 
   const openReviewModal = (shipmentId: string) => {
@@ -602,6 +632,94 @@ export default function UserOrderDetailPage() {
 
   const closeReviewModal = () => {
     setReviewModalShipmentId(null);
+  };
+
+  const openReturnModal = (shipmentId: string) => {
+    const shipment = order?.shipments?.find((item) => item.id === shipmentId);
+    if (!shipment) return;
+
+    setReturnRequestDrafts((prev) => {
+      const existing = prev[shipmentId];
+      const selectedItemIds = shipment.items.reduce<Record<string, boolean>>(
+        (acc, item) => {
+          acc[item.id] = existing?.selectedItemIds?.[item.id] || false;
+          return acc;
+        },
+        {},
+      );
+
+      return {
+        ...prev,
+        [shipmentId]: {
+          selectedItemIds,
+          reason: existing?.reason || "",
+          files: existing?.files || [],
+        },
+      };
+    });
+
+    setReturnModalShipmentId(shipmentId);
+  };
+
+  const closeReturnModal = () => {
+    setReturnModalShipmentId(null);
+  };
+
+  const updateReturnDraft = (
+    shipmentId: string,
+    patch: Partial<ReturnRequestDraft>,
+  ) => {
+    setReturnRequestDrafts((prev) => {
+      const current =
+        prev[shipmentId] ||
+        ({
+          selectedItemIds: {},
+          reason: "",
+          files: [],
+        } as ReturnRequestDraft);
+
+      return {
+        ...prev,
+        [shipmentId]: {
+          ...current,
+          ...patch,
+        },
+      };
+    });
+  };
+
+  const toggleReturnItem = (
+    shipmentId: string,
+    itemId: string,
+    checked: boolean,
+  ) => {
+    const currentDraft = returnRequestDrafts[shipmentId];
+    updateReturnDraft(shipmentId, {
+      selectedItemIds: {
+        ...(currentDraft?.selectedItemIds || {}),
+        [itemId]: checked,
+      },
+    });
+  };
+
+  const handleReturnEvidenceChange = (
+    shipmentId: string,
+    files: FileList | null,
+  ) => {
+    if (!files) return;
+
+    const existing = returnRequestDrafts[shipmentId]?.files || [];
+    const incoming = Array.from(files);
+    updateReturnDraft(shipmentId, {
+      files: [...existing, ...incoming].slice(0, 10),
+    });
+  };
+
+  const removeReturnEvidence = (shipmentId: string, targetIndex: number) => {
+    const current = returnRequestDrafts[shipmentId]?.files || [];
+    updateReturnDraft(shipmentId, {
+      files: current.filter((_, index) => index !== targetIndex),
+    });
   };
 
   const updateReviewDraft = (
@@ -755,7 +873,13 @@ export default function UserOrderDetailPage() {
   };
 
   const handleSubmitShipmentReview = async () => {
-    if (!activeReviewShipment) return;
+    alert(
+      "Chuc mung ban da hoan thanh don hang! Vui long danh gia san pham va dich vu cua shop. Neu backend chua ho tro luu danh gia, noi dung danh gia cua ban van duoc luu tam thoi tren giao dien va se duoc gui den shop khi backend san sang.",
+    );
+    if (!activeReviewShipment) {
+      alert("Khong tim thay kien hang de danh gia.");
+      return;
+    }
 
     const shipmentId = activeReviewShipment.id;
     const drafts = shipmentReviewDrafts[shipmentId] || {};
@@ -822,6 +946,152 @@ export default function UserOrderDetailPage() {
         [shipmentId]: "submitted",
       }));
       closeReviewModal();
+    }
+  };
+
+  const handleSubmitReturnRequest = async () => {
+    // alert(
+    //   "Vui long dien day du thong tin de gui yeu cau tra hang hoan tien den shop. Neu backend chua ho tro endpoint, noi dung yeu cau tra hang cua ban van duoc luu tam thoi tren giao dien va se duoc gui den shop khi backend san sang.",
+    // );
+    if (!activeReturnShipment) return;
+    //  alert(activeReturnShipment.id);
+    const shipmentId = activeReturnShipment.id;
+    const draft = returnRequestDrafts[shipmentId];
+    console.log("Submitting return request with draft:", draft);
+    const selectedItems = activeReturnShipment.items.filter(
+      (item) => !!draft?.selectedItemIds?.[item.id],
+    );
+    console.log("Selected items for return:", selectedItems);
+    const reason = String(draft?.reason || "").trim();
+
+    if (!selectedItems.length) {
+      setReturnActionMessage((prev) => ({
+        ...prev,
+        [shipmentId]: "Vui long chon it nhat 1 san pham can tra.",
+      }));
+      return;
+    }
+
+    if (!reason) {
+      setReturnActionMessage((prev) => ({
+        ...prev,
+        [shipmentId]: "Vui long dien ly do tra hang hoan tien.",
+      }));
+      return;
+    }
+
+    setReturnActionStatus((prev) => ({
+      ...prev,
+      [shipmentId]: "pending",
+    }));
+
+    console.log("Customer ID from cookie:", userId);
+    if (!userId) {
+      alert(
+        "Khong tim thay thong tin nguoi dung dang nhap. Vui long dang nhap de gui yeu cau tra hang hoan tien den shop. Neu backend chua ho tro endpoint, noi dung yeu cau tra hang cua ban van duoc luu tam thoi tren giao dien va se duoc gui den shop khi backend san sang.",
+      );
+      setReturnActionStatus((prev) => ({
+        ...prev,
+        [shipmentId]: "submitted",
+      }));
+      setReturnActionMessage((prev) => ({
+        ...prev,
+        [shipmentId]:
+          "Khong tim thay thong tin nguoi dung dang nhap (cookie user).",
+      }));
+      return;
+    }
+
+    const totalQuantity = selectedItems.reduce(
+      (sum, item) => sum + Number(item.quantity || 0),
+      0,
+    );
+
+    const totalRequestedAmount = selectedItems.reduce(
+      (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
+      0,
+    );
+    alert(
+      `Total quantity: ${totalQuantity}, Total requested amount: ${totalRequestedAmount}`,
+    );
+    const formData = new FormData();
+    formData.append("orderId", id);
+    formData.append("shopId", String(activeReturnShipment.shop_id));
+    formData.append("customerId", String(userId));
+    formData.append("reason", reason);
+    formData.append("quantity", String(totalQuantity));
+    formData.append("requestedAmount", String(totalRequestedAmount));
+    formData.append(
+      "items",
+      JSON.stringify(
+        selectedItems.map((item) => ({
+          orderItemId: item.id,
+          quantity: item.quantity,
+          requestedAmount: Number(item.price || 0) * Number(item.quantity || 0),
+        })),
+      ),
+    );
+
+    (draft?.files || []).forEach((file) => {
+      formData.append("files", file);
+      formData.append(
+        "descriptions",
+        `Evidence for order item issue - ${file.name}`,
+      );
+    });
+
+    let submittedByApi = false;
+    console.log("Submitting return request to API with formData:", formData);
+    try {
+      //Hàm không chạy được đến đây
+
+      alert(
+        "Vui long dien day du thong tin de gui yeu cau tra hang hoan tien den shop. Neu backend chua ho tro endpoint, noi dung yeu cau tra hang cua ban van duoc luu tam thoi tren giao dien va se duoc gui den shop khi backend san sang.",
+      );
+      const response = await fetch(`${API_URL}/api/refunds/multipart`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      submittedByApi = response.ok;
+      console.log("API response for return request submission:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+      });
+      let errorMessage = "Gui yeu cau that bai. Vui long thu lai.";
+      if (!submittedByApi) {
+        try {
+          const errorBody = await response.text();
+          if (errorBody?.trim()) {
+            errorMessage = errorBody;
+          }
+        } catch {
+          // keep default message
+        }
+      }
+
+      setReturnActionMessage((prev) => ({
+        ...prev,
+        [shipmentId]: submittedByApi
+          ? "Yeu cau tra hang hoan tien da duoc gui. Shop se phan hoi som."
+          : errorMessage,
+      }));
+    } catch (error) {
+      console.error("Submit return request failed:", error);
+      setReturnActionMessage((prev) => ({
+        ...prev,
+        [shipmentId]: "Gui yeu cau that bai. Vui long thu lai.",
+      }));
+    } finally {
+      setReturnActionStatus((prev) => ({
+        ...prev,
+        [shipmentId]: submittedByApi ? "submitted" : "idle",
+      }));
+      if (submittedByApi) {
+        closeReturnModal();
+      }
     }
   };
 
@@ -996,6 +1266,17 @@ export default function UserOrderDetailPage() {
                 }
               }
 
+              // Expose returnStatusSummary and returnRequestMedia if present
+              const returnStatusSummary =
+                shipment?.returnStatusSummary ||
+                shipment?.return_status_summary ||
+                seedData?.returnStatusSummary ||
+                seedData?.return_status_summary ||
+                "NONE";
+              const returnRequestMedia =
+                shipment?.returnRequestMedia ||
+                shipment?.return_request_media ||
+                [];
               return {
                 id: String(shipmentId),
                 order_id: String(shipment?.orderId ?? shipment?.order_id ?? id),
@@ -1057,6 +1338,8 @@ export default function UserOrderDetailPage() {
                 adjustment_request: adjustmentRequest,
                 adjustment_required,
                 business_status,
+                returnStatusSummary,
+                returnRequestMedia,
               };
             }),
         );
@@ -1466,6 +1749,156 @@ export default function UserOrderDetailPage() {
                                             : "Đánh giá sản phẩm"}
                                         </button>
                                       )}
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          openReturnModal(shipment.id)
+                                        }
+                                        className="btn btn-outline-danger btn-sm"
+                                      >
+                                        Trả hàng hoàn tiền
+                                      </button>
+
+                                      {/* View Return Request Media Button */}
+                                      {shipment.returnStatusSummary &&
+                                        shipment.returnStatusSummary !==
+                                          "NONE" && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setViewReturnMediaShipmentId(
+                                                shipment.id,
+                                              )
+                                            }
+                                            className="btn btn-warning btn-sm"
+                                          >
+                                            Xem yêu cầu trả hàng
+                                          </button>
+                                        )}
+                                    </div>
+                                  )}
+                                  {/* Modal for viewing return request media */}
+                                  {viewReturnMediaShipmentId && (
+                                    <div
+                                      style={styles.modalBackdrop}
+                                      onClick={() =>
+                                        setViewReturnMediaShipmentId(null)
+                                      }
+                                    >
+                                      <div
+                                        style={styles.modalCard}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <div style={styles.modalHeader}>
+                                          <h3
+                                            style={{
+                                              fontSize: 20,
+                                              fontWeight: 800,
+                                            }}
+                                          >
+                                            Yêu cầu trả hàng - Hình ảnh & Video
+                                          </h3>
+                                          <button
+                                            type="button"
+                                            className="btn btn-light border"
+                                            onClick={() =>
+                                              setViewReturnMediaShipmentId(null)
+                                            }
+                                          >
+                                            Đóng
+                                          </button>
+                                        </div>
+                                        <div style={styles.modalBody}>
+                                          {(() => {
+                                            const shipment =
+                                              order.shipments?.find(
+                                                (s) =>
+                                                  s.id ===
+                                                  viewReturnMediaShipmentId,
+                                              );
+                                            if (
+                                              !shipment ||
+                                              !shipment.returnRequestMedia ||
+                                              shipment.returnRequestMedia
+                                                .length === 0
+                                            ) {
+                                              return (
+                                                <p className="text-muted">
+                                                  Không có hình ảnh hoặc video
+                                                  nào cho yêu cầu trả hàng này.
+                                                </p>
+                                              );
+                                            }
+                                            return (
+                                              <div className="d-flex flex-wrap gap-3">
+                                                {shipment.returnRequestMedia.map(
+                                                  (media: any, idx: number) => {
+                                                    if (
+                                                      media.file_type?.startsWith(
+                                                        "image/",
+                                                      )
+                                                    ) {
+                                                      return (
+                                                        <img
+                                                          key={idx}
+                                                          src={
+                                                            media.url ||
+                                                            media.file_url
+                                                          }
+                                                          alt={
+                                                            media.file_name ||
+                                                            `Ảnh ${idx + 1}`
+                                                          }
+                                                          style={{
+                                                            maxWidth: 180,
+                                                            maxHeight: 180,
+                                                            borderRadius: 8,
+                                                            border:
+                                                              "1px solid #e2e8f0",
+                                                          }}
+                                                        />
+                                                      );
+                                                    }
+                                                    if (
+                                                      media.file_type?.startsWith(
+                                                        "video/",
+                                                      )
+                                                    ) {
+                                                      return (
+                                                        <video
+                                                          key={idx}
+                                                          controls
+                                                          style={{
+                                                            maxWidth: 220,
+                                                            maxHeight: 180,
+                                                            borderRadius: 8,
+                                                            border:
+                                                              "1px solid #e2e8f0",
+                                                          }}
+                                                        >
+                                                          <source
+                                                            src={
+                                                              media.url ||
+                                                              media.file_url
+                                                            }
+                                                            type={
+                                                              media.file_type
+                                                            }
+                                                          />
+                                                          Trình duyệt của bạn
+                                                          không hỗ trợ video.
+                                                        </video>
+                                                      );
+                                                    }
+                                                    return null;
+                                                  },
+                                                )}
+                                              </div>
+                                            );
+                                          })()}
+                                        </div>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -1487,6 +1920,17 @@ export default function UserOrderDetailPage() {
                                       style={{ fontSize: 11 }}
                                     >
                                       {reviewActionMessage[shipment.id]}
+                                    </p>
+                                  )}
+
+                                {(shipment.shipping_status === "DELIVERED" ||
+                                  shipment.shipping_status === "COMPLETED") &&
+                                  returnActionMessage[shipment.id] && (
+                                    <p
+                                      className="text-secondary mb-3"
+                                      style={{ fontSize: 11 }}
+                                    >
+                                      {returnActionMessage[shipment.id]}
                                     </p>
                                   )}
 
@@ -2501,6 +2945,38 @@ export default function UserOrderDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {activeReturnShipment && (
+        <ReturnRequestModal
+          shipment={activeReturnShipment}
+          draft={returnRequestDrafts[activeReturnShipment.id]}
+          status={returnActionStatus[activeReturnShipment.id]}
+          onClose={closeReturnModal}
+          onToggleItem={(itemId, checked) =>
+            toggleReturnItem(activeReturnShipment.id, itemId, checked)
+          }
+          onReasonChange={(reason) =>
+            updateReturnDraft(activeReturnShipment.id, { reason })
+          }
+          onFilesChange={(files) =>
+            handleReturnEvidenceChange(activeReturnShipment.id, files)
+          }
+          onRemoveFile={(fileIndex) =>
+            removeReturnEvidence(activeReturnShipment.id, fileIndex)
+          }
+          onSubmit={() => handleSubmitReturnRequest()}
+          formatMoney={formatMoney}
+          styles={{
+            modalBackdrop: styles.modalBackdrop,
+            modalCard: styles.modalCard,
+            modalHeader: styles.modalHeader,
+            modalBody: styles.modalBody,
+            productImg: styles.productImg,
+            qtyBadge: styles.qtyBadge,
+            reviewTextarea: styles.reviewTextarea,
+          }}
+        />
       )}
     </>
   );

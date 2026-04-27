@@ -3,11 +3,9 @@ package docker_test.com.dto;
 import java.util.List;
 import java.util.Map;
 
-import docker_test.com.model.Order;
+public class OrderPageResponse<T> {
 
-public class OrderPageResponse {
-
-    private List<Order> orders;
+    private List<T> orders;
     private int totalRecords;
     private int totalPages;
     private int currentPage;
@@ -17,7 +15,7 @@ public class OrderPageResponse {
     public OrderPageResponse() {
     }
 
-    public OrderPageResponse(List<Order> orders,
+    public OrderPageResponse(List<T> orders,
                              int totalRecords,
                              int totalPages,
                              int currentPage,
@@ -31,11 +29,11 @@ public class OrderPageResponse {
         this.pendingAmount = pendingAmount;
     }
 
-    public List<Order> getOrders() {
+    public List<T> getOrders() {
         return orders;
     }
 
-    public void setOrders(List<Order> orders) {
+    public void setOrders(List<T> orders) {
         this.orders = orders;
     }
 
