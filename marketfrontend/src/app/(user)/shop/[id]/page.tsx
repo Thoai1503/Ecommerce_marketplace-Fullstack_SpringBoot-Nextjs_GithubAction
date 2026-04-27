@@ -7,10 +7,12 @@ import ShopSidebar from "@/components/client/shop/ShopSidebar";
 import Link from "next/link";
 import { API_URL } from "@/helper/api";
 import VoucherClaimButton from "@/components/client/voucher/VoucherClaimButton";
+import { useUserAuth } from "@/context/UserAuthContext";
 
 export default function ShopPage() {
   const params = useParams();
   const shopId = params?.id;
+  const { userId } = useUserAuth();
   const searchParams = useSearchParams();
   const [keyword, setKeyword] = useState("");
   const [shop, setShop] = useState<any>(null);
@@ -19,6 +21,9 @@ export default function ShopPage() {
   const [categories, setCategories] = useState<string[]>(["all"]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const ownerUserId = Number(shop?.user_id ?? shop?.userId ?? 0);
+  const isOwnShop =
+    Boolean(userId) && ownerUserId > 0 && Number(userId) === ownerUserId;
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
@@ -159,6 +164,16 @@ export default function ShopPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
+
+  if (isOwnShop) {
+    return (
+      <div className="container my-5">
+        <div className="alert alert-info rounded-4 border-0 shadow-sm">
+          Sản phẩm của chính shop bạn sẽ không hiển thị ở khu vực mua hàng khi đang đăng nhập bằng tài khoản này.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container my-4">

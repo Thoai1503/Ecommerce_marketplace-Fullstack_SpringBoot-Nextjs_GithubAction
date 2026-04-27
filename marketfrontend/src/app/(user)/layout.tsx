@@ -1,10 +1,11 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Script from "next/script";
 import HeaderAuth from "@/components/HeaderAuth";
 import { cookies } from "next/headers";
 import { UserAuthProvider } from "@/context/UserAuthContext";
-import { ShoppingBag, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 import CustomProgressBar from "@/components/common/CustomProgressBar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -69,25 +70,19 @@ export default async function UserLayout({
               <div className="row align-items-center g-3">
                 {/* Logo */}
                 <div className="col-auto">
-                  <a
+                  <Link
                     href="/"
-                    className="d-flex align-items-center gap-2 text-decoration-none"
+                    className="d-flex align-items-center text-decoration-none"
                   >
-                    <div
-                      className="d-flex align-items-center justify-content-center"
-                      style={{
-                        width: "40px",
-                        height: "40px",
-                        background: "var(--primary)",
-                        borderRadius: "0.5rem",
-                      }}
-                    >
-                      <ShoppingBag size={22} className="text-white" />
-                    </div>
-                    <h1 className="fs-4 fw-bold mb-0 d-none d-md-block">
-                      Nexamart
-                    </h1>
-                  </a>
+                    <Image
+                      src="/logo/nexamart-logo.svg"
+                      alt="Nexamart"
+                      width={220}
+                      height={56}
+                      priority
+                      style={{ width: "auto", height: "44px" }}
+                    />
+                  </Link>
                 </div>
 
                 {/* Search */}
@@ -281,7 +276,6 @@ export default async function UserLayout({
             </div>
           </footer>
 
-          <Script src="/assets/js/main.js" strategy="afterInteractive" />
         </UserAuthProvider>
       </RootPrivider>
     </>

@@ -11,6 +11,27 @@ import CategoryCarousel from "@/components/client/home_page/CategoryCarousel";
 import styles from "./page.module.css";
 // import { useHomePage } from "@/feature/client/hook";
 
+const getOwnShopId = async (): Promise<number | null> => {
+  const cookieStore = await cookies();
+  const userId = Number(cookieStore.get("user")?.value ?? 0);
+
+  if (!userId) return null;
+
+  try {
+    const res = await fetch(`${INTERNAL_API}/seller/shop/user/${userId}`, {
+      cache: "no-store",
+    });
+
+    if (!res.ok) return null;
+
+    const shop = await res.json();
+    const shopId = Number(shop?.id ?? shop?.shop_id ?? 0);
+    return shopId > 0 ? shopId : null;
+  } catch {
+    return null;
+  }
+};
+
 export default async function Home() {
   const cookieStore = await cookies();
   const role = cookieStore.get("role")?.value;
@@ -47,7 +68,11 @@ export default async function Home() {
 
   console.log("Parent Categories:", parentCategories);
   const res1 = await fetch(`${INTERNAL_API}/product`);
-  const products = ((await res1.json()) as Partial<IProduct>[]) || [];
+  const rawProducts = ((await res1.json()) as Partial<IProduct>[]) || [];
+  const ownShopId = await getOwnShopId();
+  const products = rawProducts.filter(
+    (product) => !ownShopId || Number(product.shop_id ?? 0) !== ownShopId,
+  );
   // const { products } = useHomePage();
 
   if (products.length === 0 || !products) {
@@ -143,7 +168,7 @@ export default async function Home() {
                 price: "350.000",
                 oldPrice: "550.000",
                 sold: 95,
-                img: "https://images.unsplash.com/photo-1625772299848-361b803ffa25?w=400",
+                img: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&q=80",
               },
               {
                 discount: 20,
@@ -164,7 +189,7 @@ export default async function Home() {
                 price: "2.100.000",
                 oldPrice: "2.470.000",
                 sold: 0,
-                img: "https://images.unsplash.com/photo-1523275335684-04d3bccb4a93?w=400",
+                img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80",
               },
               {
                 discount: 25,
