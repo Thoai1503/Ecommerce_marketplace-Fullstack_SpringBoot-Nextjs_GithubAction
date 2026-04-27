@@ -580,9 +580,15 @@ export default function UserOrderDetailPage() {
   const [returnActionStatus, setReturnActionStatus] = useState<
     Record<string, "idle" | "pending" | "submitted">
   >({});
+
   const [returnActionMessage, setReturnActionMessage] = useState<
     Record<string, string>
   >({});
+
+  // State for viewing return request media modal
+  const [viewReturnMediaShipmentId, setViewReturnMediaShipmentId] = useState<
+    string | null
+  >(null);
 
   const activeReviewShipment = useMemo(
     () =>
@@ -1260,6 +1266,17 @@ export default function UserOrderDetailPage() {
                 }
               }
 
+              // Expose returnStatusSummary and returnRequestMedia if present
+              const returnStatusSummary =
+                shipment?.returnStatusSummary ||
+                shipment?.return_status_summary ||
+                seedData?.returnStatusSummary ||
+                seedData?.return_status_summary ||
+                "NONE";
+              const returnRequestMedia =
+                shipment?.returnRequestMedia ||
+                shipment?.return_request_media ||
+                [];
               return {
                 id: String(shipmentId),
                 order_id: String(shipment?.orderId ?? shipment?.order_id ?? id),
@@ -1321,6 +1338,8 @@ export default function UserOrderDetailPage() {
                 adjustment_request: adjustmentRequest,
                 adjustment_required,
                 business_status,
+                returnStatusSummary,
+                returnRequestMedia,
               };
             }),
         );
@@ -1740,6 +1759,146 @@ export default function UserOrderDetailPage() {
                                       >
                                         Trả hàng hoàn tiền
                                       </button>
+
+                                      {/* View Return Request Media Button */}
+                                      {shipment.returnStatusSummary &&
+                                        shipment.returnStatusSummary !==
+                                          "NONE" && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setViewReturnMediaShipmentId(
+                                                shipment.id,
+                                              )
+                                            }
+                                            className="btn btn-warning btn-sm"
+                                          >
+                                            Xem yêu cầu trả hàng
+                                          </button>
+                                        )}
+                                    </div>
+                                  )}
+                                  {/* Modal for viewing return request media */}
+                                  {viewReturnMediaShipmentId && (
+                                    <div
+                                      style={styles.modalBackdrop}
+                                      onClick={() =>
+                                        setViewReturnMediaShipmentId(null)
+                                      }
+                                    >
+                                      <div
+                                        style={styles.modalCard}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <div style={styles.modalHeader}>
+                                          <h3
+                                            style={{
+                                              fontSize: 20,
+                                              fontWeight: 800,
+                                            }}
+                                          >
+                                            Yêu cầu trả hàng - Hình ảnh & Video
+                                          </h3>
+                                          <button
+                                            type="button"
+                                            className="btn btn-light border"
+                                            onClick={() =>
+                                              setViewReturnMediaShipmentId(null)
+                                            }
+                                          >
+                                            Đóng
+                                          </button>
+                                        </div>
+                                        <div style={styles.modalBody}>
+                                          {(() => {
+                                            const shipment =
+                                              order.shipments?.find(
+                                                (s) =>
+                                                  s.id ===
+                                                  viewReturnMediaShipmentId,
+                                              );
+                                            if (
+                                              !shipment ||
+                                              !shipment.returnRequestMedia ||
+                                              shipment.returnRequestMedia
+                                                .length === 0
+                                            ) {
+                                              return (
+                                                <p className="text-muted">
+                                                  Không có hình ảnh hoặc video
+                                                  nào cho yêu cầu trả hàng này.
+                                                </p>
+                                              );
+                                            }
+                                            return (
+                                              <div className="d-flex flex-wrap gap-3">
+                                                {shipment.returnRequestMedia.map(
+                                                  (media: any, idx: number) => {
+                                                    if (
+                                                      media.file_type?.startsWith(
+                                                        "image/",
+                                                      )
+                                                    ) {
+                                                      return (
+                                                        <img
+                                                          key={idx}
+                                                          src={
+                                                            media.url ||
+                                                            media.file_url
+                                                          }
+                                                          alt={
+                                                            media.file_name ||
+                                                            `Ảnh ${idx + 1}`
+                                                          }
+                                                          style={{
+                                                            maxWidth: 180,
+                                                            maxHeight: 180,
+                                                            borderRadius: 8,
+                                                            border:
+                                                              "1px solid #e2e8f0",
+                                                          }}
+                                                        />
+                                                      );
+                                                    }
+                                                    if (
+                                                      media.file_type?.startsWith(
+                                                        "video/",
+                                                      )
+                                                    ) {
+                                                      return (
+                                                        <video
+                                                          key={idx}
+                                                          controls
+                                                          style={{
+                                                            maxWidth: 220,
+                                                            maxHeight: 180,
+                                                            borderRadius: 8,
+                                                            border:
+                                                              "1px solid #e2e8f0",
+                                                          }}
+                                                        >
+                                                          <source
+                                                            src={
+                                                              media.url ||
+                                                              media.file_url
+                                                            }
+                                                            type={
+                                                              media.file_type
+                                                            }
+                                                          />
+                                                          Trình duyệt của bạn
+                                                          không hỗ trợ video.
+                                                        </video>
+                                                      );
+                                                    }
+                                                    return null;
+                                                  },
+                                                )}
+                                              </div>
+                                            );
+                                          })()}
+                                        </div>
+                                      </div>
                                     </div>
                                   )}
                                 </div>

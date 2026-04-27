@@ -637,6 +637,14 @@ export interface Shipment {
   adjustment_required?: boolean;
   business_status?: string;
   recipient?: any;
+  // Return request fields
+  returnStatusSummary?: string;
+  returnRequestMedia?: Array<{
+    file_type: string;
+    url: string;
+    file_url?: string;
+    file_name?: string;
+  }>;
 }
 
 export interface Product {

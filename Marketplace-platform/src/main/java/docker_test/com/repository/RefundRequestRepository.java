@@ -6,5 +6,5 @@ import docker_test.com.models.refunds.ReturnRequest;
 
 @Repository
 public interface RefundRequestRepository extends org.springframework.data.jpa.repository.JpaRepository<ReturnRequest, Long> {
-
+    
 }
