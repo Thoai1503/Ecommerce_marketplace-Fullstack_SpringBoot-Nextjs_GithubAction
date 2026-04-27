@@ -99,6 +99,30 @@ const normalizeSegmentRule = (rule: any): VoucherSegmentRule => ({
   segmentValue: rule?.segmentValue ?? rule?.segment_value ?? null,
 });
 
+const normalizeRedemptionEvent = (item: any): VoucherRedemptionEvent => ({
+  id: String(item?.id ?? ""),
+  voucherId: String(item?.voucherId ?? item?.voucher_id ?? ""),
+  userName:
+    item?.userName ??
+    item?.user_name ??
+    (item?.userId ?? item?.user_id ? `User #${item?.userId ?? item?.user_id}` : "Unknown user"),
+  orderCode:
+    item?.orderCode ??
+    item?.order_code ??
+    (item?.orderId ?? item?.order_id ? `Order #${item?.orderId ?? item?.order_id}` : "Unknown order"),
+  discountAmountApplied: Number(
+    item?.discountAmountApplied ?? item?.discount_amount_applied ?? 0,
+  ),
+  finalOrderAmount: Number(
+    item?.finalOrderAmount ?? item?.final_order_amount ?? 0,
+  ),
+  status: item?.status ?? "SUCCESS",
+  redeemedAt:
+    item?.redeemedAt ??
+    item?.redeemed_at ??
+    new Date().toISOString(),
+});
+
 const toScopeApiPayload = (voucherId: string, rule: VoucherScopeRule) => ({
   voucherId: Number(voucherId),
   scopeType: rule.scopeType,
@@ -182,7 +206,19 @@ export const saveVoucherRules = async (
 export const getVoucherRedemptions = async (
   voucherId: string,
 ): Promise<VoucherRedemptionEvent[]> => {
-  return [];
+  const res = await axios.get(`${API_URL}/api/voucher-redemptions`);
+  const rows = Array.isArray(res.data) ? res.data : [];
+
+  return rows
+    .filter(
+      (item) =>
+        String(item?.voucherId ?? item?.voucher_id ?? "") === String(voucherId),
+    )
+    .map(normalizeRedemptionEvent)
+    .sort(
+      (a, b) =>
+        new Date(b.redeemedAt).getTime() - new Date(a.redeemedAt).getTime(),
+    );
 };
 
 // ================= AUDIT =================

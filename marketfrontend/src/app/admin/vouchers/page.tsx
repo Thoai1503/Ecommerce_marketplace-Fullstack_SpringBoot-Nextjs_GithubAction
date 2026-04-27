@@ -4,7 +4,6 @@ import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useVouchers } from "@/hooks/admin/useVouchers";
 import { VoucherStatus } from "@/types";
-import { useToast } from "@/context/ToastContext";
 import {
   Search,
   Filter,
@@ -57,7 +56,6 @@ const renderDiscount = (voucher: any) => {
 
 export default function VouchersPage() {
   const router = useRouter();
-  const toast = useToast();
   const {
     vouchers,
     stats,
@@ -94,10 +92,10 @@ export default function VouchersPage() {
     if (!deleteTarget) return;
     try {
       await deleteVoucher(deleteTarget.id);
-      toast.success("Da xoa voucher thanh cong");
+      window.alert("Da xoa voucher thanh cong");
       setDeleteTarget(null);
     } catch {
-      toast.error("Khong the xoa voucher");
+      window.alert("Khong the xoa voucher");
     }
   };
 
@@ -105,9 +103,9 @@ export default function VouchersPage() {
     const next = current === "ACTIVE" ? "PAUSED" : "ACTIVE";
     try {
       await updateStatus({ id, status: next });
-      toast.success(`Da chuyen trang thai sang ${next}`);
+      window.alert(`Da chuyen trang thai sang ${next}`);
     } catch {
-      toast.error("Cap nhat trang thai that bai");
+      window.alert("Cap nhat trang thai that bai");
     }
   };
 
