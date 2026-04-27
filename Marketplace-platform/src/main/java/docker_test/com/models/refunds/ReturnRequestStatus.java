@@ -1,6 +1,6 @@
 package docker_test.com.models.refunds;
 
-public enum RefundRequestStatus {
+public enum ReturnRequestStatus {
 	PENDING_APPROVAL("Đang chờ phê duyệt")	,
 	APPROVED("Đã phê duyệt"),
 	REJECTED("Đã từ chối"),
@@ -14,7 +14,7 @@ public enum RefundRequestStatus {
 	private final String description;
 
 	
-	RefundRequestStatus(String description) {
+	ReturnRequestStatus(String description) {
 		this.description = description;
 	}
 }

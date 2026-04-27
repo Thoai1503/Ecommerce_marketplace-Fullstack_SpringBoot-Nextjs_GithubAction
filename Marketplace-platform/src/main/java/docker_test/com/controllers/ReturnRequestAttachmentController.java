@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import docker_test.com.services.ReturnRequestAttachmentService;
 
 @RestController
-@RequestMapping("/api/refunds")
+@RequestMapping("/api/refunds-requests-attachments")
 public class ReturnRequestAttachmentController {
 
     private final ReturnRequestAttachmentService returnRequestAttachmentService;
@@ -53,4 +53,5 @@ public class ReturnRequestAttachmentController {
         returnRequestAttachmentService.deleteAttachment(attachmentId);
         return ResponseEntity.ok("Deleted attachment id=" + attachmentId);
     }
-}
+
+	}

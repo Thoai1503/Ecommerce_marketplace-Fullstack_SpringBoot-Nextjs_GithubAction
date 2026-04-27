@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import docker_test.com.dto.RefundRequestDTO;
-import docker_test.com.models.refunds.RefundRequest;
+import docker_test.com.models.refunds.ReturnRequest;
 import docker_test.com.repository.RefundRequestRepository;
 import docker_test.com.repository.ReturnReqestItemRepositrory;
 
@@ -26,8 +26,8 @@ public class RefundRequestService {
 		this.returnRequestAttachmentService = returnRequestAttachmentService;
 	}
 	
-	public RefundRequest createRefundRequest(RefundRequestDTO refundRequestDTO) {
-		RefundRequest savedRefundRequest = persistRefundRequest(refundRequestDTO);
+	public ReturnRequest createRefundRequest(RefundRequestDTO refundRequestDTO) {
+		ReturnRequest savedRefundRequest = persistRefundRequest(refundRequestDTO);
 
 		if (refundRequestDTO.getAttachments() != null && !refundRequestDTO.getAttachments().isEmpty()) {
 			returnRequestAttachmentService.createAttachments(savedRefundRequest.getId(), refundRequestDTO.getAttachments());
@@ -36,11 +36,11 @@ public class RefundRequestService {
 		return savedRefundRequest;
 	}
 
-	public RefundRequest createRefundRequestWithFiles(
+	public ReturnRequest createRefundRequestWithFiles(
 			RefundRequestDTO refundRequestDTO,
 			List<MultipartFile> files,
 			List<String> descriptions) {
-		RefundRequest savedRefundRequest = persistRefundRequest(refundRequestDTO);
+		ReturnRequest savedRefundRequest = persistRefundRequest(refundRequestDTO);
 
 		if (files != null && !files.isEmpty()) {
 			returnRequestAttachmentService.createAttachments(savedRefundRequest.getId(), files, descriptions);
@@ -49,8 +49,8 @@ public class RefundRequestService {
 		return savedRefundRequest;
 	}
 
-	private RefundRequest persistRefundRequest(RefundRequestDTO refundRequestDTO) {
-		RefundRequest refundRequest = new RefundRequest();
+	private ReturnRequest persistRefundRequest(RefundRequestDTO refundRequestDTO) {
+		ReturnRequest refundRequest = new ReturnRequest();
 		refundRequest.setOrderId(refundRequestDTO.getOrderId());
 		refundRequest.setShopId(refundRequestDTO.getShopId());
 		refundRequest.setCustomerId(refundRequestDTO.getCustomerId());
@@ -75,7 +75,21 @@ public class RefundRequestService {
 			});
 		}
 		
+		
+		
 		return savedRefundRequest;
+	}
+	 
+	public List<ReturnRequest> getRefundRequestsByCustomerId() {
+		refundRequestRepository.findAll().forEach(request -> {
+			request.getItems().forEach(item -> {
+				System.out.println("OrderItemId: " + item.getOrderItemId() + " Quantity: " + item.getQuantity() + " RequestedAmount: " + item.getRequestedAmount());
+			});
+		});
+		
+		return refundRequestRepository.findAll().stream()
+				.filter(request -> request.getAttachments().size()>0) // Replace 1L with the actual customer ID you want to filter by
+				.toList();
 	}
 	
 }

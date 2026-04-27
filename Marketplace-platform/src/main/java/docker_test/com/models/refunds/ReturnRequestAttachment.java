@@ -7,8 +7,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -42,6 +45,11 @@ public class ReturnRequestAttachment {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @JsonBackReference("return-request-attachments")
+    @ManyToOne
+    @JoinColumn(name = "return_request_id", insertable = false, updatable = false, nullable = false)
+    private ReturnRequest returnRequest;
 
     @PrePersist
     public void prePersist() {

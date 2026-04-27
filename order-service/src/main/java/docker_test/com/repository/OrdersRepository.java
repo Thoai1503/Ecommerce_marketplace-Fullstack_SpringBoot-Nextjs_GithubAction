@@ -30,6 +30,8 @@ public interface OrdersRepository extends JpaRepository<Order,Long> {
 			  o.payment_method AS paymentMethod,
 			  o.order_status AS orderStatus,
 			  o.tracking_number AS trackingNumber,
+			  o.return_status_summary AS returnStatusSummary,
+			  o.last_return_request_id AS lastReturnRequestId,
 			  o.created_at AS createdAt,
 			  o.updated_at AS updatedAt,
 			  COALESCE(u.full_name, 'Customer') AS customerName,

@@ -7,7 +7,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -49,73 +52,16 @@ public class ReturnRequestItem {
      private LocalDateTime updatedAt;
      
      
+     @JsonBackReference("return-request-items")
+     @ManyToOne
+     @JoinColumn(name = "return_request_id", insertable = false, updatable = false, nullable = false)
+     private ReturnRequest returnRequest;
+     
      @PrePersist
      public void prePersist() {
 		 this.createdAt = LocalDateTime.now();
 		// this.updatedAt = LocalDateTime.now();
 	 }
 
-     public Long getId() {
-          return id;
-     }
-
-     public void setId(Long id) {
-          this.id = id;
-     }
-
-     public Long getReturnRequestId() {
-          return returnRequestId;
-     }
-
-     public void setReturnRequestId(Long returnRequestId) {
-          this.returnRequestId = returnRequestId;
-     }
-
-     public Long getOrderItemId() {
-          return orderItemId;
-     }
-
-     public void setOrderItemId(Long orderItemId) {
-          this.orderItemId = orderItemId;
-     }
-
-     public int getQuantity() {
-          return quantity;
-     }
-
-     public void setQuantity(int quantity) {
-          this.quantity = quantity;
-     }
-
-     public double getRequestedAmount() {
-          return requestedAmount;
-     }
-
-     public void setRequestedAmount(double requestedAmount) {
-          this.requestedAmount = requestedAmount;
-     }
-
-     public double getRefundedAmount() {
-          return refundedAmount;
-     }
-
-     public void setRefundedAmount(double refundedAmount) {
-          this.refundedAmount = refundedAmount;
-     }
-
-     public LocalDateTime getCreatedAt() {
-          return createdAt;
-     }
-
-     public void setCreatedAt(LocalDateTime createdAt) {
-          this.createdAt = createdAt;
-     }
-
-     public LocalDateTime getUpdatedAt() {
-          return updatedAt;
-     }
-
-     public void setUpdatedAt(LocalDateTime updatedAt) {
-          this.updatedAt = updatedAt;
-     }
+   
 }
