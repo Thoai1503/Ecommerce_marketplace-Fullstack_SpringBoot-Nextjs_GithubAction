@@ -258,6 +258,19 @@ export default function CheckoutPage() {
     );
   }, [cartItems]);
 
+  const hasOwnShopItems = useMemo(
+    () =>
+      cartItems.some((item) => {
+        const sellerUserId = Number(
+          item?.product?.shop?.userId ??
+            item?.product?.shop?.user_id ??
+            0,
+        );
+        return Boolean(userId) && sellerUserId > 0 && sellerUserId === Number(userId);
+      }),
+    [cartItems, userId],
+  );
+
   console.log("Grouped cart items by shop:", groupedByShop);
 
   // Shipping options (có thể lấy từ API)
@@ -938,6 +951,10 @@ export default function CheckoutPage() {
   };
 
   const handleOrder = async () => {
+    if (hasOwnShopItems) {
+      message.warning("Bạn không thể mua sản phẩm của chính shop mình.");
+      return;
+    }
     // alert("Address id: " + selectedAddressId);
     //alert("Đặt hàng thành công!")
     alert(
@@ -1098,6 +1115,13 @@ export default function CheckoutPage() {
             Chào mừng trở lại, A. Kiểm tra nhanh và hoàn tất đơn hàng.
           </p>
         </div>
+
+        {hasOwnShopItems && (
+          <div className="alert alert-warning">
+            Bạn đang có sản phẩm của chính shop mình trong giỏ hàng. Hãy xóa các
+            sản phẩm đó trước khi đặt hàng.
+          </div>
+        )}
 
         <div className="row g-4 align-items-start">
           <CheckoutLeftSteps

@@ -69,7 +69,7 @@ public class ProductController {
 	@GetMapping("/shop/{shopId}")
 	public ResponseEntity<?> getByShopId(@PathVariable int shopId) {
 
-		var products = ((ProductRepository) repositories).GetByShopId(shopId);
+		var products = ((ProductRepository) repositories).GetActiveByShopId(shopId);
 
 		return ResponseEntity.ok(products);
 	}
@@ -77,7 +77,7 @@ public class ProductController {
 	@GetMapping("/shop/{shopId}/categories")
 	public ResponseEntity<?> getCategoriesByShop(@PathVariable int shopId) {
 
-		var categories = ((ProductRepository) repositories).getCategoriesByShop(shopId);
+		var categories = ((ProductRepository) repositories).getActiveCategoriesByShop(shopId);
 
 		return ResponseEntity.ok(categories);
 	}

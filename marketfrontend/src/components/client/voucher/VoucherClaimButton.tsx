@@ -16,6 +16,7 @@ type Props = {
   claimedCount?: number | null;
   className?: string;
   style?: CSSProperties;
+  onClaimSuccess?: () => void | Promise<void>;
 };
 
 type UserVoucher = {
@@ -32,7 +33,7 @@ const parseUserId = (value: unknown): number | null => {
 
 const formatDate = (value?: string | null) => {
   if (!value) return "";
-  return new Date(value).toLocaleDateString("vi-VN");
+  return new Date(value).toLocaleDateString("en-GB");
 };
 
 const getFallbackUserId = (): number | null => {
@@ -71,6 +72,7 @@ export default function VoucherClaimButton({
   claimedCount,
   className,
   style,
+  onClaimSuccess,
 }: Props) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -121,17 +123,17 @@ export default function VoucherClaimButton({
   const disabledReason = !isVoucherActive
     ? "Voucher inactive"
     : isBeforeClaimStart
-      ? `Nhận từ ${formatDate(claimStartAt)}`
+      ? `Available from ${formatDate(claimStartAt)}`
       : isAfterClaimEnd
-        ? `Hết nhận ${formatDate(claimEndAt)}`
+        ? `Claim ended ${formatDate(claimEndAt)}`
       : !isQuotaAvailable
-        ? "Voucher hết lượt"
+        ? "Voucher fully claimed"
         : null;
 
   const claimMutation = useMutation({
     mutationFn: async () => {
       if (!currentUserId) {
-        throw new Error("Vui lòng đăng nhập để nhặt voucher");
+        throw new Error("Please log in to claim this voucher");
       }
 
       const res = await fetch(`${API_URL}/api/user-vouchers`, {
@@ -149,7 +151,7 @@ export default function VoucherClaimButton({
 
       if (!res.ok) {
         const message = await res.text();
-        throw new Error(message || "Nhặt voucher thất bại");
+        throw new Error(message || "Failed to claim voucher");
       }
 
       return res.json();
@@ -158,10 +160,11 @@ export default function VoucherClaimButton({
       await queryClient.invalidateQueries({
         queryKey: ["user-vouchers", currentUserId],
       });
-      window.alert(`Đã nhặt voucher ${voucherCode}`);
+      await onClaimSuccess?.();
+      window.alert(`Voucher ${voucherCode} claimed successfully`);
     },
     onError: (error: any) => {
-      window.alert(error?.message || "Nhặt voucher thất bại");
+      window.alert(error?.message || "Failed to claim voucher");
     },
   });
 
@@ -183,12 +186,12 @@ export default function VoucherClaimButton({
   };
 
   const buttonLabel = isAlreadyClaimed
-    ? "Đã nhặt"
+    ? "Claimed"
     : claimMutation.isPending
-      ? "Đang nhặt..."
+      ? "Claiming..."
       : disabledReason
         ? disabledReason
-        : "Nhặt voucher";
+        : "Claim voucher";
 
   return (
     <button
@@ -197,7 +200,7 @@ export default function VoucherClaimButton({
       style={style}
       onClick={handleClaim}
       disabled={isAlreadyClaimed || Boolean(disabledReason) || claimMutation.isPending}
-      title={isAlreadyClaimed ? "Bạn đã nhặt voucher này" : disabledReason || ""}
+      title={isAlreadyClaimed ? "You have already claimed this voucher" : disabledReason || ""}
     >
       {buttonLabel}
     </button>

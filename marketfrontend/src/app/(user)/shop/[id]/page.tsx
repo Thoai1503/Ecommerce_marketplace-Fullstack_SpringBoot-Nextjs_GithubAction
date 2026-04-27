@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import ShopSidebar from "@/components/client/shop/ShopSidebar";
 import Link from "next/link";
 import { API_URL } from "@/helper/api";
+import VoucherClaimButton from "@/components/client/voucher/VoucherClaimButton";
 
 export default function ShopPage() {
   const params = useParams();
@@ -14,6 +15,7 @@ export default function ShopPage() {
   const [keyword, setKeyword] = useState("");
   const [shop, setShop] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
+  const [shopVouchers, setShopVouchers] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>(["all"]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -24,6 +26,35 @@ export default function ShopPage() {
   // ===== FETCH =====
   useEffect(() => {
     if (!shopId) return;
+
+    const fetchShopVouchers = async () => {
+      const res = await fetch(`${API_URL}/api/vouchers`, {
+        cache: "no-store",
+      });
+      const data = await res.json();
+      const vouchers = Array.isArray(data) ? data : [];
+
+      const filtered = vouchers
+        .filter((voucher: any) => {
+          const issuerType = String(
+            voucher.issuerType ?? voucher.issuer_type ?? "",
+          ).toUpperCase();
+          const issuerId = Number(voucher.issuerId ?? voucher.issuer_id ?? 0);
+          const status = String(voucher.status ?? "").toUpperCase();
+
+          return (
+            issuerType === "SHOP" &&
+            issuerId === Number(shopId) &&
+            ["ACTIVE", "DRAFT", "PAUSED"].includes(status)
+          );
+        })
+        .sort(
+          (a: any, b: any) =>
+            Number(b.priority ?? 0) - Number(a.priority ?? 0),
+        );
+
+      setShopVouchers(filtered);
+    };
 
     const fetchData = async () => {
       try {
@@ -54,9 +85,12 @@ export default function ShopPage() {
         const names = catJson.map((c: any) => c.category_name);
 
         setCategories(["all", ...names]);
+
+        await fetchShopVouchers();
       } catch (e) {
         console.error(e);
         setProducts([]);
+        setShopVouchers([]);
       } finally {
         setLoading(false);
       }
@@ -87,6 +121,24 @@ export default function ShopPage() {
 
   const formatPrice = (n?: number) =>
     new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
+
+  const formatVoucherDiscount = (voucher: any) => {
+    const type = String(
+      voucher.discountType ?? voucher.discount_type ?? "",
+    ).toUpperCase();
+    if (type === "PERCENT") {
+      return `Save ${Number(voucher.discountPercent ?? voucher.discount_percent ?? 0)}%`;
+    }
+    if (type === "FIXED") {
+      return `Save ${Number(
+        voucher.discountAmount ?? voucher.discount_amount ?? 0,
+      ).toLocaleString("vi-VN")}đ`;
+    }
+    if (type === "FREE_SHIPPING") {
+      return "Free shipping";
+    }
+    return "Gift item";
+  };
 
   // ===== FILTER (GIỮ NGUYÊN) =====
   const filteredProducts = products.filter((p) => {
@@ -170,6 +222,116 @@ export default function ShopPage() {
           </div>
         </div>
       </div>
+
+      {shopVouchers.length > 0 && (
+        <div className="card border-0 shadow-sm rounded-4 mb-4">
+          <div className="card-body p-4">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h5 className="mb-1 fw-bold">Shop vouchers</h5>
+                <div className="text-muted small">
+                  Collect vouchers from this shop before placing your order.
+                </div>
+              </div>
+              <span className="badge bg-danger-subtle text-danger border">
+                {shopVouchers.length} voucher(s)
+              </span>
+            </div>
+
+            <div className="row g-3">
+              {shopVouchers.map((voucher) => (
+                <div className="col-lg-6" key={voucher.id}>
+                  <div className="border rounded-4 p-3 h-100 voucher-card">
+                    <div className="d-flex gap-3">
+                      <div className="voucher-mark text-white fw-bold">S</div>
+                      <div className="flex-grow-1">
+                        <div className="d-flex justify-content-between gap-3 align-items-start">
+                          <div>
+                            <div className="fw-bold">{voucher.title}</div>
+                            <div className="small text-muted">
+                              Code: {voucher.code}
+                            </div>
+                          </div>
+                          <span className="badge bg-light text-dark border">
+                            {String(voucher.status ?? "").toUpperCase()}
+                          </span>
+                        </div>
+
+                        <div className="small mt-2 text-danger fw-semibold">
+                          {formatVoucherDiscount(voucher)}
+                        </div>
+                        <div className="small text-muted mt-1">
+                          Min. order:{" "}
+                          {Number(
+                            voucher.minOrderValue ?? voucher.min_order_value ?? 0,
+                          ).toLocaleString("vi-VN")}
+                          đ
+                        </div>
+                        <div className="small text-muted">
+                          Claimed:{" "}
+                          {Number(
+                            voucher.claimedCount ?? voucher.claimed_count ?? 0,
+                          )}
+                          /
+                          {Number(
+                            voucher.totalQuota ?? voucher.total_quota ?? 0,
+                          ) || "∞"}
+                        </div>
+                        <div className="small text-muted">
+                          Claim until:{" "}
+                          {voucher.claimEndAt || voucher.claim_end_at
+                            ? new Date(
+                                voucher.claimEndAt ?? voucher.claim_end_at,
+                              ).toLocaleString("en-GB")
+                            : "N/A"}
+                        </div>
+
+                        <div className="mt-3">
+                          <VoucherClaimButton
+                            voucherId={Number(voucher.id)}
+                            voucherCode={voucher.code}
+                            voucherStatus={voucher.status}
+                            claimStartAt={voucher.claimStartAt ?? voucher.claim_start_at}
+                            claimEndAt={voucher.claimEndAt ?? voucher.claim_end_at}
+                            totalQuota={Number(
+                              voucher.totalQuota ?? voucher.total_quota ?? 0,
+                            )}
+                            claimedCount={Number(
+                              voucher.claimedCount ?? voucher.claimed_count ?? 0,
+                            )}
+                            className="btn btn-danger btn-sm px-3"
+                            onClaimSuccess={async () => {
+                              const res = await fetch(`${API_URL}/api/vouchers`, {
+                                cache: "no-store",
+                              });
+                              const data = await res.json();
+                              const vouchers = Array.isArray(data) ? data : [];
+                              setShopVouchers(
+                                vouchers.filter((item: any) => {
+                                  const issuerType = String(
+                                    item.issuerType ?? item.issuer_type ?? "",
+                                  ).toUpperCase();
+                                  const issuerId = Number(
+                                    item.issuerId ?? item.issuer_id ?? 0,
+                                  );
+                                  return (
+                                    issuerType === "SHOP" &&
+                                    issuerId === Number(shopId)
+                                  );
+                                }),
+                              );
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== SEARCH ===== */}
       <div className="mb-4">
@@ -297,6 +459,21 @@ export default function ShopPage() {
           width: 110%;
           transform: translateY(-5px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .voucher-card {
+          background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
+        }
+
+        .voucher-mark {
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+          flex-shrink: 0;
         }
 
         .product-col {

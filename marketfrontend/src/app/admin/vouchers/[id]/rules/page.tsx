@@ -21,7 +21,6 @@ import {
   UserCheck,
   Link2,
 } from "lucide-react";
-import { useToast } from "@/context/ToastContext";
 
 const scopeTypes = [
   "SHOP",
@@ -79,7 +78,6 @@ export default function VoucherRuleBuilderPage() {
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
-  const toast = useToast();
   const { rules, isLoading, saveRules, isSaving } = useVoucherRules(id);
 
   const [form, setForm] = useState<VoucherRulesPayload>({
@@ -284,10 +282,10 @@ export default function VoucherRuleBuilderPage() {
   const onSave = async () => {
     try {
       await saveRules(form);
-      toast.success("Da luu rule thanh cong");
+      window.alert("Da luu rule thanh cong");
       router.push(`/admin/vouchers/${id}`);
     } catch {
-      toast.error("Luu rule that bai");
+      window.alert("Luu rule that bai");
     }
   };
 

@@ -19,7 +19,6 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { z } from "zod";
-import ToastComponent, { ToastType } from "@/components/ui/Toast";
 import { useBrands } from "@/hooks/admin/useBrands";
 
 const schema = z
@@ -110,10 +109,6 @@ export default function EditVoucher() {
 
   const { brands = [] } = useBrands();
 
-  const [toast, setToast] = useState<{
-    message: string;
-    type: ToastType;
-  } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState<any>({
@@ -235,21 +230,21 @@ export default function EditVoucher() {
         map[String(i.path[0])] = i.message;
       });
       setErrors(map);
-      setToast({ message: "Please check the form.", type: "error" });
+      window.alert("Please check the form.");
       return;
     }
 
     try {
       if (isEdit) {
         await updateVoucher(payload);
-        setToast({ message: "Voucher updated successfully.", type: "success" });
+        window.alert("Voucher updated successfully.");
       } else {
         await createVoucher(payload);
-        setToast({ message: "Voucher created successfully.", type: "success" });
+        window.alert("Voucher created successfully.");
       }
       setTimeout(() => router.push("/admin/vouchers"), 700);
     } catch {
-      setToast({ message: "Failed to save voucher.", type: "error" });
+      window.alert("Failed to save voucher.");
     }
   };
 
@@ -259,13 +254,6 @@ export default function EditVoucher() {
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
-      {toast && (
-        <ToastComponent
-          toast={{ id: "voucher-toast", ...toast }}
-          onClose={() => setToast(null)}
-        />
-      )}
-
       <div className="rounded-3xl border border-cyan-100 bg-gradient-to-r from-cyan-50 via-sky-50 to-indigo-50 p-6 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">

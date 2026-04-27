@@ -231,7 +231,7 @@ public class ProductRepository implements IRepositories<Product> {
 		return null;
 	}
 
-	public List<Product> GetByShopId(int shop_id) {
+	private List<Product> getProductsByShopId(int shop_id, boolean onlyActive) {
 		List<Product> products = new ArrayList<>();
 		String sql = """
 				SELECT
@@ -241,7 +241,11 @@ public class ProductRepository implements IRepositories<Product> {
 				    c.category_name,  
 				    p.product_name,
 				    p.product_slug,
+				    p.description,
 				    p.price,
+				    p.original_price,
+				    p.stock_quantity,
+				    p.is_active,
 				    pi.image_url,
 				    CASE
 				        WHEN COUNT(pv.id) >= 2 THEN
@@ -261,9 +265,11 @@ public class ProductRepository implements IRepositories<Product> {
 				FROM product p
 				LEFT JOIN category c ON p.category_id = c.id
 				left join product_image pi on  p.id = pi.product_id and pi.id = (select MIN(id) from product_image where product_id =p.id)
-				LEFT JOIN product_variant pv ON p.id = pv.product_id
+				LEFT JOIN product_variant pv ON p.id = pv.product_id AND pv.is_active = 1
 				WHERE p.shop_id = ?
-				GROUP BY p.id, p.product_name, p.price ,pi.image_url
+				  AND (? = FALSE OR p.is_active = 1)
+				GROUP BY p.id, p.shop_id, p.category_id, c.category_name, p.product_name, p.product_slug,
+				         p.description, p.price, p.original_price, p.stock_quantity, p.is_active, pi.image_url
 				ORDER BY p.id
 				""";
 
@@ -271,6 +277,7 @@ public class ProductRepository implements IRepositories<Product> {
 
 		) {
 			stmt.setInt(1, shop_id);
+			stmt.setBoolean(2, onlyActive);
 			ResultSet rs = stmt.executeQuery();
 
 			ObjectMapper mapper = new ObjectMapper();
@@ -283,8 +290,12 @@ public class ProductRepository implements IRepositories<Product> {
 				product.setCategory_name(rs.getString("category_name"));
 				product.setProduct_name(rs.getString("product_name"));
 				product.setProduct_slug(rs.getString("product_slug"));
+				product.setDescription(rs.getString("description"));
 				product.setImage_url(rs.getString("image_url"));
 				product.setPrice(rs.getDouble("price"));
+				product.setOriginal_price(rs.getDouble("original_price"));
+				product.setStock_quantity(rs.getInt("stock_quantity"));
+				product.setIs_active(rs.getInt("is_active"));
 
 				String variantsJson = rs.getString("variants");
 
@@ -303,6 +314,14 @@ public class ProductRepository implements IRepositories<Product> {
 		}
 
 		return products;
+	}
+
+	public List<Product> GetByShopId(int shop_id) {
+		return getProductsByShopId(shop_id, false);
+	}
+
+	public List<Product> GetActiveByShopId(int shop_id) {
+		return getProductsByShopId(shop_id, true);
 	}
 
 	public List<Product> GetProductsWithVariants() {
@@ -494,6 +513,14 @@ public class ProductRepository implements IRepositories<Product> {
 	}
 
 	public List<Category> getCategoriesByShop(int shopId) {
+		return getCategoriesByShop(shopId, false);
+	}
+
+	public List<Category> getActiveCategoriesByShop(int shopId) {
+		return getCategoriesByShop(shopId, true);
+	}
+
+	private List<Category> getCategoriesByShop(int shopId, boolean onlyActive) {
 
 		List<Category> categories = new ArrayList<>();
 
@@ -504,11 +531,13 @@ public class ProductRepository implements IRepositories<Product> {
 				    FROM product p
 				    JOIN category c ON p.category_id = c.id
 				    WHERE p.shop_id = ?
+				      AND (? = FALSE OR p.is_active = 1)
 				""";
 
 		try (Connection conn = dbConnection.getConn(); PreparedStatement stmt = conn.prepareStatement(sql)) {
 
 			stmt.setInt(1, shopId);
+			stmt.setBoolean(2, onlyActive);
 			ResultSet rs = stmt.executeQuery();
 
 			while (rs.next()) {
