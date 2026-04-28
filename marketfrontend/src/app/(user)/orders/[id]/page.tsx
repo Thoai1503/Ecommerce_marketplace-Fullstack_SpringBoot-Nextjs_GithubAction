@@ -27,6 +27,9 @@ import {
 import { API_URL } from "@/helper/api";
 import ReturnRequestModal, { ReturnRequestDraft } from "./ReturnRequestModal";
 import { useUserAuth } from "@/context/UserAuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { ReturnRequestAttachment } from "@/types/data/refund/ReuturnRequestAttachment";
+import ReturnAttachmentModal from "./ReturnAttachmentModal";
 
 const orderStatusLabel: Record<Order["status"], string> = {
   PENDING: "Cho xac nhan",
@@ -252,6 +255,7 @@ const toOrderItem = (raw: any): OrderItem => ({
   variant:
     pickText(raw?.variantName, raw?.variant_name, raw?.variant) || undefined,
   quantity: asNumber(raw?.quantity, 0),
+  lastReturnRequestId: raw?.lastReturnRequestId,
   price: asNumber(raw?.price, 0),
   status: "Ready" as const,
 });
@@ -546,6 +550,9 @@ export default function UserOrderDetailPage() {
   const { userId } = useUserAuth();
 
   const [order, setOrder] = useState<Order | null>(null);
+  const [requestIdShipmentMap, setRequestIdShipmentMap] = useState<
+    Record<number, number>
+  >({});
   const [loading, setLoading] = useState(true);
   const [adjustmentActionStatus, setAdjustmentActionStatus] = useState<
     Record<string, "idle" | "pending" | "accepted" | "rejected">
@@ -560,7 +567,7 @@ export default function UserOrderDetailPage() {
     Record<string, string>
   >({});
   const [reviewModalShipmentId, setReviewModalShipmentId] = useState<
-    string | null
+    number | null
   >(null);
   const [shipmentReviewDrafts, setShipmentReviewDrafts] = useState<
     Record<string, Record<string, ReviewDraft>>
@@ -572,22 +579,22 @@ export default function UserOrderDetailPage() {
     Record<string, string>
   >({});
   const [returnModalShipmentId, setReturnModalShipmentId] = useState<
-    string | null
+    number | null
   >(null);
   const [returnRequestDrafts, setReturnRequestDrafts] = useState<
-    Record<string, ReturnRequestDraft>
+    Record<number, ReturnRequestDraft>
   >({});
   const [returnActionStatus, setReturnActionStatus] = useState<
-    Record<string, "idle" | "pending" | "submitted">
+    Record<number, "idle" | "pending" | "submitted">
   >({});
 
   const [returnActionMessage, setReturnActionMessage] = useState<
-    Record<string, string>
+    Record<number, string>
   >({});
 
   // State for viewing return request media modal
   const [viewReturnMediaShipmentId, setViewReturnMediaShipmentId] = useState<
-    string | null
+    number | null
   >(null);
 
   const activeReviewShipment = useMemo(
@@ -606,7 +613,7 @@ export default function UserOrderDetailPage() {
     [order, returnModalShipmentId],
   );
 
-  const openReviewModal = (shipmentId: string) => {
+  const openReviewModal = (shipmentId: number) => {
     const shipment = order?.shipments?.find((item) => item.id === shipmentId);
     if (!shipment) return;
 
@@ -634,7 +641,7 @@ export default function UserOrderDetailPage() {
     setReviewModalShipmentId(null);
   };
 
-  const openReturnModal = (shipmentId: string) => {
+  const openReturnModal = (shipmentId: number) => {
     const shipment = order?.shipments?.find((item) => item.id === shipmentId);
     if (!shipment) return;
 
@@ -666,7 +673,7 @@ export default function UserOrderDetailPage() {
   };
 
   const updateReturnDraft = (
-    shipmentId: string,
+    shipmentId: number,
     patch: Partial<ReturnRequestDraft>,
   ) => {
     setReturnRequestDrafts((prev) => {
@@ -689,7 +696,7 @@ export default function UserOrderDetailPage() {
   };
 
   const toggleReturnItem = (
-    shipmentId: string,
+    shipmentId: number,
     itemId: string,
     checked: boolean,
   ) => {
@@ -703,7 +710,7 @@ export default function UserOrderDetailPage() {
   };
 
   const handleReturnEvidenceChange = (
-    shipmentId: string,
+    shipmentId: number,
     files: FileList | null,
   ) => {
     if (!files) return;
@@ -715,7 +722,7 @@ export default function UserOrderDetailPage() {
     });
   };
 
-  const removeReturnEvidence = (shipmentId: string, targetIndex: number) => {
+  const removeReturnEvidence = (shipmentId: number, targetIndex: number) => {
     const current = returnRequestDrafts[shipmentId]?.files || [];
     updateReturnDraft(shipmentId, {
       files: current.filter((_, index) => index !== targetIndex),
@@ -723,7 +730,7 @@ export default function UserOrderDetailPage() {
   };
 
   const updateReviewDraft = (
-    shipmentId: string,
+    shipmentId: number,
     itemId: string,
     patch: Partial<ReviewDraft>,
   ) => {
@@ -745,7 +752,7 @@ export default function UserOrderDetailPage() {
     }));
   };
 
-  const markShipmentAsCompletedLocal = (shipmentId: string, note: string) => {
+  const markShipmentAsCompletedLocal = (shipmentId: number, note: string) => {
     setOrder((prev) => {
       if (!prev) return prev;
 
@@ -804,7 +811,7 @@ export default function UserOrderDetailPage() {
     });
   };
 
-  const handleConfirmReceived = async (shipmentId: string) => {
+  const handleConfirmReceived = async (shipmentId: number) => {
     setReceiveActionStatus((prev) => ({
       ...prev,
       [shipmentId]: "pending",
@@ -1096,7 +1103,7 @@ export default function UserOrderDetailPage() {
   };
 
   const handleAdjustmentDecision = async (
-    shipmentId: string,
+    shipmentId: number,
     requestId: string,
     decision: "accepted" | "rejected",
   ) => {
@@ -1350,11 +1357,43 @@ export default function UserOrderDetailPage() {
             ? shipments.flatMap((s: any) => s.items || [])
             : fallbackItems;
 
-        const uniqueItems: OrderItem[] = Array.from(
-          new Map(
-            orderItems.map((item: OrderItem) => [item.id, item]),
-          ).values(),
-        );
+        const uniqueItems: OrderItem[] =
+          //  Array.from(
+          //   new Map(
+          //     orderItems.map((item: OrderItem) => [item.id, item]),
+          //   ).values(),
+          // );
+          orderData?.items.map((item: any) => {
+            console.log("Mapping order item:", item);
+            return {
+              ...item,
+              productImage: item.image,
+            };
+          }) || [];
+
+        // orderData?.item.forEach((item: any) => {
+        //   console.log("Shipment ID from order item:", item?.shipmentId);
+        //   if (requestIdShipmentMap[item?.shipmentId]) return;
+
+        //   setRequestIdShipmentMap((prev) => ({
+        //     ...prev,
+        //     [item.shipmentId]: item.lastAdjustmentRequestId,
+        //   }));
+        // });
+
+        orderData?.items.forEach((item: any) => {
+          console.log(
+            "Shipment ID from order item:",
+            item?.shipmentId,
+            item?.lastReturnRequestId,
+          );
+          if (item?.shipmentId && item?.lastReturnRequestId) {
+            setRequestIdShipmentMap((prev) => ({
+              ...prev,
+              [item.shipmentId]: item.lastReturnRequestId,
+            }));
+          }
+        });
 
         const firstRecipient = shipments[0]?.recipient;
         const shippingAddress =
@@ -1443,6 +1482,8 @@ export default function UserOrderDetailPage() {
       mounted = false;
     };
   }, [id]);
+
+  console.log("Request ID to Shipment Map:", requestIdShipmentMap);
 
   const statusChipClass = useMemo(() => {
     if (!order) return "bg-slate-100 text-slate-600";
@@ -1627,7 +1668,7 @@ export default function UserOrderDetailPage() {
                             shipment.shipping_status,
                           );
                           const adjustmentRequest = shipment.adjustment_request;
-
+                          const requestId = requestIdShipmentMap[shipment.id];
                           return (
                             <div key={shipment.id} style={styles.shipmentItem}>
                               <div style={styles.shipmentHead}>
@@ -1750,16 +1791,19 @@ export default function UserOrderDetailPage() {
                                         </button>
                                       )}
 
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          openReturnModal(shipment.id)
-                                        }
-                                        className="btn btn-outline-danger btn-sm"
-                                      >
-                                        Trả hàng hoàn tiền
-                                      </button>
-
+                                      {shipment.returnStatusSummary &&
+                                        shipment.returnStatusSummary ==
+                                          "NONE" && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              openReturnModal(shipment.id)
+                                            }
+                                            className="btn btn-outline-danger btn-sm"
+                                          >
+                                            Trả hàng hoàn tiền
+                                          </button>
+                                        )}
                                       {/* View Return Request Media Button */}
                                       {shipment.returnStatusSummary &&
                                         shipment.returnStatusSummary !==
@@ -1780,126 +1824,13 @@ export default function UserOrderDetailPage() {
                                   )}
                                   {/* Modal for viewing return request media */}
                                   {viewReturnMediaShipmentId && (
-                                    <div
-                                      style={styles.modalBackdrop}
-                                      onClick={() =>
-                                        setViewReturnMediaShipmentId(null)
+                                    <ReturnAttachmentModal
+                                      returnRequestId={requestId}
+                                      setViewReturnMediaShipmentId={
+                                        setViewReturnMediaShipmentId
                                       }
-                                    >
-                                      <div
-                                        style={styles.modalCard}
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <div style={styles.modalHeader}>
-                                          <h3
-                                            style={{
-                                              fontSize: 20,
-                                              fontWeight: 800,
-                                            }}
-                                          >
-                                            Yêu cầu trả hàng - Hình ảnh & Video
-                                          </h3>
-                                          <button
-                                            type="button"
-                                            className="btn btn-light border"
-                                            onClick={() =>
-                                              setViewReturnMediaShipmentId(null)
-                                            }
-                                          >
-                                            Đóng
-                                          </button>
-                                        </div>
-                                        <div style={styles.modalBody}>
-                                          {(() => {
-                                            const shipment =
-                                              order.shipments?.find(
-                                                (s) =>
-                                                  s.id ===
-                                                  viewReturnMediaShipmentId,
-                                              );
-                                            if (
-                                              !shipment ||
-                                              !shipment.returnRequestMedia ||
-                                              shipment.returnRequestMedia
-                                                .length === 0
-                                            ) {
-                                              return (
-                                                <p className="text-muted">
-                                                  Không có hình ảnh hoặc video
-                                                  nào cho yêu cầu trả hàng này.
-                                                </p>
-                                              );
-                                            }
-                                            return (
-                                              <div className="d-flex flex-wrap gap-3">
-                                                {shipment.returnRequestMedia.map(
-                                                  (media: any, idx: number) => {
-                                                    if (
-                                                      media.file_type?.startsWith(
-                                                        "image/",
-                                                      )
-                                                    ) {
-                                                      return (
-                                                        <img
-                                                          key={idx}
-                                                          src={
-                                                            media.url ||
-                                                            media.file_url
-                                                          }
-                                                          alt={
-                                                            media.file_name ||
-                                                            `Ảnh ${idx + 1}`
-                                                          }
-                                                          style={{
-                                                            maxWidth: 180,
-                                                            maxHeight: 180,
-                                                            borderRadius: 8,
-                                                            border:
-                                                              "1px solid #e2e8f0",
-                                                          }}
-                                                        />
-                                                      );
-                                                    }
-                                                    if (
-                                                      media.file_type?.startsWith(
-                                                        "video/",
-                                                      )
-                                                    ) {
-                                                      return (
-                                                        <video
-                                                          key={idx}
-                                                          controls
-                                                          style={{
-                                                            maxWidth: 220,
-                                                            maxHeight: 180,
-                                                            borderRadius: 8,
-                                                            border:
-                                                              "1px solid #e2e8f0",
-                                                          }}
-                                                        >
-                                                          <source
-                                                            src={
-                                                              media.url ||
-                                                              media.file_url
-                                                            }
-                                                            type={
-                                                              media.file_type
-                                                            }
-                                                          />
-                                                          Trình duyệt của bạn
-                                                          không hỗ trợ video.
-                                                        </video>
-                                                      );
-                                                    }
-                                                    return null;
-                                                  },
-                                                )}
-                                              </div>
-                                            );
-                                          })()}
-                                        </div>
-                                      </div>
-                                    </div>
+                                      order={order}
+                                    />
                                   )}
                                 </div>
 
