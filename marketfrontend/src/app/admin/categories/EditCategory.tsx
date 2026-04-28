@@ -8,6 +8,7 @@ import { ChevronLeft, Save, UploadCloud } from "lucide-react";
 import ToastComponent, { ToastType } from "../../../components/ui/Toast";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
+import { API_URL } from "@/helper/api";
 
 export default function CategoryForm() {
   const params = useParams();
@@ -80,7 +81,8 @@ export default function CategoryForm() {
       const form = new FormData();
       form.append("file", file);
 
-      const res = await fetch("/api/upload/category", {
+      // Gọi API backend (Marketplace-platform) thay vì API local
+      const res = await fetch(`${API_URL}/api/upload/category`, {
         method: "POST",
         body: form,
       });

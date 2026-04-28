@@ -1,10 +1,22 @@
 package docker_test.com.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class OrderItemDTO {
 
 	private Long id;
 	private Long order_id;
 	private Long shipment_id;
+	private String image_url;
+	public String getImage_url() {
+		return image_url;
+	}
+
+	public void setImage_url(String image_url) {
+		this.image_url = image_url;
+	}
+
 	public Long getShipment_id() {
 		return shipment_id;
 	}

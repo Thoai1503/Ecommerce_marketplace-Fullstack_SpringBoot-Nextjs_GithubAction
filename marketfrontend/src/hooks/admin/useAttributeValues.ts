@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { API_URL } from "@/helper/api";
 
-const API = "http://localhost:8000/api/attribute-value";
+const ATTRIBUTE_VALUE_API_URL = `${API_URL}/api/attribute-value`;
 
 export function useAttributeValues() {
   const [values, setValues] = useState<any[]>([]);
@@ -11,7 +12,7 @@ export function useAttributeValues() {
   // ================= GET ALL =================
   const fetchAll = async () => {
     try {
-      const res = await fetch(API);
+      const res = await fetch(ATTRIBUTE_VALUE_API_URL);
       const json = await res.json();
       setValues(Array.isArray(json) ? json : []);
     } catch (err) {
@@ -29,7 +30,7 @@ export function useAttributeValues() {
   // ================= CREATE =================
   const createValue = async (payload: any) => {
     try {
-      const res = await fetch(API, {
+      const res = await fetch(ATTRIBUTE_VALUE_API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -52,7 +53,7 @@ export function useAttributeValues() {
   // ================= DELETE =================
   const deleteValue = async (id: number) => {
     try {
-      const res = await fetch(`${API}/${id}`, {
+      const res = await fetch(`${ATTRIBUTE_VALUE_API_URL}/${id}`, {
         method: "DELETE",
       });
 

@@ -95,13 +95,13 @@ export const mapOrder = (o: any): Order => {
     id: (o.orderId || o.id)?.toString(),
     orderCode: o.orderNumber || o.orderCode || "",
 
-    // Customer information (⚠️ Currently placeholder - needs service integration)
-    customerName: "Customer", // TODO: Fetch from User service using userId
-    customerEmail: "", // TODO: Fetch from User service using userId
-    customerPhone: "", // TODO: Fetch from User service using userId
+    // Customer information – now populated from JOIN with user table
+    customerName: o.customerName || o.customer_name || "Customer",
+    customerEmail: o.customerEmail || o.customer_email || "",
+    customerPhone: o.customerPhone || o.customer_phone || "",
 
     // Address (⚠️ Currently empty - needs service integration)
-    shippingAddress: "", // TODO: Fetch from Address service using addressId
+    shippingAddress: o.shippingAddress || "", // TODO: Fetch from Address service using addressId
 
     // Financial information
     totalAmount, // finalAmount (total to pay)
@@ -111,7 +111,13 @@ export const mapOrder = (o: any): Order => {
     taxAmount: 0, // TODO: Calculate or fetch tax amount
 
     // Items
-    itemsCount: 0, // TODO: Fetch from Order Items service
+    itemsCount:
+      o.itemsCount ||
+      o.items_count ||
+      o.shipmentsCount ||
+      o.shipments_count ||
+      0,
+    shipmentsCount: o.shipmentsCount || o.shipments_count || 0,
 
     // Payment
     paymentStatus: normalizePaymentStatus(o.paymentStatus),
@@ -387,7 +393,7 @@ export const getOrdersWithFilters = async (
   if (filters.size) params.set("size", filters.size.toString());
 
   const queryString = params.toString();
-  const url = `/api/admin/orders${queryString ? `?${queryString}` : ""}`;
+  const url = `/api/orders${queryString ? `?${queryString}` : ""}`;
 
   const res = await http2(url);
 
@@ -451,7 +457,7 @@ const MOCK_ORDER_DETAIL: Order = {
   ],
   shipments: [
     {
-      id: "s1",
+      id: 1,
       order_id: "1",
       shop_id: "2",
       shopName: "Tech Store",

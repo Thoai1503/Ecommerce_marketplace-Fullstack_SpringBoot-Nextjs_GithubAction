@@ -14,7 +14,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 
-
+// Lưu ý: Các trường như created_at, updated_at có thể được tự động quản lý bởi JPA nếu bạn sử dụng @CreationTimestamp và @UpdateTimestamp
 @Entity
 @Table(name = "orders")
 @Getter
@@ -27,7 +27,9 @@ public class Order {
       @Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-    
+     
+      
+      // Thông tin người dùng
       @Column(name = "user_id", nullable = false)
       private Long userId;
       
@@ -63,4 +65,14 @@ public class Order {
       
       @Column(name = "tracking_number", nullable = true)
       private String trackingNumber;
+
+      @Column(name = "voucher_id", nullable = true)
+      private Long voucherId;
+      
+      @Column(name ="last_return_request_id")
+      private Long lastReturnRequestId;
+      
+      @Column(name = "return_status_summary")
+      @Enumerated(EnumType.STRING)
+      private ReturnStatusSummary returnStatusSummary;
 }

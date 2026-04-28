@@ -10,4 +10,6 @@ services:
       DATABASE_URL: "jdbc:mysql://103.90.225.130:3306/logistic_service?ssl-mode=REQUIRED&serverTimezone=Asia/Ho_Chi_Minh"
       DATABASE_USERNAME: "root"
       DATABASE_PASSWORD: "123456"
+      LOGISTICS_FEE_PROVIDER_URL: "${LOGISTICS_FEE_PROVIDER_URL}"
+      LOGISTICS_FEE_PROVIDER_TOKEN: "${LOGISTICS_FEE_PROVIDER_TOKEN}"
     restart: unless-stopped

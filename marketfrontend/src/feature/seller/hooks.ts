@@ -4,7 +4,12 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { categoryQuery, productImageQuery } from "./query";
 import { slugify, generateUniqueSlug, isValidSlug } from "@/helper/utils";
-import { addProduct, createProductVariant, uploadToProduct } from "./service";
+import {
+  addProduct,
+  createProductVariant,
+  updateVariantImage,
+  uploadToProduct,
+} from "./service";
 import { message, UploadFile, UploadProps } from "antd";
 import { useSellerAuth } from "@/context/SellerAuthContext";
 import { ProductVariant } from "@/validators/productVariant";
@@ -12,6 +17,7 @@ import { ProductVariant } from "@/validators/productVariant";
 export const useAddProductSeller = (
   onSuccessCallback: (id: number) => void,
   id?: number,
+  variantImageFile?: UploadFile,
 ) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const { roles, userId, shop } = useSellerAuth();
@@ -25,6 +31,11 @@ export const useAddProductSeller = (
     shop_id: 0,
     description: "",
     category_id: 2,
+    weight: 0,
+    length: 0,
+    width: 0,
+    height: 0,
+    stock_quantity: 0,
     original_price: 0,
     price: 0,
   });
@@ -60,10 +71,29 @@ export const useAddProductSeller = (
     onSuccess: (data) => {
       console.log("Variant created:", data);
       message.success(`Tạo biến thể sản phẩm thành công`);
+      if (variantImageFile?.originFileObj) {
+        const formData = new FormData();
+
+        formData.append("image", variantImageFile.originFileObj as Blob); // Upload ảnh được chọn cho biến thể
+        updateVariantImageMutate({ id: data.id, formData });
+      }
     },
     onError: (error) => {
       console.error("Error creating variant:", error);
       message.error(`Lỗi khi tạo biến thể sản phẩm: ${error.message}`);
+    },
+  });
+
+  const { mutate: updateVariantImageMutate } = useMutation({
+    mutationFn: ({ id, formData }: { id: number; formData: FormData }) =>
+      updateVariantImage(id, formData),
+    onSuccess: (data) => {
+      console.log("Variant image updated:", data);
+      message.success(`Cập nhật ảnh biến thể sản phẩm thành công`);
+    },
+    onError: (error) => {
+      console.error("Error updating variant image:", error);
+      message.error(`Lỗi khi cập nhật ảnh biến thể sản phẩm: ${error.message}`);
     },
   });
 
@@ -81,7 +111,12 @@ export const useAddProductSeller = (
         description: "",
         category_id: 2,
         original_price: 0,
+        weight: 0,
+        length: 0,
+        width: 0,
+        height: 0,
         price: 0,
+        stock_quantity: 0,
       });
       createVariant({
         id: 0,
@@ -90,6 +125,10 @@ export const useAddProductSeller = (
         sku: `SKU-${data.id}`,
         price: data.original_price || 0,
         stock_quantity: data.stock_quantity || 0,
+        weight: data.weight || 0,
+        height: data.height || 0,
+        length: data.length || 0,
+        width: data.width || 0,
         image_url: data.image_url || "",
       });
     },
@@ -173,7 +212,7 @@ export const useAddProductSeller = (
       return;
     }
 
-    alert(JSON.stringify(product, null, 2));
+    // alert(JSON.stringify(product, null, 2));
     // return;
     add(product);
     // TODO: Gọi API để tạo sản phẩm
@@ -241,6 +280,7 @@ export const useAddImageSeller = (id?: number) => {
     const uploadImage = updatedList.filter((item) =>
       item.thumbUrl?.startsWith("data:image"),
     );
+    //  alert("uploadImage: " + JSON.stringify(updatedList));
     console.log("uploadImage: " + uploadImage.length);
   };
 

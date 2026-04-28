@@ -42,13 +42,14 @@ RUN adduser --system --uid 1001 nextjs
 # ✅ Cài sed để dùng trong entrypoint script
 RUN apk add --no-cache sed
 
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # ✅ Copy entrypoint script vào image
 COPY --chown=nextjs:nodejs entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
+RUN mkdir -p ./public/image/brand ./public/image/category && chown -R nextjs:nodejs ./public
 
 USER nextjs
 

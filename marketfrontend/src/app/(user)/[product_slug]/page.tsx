@@ -18,7 +18,7 @@ export default async function ProductDetailPage({
 }: PageProps) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
-
+  console.log("Resolved Params:", resolvedParams);
   console.log("Product Slug:", resolvedParams.product_slug);
   console.log("Product ID:", resolvedSearchParams?.id);
 
@@ -36,6 +36,7 @@ export default async function ProductDetailPage({
   const id = Number((await cookies()).get("user")?.value.toString());
   console.log("User role: " + role);
   console.log("User id: " + id);
+  // alert("Product data: " + JSON.stringify(productData));
   if (!res.ok) {
     return (
       <div>

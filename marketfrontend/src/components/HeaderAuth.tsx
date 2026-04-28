@@ -2,6 +2,8 @@
 
 import { logoutAction } from "@/app/actions/auth";
 import { useUserAuth } from "@/context/UserAuthContext";
+import { findUserById } from "@/feature/client/service";
+import { Alegreya } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -14,62 +16,93 @@ type User = {
 
 export default function HeaderAuth() {
   const [user, setUser] = useState<User | null>(null);
-  const { roles } = useUserAuth();
+  const [cartCount, setCartCount] = useState(0);
+  const { roles, userId } = useUserAuth();
+  // alert("User data : " + JSON.stringify(user) + ", Roles: " + roles);
+  //alert("User ID from context: " + userId + ", Roles: " + roles);
+
+  useEffect(() => {
+    if (userId && roles) {
+      // alert("Fetching user data for ID: " + userId);
+      findUserById(userId).then((userData) => {
+        // alert("User data fetched: " + JSON.stringify(userData));
+        setUser(userData);
+      });
+    }
+  }, [userId, roles]);
+  // alert("Current user: " + JSON.stringify(user) + ", Roles: " + roles);
 
   const router = useRouter();
 
   const handleLogout = async () => {
     await logoutAction();
     localStorage.removeItem("user");
-
-    // BẮT BUỘC để layout đọc lại cookie
     router.refresh();
     router.push("/login");
   };
 
+  // ===== LOAD USER =====
   useEffect(() => {
     const raw = localStorage.getItem("user");
-    if (raw) {
-      setUser(JSON.parse(raw));
+    if (raw) setUser(JSON.parse(raw));
+  }, []);
+
+  // ===== LOAD CART COUNT =====
+  useEffect(() => {
+    const cart = localStorage.getItem("cart");
+    if (cart) {
+      const items = JSON.parse(cart);
+      setCartCount(Array.isArray(items) ? items.length : 0);
     }
   }, []);
 
   const logout = () => {
     localStorage.removeItem("user");
+    //xoá cookie
+    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     window.location.href = "/";
   };
 
   return (
     <div className="d-flex gap-3 justify-content-end align-items-center">
-      {/* Notification */}
-      <div className="top-dropdown">
-        <span className="fw-medium d-flex align-items-center gap-1">
-          <span className="material-symbols-outlined">notifications</span>
-          Thông báo
-        </span>
+      {/* 🛒 CART */}
+      <div
+        className="position-relative cursor-pointer icon-btn"
+        onClick={() => router.push("/cart")}
+      >
+        <span className="material-symbols-outlined">shopping_cart</span>
+        cart
+        {cartCount > 0 && <span className="badge-custom">{cartCount}</span>}
+      </div>
+
+      {/* 🔔 NOTIFICATION */}
+      <div className="top-dropdown icon-btn">
+        <span className="material-symbols-outlined">notifications</span>
+        notification
         <div className="dropdown-menu-custom">
           <div className="px-3 py-2 text-secondary text-center">
-            Chưa có thông báo
+            No announcement yet
           </div>
         </div>
       </div>
 
-      {/* Help */}
-      <div className="top-dropdown">
-        <span className="fw-medium d-flex align-items-center gap-1">
-          <span className="material-symbols-outlined">help</span>
-          Hỗ trợ
-        </span>
+      {/* ❓ HELP */}
+      <div className="top-dropdown icon-btn">
+        <span className="material-symbols-outlined">help</span>
+        Help
         <div className="dropdown-menu-custom">
           <a href="/help" className="dropdown-item">
-            Trung tâm trợ giúp
+            Help Center
           </a>
           <a href="/contact" className="dropdown-item">
-            Liên hệ CSKH
+            Contact Customer Service
           </a>
         </div>
       </div>
 
+      {/* USER */}
       {!user ? (
         <>
           <a href="/register" className="fw-medium">
@@ -94,9 +127,7 @@ export default function HeaderAuth() {
             className="user-avatar"
           />
 
-          <span className="fw-medium user-name">
-            {user.fullName} {roles}
-          </span>
+          <span className="fw-medium user-name">{user.fullName}</span>
 
           <div className="dropdown-menu-custom">
             <a href="/profile" className="dropdown-item">
@@ -112,7 +143,33 @@ export default function HeaderAuth() {
         </div>
       )}
 
+      {/* STYLE */}
       <style jsx>{`
+        .cursor-pointer {
+          cursor: pointer;
+        }
+
+        .icon-btn {
+          display: flex;
+          align-items: center;
+          font-size: 100%;
+        }
+
+        .icon-btn:hover {
+          opacity: 0.8;
+        }
+
+        .badge-custom {
+          position: absolute;
+          top: -4px;
+          right: -8px;
+          background: red;
+          color: #fff;
+          border-radius: 999px;
+          font-size: 10px;
+          padding: 2px 6px;
+        }
+
         .top-dropdown,
         .user-dropdown {
           position: relative;

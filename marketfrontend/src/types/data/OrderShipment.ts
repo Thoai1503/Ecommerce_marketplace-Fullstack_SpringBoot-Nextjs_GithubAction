@@ -31,6 +31,19 @@ export class OrderShipments extends Model {
     };
   }
 
+  static getById(shipmentId: number) {
+    return {
+      queryKey: [this.queryKeys.findOne, shipmentId],
+      queryFn: (): Promise<IOrderShipment> =>
+        this.api
+          .get<IOrderShipment>({
+            url: `${API_URL}/api/orders/shipments/${shipmentId}`,
+          })
+          .then((r) => r.data),
+      enabled: !!shipmentId,
+    };
+  }
+
   static confirmPackaged(shipmentId: number) {
     return this.api.post<{
       shipmentId: number;
@@ -40,6 +53,34 @@ export class OrderShipments extends Model {
       message: string;
     }>({
       url: `${API_URL}/api/orders/shipments/${shipmentId}/confirm-packaged`,
+    });
+  }
+
+  static createAdjustmentRequest(
+    shipmentId: number,
+    payload: {
+      shopReason: string;
+      items: Array<{
+        orderItemId: number;
+        newQuantity: number;
+      }>;
+    },
+  ) {
+    return this.api.post({
+      url: `${API_URL}/api/orders/shipments/${shipmentId}/adjustment-request`,
+      data: payload,
+    });
+  }
+
+  static cancelByOutOfStock(
+    shipmentId: number,
+    payload: {
+      reason: string;
+    },
+  ) {
+    return this.api.post({
+      url: `${API_URL}/api/orders/shipments/${shipmentId}/cancel-by-oos`,
+      data: payload,
     });
   }
 }

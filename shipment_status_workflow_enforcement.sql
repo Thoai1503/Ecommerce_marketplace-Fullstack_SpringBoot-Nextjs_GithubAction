@@ -3,6 +3,8 @@ USE logistic_service;
 DROP TRIGGER IF EXISTS trg_shipment_after_update_status_history;
 DROP TRIGGER IF EXISTS trg_shipment_after_insert_status_history;
 DROP TRIGGER IF EXISTS trg_shipment_before_update_status;
+DROP TRIGGER IF EXISTS trg_shipment_status_history_after_insert_sync;
+DROP TRIGGER IF EXISTS trg_shipment_status_history_after_update_sync;
 DROP FUNCTION IF EXISTS fn_shipment_delivery_failed_toggle_count;
 DROP FUNCTION IF EXISTS fn_shipment_status_step;
 
@@ -102,68 +104,10 @@ BEGIN
 	END IF;
 END$$
 
-CREATE TRIGGER trg_shipment_after_insert_status_history
-AFTER INSERT ON shipment
-FOR EACH ROW
-BEGIN
-	INSERT INTO shipment_status_history (
-		shipment_id,
-		status,
-		description,
-		location,
-		updated_by,
-		updated_at
-	) VALUES (
-		NEW.id,
-		NEW.status,
-		CASE NEW.status
-			WHEN 'PENDING' THEN 'Shipment created'
-			WHEN 'CONFIRMED' THEN 'Shipment confirmed'
-			WHEN 'PICKED_UP' THEN 'Shipment picked up'
-			WHEN 'IN_TRANSIT' THEN 'Shipment is in transit'
-			WHEN 'OUT_FOR_DELIVERY' THEN 'Shipment is out for delivery'
-			WHEN 'DELIVERED' THEN 'Shipment delivered successfully'
-			WHEN 'FAILED' THEN 'Shipment delivery failed'
-			WHEN 'RETURNED' THEN 'Shipment returned to sender'
-			ELSE CONCAT('Shipment status changed to ', NEW.status)
-		END,
-		NULL,
-		'system',
-		CURRENT_TIMESTAMP
-	);
-END$$
-
-CREATE TRIGGER trg_shipment_after_update_status_history
-AFTER UPDATE ON shipment
-FOR EACH ROW
-BEGIN
-	IF NOT (OLD.status <=> NEW.status) THEN
-		INSERT INTO shipment_status_history (
-			shipment_id,
-			status,
-			description,
-			location,
-			updated_by,
-			updated_at
-		) VALUES (
-			NEW.id,
-			NEW.status,
-			CASE NEW.status
-				WHEN 'PENDING' THEN 'Shipment created'
-				WHEN 'CONFIRMED' THEN 'Shipment confirmed'
-				WHEN 'PICKED_UP' THEN 'Shipment picked up'
-				WHEN 'IN_TRANSIT' THEN 'Shipment is in transit'
-				WHEN 'OUT_FOR_DELIVERY' THEN 'Shipment is out for delivery'
-				WHEN 'DELIVERED' THEN 'Shipment delivered successfully'
-				WHEN 'FAILED' THEN 'Shipment delivery failed'
-				WHEN 'RETURNED' THEN 'Shipment returned to sender'
-				ELSE CONCAT('Shipment status changed to ', NEW.status)
-			END,
-			NULL,
-			'system',
-			CURRENT_TIMESTAMP
-		);
-	END IF;
-END$$
+-- IMPORTANT:
+-- Do not create AFTER INSERT/UPDATE triggers on shipment that write to
+-- shipment_status_history. Those trigger chains can cause MySQL error:
+-- "Can't update table 'shipment' in stored function/trigger..."
+-- Status history should be written by application service layer.
 
 DELIMITER ;

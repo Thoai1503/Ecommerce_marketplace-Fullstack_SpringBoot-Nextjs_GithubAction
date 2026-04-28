@@ -40,6 +40,7 @@ public class Vnpay {
 		 String vnp_Version = "2.1.0";
          String vnp_Command = "pay";
          String vnp_OrderInfo = req.getParameter("orderInfo");
+      //   String orderId = req.getParameter("orderId");
          String orderType = req.getParameter("ordertype");
          String bank_c = req.getParameter("bankCode");
          System.out.println("Bank code: " + bank_c);

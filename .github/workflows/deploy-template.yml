@@ -59,6 +59,11 @@ jobs:
 
             if docker compose config --services | grep -x "${SERVICE}" >/dev/null 2>&1; then
               docker compose pull "${SERVICE}"
+              # Stop and remove old container to prevent name conflict on recreate
+              docker compose stop "${SERVICE}" 2>/dev/null || true
+              docker compose rm -f "${SERVICE}" 2>/dev/null || true
+              # Also hard-remove any stale container matching the service name
+              docker rm -f "${SERVICE}" 2>/dev/null || true
               docker compose up -d "${SERVICE}"
               FAILED=$(docker compose ps "${SERVICE}" --status exited -q)
               if [ ! -z "${FAILED}" ]; then
@@ -70,7 +75,7 @@ jobs:
             else
               echo "Service ${SERVICE} not found in compose; fallback to full deploy"
               docker compose pull
-              docker compose up -d
+              docker compose up -d --remove-orphans
             fi
 
             docker image prune -f

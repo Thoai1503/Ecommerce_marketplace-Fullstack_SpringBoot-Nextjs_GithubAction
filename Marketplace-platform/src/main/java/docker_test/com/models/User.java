@@ -141,4 +141,21 @@ public final class User {
     public void setLastLogin(LocalDateTime lastLogin) {
         this.lastLogin = lastLogin;
     }
+    @Override
+    public String toString() {
+		return "User{" +
+				"id=" + id +
+				", email='" + email + '\'' +
+				", phone='" + phone + '\'' +
+				", fullName='" + fullName + '\'' +
+				", avatarUrl='" + avatarUrl + '\'' +
+				", dateOfBirth=" + dateOfBirth +
+				", role='" + userType + '\'' +
+				", isVerified=" + isVerified +
+				", isActive=" + isActive +
+				", createdAt=" + createdAt +
+				", updatedAt=" + updatedAt +
+				", lastLogin=" + lastLogin +
+				'}';
+    }
 }

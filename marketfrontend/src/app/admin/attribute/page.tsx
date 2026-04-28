@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { Plus, Edit2, Trash2, X, Check, Search, ArrowLeft } from "lucide-react";
+import { API_URL } from "@/helper/api";
 
 // Types (tái sử dụng từ trước)
 interface AttributeValue {
@@ -33,7 +34,7 @@ interface Attribute {
 const GlobalAttributeManager = () => {
   // Danh sách thuộc tính chung (mở rộng cho nhiều ngành hàng)
   const [attributes, setAttributes] = useState<Attribute[]>([]);
-  const API_URL = "http://localhost:8000/attribute";
+  const ATTRIBUTE_API_URL = `${API_URL}/attribute`;
 
   useEffect(() => {
     fetchAttributes();
@@ -41,7 +42,7 @@ const GlobalAttributeManager = () => {
 
   const fetchAttributes = async () => {
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(ATTRIBUTE_API_URL);
       const data = await res.json();
       console.log("Fetched attributes:", data);
       alert(data);
@@ -53,7 +54,7 @@ const GlobalAttributeManager = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAttribute, setSelectedAttribute] = useState<Attribute | null>(
-    null
+    null,
   );
   const [isEditing, setIsEditing] = useState(false);
 
@@ -86,7 +87,7 @@ const GlobalAttributeManager = () => {
   const filteredAttributes = attributes.filter(
     (attr) =>
       attr.label?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-      attr.name?.toLowerCase().includes(searchTerm?.toLowerCase())
+      attr.name?.toLowerCase().includes(searchTerm?.toLowerCase()),
   );
 
   const handleAddValue = () => {
@@ -210,7 +211,11 @@ const GlobalAttributeManager = () => {
     <>
       <style jsx global>{`
         body {
-          font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          font-family:
+            "Inter",
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
             sans-serif;
           background-color: #f8f9fa;
         }

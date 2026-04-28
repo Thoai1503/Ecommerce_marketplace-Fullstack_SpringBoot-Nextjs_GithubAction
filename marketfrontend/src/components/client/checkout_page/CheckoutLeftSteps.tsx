@@ -17,7 +17,7 @@ import {
 } from "@/components/client/checkout_page/types";
 import type { Address } from "@/components/client/checkout_page/types";
 
-type PaymentMethod = "cod" | "vnpay" | "bank";
+type PaymentMethod = "COD" | "VNPAY" | "BANK";
 
 const PAYMENT_OPTIONS: {
   id: PaymentMethod;
@@ -26,19 +26,19 @@ const PAYMENT_OPTIONS: {
   icon: React.ReactNode;
 }[] = [
   {
-    id: "cod",
+    id: "COD",
     label: "Thanh toán khi nhận hàng (COD)",
     description: "Trả tiền mặt khi nhận hàng tại nhà.",
     icon: <Banknote size={24} color="#22c55e" strokeWidth={1.5} />,
   },
   {
-    id: "vnpay",
+    id: "VNPAY",
     label: "VNPay",
     description: "Thanh toán qua cổng VNPay (ATM, QR, thẻ quốc tế).",
     icon: <CreditCard size={24} color="#137fec" strokeWidth={1.5} />,
   },
   {
-    id: "bank",
+    id: "BANK",
     label: "Chuyển khoản ngân hàng",
     description: "Chuyển khoản trực tiếp qua tài khoản ngân hàng.",
     icon: <Wallet size={24} color="#f59e0b" strokeWidth={1.5} />,
@@ -90,7 +90,8 @@ export default function CheckoutLeftSteps({
   onPaymentMethodChange,
 }: CheckoutLeftStepsProps) {
   const [selectedPayment, setSelectedPayment] =
-    React.useState<PaymentMethod>("cod");
+    React.useState<PaymentMethod>("COD");
+  const hasAddress = Boolean(defaultAddress) && addresses.length > 0;
 
   const handleSelectPayment = (method: PaymentMethod) => {
     setSelectedPayment(method);
@@ -109,22 +110,54 @@ export default function CheckoutLeftSteps({
               </div>
               <div className="flex-grow-1">
                 <h3 style={styles.stepTitle}>Địa chỉ nhận hàng</h3>
-                <p
-                  className="fw-bold mb-1"
-                  style={{ fontSize: 12, color: "#1e293b" }}
-                >
-                  {defaultAddress?.name} • {defaultAddress?.phone}
-                </p>
-                <p className="text-muted mb-0" style={{ fontSize: 12 }}>
-                  {defaultAddress?.address}
-                </p>
+                {hasAddress ? (
+                  <>
+                    <p
+                      className="fw-bold mb-1"
+                      style={{ fontSize: 12, color: "#1e293b" }}
+                    >
+                      {defaultAddress?.name} • {defaultAddress?.phone}
+                    </p>
+                    <p className="text-muted mb-0" style={{ fontSize: 12 }}>
+                      {defaultAddress?.address}
+                    </p>
+                  </>
+                ) : (
+                  <div
+                    style={{
+                      border: "1px dashed #f59e0b",
+                      background: "#fffbeb",
+                      borderRadius: 8,
+                      padding: "10px 12px",
+                      maxWidth: 420,
+                    }}
+                  >
+                    <p
+                      className="mb-1"
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#92400e",
+                      }}
+                    >
+                      Bạn chưa có địa chỉ nhận hàng
+                    </p>
+                    <p
+                      className="mb-0"
+                      style={{ fontSize: 12, color: "#a16207" }}
+                    >
+                      Vui lòng thêm địa chỉ để tiếp tục tính phí vận chuyển và
+                      đặt hàng.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
             <button
               style={styles.linkPrimary}
               onClick={() => setShowAddressPanel(true)}
             >
-              Thay đổi
+              {hasAddress ? "Thay đổi" : "Thêm địa chỉ"}
             </button>
             {showAddressPanel && (
               <AddressModal

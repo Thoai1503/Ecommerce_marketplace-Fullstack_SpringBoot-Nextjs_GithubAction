@@ -5,5 +5,9 @@ export interface ProductVariant {
   sku: string;
   price: number;
   stock_quantity: number;
+  weight?: number;
+  height?: number;
+  length?: number;
+  width?: number;
   image_url: string;
 }

@@ -8,9 +8,13 @@ import { API_URL } from "@/helper/api";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { CartItem, GroupedCartByShop } from "@/validators/cart";
 import { productVariantQuery } from "@/query/productVariant";
+import { productQuery } from "@/feature/client/query";
 
 type CartStateItem = CartItem & {
   selected: boolean;
+  isGuest?: boolean;
+  guestProductId?: number;
+  guestVariantId?: number;
 };
 
 type EnrichedCartItem = CartStateItem & {
@@ -20,33 +24,182 @@ type EnrichedCartItem = CartStateItem & {
   stockQuantity?: number;
 };
 
+type PreLoginCartItem = {
+  user_id: null;
+  product_id: number;
+  variant_id: number;
+  quantity: number;
+};
+
+const resolveProductId = (item: any): number | null => {
+  return (
+    item?.guestProductId ??
+    item?.product?.id ??
+    item?.product?.product_id ??
+    item?.productId ??
+    item?.product_id ??
+    null
+  );
+};
+
+const resolveVariantId = (item: any): number | null => {
+  return (
+    item?.guestVariantId ??
+    item?.productVariant?.id ??
+    item?.productVariant?.variant_id ??
+    item?.variantId ??
+    item?.variant_id ??
+    null
+  );
+};
+
+
 const ShoppingCart: React.FC = () => {
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { userId } = useUserAuth();
-  const { data, isError, status } = useQuery(Cart.getByUserId(userId || 0));
+  const isLoggedIn = Boolean(userId);
+  const { data, isError, status } = useQuery({
+    ...Cart.getByUserId(userId || 0),
+    enabled: isLoggedIn,
+  });
 
+  const [preLoginCart, setPreLoginCart] = useState<PreLoginCartItem[]>([]);
   // State lưu danh sách cartItems từ API + selected flag
   const [cartItems, setCartItems] = useState<CartStateItem[]>([]);
   // Track items đang được update/delete để disable tương tác
   const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
   const [stockWarning, setStockWarning] = useState<Record<number, string>>({});
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem("preLoginCart");
+      setPreLoginCart(raw ? JSON.parse(raw) : []);
+    } catch {
+      setPreLoginCart([]);
+    }
+  }, []);
+
   // Sync dữ liệu từ API vào state khi data thay đổi
   useEffect(() => {
+    if (!isLoggedIn) return;
     if (data) {
       setCartItems((prev) =>
         data.map((item) => ({
           ...item,
+          guestProductId: resolveProductId(item) ?? undefined,
+          guestVariantId: resolveVariantId(item) ?? undefined,
           selected:
             prev.find((prevItem) => prevItem.id === item.id)?.selected ?? false,
         })),
       );
     }
-  }, [data]);
+  }, [data, isLoggedIn]);
+
+  const productQueries = useQueries({
+    queries: preLoginCart.map((item) => {
+      const productId = item.product_id;
+      return {
+        ...productQuery.detail_with_shop(productId),
+        enabled: !isLoggedIn && Boolean(productId),
+      };
+    }),
+  });
+  const guestVariantQueries = useQueries({
+    queries: preLoginCart.map((item) => {
+      const variantId = item.variant_id;
+      return {
+        ...productVariantQuery.detail(variantId ?? 0),
+        enabled: !isLoggedIn && Boolean(variantId),
+      };
+    }),
+  });
+
+  useEffect(() => {
+    if (isLoggedIn) return;
+
+    if (preLoginCart.length === 0) {
+      setCartItems([]);
+      return;
+    }
+
+    const hasPendingQueries =
+      productQueries.some((q) => q.isLoading) ||
+      guestVariantQueries.some((q) => q.isLoading);
+
+    if (hasPendingQueries) return;
+
+    setCartItems((prev) => {
+      const nextItems = preLoginCart.map((item, index) => {
+        const productData = productQueries[index]?.data;
+        const variantData = guestVariantQueries[index]?.data;
+        const syntheticId = Number(
+          `9${item.product_id}${item.variant_id}${index}`,
+        );
+        const existingItem = prev.find(
+          (prevItem) => prevItem.id === syntheticId,
+        );
+
+        return {
+          id: syntheticId,
+          userId: 0,
+          quantity: item.quantity,
+          addedAt: existingItem?.addedAt ?? new Date().toISOString(),
+          updatedAt: existingItem?.updatedAt ?? new Date().toISOString(),
+          selected:
+            prev.find((prevItem) => prevItem.id === syntheticId)?.selected ??
+            false,
+          isGuest: true,
+          guestProductId: item.product_id,
+          guestVariantId: item.variant_id,
+          product: {
+            id: productData?.id ?? item.product_id,
+            name: productData?.name ?? "",
+            shop: {
+              id: productData?.shop?.id ?? 0,
+              userId: productData?.shop?.userId ?? 0,
+              shopName: productData?.shop?.shopName ?? "",
+            },
+          },
+          productVariant: variantData
+            ? {
+                id: variantData.id,
+                variantName: variantData.variantName ?? "",
+                sku: variantData.sku,
+                price: variantData.price,
+                stockQuantity: variantData.stockQuantity,
+                imageUrl: variantData.imageUrl,
+              }
+            : null,
+        } as CartStateItem;
+      });
+
+      const unchanged =
+        prev.length === nextItems.length &&
+        prev.every((prevItem, index) => {
+          const nextItem = nextItems[index];
+          if (!nextItem) return false;
+
+          return (
+            prevItem.id === nextItem.id &&
+            prevItem.quantity === nextItem.quantity &&
+            prevItem.selected === nextItem.selected &&
+            prevItem.guestProductId === nextItem.guestProductId &&
+            prevItem.guestVariantId === nextItem.guestVariantId &&
+            prevItem.product?.name === nextItem.product?.name &&
+            prevItem.productVariant?.price === nextItem.productVariant?.price &&
+            prevItem.productVariant?.stockQuantity ===
+              nextItem.productVariant?.stockQuantity
+          );
+        });
+
+      return unchanged ? prev : nextItems;
+    });
+  }, [guestVariantQueries, isLoggedIn, preLoginCart, productQueries]);
 
   const variantQueries = useQueries({
     queries: cartItems.map((item) => {
-      const variantId = item.productVariant?.id;
+      const variantId = resolveVariantId(item);
 
       return {
         ...productVariantQuery.detail(variantId ?? 0),
@@ -54,14 +207,63 @@ const ShoppingCart: React.FC = () => {
       };
     }),
   });
-  console.log("Variant Queries:", variantQueries);
+
+  const cartProductQueries = useQueries({
+    queries: cartItems.map((item) => {
+      const productId = resolveProductId(item);
+
+      return {
+        ...productQuery.detail_with_shop(productId ?? 0),
+        enabled: Boolean(productId),
+      };
+    }),
+  });
 
   const enrichedCartItems = useMemo<EnrichedCartItem[]>(() => {
     return cartItems.map((item, index) => {
+      const productData = cartProductQueries[index]?.data;
       const variantData = variantQueries[index]?.data;
+      const currentVariant = item.productVariant;
 
       return {
         ...item,
+        product: {
+          id: productData?.id ?? item.product?.id ?? item.guestProductId ?? 0,
+          name:
+            productData?.name ??
+            (item.product as any)?.name ??
+            (item.product as any)?.product_name ??
+            "",
+          shop: {
+            id: productData?.shop?.id ?? item.product?.shop?.id ?? 0,
+            userId:
+              productData?.shop?.userId ?? item.product?.shop?.userId ?? 0,
+            shopName:
+              productData?.shop?.shopName ??
+              (item.product as any)?.shop?.shopName ??
+              (item.product as any)?.shop?.shop_name ??
+              "",
+          },
+        },
+        productVariant:
+          variantData || currentVariant
+            ? {
+                id: variantData?.id ?? currentVariant?.id ?? 0,
+                variantName:
+                  variantData?.variantName ??
+                  (currentVariant as any)?.variantName ??
+                  (currentVariant as any)?.variant_name ??
+                  "",
+                sku: variantData?.sku ?? currentVariant?.sku ?? "",
+                price: variantData?.price ?? currentVariant?.price ?? 0,
+                stockQuantity:
+                  variantData?.stockQuantity ??
+                  currentVariant?.stockQuantity ??
+                  0,
+                imageUrl:
+                  variantData?.imageUrl ?? currentVariant?.imageUrl ?? "",
+              }
+            : null,
         width: variantData?.width ?? 0,
         height: variantData?.height ?? 0,
         weight: variantData?.weight ?? 0,
@@ -70,7 +272,7 @@ const ShoppingCart: React.FC = () => {
           variantData?.stockQuantity ?? item.productVariant?.stockQuantity ?? 0,
       };
     });
-  }, [cartItems, variantQueries]);
+  }, [cartItems, cartProductQueries, variantQueries]);
 
   // Lưu các item được chọn vào localStorage
   useEffect(() => {
@@ -88,9 +290,30 @@ const ShoppingCart: React.FC = () => {
     }
   }, [isError, status]);
 
-  const [voucher, setVoucher] = useState("");
-  const discount = 50000;
-  const shippingFee = 35000;
+  const shippingFee: number = 35000;
+
+  const syncGuestCartLocalStorage = (nextItems: CartStateItem[]) => {
+    if (typeof window === "undefined") return;
+
+    const rawPayload = nextItems
+      .filter((item) => item.isGuest)
+      .map((item) => ({
+        user_id: null,
+        product_id: item.guestProductId ?? item.product?.id,
+        variant_id: item.guestVariantId ?? item.productVariant?.id,
+        quantity: item.quantity,
+      }));
+
+    const payload = rawPayload.filter(
+      (item): item is PreLoginCartItem =>
+        typeof item.product_id === "number" &&
+        typeof item.variant_id === "number",
+    );
+
+    localStorage.setItem("preLoginCart", JSON.stringify(payload));
+    setPreLoginCart(payload);
+    window.dispatchEvent(new Event("cart-updated"));
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -103,9 +326,12 @@ const ShoppingCart: React.FC = () => {
   const groupedByShop: Record<number, GroupedCartByShop> = useMemo(() => {
     return enrichedCartItems.reduce(
       (acc, item) => {
-        const shopId = item?.product?.shop?.id;
+        const shopId = item?.product?.shop?.id ?? 0;
         if (!acc[shopId]) {
-          acc[shopId] = { shop: item?.product?.shop, items: [] };
+          acc[shopId] = {
+            shop: item?.product?.shop,
+            items: [],
+          };
         }
         acc[shopId].items.push(item);
         return acc;
@@ -128,7 +354,7 @@ const ShoppingCart: React.FC = () => {
   };
 
   const calculateTotal = () => {
-    return calculateSubtotal() - discount + shippingFee;
+    return Math.max(0, calculateSubtotal() + shippingFee);
   };
 
   const selectedCount = enrichedCartItems.filter(
@@ -175,7 +401,7 @@ const ShoppingCart: React.FC = () => {
     const allSelected = isShopAllSelected(shopId);
     setCartItems((prev) =>
       prev.map((item) =>
-        item.product.shop.id === shopId
+        item.product?.shop?.id === shopId
           ? { ...item, selected: !allSelected }
           : item,
       ),
@@ -207,6 +433,17 @@ const ShoppingCart: React.FC = () => {
 
     if (newQty === currentItem.quantity) return;
 
+    if (currentItem.isGuest) {
+      setCartItems((prev) => {
+        const nextItems = prev.map((item) =>
+          item.id === itemId ? { ...item, quantity: newQty } : item,
+        );
+        syncGuestCartLocalStorage(nextItems);
+        return nextItems;
+      });
+      return;
+    }
+
     // Optimistic update
     setCartItems((prev) =>
       prev.map((item) =>
@@ -216,6 +453,7 @@ const ShoppingCart: React.FC = () => {
     setUpdatingItems((prev) => new Set(prev).add(itemId));
     try {
       await Cart.updateCartItem(itemId, newQty);
+      window.dispatchEvent(new Event("cart-updated"));
     } catch {
       // Rollback on error
       setCartItems((prev) =>
@@ -235,6 +473,23 @@ const ShoppingCart: React.FC = () => {
   };
 
   const removeItem = async (itemId: number) => {
+    const currentItem = cartItems.find((i) => i.id === itemId);
+    if (!currentItem) return;
+
+    if (currentItem.isGuest) {
+      setCartItems((prev) => {
+        const nextItems = prev.filter((item) => item.id !== itemId);
+        syncGuestCartLocalStorage(nextItems);
+        return nextItems;
+      });
+      setStockWarning((prev) => {
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
+      });
+      return;
+    }
+
     if (updatingItems.has(itemId)) return;
     setUpdatingItems((prev) => new Set(prev).add(itemId));
     // Optimistic remove
@@ -247,6 +502,7 @@ const ShoppingCart: React.FC = () => {
     });
     try {
       await Cart.deleteCartItem(itemId);
+      window.dispatchEvent(new Event("cart-updated"));
     } catch {
       // Restore item on error
       if (snapshot) {
@@ -325,7 +581,14 @@ const ShoppingCart: React.FC = () => {
     },
   ];
 
-  if (!data && !isError) {
+  const isGuestLoading =
+    !isLoggedIn &&
+    preLoginCart.length > 0 &&
+    (productQueries.some((q) => q.isLoading) ||
+      guestVariantQueries.some((q) => q.isLoading)) &&
+    cartItems.length === 0;
+
+  if ((isLoggedIn && status === "pending") || isGuestLoading) {
     return (
       <div className="container py-5 text-center">
         <div className="spinner-border text-primary" role="status">
@@ -417,7 +680,7 @@ const ShoppingCart: React.FC = () => {
                   />
                   <i className="bi bi-shop text-primary"></i>
                   <span className="fw-bold text-uppercase small">
-                    {group?.shop?.shopName}
+                    {group?.shop?.shopName || "Dang tai ten shop..."}
                   </span>
                   <i className="bi bi-chevron-right text-muted"></i>
                 </div>
@@ -454,13 +717,21 @@ const ShoppingCart: React.FC = () => {
                           </div>
                           <div className="flex-grow-1 min-w-0">
                             <h6 className="fw-bold mb-1 text-truncate">
-                              {item?.product?.name}
+                              {item?.product?.name ||
+                                "Dang tai ten san pham..."}
                             </h6>
-                            {item?.productVariant && (
+                            <div className="small text-muted mb-1">
+                              Shop:{" "}
+                              {item?.product?.shop?.shopName ||
+                                "Dang tai ten shop..."}
+                            </div>
+                            {(item?.productVariant ||
+                              item.productVariant?.id) && (
                               <div className="small text-muted d-flex align-items-center gap-1">
                                 Phân loại:{" "}
                                 <span className="text-dark fw-medium">
-                                  {item?.productVariant?.variantName}
+                                  {item?.productVariant?.variantName ||
+                                    "Dang tai ten phan loai..."}
                                 </span>
                                 <i className="bi bi-chevron-down"></i>
                               </div>
@@ -616,26 +887,6 @@ const ShoppingCart: React.FC = () => {
               </div>
             </div>
 
-            {/* Voucher Card */}
-            <div className="card shadow-sm mb-3">
-              <div className="card-body">
-                <h6 className="text-uppercase text-muted small fw-bold mb-3 d-flex align-items-center gap-2">
-                  <i className="bi bi-tag"></i>
-                  Voucher khuyến mãi
-                </h6>
-                <div className="input-group">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Nhập mã giảm giá..."
-                    value={voucher}
-                    onChange={(e) => setVoucher(e.target.value)}
-                  />
-                  <button className="btn btn-primary">Áp dụng</button>
-                </div>
-              </div>
-            </div>
-
             {/* Payment Summary */}
             <div className="card shadow-sm mb-3">
               <div className="card-body">
@@ -648,23 +899,19 @@ const ShoppingCart: React.FC = () => {
                   </span>
                 </div>
                 <div className="d-flex justify-content-between mb-3">
-                  <span className="text-muted small">Giảm giá voucher</span>
-                  <span className="fw-semibold text-success">
-                    - {formatCurrency(discount)}
-                  </span>
-                </div>
-                <div className="d-flex justify-content-between mb-3">
                   <span className="text-muted small">Phí vận chuyển</span>
                   <div className="text-end">
                     <div className="fw-semibold">
                       {formatCurrency(shippingFee)}
                     </div>
-                    <span
-                      className="badge bg-success"
-                      style={{ fontSize: "9px" }}
-                    >
-                      MIỄN PHÍ VẬN CHUYỂN
-                    </span>
+                    {shippingFee === 0 && (
+                      <span
+                        className="badge bg-success"
+                        style={{ fontSize: "9px" }}
+                      >
+                        MIỄN PHÍ VẬN CHUYỂN
+                      </span>
+                    )}
                   </div>
                 </div>
                 <hr className="border-dashed" />
@@ -682,7 +929,13 @@ const ShoppingCart: React.FC = () => {
                 <button
                   className="btn btn-primary w-100 py-3 fw-bold d-flex align-items-center justify-content-center gap-2"
                   disabled={selectedCount === 0}
-                  onClick={() => (window.location.href = "/checkout")}
+                  onClick={() => {
+                    if (isLoggedIn) {
+                      window.location.href = "/checkout";
+                    } else {
+                      window.location.href = "/login?redirect=cart";
+                    }
+                  }}
                 >
                   MUA HÀNG ({selectedCount})
                   <i className="bi bi-arrow-right"></i>

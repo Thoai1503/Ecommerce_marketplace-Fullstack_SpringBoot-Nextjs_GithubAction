@@ -9,7 +9,7 @@
  */
 
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import { API_URL } from "@/helper/api";
+import { ADDRESS_LOOKUP_API_URL, API_URL } from "@/helper/api";
 
 // Token storage keys
 const TOKEN_KEYS = {
@@ -29,7 +29,7 @@ const http = axios.create({
   // },
 });
 const addressAPI = axios.create({
-  baseURL: "https://provinces.open-api.vn/api/",
+  baseURL: ADDRESS_LOOKUP_API_URL,
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",

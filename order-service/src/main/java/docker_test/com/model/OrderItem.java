@@ -24,6 +24,8 @@ import lombok.ToString;
 @Builder
 @ToString
 public class OrderItem {
+	
+	
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,6 +52,9 @@ public class OrderItem {
 	@Column(name = "variant_name", nullable = false)
 	private String variantName;
 	
+	@Column(name ="image")
+	private String image;
+	
 	@Column(name = "quantity", nullable = false)
 	private Integer quantity;
 	
@@ -58,6 +63,16 @@ public class OrderItem {
 	
 	@Column(name = "total_price", nullable = false)
 	private Double totalPrice;
+
+	@Column(name = "final_quantity")
+	private Integer finalQuantity;
+
+	@Column(name = "is_adjusted", nullable = false)
+	private Boolean isAdjusted;
+	
+	
+	@Column(name = "last_return_request_id")
+	private Long lastReturnRequestId;
 	
 //	@Column(name = "created_at", nullable = false)
 //	private LocalDateTime createdAt;

@@ -68,6 +68,12 @@ const ShipmentStatusConfig: Record<
     icon: <MapPin size={16} />,
     label: "Đã trả lại",
   },
+  COMPLETED: {
+    bg: "bg-green-100",
+    text: "text-green-600",
+    icon: <Check size={16} />,
+    label: "Đã hoàn thành",
+  },
 };
 
 export default function ShipmentCard({
@@ -204,7 +210,7 @@ export default function ShipmentCard({
       {/* Actions */}
       {onStatusUpdate && (
         <button
-          onClick={() => onStatusUpdate(shipment.id)}
+          onClick={() => onStatusUpdate(shipment.id.toString())}
           className="w-full mt-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors"
         >
           Cập nhật trạng thái

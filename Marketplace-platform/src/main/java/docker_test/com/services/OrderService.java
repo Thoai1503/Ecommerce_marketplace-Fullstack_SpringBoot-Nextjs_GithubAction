@@ -13,7 +13,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
 
     public OrderService() {
-        this.orderRepository = OrderRepository.Instance();
+                this.orderRepository = new OrderRepository();
     }
 
     public OrderPageResponse getAdminOrders(
@@ -26,19 +26,21 @@ public class OrderService {
             String sortBy,
             String sortOrder,
             int page,
-            int size
+            int size,
+            String search,
+            String paymentStatus
     ) {
 
         List<Order> orders = orderRepository.findAllWithPagination(
                 userId, startDate, endDate,
                 minAmount, maxAmount,
                 status, sortBy, sortOrder,
-                page, size
+                page, size, search, paymentStatus
         );
 
         int totalRecords = orderRepository.countOrders(
                 userId, startDate, endDate,
-                minAmount, maxAmount, status
+                minAmount, maxAmount, status, search, paymentStatus
         );
 
         int totalPages = (int) Math.ceil((double) totalRecords / size);
@@ -57,4 +59,11 @@ public class OrderService {
                 pendingAmount
         );
     }
+
+        public Order getAdminOrderById(Long id) {
+                if (id == null) {
+                        return null;
+                }
+                return orderRepository.findById(id);
+        }
 }

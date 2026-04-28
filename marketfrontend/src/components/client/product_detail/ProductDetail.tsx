@@ -13,26 +13,124 @@ import React, { useEffect, useState } from "react";
 
 const ProductDetail = ({ data }: { data: IProduct }) => {
   const { userId } = useUserAuth();
+  const [shop, setShop] = useState<any>(null);
+  console.log("Product Detail User ID:", userId);
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { mutate: addToCart } = useAddToCartMutation();
+  const [shopProducts, setShopProducts] = useState<any[]>([]);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fullUrl = pathname + "?" + searchParams.toString();
-
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
   const [variant, setVariant] = useState<Variant | null>(null);
   const [mainImage, setMainImage] = useState(
     data.images[0]?.image_url || "/assets/images/ecommerce/product-1.jpg",
   );
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
+  const sellerOwnerUserId = Number(shop?.user_id ?? shop?.userId ?? 0);
+  const isOwnShopProduct =
+    Boolean(userId) &&
+    sellerOwnerUserId > 0 &&
+    Number(userId) === sellerOwnerUserId;
 
-  // Lấy ảnh hiển thị: ưu tiên ảnh đang hover, sau đó là ảnh chính
+  const formatPrice = (price?: number) => {
+    if (!price) return "";
+    return new Intl.NumberFormat("vi-VN").format(price);
+  };
+
+  useEffect(() => {
+    if (!data?.shop_id) return;
+
+    const fetchData = async () => {
+      try {
+        // shop
+        const shopRes = await fetch(`${API_URL}/shops/${data.shop_id}`);
+        const shopJson = await shopRes.json();
+        setShop(shopJson);
+
+        // products theo shop
+        const prodRes = await fetch(`${API_URL}/product/shop/${data.shop_id}`);
+        const prodJson = await prodRes.json();
+
+        let list: any[] = [];
+
+        if (Array.isArray(prodJson)) list = prodJson;
+        else if (Array.isArray(prodJson?.data)) list = prodJson.data;
+        else if (Array.isArray(prodJson?.products)) list = prodJson.products;
+
+        setShopProducts(list);
+      } catch (err) {
+        console.error(err);
+        setShopProducts([]);
+      }
+    };
+
+    fetchData();
+  }, [data]);
+
   const displayImage = hoveredImage || mainImage;
 
+  if (isOwnShopProduct) {
+    return (
+      <div className="container py-5">
+        <div className="alert alert-info rounded-4 border-0 shadow-sm">
+          Sản phẩm của chính shop bạn không hiển thị ở giao diện mua hàng khi đang đăng nhập bằng tài khoản này.
+        </div>
+      </div>
+    );
+  }
+
   const handleAddToCart = (cart: ICart) => {
-    // alert(`Thêm vào giỏ hàng: ${JSON.stringify(cart, null, 2)}`);
+    if (isOwnShopProduct) {
+      message.warning("Bạn không thể mua sản phẩm của chính shop mình.");
+      return;
+    }
     if (!userId) {
-      message.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
+      const notifyCartUpdated = () => {
+        window.dispatchEvent(new Event("cart-updated"));
+      };
+
+      if (selectedVariant === null) {
+        message.warning("Vui lòng chọn phân loại sản phẩm");
+        return;
+      }
+      const preLoginCart = localStorage.getItem("preLoginCart")
+        ? JSON.parse(localStorage.getItem("preLoginCart") || "[]")
+        : [];
+      if (preLoginCart.length >= 1) {
+        const existingItemIndex = preLoginCart.findIndex((item: ICart) => {
+          return (
+            item.product_id === cart.product_id &&
+            item.variant_id === cart.variant_id
+          );
+        });
+        if (existingItemIndex !== -1) {
+          preLoginCart[existingItemIndex].quantity += cart.quantity;
+          localStorage.setItem("preLoginCart", JSON.stringify(preLoginCart));
+          notifyCartUpdated();
+          message.success(
+            "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
+          );
+          return;
+        } else {
+          const pushedItem = [...preLoginCart, cart];
+          localStorage.setItem("preLoginCart", JSON.stringify(pushedItem));
+          notifyCartUpdated();
+          message.success(
+            "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
+          );
+          return;
+        }
+      }
+      preLoginCart.push(cart);
+
+      localStorage.setItem("preLoginCart", JSON.stringify(preLoginCart));
+      notifyCartUpdated();
+
+      message.success(
+        "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
+      );
+      //      message.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
       return;
     }
     if (selectedVariant === null) {
@@ -46,6 +144,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
     addToCart(cart, {
       onSuccess: (data) => {
         console.log("Added to cart:", data);
+        window.dispatchEvent(new Event("cart-updated"));
         message.success("Thêm vào giỏ hàng thành công");
       },
       onError: (error) => {
@@ -159,12 +258,14 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
 
                           <div className="mb-5">
                             <h4 className="mb-1">
-                              $49.00{" "}
-                              <span className="text-muted text-decoration-line-through ms-2">
-                                $69.00
-                              </span>{" "}
-                              <span className="text-warning">(45% OFF)</span>
+                              {formatPrice(variant?.price ?? data.price)}đ
+                              {data.original_price && (
+                                <span className="text-muted text-decoration-line-through ms-2">
+                                  {formatPrice(data.original_price)}đ
+                                </span>
+                              )}
                             </h4>
+
                             <small className="text-muted">
                               inclusive of all taxes
                             </small>
@@ -172,7 +273,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
 
                           {/* Color */}
                           <div className="mb-4">
-                            <h4 className="mb-3">Phân Loại</h4>
+                            <h4 className="mb-3">Classify</h4>
 
                             <div className="d-flex flex-wrap gap-3">
                               {/* Variant 1 - màu xanh */}
@@ -233,7 +334,12 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                         variant.image_url ||
                                         "/assets/images/ecommerce/product-1.jpg"
                                       }
-                                      alt={variant.name}
+                                      alt={
+                                        variant.name ||
+                                        variant.sku ||
+                                        data.product_name ||
+                                        "Product variant"
+                                      }
                                       width={80}
                                       height={80}
                                       className="img-fluid rounded mb-2"
@@ -254,6 +360,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                             <div className="col-md-6">
                               <button
                                 className="btn btn-danger w-100"
+                                disabled={isOwnShopProduct}
                                 onClick={() => {
                                   handleAddToCart({
                                     user_id: userId!,
@@ -263,7 +370,10 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                   });
                                 }}
                               >
-                                <i className="bi bi-cart me-2"></i>Add To Cart
+                                <i className="bi bi-cart me-2"></i>
+                                {isOwnShopProduct
+                                  ? "Cannot Buy Own Product"
+                                  : "Add To Cart"}
                               </button>
                             </div>
                             <div className="col-md-6">
@@ -273,76 +383,163 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                             </div>
                           </div>
 
+                          {isOwnShopProduct && (
+                            <div className="alert alert-warning mt-3 mb-0 py-2">
+                              You cannot buy products from your own shop.
+                            </div>
+                          )}
+
                           <hr className="mt-4 mb-2" />
 
-                          {/* Accordion */}
-                          <div className="accordion" id="ecommerceAccordion">
-                            <div className="accordion-item">
-                              <h2 className="accordion-header">
-                                <button
-                                  className="accordion-button"
-                                  type="button"
-                                  data-bs-toggle="collapse"
-                                  data-bs-target="#productDetails"
-                                  aria-expanded="true"
-                                >
-                                  Product Details
-                                </button>
-                              </h2>
-                              <div
-                                id="productDetails"
-                                className="accordion-collapse collapse show"
-                                data-bs-parent="#ecommerceAccordion"
-                              >
-                                <div className="accordion-body">
-                                  <p>
-                                    Lorem ipsum dolor sit amet, consectetur
-                                    adipiscing elit...
-                                  </p>
-                                  <h5>Features:</h5>
-                                  <ul>
-                                    <li>Lorem ipsum dolor sit amet...</li>
-                                    <li>Integer ut justo quis diam...</li>
-                                  </ul>
-                                </div>
-                              </div>
+                          variant
+
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shop-header mt-4 p-4 rounded text-white">
+                      <div className="d-flex justify-content-between align-items-center flex-wrap">
+                        {/* LEFT */}
+                        <div className="d-flex align-items-center gap-3">
+                          <img
+                            src={
+                              shop?.shop_logo ||
+                              "/assets/images/avatar-shop.png"
+                            }
+                            width={70}
+                            height={70}
+                            className="rounded-circle border border-white"
+                          />
+
+                          <div>
+                            <div className="fw-bold fs-5">
+                              {shop?.shop_name || "Loading..."}
                             </div>
 
-                            <div className="accordion-item">
-                              <h2 className="accordion-header">
-                                <button
-                                  className="accordion-button collapsed"
-                                  type="button"
-                                  data-bs-toggle="collapse"
-                                  data-bs-target="#specifications"
-                                >
-                                  Specifications
-                                </button>
-                              </h2>
-                              <div
-                                id="specifications"
-                                className="accordion-collapse collapse"
-                                data-bs-parent="#ecommerceAccordion"
+                            <small className="opacity-75">
+                              Online recently
+                            </small>
+
+                            <div className="mt-2 d-flex gap-2">
+                              <button className="btn btn-outline-light btn-sm">
+                                💬 Chat Now
+                              </button>
+
+                              <button
+                                className="btn btn-outline-light btn-sm"
+                                onClick={() =>
+                                  (window.location.href = `/shop/${data.shop_id}`)
+                                }
                               >
-                                <div className="accordion-body">
-                                  <table className="table table-striped">
-                                    <tbody>
-                                      <tr>
-                                        <th className="w-25">Sport</th>
-                                        <td>Running</td>
-                                      </tr>
-                                      <tr>
-                                        <th>Material</th>
-                                        <td>Mesh</td>
-                                      </tr>
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
+                                🏪 View Shop
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* RIGHT */}
+                        <div className="d-flex gap-5 text-center mt-3 mt-md-0">
+                          <div>
+                            <div className="small opacity-75">Products</div>
+                            <div className="stat-number">
+                              {shopProducts.length}
                             </div>
                           </div>
 
-                          {/* Ratings & Reviews */}
+                          <div>
+                            <div className="small opacity-75">Ratings</div>
+                            <div className="stat-number">
+                              {shop?.rating || 0}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="small opacity-75">
+                              Response Rate
+                            </div>
+                            <div className="stat-number">
+                              {shop?.response_rate || 0}%
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="small opacity-75">
+                              Response Time
+                            </div>
+                            <div className="stat-number">
+                              {shop?.response_time || 0}h
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Accordion */}
+                    <div className="accordion" id="ecommerceAccordion">
+                      <div className="accordion-item">
+                        <h2 className="accordion-header">
+                          <button
+                            className="accordion-button"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#productDetails"
+                            aria-expanded="true"
+                          >
+                            Product Details
+                          </button>
+                        </h2>
+                        <div
+                          id="productDetails"
+                          className="accordion-collapse collapse show"
+                          data-bs-parent="#ecommerceAccordion"
+                        >
+                          <div className="accordion-body">
+                            <p>
+                              Lorem ipsum dolor sit amet, consectetur adipiscing
+                              elit...
+                            </p>
+                            <h5>Features:</h5>
+                            <ul>
+                              <li>Lorem ipsum dolor sit amet...</li>
+                              <li>Integer ut justo quis diam...</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="accordion-item">
+                        <h2 className="accordion-header">
+                          <button
+                            className="accordion-button collapsed"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#specifications"
+                          >
+                            Specifications
+                          </button>
+                        </h2>
+                        <div
+                          id="specifications"
+                          className="accordion-collapse collapse"
+                          data-bs-parent="#ecommerceAccordion"
+                        >
+                          <div className="accordion-body">
+                            <table className="table table-striped">
+                              <tbody>
+                                <tr>
+                                  <th className="w-25">Sport</th>
+                                  <td>Running</td>
+                                </tr>
+                                <tr>
+                                  <th>Material</th>
+                                  <td>Mesh</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          
+                        </div>
+                      </div>
+                    </div>
+                                              {/* Ratings & Reviews */}
                           <div className="mt-5">
                             <h3 className="mb-4">Ratings & Reviews</h3>
 
@@ -398,9 +595,6 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -426,6 +620,21 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
         .variant-item:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .shop-header {
+          background: linear-gradient(135deg, #1cc7d0, #1a4fff);
+          transition: 0.3s;
+        }
+
+        .shop-header:hover {
+          opacity: 0.95;
+        }
+
+        .stat-number {
+          color: #ffd700; /* vàng */
+          font-weight: bold;
+          font-size: 18px;
         }
       `}</style>
     </div>

@@ -1,7 +1,7 @@
 import { API_URL } from "@/helper/api";
 import { Unit } from "@/types";
 
-//const API_URL = "http://localhost:8000/api/unit";
+// Legacy hardcoded API URL removed; use API_URL from helper.
 
 // ================= GET ALL =================
 export const getUnits = async (): Promise<Unit[]> => {
@@ -9,7 +9,7 @@ export const getUnits = async (): Promise<Unit[]> => {
 
   if (!res.ok) throw new Error("Fetch failed");
 
-  const data = await res.json();
+  const data = await res.json(); 
 
   // map backend → frontend
   return data.map((u: any) => ({

@@ -1,0 +1,103 @@
+.productGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .productGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .productGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .productGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+.noProducts {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+}
+
+.productCard {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s ease;
+  border: 1px solid #f0f0f0;
+}
+
+.productCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 32px rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.imageWrap {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  background: #f9fafb;
+  overflow: hidden;
+}
+
+.productImage {
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.productCard:hover .productImage {
+  transform: scale(1.06);
+}
+
+.productInfo {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.productName {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #374151;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.8em;
+}
+
+.priceWrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.currentPrice {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #dc2626;
+}
+
+.oldPrice {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  text-decoration: line-through;
+}

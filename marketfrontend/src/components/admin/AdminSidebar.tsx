@@ -199,7 +199,7 @@ export default function AdminSidebar({
         { label: "Sản phẩm", path: "/admin/products", icon: <Package /> },
         { label: "Khách hàng", path: "/admin/customers", icon: <Users /> },
         { label: "Nhà bán hàng", path: "/admin/sellers", icon: <Store /> },
-        { label: "Mã giảm giá", path: "/admin/coupons", icon: <Ticket /> },
+        { label: "Mã giảm giá", path: "/admin/vouchers", icon: <Ticket /> },
         {
           label: "Tài chính",
           id: "finance",
@@ -211,9 +211,39 @@ export default function AdminSidebar({
               active: pathname === "/admin/finance",
             },
             {
+              label: "Revenue Snapshot",
+              path: "/admin/finance/revenue-snapshots",
+              active: pathname === "/admin/finance/revenue-snapshots",
+            },
+            {
+              label: "Reconciliation",
+              path: "/admin/finance/reconciliation",
+              active: pathname === "/admin/finance/reconciliation",
+            },
+            {
               label: "Giao dịch",
               path: "/admin/finance/transactions",
               active: pathname === "/admin/finance/transactions",
+            },
+            {
+              label: "Hoàn tiền",
+              path: "/admin/finance/refunds",
+              active: pathname === "/admin/finance/refunds",
+            },
+            {
+              label: "Tranh chấp",
+              path: "/admin/finance/disputes",
+              active: pathname === "/admin/finance/disputes",
+            },
+            {
+              label: "Đối soát seller",
+              path: "/admin/finance/settlements",
+              active: pathname === "/admin/finance/settlements",
+            },
+            {
+              label: "Ví người dùng",
+              path: "/admin/finance/wallets",
+              active: pathname === "/admin/finance/wallets",
             },
             {
               label: "Thanh toán Seller",

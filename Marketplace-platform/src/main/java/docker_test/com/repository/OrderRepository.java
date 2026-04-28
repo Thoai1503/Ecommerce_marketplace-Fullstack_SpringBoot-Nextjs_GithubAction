@@ -23,7 +23,7 @@ public class OrderRepository implements IRepositories<Order>{
 	private static OrderRepository instance=null;
 	private DBConnection dbConnection;
 	
-	private OrderRepository() {
+	public OrderRepository() {
         this.dbConnection = DBConnection.getInstance();
     }
 	
@@ -44,11 +44,19 @@ public class OrderRepository implements IRepositories<Order>{
 	        String sortBy,
 	        String sortOrder,
 	        int page,
-	        int size
+	        int size,
+	        String search,
+	        String paymentStatus
 	) {
 
 	    StringBuilder sql = new StringBuilder(
-	            "SELECT o.* FROM `orders` o WHERE 1=1 "
+	            "SELECT o.*, " +
+	            "u.full_name AS customer_name, u.email AS customer_email, u.phone AS customer_phone, " +
+	            "COALESCE(oi_count.cnt, 0) AS items_count " +
+	            "FROM `orders` o " +
+	            "LEFT JOIN `user` u ON o.user_id = u.id " +
+	            "LEFT JOIN (SELECT order_id, COUNT(*) AS cnt FROM order_item GROUP BY order_id) oi_count ON o.id = oi_count.order_id " +
+	            "WHERE 1=1 "
 	    );
 
 	    List<Object> params = new ArrayList<>();
@@ -78,14 +86,29 @@ public class OrderRepository implements IRepositories<Order>{
 	        params.add(maxAmount);
 	    }
 
-//	    if (status != null && !status.equalsIgnoreCase("all")) {
-//	        sql.append("AND o.order_status = ? ");
-//	        params.add(status);
-//	    }
+	    if (status != null && !status.equalsIgnoreCase("all") && !status.isEmpty()) {
+	        sql.append("AND o.order_status = ? ");
+	        params.add(status.toUpperCase());
+	    }
+
+	    if (paymentStatus != null && !paymentStatus.equalsIgnoreCase("all") && !paymentStatus.isEmpty()) {
+	        sql.append("AND o.payment_status = ? ");
+	        params.add(paymentStatus.toUpperCase());
+	    }
+
+	    if (search != null && !search.trim().isEmpty()) {
+	        sql.append("AND (o.order_number LIKE ? OR u.full_name LIKE ? OR u.email LIKE ?) ");
+	        String like = "%" + search.trim() + "%";
+	        params.add(like);
+	        params.add(like);
+	        params.add(like);
+	    }
 
 	    String sortColumn = "o.created_at";
 	    if ("amount".equalsIgnoreCase(sortBy)) {
 	        sortColumn = "o.final_amount";
+	    } else if ("status".equalsIgnoreCase(sortBy)) {
+	        sortColumn = "o.order_status";
 	    }
 
 	    String direction = "ASC";
@@ -224,11 +247,13 @@ public class OrderRepository implements IRepositories<Order>{
 	        LocalDateTime endDate,
 	        Double minAmount,
 	        Double maxAmount,
-	        String status
+	        String status,
+	        String search,
+	        String paymentStatus
 	) {
 
 	    StringBuilder sql = new StringBuilder(
-	            "SELECT COUNT(*) FROM `orders` o WHERE 1=1 "
+	            "SELECT COUNT(*) FROM `orders` o LEFT JOIN `user` u ON o.user_id = u.id WHERE 1=1 "
 	    );
 
 	    List<Object> params = new ArrayList<>();
@@ -258,9 +283,22 @@ public class OrderRepository implements IRepositories<Order>{
 	        params.add(maxAmount);
 	    }
 
-	    if (status != null && !status.equalsIgnoreCase("all")) {
+	    if (status != null && !status.equalsIgnoreCase("all") && !status.isEmpty()) {
 	        sql.append("AND o.order_status = ? ");
-	        params.add(status);
+	        params.add(status.toUpperCase());
+	    }
+
+	    if (paymentStatus != null && !paymentStatus.equalsIgnoreCase("all") && !paymentStatus.isEmpty()) {
+	        sql.append("AND o.payment_status = ? ");
+	        params.add(paymentStatus.toUpperCase());
+	    }
+
+	    if (search != null && !search.trim().isEmpty()) {
+	        sql.append("AND (o.order_number LIKE ? OR u.full_name LIKE ? OR u.email LIKE ?) ");
+	        String like = "%" + search.trim() + "%";
+	        params.add(like);
+	        params.add(like);
+	        params.add(like);
 	    }
 
 	    try (Connection con = dbConnection.getConn();
@@ -281,6 +319,25 @@ public class OrderRepository implements IRepositories<Order>{
 	    }
 
 	    return 0;
+	}
+
+	public Order findById(Long id) {
+	    String sql = "SELECT o.* FROM `orders` o WHERE o.id = ? LIMIT 1";
+
+	    try (Connection con = dbConnection.getConn();
+	         PreparedStatement ps = con.prepareStatement(sql)) {
+
+	        ps.setLong(1, id);
+	        ResultSet rs = ps.executeQuery();
+
+	        if (rs.next()) {
+	            return mapResultSetToOrder(rs);
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+
+	    return null;
 	}
 
 
@@ -334,7 +391,6 @@ public class OrderRepository implements IRepositories<Order>{
         order.setOrderId(rs.getLong("id"));
         order.setOrderNumber(rs.getString("order_number"));
         order.setUserId(rs.getLong("user_id"));
-//        order.setShopId(rs.getLong("shop_id"));
         order.setAddressId(rs.getLong("address_id"));
         order.setTotalAmount(rs.getDouble("total_amount"));
         order.setShippingFee(rs.getDouble("shipping_fee"));
@@ -358,6 +414,12 @@ public class OrderRepository implements IRepositories<Order>{
 
         order.setCreatedAt(rs.getTimestamp("created_at").toLocalDateTime());
         order.setUpdatedAt(rs.getTimestamp("updated_at").toLocalDateTime());
+
+        // Enriched fields from JOIN
+        try { order.setCustomerName(rs.getString("customer_name")); } catch (SQLException ignored) {}
+        try { order.setCustomerEmail(rs.getString("customer_email")); } catch (SQLException ignored) {}
+        try { order.setCustomerPhone(rs.getString("customer_phone")); } catch (SQLException ignored) {}
+        try { order.setItemsCount(rs.getInt("items_count")); } catch (SQLException ignored) {}
 
         return order;
     }

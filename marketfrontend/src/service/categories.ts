@@ -1,6 +1,6 @@
 import { Category } from "@/types/index";
 
-//const API_URL = "http://localhost:8000/api/categories";
+// Legacy hardcoded API URL removed; use API_URL from helper.
 
 import { API_URL } from "@/helper/api";
 /* ================= HELPERS ================= */
@@ -40,7 +40,7 @@ export const generateCategoryCode = (name: string): string => {
 
 /* ================= MAP BACKEND → FRONTEND ================= */
 
-const mapCategory = (c: any): Category => ({
+const mapCategory = (c: any, productStock: number = 0): Category => ({
   id: String(c.id),
 
   name: c.category_name,
@@ -53,7 +53,7 @@ const mapCategory = (c: any): Category => ({
 
   status: c.is_active === 1 ? "ACTIVE" : "HIDDEN",
 
-  productStock: 0,
+  productStock,
 
   attributeIds: [],
 
@@ -63,6 +63,22 @@ const mapCategory = (c: any): Category => ({
     ? new Date(c.created_at).toISOString()
     : new Date().toISOString(),
 });
+
+const getCategoryProductCount = async (categoryId: number): Promise<number> => {
+  try {
+    const res = await fetch(`${API_URL}/api/categories/${categoryId}/products`);
+
+    if (!res.ok) {
+      return 0;
+    }
+
+    const data = await res.json();
+    return Array.isArray(data) ? data.length : 0;
+  } catch (error) {
+    console.error(`Failed to load product count for category ${categoryId}:`, error);
+    return 0;
+  }
+};
 
 /* ================= GET ALL (LEVEL = 0) ================= */
 
@@ -77,8 +93,15 @@ export const getCategories = async (): Promise<Category[]> => {
 
   // chỉ lấy category level = 0
   const rootCategories = data.filter((c: any) => c.level === 0);
+  const productCounts = await Promise.all(
+    rootCategories.map((category: any) =>
+      getCategoryProductCount(Number(category.id)),
+    ),
+  );
 
-  return rootCategories.map(mapCategory);
+  return rootCategories.map((category: any, index: number) =>
+    mapCategory(category, productCounts[index] ?? 0),
+  );
 };
 
 /* ================= GET BY ID ================= */
@@ -91,8 +114,9 @@ export const getCategoryById = async (id: string): Promise<Category> => {
   }
 
   const data = await res.json();
+  const productStock = await getCategoryProductCount(Number(id));
 
-  return mapCategory(data);
+  return mapCategory(data, productStock);
 };
 
 /* ================= CREATE ================= */
@@ -111,8 +135,7 @@ export const createCategory = async (data: any): Promise<Category> => {
   }
 
   const result = await res.json();
-
-  return mapCategory(result);
+  return mapCategory(result, 0);
 };
 
 /* ================= UPDATE ================= */
@@ -134,8 +157,9 @@ export const updateCategory = async (
   }
 
   const result = await res.json();
+  const productStock = await getCategoryProductCount(Number(id));
 
-  return mapCategory(result);
+  return mapCategory(result, productStock);
 };
 
 /* ================= DELETE ================= */
