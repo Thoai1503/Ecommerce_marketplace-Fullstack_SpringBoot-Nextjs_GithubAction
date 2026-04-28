@@ -70,6 +70,35 @@ public class OrderController {
 	        }
 	    }
 
+	  
+	  @PostMapping
+	    @ResponseStatus(HttpStatus.CREATED)           // return 201, not 200
+	    public ResponseEntity<OrderResponeDTO> placeOrder(@Valid @RequestBody OrderDTO dto) {
+	    	RecipientDTO recipient = dto.getRecipient();
+	    	System.out.println("Received order for recipient: " + recipient.getName() + ", Phone: " + recipient.getPhone());
+	        dto.getOrder_shipment().forEach(shipment -> {
+				System.out.println("Shipment :" + shipment.toString());
+			});
+	    	try {
+	    		
+	    		
+	    	OrderResponeDTO saved = orderService.placeOrder(dto);
+	    	System.out.println("Order placed successfully : " + saved.toString());
+	    	return ResponseEntity
+	    			.status(HttpStatus.CREATED)
+	    			.body(saved);
+	    	}
+	        catch (Exception e) {
+				System.err.println("Error placing order: " + e.getMessage());
+				
+				//return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+				//giúp tôi trả về cả message lỗi trong response body
+				return ResponseEntity
+						.status(HttpStatus.INTERNAL_SERVER_ERROR)
+						.body(new OrderResponeDTO(null, null, "Failed to place order: " + e.getMessage()));
+			}
+	    }
+	  
 	    @GetMapping("")
 	    public OrderPageResponse<AdminOrderListItemDTO> getOrders(
 	            @RequestParam(required = false) Long userId,
