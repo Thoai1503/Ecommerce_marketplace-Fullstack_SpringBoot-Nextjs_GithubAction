@@ -10,6 +10,7 @@ export interface IOrder {
   shop_id: number;
   shipping_fee: number;
   discount_amount: number;
+  voucher_id?: number;
   payment_method: string;
   total_price: number;
   final_amount: number;

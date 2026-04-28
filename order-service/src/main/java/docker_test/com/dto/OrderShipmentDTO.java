@@ -1,6 +1,12 @@
 package docker_test.com.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class OrderShipmentDTO {
+           public OrderShipmentDTO() {
+		super();
+	}
            public OrderShipmentDTO(Long order_id, Long shop_id, Double total_amount, String carrier_name, Double shipping_fee,
 			String tracking_number, String shipping_status) {
 		super();

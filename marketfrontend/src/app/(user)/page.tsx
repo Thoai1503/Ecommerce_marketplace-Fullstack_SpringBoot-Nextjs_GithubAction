@@ -11,6 +11,16 @@ import CategoryCarousel from "@/components/client/home_page/CategoryCarousel";
 import styles from "./page.module.css";
 // import { useHomePage } from "@/feature/client/hook";
 
+const unwrapCollection = (payload: any): any[] => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.content)) return payload.content;
+  if (Array.isArray(payload?.results)) return payload.results;
+  if (Array.isArray(payload?.result)) return payload.result;
+  return [];
+};
+
 const getOwnShopId = async (): Promise<number | null> => {
   const cookieStore = await cookies();
   const userId = Number(cookieStore.get("user")?.value ?? 0);
@@ -68,7 +78,8 @@ export default async function Home() {
 
   console.log("Parent Categories:", parentCategories);
   const res1 = await fetch(`${INTERNAL_API}/product`);
-  const rawProducts = ((await res1.json()) as Partial<IProduct>[]) || [];
+  const productsPayload = await res1.json();
+  const rawProducts = unwrapCollection(productsPayload) as Partial<IProduct>[];
   const ownShopId = await getOwnShopId();
   const products = rawProducts.filter(
     (product) => !ownShopId || Number(product.shop_id ?? 0) !== ownShopId,
@@ -126,12 +137,12 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* Danh mục sản phẩm */}
+        {/* Category Section */}
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
               <span className={styles.titleIcon}>☰</span>
-              Danh mục
+              Category
             </h2>
           </div>
           <CategoryCarousel categories={parentCategories} />
@@ -144,12 +155,12 @@ export default async function Home() {
               <span className={styles.flashIcon}>⚡</span>
               <h2 className={styles.flashSaleTitle}>FLASH SALE</h2>
               <div className={styles.flashTimer}>
-                <span className={styles.timerLabel}>Kết thúc sau</span>
+                <span className={styles.timerLabel}>Ends in</span>
                 <span className={styles.timerValue}>02:14:59</span>
               </div>
             </div>
             <Link href="#" className={styles.viewAllLink}>
-              Xem tất cả <span className={styles.arrowIcon}>→</span>
+              View All <span className={styles.arrowIcon}>→</span>
             </Link>
           </div>
 
@@ -239,15 +250,15 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Gợi ý hôm nay */}
+        {/* Suggested for You */}
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
               <span className={styles.titleIcon}>✦</span>
-              Gợi ý hôm nay
+              Suggested for You
             </h2>
             <Link href="#" className={styles.viewAllLink}>
-              Xem tất cả <span className={styles.arrowIcon}>→</span>
+              View All <span className={styles.arrowIcon}>→</span>
             </Link>
           </div>
 

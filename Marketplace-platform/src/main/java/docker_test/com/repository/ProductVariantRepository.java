@@ -154,4 +154,20 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 		return null;
 	}
 
+	public boolean reserveStock(Connection con, long variantId, int quantity) throws SQLException {
+		String sql = """
+				UPDATE product_variant
+				SET stock_quantity = stock_quantity - ?
+				WHERE id = ?
+				  AND stock_quantity >= ?
+				""";
+
+		try (PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setInt(1, quantity);
+			ps.setLong(2, variantId);
+			ps.setInt(3, quantity);
+			return ps.executeUpdate() > 0;
+		}
+	}
+
 }
