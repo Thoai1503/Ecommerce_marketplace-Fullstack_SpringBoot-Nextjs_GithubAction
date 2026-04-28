@@ -10,10 +10,18 @@ export type ReturnRequestDraft = {
 
 type OrderShipment = NonNullable<Order["shipments"]>[number];
 
+export type ReturnRequestAttachment = {
+  id: number | string;
+  fileUrl: string;
+  fileType?: string; // 'IMAGE', 'VIDEO', ...
+  description?: string;
+};
+
 type ReturnRequestModalProps = {
   shipment: OrderShipment;
   draft?: ReturnRequestDraft;
   status?: "idle" | "pending" | "submitted";
+  attachments?: ReturnRequestAttachment[];
   onClose: () => void;
   onToggleItem: (itemId: string, checked: boolean) => void;
   onReasonChange: (reason: string) => void;
@@ -36,6 +44,7 @@ export default function ReturnRequestModal({
   shipment,
   draft,
   status = "idle",
+  attachments = [],
   onClose,
   onToggleItem,
   onReasonChange,
@@ -163,6 +172,75 @@ export default function ReturnRequestModal({
             <p className="mb-0 text-muted" style={{ fontSize: 12 }}>
               Vui long danh dau cac san pham ban muon tra trong kien hang nay.
             </p>
+            {attachments.length > 0 && (
+              <div className="mt-3">
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 12,
+                    color: "#dc2626",
+                    marginBottom: 6,
+                  }}
+                >
+                  File đính kèm từ hệ thống:
+                </div>
+                <div className="d-flex flex-wrap gap-3">
+                  {attachments.map((att) => {
+                    const isImage =
+                      att.fileType?.toLowerCase().includes("image") ||
+                      /\.(jpg|jpeg|png|gif|webp)$/i.test(att.fileUrl);
+                    const isVideo =
+                      att.fileType?.toLowerCase().includes("video") ||
+                      /\.(mp4|mov|avi|webm|mkv)$/i.test(att.fileUrl);
+                    return (
+                      <div key={att.id} style={{ maxWidth: 160 }}>
+                        {isImage && (
+                          <img
+                            src={att.fileUrl}
+                            alt={att.description || "evidence"}
+                            style={{
+                              width: "100%",
+                              borderRadius: 8,
+                              marginBottom: 4,
+                              objectFit: "cover",
+                            }}
+                          />
+                        )}
+                        {isVideo && (
+                          <video
+                            src={att.fileUrl}
+                            controls
+                            style={{
+                              width: "100%",
+                              borderRadius: 8,
+                              marginBottom: 4,
+                              background: "#000",
+                            }}
+                          >
+                            Trinh duyet khong ho tro video.
+                          </video>
+                        )}
+                        {!isImage && !isVideo && (
+                          <a
+                            href={att.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: 12 }}
+                          >
+                            {att.fileUrl}
+                          </a>
+                        )}
+                        {att.description && (
+                          <div style={{ fontSize: 11, color: "#64748b" }}>
+                            {att.description}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="d-flex flex-column gap-2 mb-4">

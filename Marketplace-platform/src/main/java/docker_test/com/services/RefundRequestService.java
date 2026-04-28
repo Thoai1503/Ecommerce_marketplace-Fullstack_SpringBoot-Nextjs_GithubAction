@@ -92,4 +92,8 @@ public class RefundRequestService {
 				.toList();
 	}
 	
+	public ReturnRequest getRefundRequestById(Long id) {
+		return refundRequestRepository.findById(id).orElse(null);
+	}
+	
 }

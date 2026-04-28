@@ -24,6 +24,8 @@ import lombok.ToString;
 @Builder
 @ToString
 public class OrderItem {
+	
+	
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,6 +69,10 @@ public class OrderItem {
 
 	@Column(name = "is_adjusted", nullable = false)
 	private Boolean isAdjusted;
+	
+	
+	@Column(name = "last_return_request_id")
+	private Long lastReturnRequestId;
 	
 //	@Column(name = "created_at", nullable = false)
 //	private LocalDateTime createdAt;

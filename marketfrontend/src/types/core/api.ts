@@ -1,3 +1,4 @@
+import { API_URL } from "@/helper/api";
 import type {
   AxiosInstance,
   AxiosRequestConfig,
@@ -52,7 +53,7 @@ export interface IServiceConstructorData {
 }
 
 export class ApiService {
-  http: AxiosInstance = axios.create();
+  http: AxiosInstance = axios.create({ baseURL: API_URL });
   path: string = "";
 
   constructor(config: IServiceConstructorData) {
