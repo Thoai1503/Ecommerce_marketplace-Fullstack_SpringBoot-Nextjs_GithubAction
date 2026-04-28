@@ -26,6 +26,7 @@ import docker_test.com.dto.PaymentStatusUpdatedEvent;
 import docker_test.com.exception.SimulatedRollbackException;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
+import docker_test.com.model.ReturnStatusSummary;
 import docker_test.com.models.OrderShipment;
 import docker_test.com.publisher.OrderEventPublisher;
 import docker_test.com.repository.OrderItemRepository;
@@ -92,6 +93,7 @@ public class OrderService {
         	orderShipmetDto.setTrackingNumber(null);
         	orderShipmetDto.setAdjustmentRequired(false);
         	orderShipmetDto.setBusinessStatus("NORMAL");
+        	orderShipmetDto.setReturnStatusSummary("NONE");
 			
 			orderShipmetDto.setShippingFee(Double.valueOf(os.getShipping_fee()));
 		    orderShipmetDto.setTotalAmount(os.getTotal_amount());
@@ -300,6 +302,7 @@ public class OrderService {
                 .paymentMethod(dto.getPayment_method())
                 .paymentStatus("PENDING")
                 .orderStatus("PENDING")
+                .returnStatusSummary(ReturnStatusSummary.NONE)
                 .build();
     }
     private OrderShipment buildOrderShipment (OrderShipmentDTO dto) {
@@ -309,6 +312,7 @@ public class OrderService {
         shipment.setTrackingNumber(dto.getTracking_number());
         shipment.setShippingStatus(dto.getShipping_status());
         shipment.setCarrierName("LOG");
+        shipment.setReturnStatusSummary("NONE"); // Ensure not null
         return shipment;
     }
 
