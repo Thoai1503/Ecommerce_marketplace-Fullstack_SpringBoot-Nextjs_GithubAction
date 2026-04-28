@@ -210,7 +210,7 @@ export default function ShipmentCard({
       {/* Actions */}
       {onStatusUpdate && (
         <button
-          onClick={() => onStatusUpdate(shipment.id)}
+          onClick={() => onStatusUpdate(shipment.id.toString())}
           className="w-full mt-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors"
         >
           Cập nhật trạng thái

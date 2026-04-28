@@ -457,7 +457,7 @@ const MOCK_ORDER_DETAIL: Order = {
   ],
   shipments: [
     {
-      id: "s1",
+      id: 1,
       order_id: "1",
       shop_id: "2",
       shopName: "Tech Store",
