@@ -555,6 +555,7 @@ export interface OrderItem {
   quantity: number;
   price: number;
   originalPrice?: number;
+  lastReturnRequestId?: number;
   discount?: number;
   stockStatus?: "IN_STOCK" | "OUT_OF_STOCK" | "LOW_STOCK";
   status: ItemStatus;
@@ -620,7 +621,7 @@ export interface AdjustmentRequest {
 }
 
 export interface Shipment {
-  id: string;
+  id: number;
   order_id: string;
   shop_id: string;
   shopName: string;
@@ -733,6 +734,7 @@ export interface Order {
   priority: "NORMAL" | "HIGH";
   createdAt: string;
   updatedAt: string;
+  lastReturnRequestId?: number;
   items?: OrderItem[];
   shipments?: Shipment[]; // New: Multi-tracking support
   logs?: OrderLog[];
