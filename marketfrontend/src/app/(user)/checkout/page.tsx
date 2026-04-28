@@ -21,10 +21,7 @@ const cityMap = { 202: "TP. Hồ Chí Minh", 1: "Hà Nội" };
 import { useQuery } from "@tanstack/react-query";
 import { message } from "antd";
 import { ADDRESS_KEY, API_URL, PROVINCE_API } from "@/helper/api";
-import {
-  VoucherScopeRule,
-  VoucherSegmentRule,
-} from "@/types";
+import { VoucherScopeRule, VoucherSegmentRule } from "@/types";
 import { set } from "zod";
 import { AxiosError } from "axios";
 import { getUserInfoById, getUsersInfoByIds } from "@/service/userInfo";
@@ -167,25 +164,29 @@ const getVoucherAvailability = (
     switch (rule.scopeType) {
       case "SHOP":
         return cartItems.some(
-          (item) =>
-            Number(item?.product?.shop?.id ?? item?.product?.shop_id ?? 0) ===
-            scopeId,
+          (item) => Number(item?.product?.shop?.id ?? 0) === scopeId,
         );
       case "PRODUCT":
         return cartItems.some(
-          (item) => Number(item?.product?.id ?? item?.product_id ?? 0) === scopeId,
+          (item) => Number(item?.product?.id ?? 0) === scopeId,
         );
       case "CATEGORY":
         return cartItems.some(
           (item) =>
             Number(
-              item?.product?.category_id ?? item?.product?.categoryId ?? 0,
+              (item?.product as any)?.category_id ??
+                (item?.product as any)?.categoryId ??
+                0,
             ) === scopeId,
         );
       case "BRAND":
         return cartItems.some(
           (item) =>
-            Number(item?.product?.brand ?? item?.product?.brand_id ?? 0) === scopeId,
+            Number(
+              (item?.product as any)?.brand_id ??
+                (item?.product as any)?.brand ??
+                0,
+            ) === scopeId,
         );
       default:
         return false;
@@ -357,11 +358,11 @@ export default function CheckoutPage() {
     () =>
       cartItems.some((item) => {
         const sellerUserId = Number(
-          item?.product?.shop?.userId ??
-            item?.product?.shop?.user_id ??
-            0,
+          item?.product?.shop?.userId ?? item?.product?.shop?.user_id ?? 0,
         );
-        return Boolean(userId) && sellerUserId > 0 && sellerUserId === Number(userId);
+        return (
+          Boolean(userId) && sellerUserId > 0 && sellerUserId === Number(userId)
+        );
       }),
     [cartItems, userId],
   );
@@ -395,9 +396,8 @@ export default function CheckoutPage() {
   ];
 
   // State để lưu lựa chọn vận chuyển cho mỗi shop
-  const [shippingSelections, setShippingSelections] = useState<ShippingSelection>(
-    {},
-  );
+  const [shippingSelections, setShippingSelections] =
+    useState<ShippingSelection>({});
 
   const [shippingFees, setShippingFees] = useState<Record<number, number>>({});
   const [shippingFeeLoading, setShippingFeeLoading] = useState<
@@ -529,52 +529,70 @@ export default function CheckoutPage() {
           claimedVoucherPairs.map(async ({ voucherId }) => {
             try {
               const rules = await getVoucherRules(String(voucherId));
-              return [voucherId, rules] as const;
+
+              return [voucherId, rules] as [
+                number,
+                {
+                  scopeRules: VoucherScopeRule[];
+                  segmentRules: VoucherSegmentRule[];
+                },
+              ];
             } catch (error) {
               console.error("Load voucher rules error:", voucherId, error);
+
               return [
                 voucherId,
-                { scopeRules: [], segmentRules: [] },
-              ] as const;
+                {
+                  scopeRules: [],
+                  segmentRules: [],
+                },
+              ] as [
+                number,
+                {
+                  scopeRules: VoucherScopeRule[];
+                  segmentRules: VoucherSegmentRule[];
+                },
+              ];
             }
           }),
         );
 
         const voucherRulesMap = new Map(voucherRulesEntries);
 
-        const mappedVouchers: Array<OwnedVoucher | null> = claimedVoucherPairs.map(
-          ({ userVoucherId, voucherId, claimedAt, status }) => {
-            const voucher = voucherMap.get(voucherId);
-            if (!voucher) return null;
-            const rules = voucherRulesMap.get(voucherId) || {
-              scopeRules: [],
-              segmentRules: [],
-            };
+        const mappedVouchers: Array<OwnedVoucher | null> =
+          claimedVoucherPairs.map(
+            ({ userVoucherId, voucherId, claimedAt, status }) => {
+              const voucher = voucherMap.get(voucherId);
+              if (!voucher) return null;
+              const rules = voucherRulesMap.get(voucherId) || {
+                scopeRules: [],
+                segmentRules: [],
+              };
 
-            return {
-              userVoucherId,
-              id: Number(voucher.id),
-              code: voucher.code,
-              title: voucher.title,
-              description: voucher.description,
-              discountType: voucher.discountType ?? voucher.discount_type,
-              discountPercent:
-                voucher.discountPercent ?? voucher.discount_percent,
-              discountAmount:
-                voucher.discountAmount ?? voucher.discount_amount,
-              maxDiscountAmount:
-                voucher.maxDiscountAmount ?? voucher.max_discount_amount,
-              minOrderValue: voucher.minOrderValue ?? voucher.min_order_value,
-              validTo: voucher.validTo ?? voucher.valid_to,
-              claimEndAt: voucher.claimEndAt ?? voucher.claim_end_at,
-              issuerType: voucher.issuerType ?? voucher.issuer_type,
-              status,
-              claimedAt,
-              scopeRules: rules.scopeRules,
-              segmentRules: rules.segmentRules,
-            } satisfies OwnedVoucher;
-          },
-        );
+              return {
+                userVoucherId,
+                id: Number(voucher.id),
+                code: voucher.code,
+                title: voucher.title,
+                description: voucher.description,
+                discountType: voucher.discountType ?? voucher.discount_type,
+                discountPercent:
+                  voucher.discountPercent ?? voucher.discount_percent,
+                discountAmount:
+                  voucher.discountAmount ?? voucher.discount_amount,
+                maxDiscountAmount:
+                  voucher.maxDiscountAmount ?? voucher.max_discount_amount,
+                minOrderValue: voucher.minOrderValue ?? voucher.min_order_value,
+                validTo: voucher.validTo ?? voucher.valid_to,
+                claimEndAt: voucher.claimEndAt ?? voucher.claim_end_at,
+                issuerType: voucher.issuerType ?? voucher.issuer_type,
+                status,
+                claimedAt,
+                scopeRules: rules.scopeRules,
+                segmentRules: rules.segmentRules,
+              } satisfies OwnedVoucher;
+            },
+          );
 
         const merged: OwnedVoucher[] = mappedVouchers
           .filter((item): item is OwnedVoucher => item !== null)
@@ -601,12 +619,7 @@ export default function CheckoutPage() {
   const voucherAvailabilityList = useMemo(() => {
     const subtotal = calculateSubtotal();
     return ownedVouchers.map((voucher) =>
-      getVoucherAvailability(
-        voucher,
-        subtotal,
-        cartItems,
-        hasPreviousOrder,
-      ),
+      getVoucherAvailability(voucher, subtotal, cartItems, hasPreviousOrder),
     );
   }, [ownedVouchers, cartItems, hasPreviousOrder]);
 
@@ -1061,9 +1074,9 @@ export default function CheckoutPage() {
           shop_id: shopId,
           shipmentId: 0,
           shipmentCode: `SHIP-${baseTrackingSeed}-${index + 1}`,
-      shipping_fee:
+          shipping_fee:
             String(selectedVoucher?.discountType ?? "").toUpperCase() ===
-              "FREE_SHIPPING"
+            "FREE_SHIPPING"
               ? 0
               : getShippingFeeForShop(shopId, shippingSelections[shopId]) || 0,
           total_amount:
@@ -1144,8 +1157,8 @@ export default function CheckoutPage() {
 
     const orderItemsPayload = orderItems.map((item) => ({
       id: Number(item.id || 0),
-      order_id: Number(item.order_id || 0),
-      shop_id: Number(item.shop_id || 0),
+      order_id: Number((item as any).order_id || 0),
+      shop_id: Number((item as any).shop_id || 0),
       product_id: Number(item.product_id || 0),
       variant_id: Number(item.variant_id || 0),
       product_name: item.product_name || "",
@@ -1156,7 +1169,7 @@ export default function CheckoutPage() {
     }));
 
     const orderShipmentPayload = ordersShipment.map((shipment) => ({
-      order_id: Number(shipment.orderId || shipment.order_id || 0),
+      order_id: Number(shipment.orderId || (shipment as any).order_id || 0),
       shop_id: Number(shipment.shop_id || 0),
       carrier_name: shipment.carrier_name || "LOG",
       shipping_fee: Number(shipment.shipping_fee || 0),
@@ -1194,7 +1207,7 @@ export default function CheckoutPage() {
       //cancel_reason: "SIMULATE_ROLLBACK",
     };
 
-    createOrder(orderPayload)
+    createOrder(orderPayload as any)
       .then(async (dt) => {
         alert(`Đặt hàng thành công! Mã đơn hàng: ${dt.id}`);
 
@@ -1202,18 +1215,21 @@ export default function CheckoutPage() {
 
         if (selectedVoucher?.userVoucherId) {
           cleanupTasks.push(
-            fetch(`${API_URL}/api/user-vouchers/${selectedVoucher.userVoucherId}`, {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
+            fetch(
+              `${API_URL}/api/user-vouchers/${selectedVoucher.userVoucherId}`,
+              {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  status: "REDEEMED",
+                  reservedOrderId: dt.id,
+                  reservedAt: new Date().toISOString(),
+                  redeemedAt: new Date().toISOString(),
+                }),
               },
-              body: JSON.stringify({
-                status: "REDEEMED",
-                reservedOrderId: dt.id,
-                reservedAt: new Date().toISOString(),
-                redeemedAt: new Date().toISOString(),
-              }),
-            }).then(async (res) => {
+            ).then(async (res) => {
               if (!res.ok) {
                 const text = await res.text();
                 throw new Error(text || "Failed to update voucher status");
