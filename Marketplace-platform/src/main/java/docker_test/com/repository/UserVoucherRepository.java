@@ -28,6 +28,13 @@ public class UserVoucherRepository implements IRepositories<UserVoucher> {
 	@Override
 	public UserVoucher Create(UserVoucher u) throws SQLException {
 
+		String updateVoucherSql = """
+					UPDATE voucher
+					SET claimed_count = COALESCE(claimed_count, 0) + 1,
+					    updated_at = NOW()
+					WHERE id = ?
+					  AND (total_quota IS NULL OR COALESCE(claimed_count, 0) < total_quota)
+				""";
 		String insertSql = """
 					INSERT INTO user_voucher (
 						user_id, voucher_id, claim_channel,
@@ -35,20 +42,22 @@ public class UserVoucherRepository implements IRepositories<UserVoucher> {
 					)
 					VALUES (?, ?, ?, NOW(), ?)
 				""";
-		String updateVoucherSql = """
-					UPDATE voucher
-					SET claimed_count = COALESCE(claimed_count, 0) + 1,
-					    updated_at = NOW()
-					WHERE id = ?
-				""";
 
 		Connection con = null;
 		try {
 			con = dbConnection.getConn();
-			try (PreparedStatement insertPs = con.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS);
-				PreparedStatement updateVoucherPs = con.prepareStatement(updateVoucherSql)) {
+			try (PreparedStatement updateVoucherPs = con.prepareStatement(updateVoucherSql);
+				PreparedStatement insertPs = con.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
 
 				con.setAutoCommit(false);
+
+				updateVoucherPs.setObject(1, u.getVoucherId());
+				int updatedRows = updateVoucherPs.executeUpdate();
+				if (updatedRows <= 0) {
+					throw new SQLException("Voucher has reached total_quota or does not exist");
+				}
+				System.out.println("✅ Increased claimed_count for voucher_id=" + u.getVoucherId()
+					+ " | updatedRows=" + updatedRows);
 
 				insertPs.setObject(1, u.getUserId());
 				insertPs.setObject(2, u.getVoucherId());
@@ -61,14 +70,6 @@ public class UserVoucherRepository implements IRepositories<UserVoucher> {
 				if (rs.next()) {
 					u.setId(rs.getLong(1));
 				}
-
-				updateVoucherPs.setObject(1, u.getVoucherId());
-				int updatedRows = updateVoucherPs.executeUpdate();
-				if (updatedRows <= 0) {
-					throw new SQLException("Voucher not found when updating claimed_count");
-				}
-				System.out.println("✅ Increased claimed_count for voucher_id=" + u.getVoucherId()
-					+ " | updatedRows=" + updatedRows);
 
 				con.commit();
 				System.out.println("✅ Claim transaction committed for user_id=" + u.getUserId()

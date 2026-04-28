@@ -300,6 +300,7 @@ public class OrderService {
                 .paymentMethod(dto.getPayment_method())
                 .paymentStatus("PENDING")
                 .orderStatus("PENDING")
+                .voucherId(dto.getVoucher_id())
                 .build();
     }
     private OrderShipment buildOrderShipment (OrderShipmentDTO dto) {

@@ -299,7 +299,7 @@ export default function CheckoutOrderSummary({
               <div>
                 <h5 className="mb-1">Choose voucher</h5>
                 <div className="small text-muted">
-                  Eligible vouchers will be highlighted for quick selection
+                  Only eligible vouchers are shown for this order
                 </div>
               </div>
               <button
@@ -316,7 +316,8 @@ export default function CheckoutOrderSummary({
                 Cart subtotal: {formatCurrency(subtotal)}
               </div>
               <div className="small text-muted">
-                {usableVouchers.length}/{ownedVouchers.length} vouchers available
+                {usableVouchers.length} eligible voucher
+                {usableVouchers.length === 1 ? "" : "s"}
               </div>
             </div>
 
@@ -336,8 +337,14 @@ export default function CheckoutOrderSummary({
                 </div>
               )}
 
+              {!voucherLoading && ownedVouchers.length > 0 && usableVouchers.length === 0 && (
+                <div className="alert alert-light small mb-0">
+                  There are no vouchers matching this cart yet.
+                </div>
+              )}
+
               {!voucherLoading &&
-                voucherAvailabilityList.map(({ voucher, isEligible, reason }) => {
+                usableVouchers.map(({ voucher, isEligible, reason }) => {
                   const isSelected = draftVoucherId === voucher.id;
 
                   return (
@@ -347,22 +354,17 @@ export default function CheckoutOrderSummary({
                       className={`btn text-start border rounded-4 p-0 overflow-hidden ${
                         isSelected
                           ? "border-primary shadow-sm"
-                          : isEligible
-                            ? "border-info-subtle"
-                            : "border-light-subtle opacity-75"
-                      }`}
-                      onClick={() =>
-                        isEligible &&
-                        setDraftVoucherId((current) =>
-                          current === voucher.id ? null : voucher.id,
-                        )
-                      }
+                           : "border-info-subtle"
+                       }`}
+                       onClick={() =>
+                         setDraftVoucherId((current) =>
+                           current === voucher.id ? null : voucher.id,
+                         )
+                       }
                     >
                       <div className="row g-0 align-items-stretch">
                         <div
-                          className={`col-4 col-sm-3 d-flex flex-column justify-content-center text-white p-3 ${
-                            isEligible ? "bg-primary" : "bg-secondary"
-                          }`}
+                          className="col-4 col-sm-3 d-flex flex-column justify-content-center text-white p-3 bg-primary"
                         >
                           <div className="fw-bold">{voucher.code}</div>
                           <div className="small mt-2">
@@ -400,16 +402,10 @@ export default function CheckoutOrderSummary({
                               className={`badge ${
                                 isSelected
                                   ? "bg-primary"
-                                  : isEligible
-                                    ? "bg-success-subtle text-success"
-                                    : "bg-secondary-subtle text-secondary"
+                                  : "bg-success-subtle text-success"
                               }`}
                             >
-                              {isSelected
-                                ? "Selected"
-                                : isEligible
-                                  ? "Available"
-                                  : "Not eligible"}
+                              {isSelected ? "Selected" : "Available"}
                             </span>
                           </div>
                         </div>

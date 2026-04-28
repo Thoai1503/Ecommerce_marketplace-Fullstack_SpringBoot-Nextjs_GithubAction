@@ -21,12 +21,15 @@ const cityMap = { 202: "TP. Hồ Chí Minh", 1: "Hà Nội" };
 import { useQuery } from "@tanstack/react-query";
 import { message } from "antd";
 import { ADDRESS_KEY, API_URL, PROVINCE_API } from "@/helper/api";
-import { calculateFeeOfLOGS } from "@/service/calculateFeeAPI";
-import { CalculateFeePayload } from "@/types";
+import {
+  VoucherScopeRule,
+  VoucherSegmentRule,
+} from "@/types";
 import { set } from "zod";
-import { getAddressByShopId } from "@/service/addresses";
 import { AxiosError } from "axios";
 import { getUserInfoById, getUsersInfoByIds } from "@/service/userInfo";
+import { Cart } from "@/types/data/Cart";
+import { getVoucherRules } from "@/service/vouchers";
 
 // Hàm fetch districts theo provinceId
 async function fetchDistrictsByProvince(provinceId: number) {
@@ -87,6 +90,7 @@ export function useWardName(districtId: number, wardCode: number) {
 }
 
 type OwnedVoucher = {
+  userVoucherId: number;
   id: number;
   code: string;
   title: string;
@@ -101,6 +105,8 @@ type OwnedVoucher = {
   issuerType?: string | null;
   status: string;
   claimedAt?: string | null;
+  scopeRules: VoucherScopeRule[];
+  segmentRules: VoucherSegmentRule[];
 };
 
 type VoucherAvailability = {
@@ -117,6 +123,8 @@ const normalizeVoucherNumber = (value: unknown) => {
 const getVoucherAvailability = (
   voucher: OwnedVoucher,
   subtotal: number,
+  cartItems: CartItem[],
+  hasPreviousOrder: boolean,
 ): VoucherAvailability => {
   const status = String(voucher.status ?? "").toUpperCase();
   if (status && status !== "CLAIMED") {
@@ -153,6 +161,82 @@ const getVoucherAvailability = (
     };
   }
 
+  const matchesScopeRule = (rule: VoucherScopeRule) => {
+    const scopeId = Number(rule.scopeId || 0);
+
+    switch (rule.scopeType) {
+      case "SHOP":
+        return cartItems.some(
+          (item) =>
+            Number(item?.product?.shop?.id ?? item?.product?.shop_id ?? 0) ===
+            scopeId,
+        );
+      case "PRODUCT":
+        return cartItems.some(
+          (item) => Number(item?.product?.id ?? item?.product_id ?? 0) === scopeId,
+        );
+      case "CATEGORY":
+        return cartItems.some(
+          (item) =>
+            Number(
+              item?.product?.category_id ?? item?.product?.categoryId ?? 0,
+            ) === scopeId,
+        );
+      case "BRAND":
+        return cartItems.some(
+          (item) =>
+            Number(item?.product?.brand ?? item?.product?.brand_id ?? 0) === scopeId,
+        );
+      default:
+        return false;
+    }
+  };
+
+  const excludedScopeRules = voucher.scopeRules.filter(
+    (rule) => rule.includeExclude === "EXCLUDE",
+  );
+  if (excludedScopeRules.some(matchesScopeRule)) {
+    return {
+      voucher,
+      isEligible: false,
+      reason: "Excluded by voucher rule",
+    };
+  }
+
+  const includedScopeRules = voucher.scopeRules.filter(
+    (rule) => rule.includeExclude === "INCLUDE",
+  );
+  if (
+    includedScopeRules.length > 0 &&
+    !includedScopeRules.some(matchesScopeRule)
+  ) {
+    return {
+      voucher,
+      isEligible: false,
+      reason: "Does not match shop/product/category rule",
+    };
+  }
+
+  for (const rule of voucher.segmentRules) {
+    const segmentType = String(rule.segmentType ?? "").toUpperCase();
+
+    if (segmentType === "NEW_USER" || segmentType === "FIRST_ORDER") {
+      if (hasPreviousOrder) {
+        return {
+          voucher,
+          isEligible: false,
+          reason: "Only for new users or first order",
+        };
+      }
+    } else {
+      return {
+        voucher,
+        isEligible: false,
+        reason: `Unsupported segment rule: ${segmentType}`,
+      };
+    }
+  }
+
   return {
     voucher,
     isEligible: true,
@@ -164,12 +248,23 @@ export default function CheckoutPage() {
   const { userId } = useUserAuth();
   const { data: addressesQuery } = useAddresses(userId || 0);
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const [showAddressPanel, setShowAddressPanel] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState(0);
+  const [recipient, setRecipient] = useState<any>(null);
   const [ownedVouchers, setOwnedVouchers] = useState<OwnedVoucher[]>([]);
   const [voucherLoading, setVoucherLoading] = useState(false);
+  const [hasPreviousOrder, setHasPreviousOrder] = useState(false);
   const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(
     null,
   );
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
+  const defaultAddress =
+    addresses.find((a) => a.id === selectedAddressId) ||
+    addresses.find((a) => a.isDefault === 1) ||
+    addresses[0];
+
+  const hasAddress = Boolean(defaultAddress) && addresses.length > 0;
 
   useEffect(() => {
     async function mapAddresses() {
@@ -271,8 +366,6 @@ export default function CheckoutPage() {
     [cartItems, userId],
   );
 
-  console.log("Grouped cart items by shop:", groupedByShop);
-
   // Shipping options (có thể lấy từ API)
   const shippingOptions: ShippingOption[] = [
     {
@@ -298,24 +391,45 @@ export default function CheckoutPage() {
       name: "Giao hàng LOGS",
       estimatedDays: "3-5 ngày làm việc",
       fee: 0,
-      calculateFeeAPI: async (params: CalculateFeePayload) =>
-        calculateFeeOfLOGS(params),
     },
   ];
 
   // State để lưu lựa chọn vận chuyển cho mỗi shop
-  const [shippingSelections, setShippingSelections] =
-    useState<ShippingSelection>(
-      Object.keys(groupedByShop).reduce((acc, shopId) => {
-        acc[Number(shopId)] = "standard"; // mặc định chọn tiêu chuẩn
-        return acc;
-      }, {} as ShippingSelection),
-    );
+  const [shippingSelections, setShippingSelections] = useState<ShippingSelection>(
+    {},
+  );
 
   const [shippingFees, setShippingFees] = useState<Record<number, number>>({});
   const [shippingFeeLoading, setShippingFeeLoading] = useState<
     Record<number, boolean>
   >({});
+
+  useEffect(() => {
+    const shopIds = Object.keys(groupedByShop).map(Number).filter(Boolean);
+
+    if (shopIds.length === 0) {
+      setShippingSelections({});
+      return;
+    }
+
+    setShippingSelections((prev) => {
+      let changed = false;
+      const next: ShippingSelection = {};
+
+      for (const shopId of shopIds) {
+        next[shopId] = prev[shopId] || "standard";
+        if (prev[shopId] !== next[shopId]) {
+          changed = true;
+        }
+      }
+
+      if (!changed && Object.keys(prev).length === shopIds.length) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [groupedByShop]);
 
   // Hàm format currency
   const formatCurrency = (amount: number) => {
@@ -336,9 +450,6 @@ export default function CheckoutPage() {
   const getShippingFeeForShop = (shopId: number, shippingOptionId: string) => {
     const option = getSelectedShippingOption(shopId, shippingOptionId);
     if (!option) return 0;
-    if (option.calculateFeeAPI) {
-      return shippingFees[shopId] ?? 0;
-    }
     return option.fee || 0;
   };
 
@@ -374,12 +485,16 @@ export default function CheckoutPage() {
       setVoucherLoading(true);
 
       try {
-        const [userVouchersRes, vouchersRes] = await Promise.all([
+        const [userVouchersRes, vouchersRes, ordersRes] = await Promise.all([
           fetch(`${API_URL}/api/user-vouchers/user/${userId}`, {
             credentials: "include",
             cache: "no-store",
           }),
           fetch(`${API_URL}/api/vouchers`, {
+            credentials: "include",
+            cache: "no-store",
+          }),
+          fetch(`${API_URL}/api/orders?userId=${userId}&page=1&size=1`, {
             credentials: "include",
             cache: "no-store",
           }),
@@ -389,9 +504,10 @@ export default function CheckoutPage() {
           throw new Error("Failed to load vouchers");
         }
 
-        const [userVouchersJson, vouchersJson] = await Promise.all([
+        const [userVouchersJson, vouchersJson, ordersJson] = await Promise.all([
           userVouchersRes.json(),
           vouchersRes.json(),
+          ordersRes.ok ? ordersRes.json() : Promise.resolve(null),
         ]);
 
         const userVouchers = Array.isArray(userVouchersJson)
@@ -402,14 +518,41 @@ export default function CheckoutPage() {
           vouchers.map((voucher: any) => [Number(voucher.id), voucher]),
         );
 
-        const mappedVouchers: Array<OwnedVoucher | null> = userVouchers.map(
-          (item: any) => {
-            const voucher = voucherMap.get(
-              Number(item.voucherId ?? item.voucher_id),
-            );
+        const claimedVoucherPairs = userVouchers.map((item: any) => ({
+          userVoucherId: Number(item.id ?? 0),
+          voucherId: Number(item.voucherId ?? item.voucher_id ?? 0),
+          claimedAt: item.claimedAt ?? item.claimed_at,
+          status: item.status,
+        }));
+
+        const voucherRulesEntries = await Promise.all(
+          claimedVoucherPairs.map(async ({ voucherId }) => {
+            try {
+              const rules = await getVoucherRules(String(voucherId));
+              return [voucherId, rules] as const;
+            } catch (error) {
+              console.error("Load voucher rules error:", voucherId, error);
+              return [
+                voucherId,
+                { scopeRules: [], segmentRules: [] },
+              ] as const;
+            }
+          }),
+        );
+
+        const voucherRulesMap = new Map(voucherRulesEntries);
+
+        const mappedVouchers: Array<OwnedVoucher | null> = claimedVoucherPairs.map(
+          ({ userVoucherId, voucherId, claimedAt, status }) => {
+            const voucher = voucherMap.get(voucherId);
             if (!voucher) return null;
+            const rules = voucherRulesMap.get(voucherId) || {
+              scopeRules: [],
+              segmentRules: [],
+            };
 
             return {
+              userVoucherId,
               id: Number(voucher.id),
               code: voucher.code,
               title: voucher.title,
@@ -425,8 +568,10 @@ export default function CheckoutPage() {
               validTo: voucher.validTo ?? voucher.valid_to,
               claimEndAt: voucher.claimEndAt ?? voucher.claim_end_at,
               issuerType: voucher.issuerType ?? voucher.issuer_type,
-              status: item.status,
-              claimedAt: item.claimedAt ?? item.claimed_at,
+              status,
+              claimedAt,
+              scopeRules: rules.scopeRules,
+              segmentRules: rules.segmentRules,
             } satisfies OwnedVoucher;
           },
         );
@@ -440,9 +585,11 @@ export default function CheckoutPage() {
           });
 
         setOwnedVouchers(merged);
+        setHasPreviousOrder(Number(ordersJson?.totalRecords ?? 0) > 0);
       } catch (error) {
         console.error("Load checkout vouchers error:", error);
         setOwnedVouchers([]);
+        setHasPreviousOrder(false);
       } finally {
         setVoucherLoading(false);
       }
@@ -454,9 +601,14 @@ export default function CheckoutPage() {
   const voucherAvailabilityList = useMemo(() => {
     const subtotal = calculateSubtotal();
     return ownedVouchers.map((voucher) =>
-      getVoucherAvailability(voucher, subtotal),
+      getVoucherAvailability(
+        voucher,
+        subtotal,
+        cartItems,
+        hasPreviousOrder,
+      ),
     );
-  }, [ownedVouchers, cartItems]);
+  }, [ownedVouchers, cartItems, hasPreviousOrder]);
 
   const selectedVoucher = ownedVouchers.find(
     (voucher) => voucher.id === selectedVoucherId,
@@ -531,9 +683,8 @@ export default function CheckoutPage() {
   const [paymentInfo, setPaymentInfo] = useState<any>({
     amount: finalTotal,
     orderId: Date.now(),
-
-    user_id: 1,
-    method: "vnpay",
+    user_id: Number(userId || 0),
+    method: "COD",
     bankCode: "NCB",
     orderInfo: "Thanh toán đơn hàng #123456" + Date.now(),
   });
@@ -543,8 +694,9 @@ export default function CheckoutPage() {
     setPaymentInfo((prev: any) => ({
       ...prev,
       amount: finalTotal,
+      user_id: Number(userId || 0),
     }));
-  }, [finalTotal]);
+  }, [finalTotal, userId]);
 
   const stepNumberBase: React.CSSProperties = {
     width: 24,
@@ -823,18 +975,6 @@ export default function CheckoutPage() {
     },
   };
 
-  const [showAddressPanel, setShowAddressPanel] = useState(false);
-  const [selectedAddressId, setSelectedAddressId] = useState(0);
-
-  const [recipient, setRecipient] = useState<any>(null);
-
-  const defaultAddress =
-    addresses.find((a) => a.id === selectedAddressId) ||
-    addresses.find((a) => a.isDefault === 1) ||
-    addresses[0];
-
-  const hasAddress = Boolean(defaultAddress) && addresses.length > 0;
-
   useEffect(() => {
     if (defaultAddress) {
       setRecipient({
@@ -868,74 +1008,12 @@ export default function CheckoutPage() {
     // alert(
     //   `Địa chỉ măc định: ${defaultAddress?.address}\nĐang chọn phương thức vận chuyển...`,
     // );
-    const shopAddress = await getAddressByShopId(shopId);
-    // alert(
-    //   `Địa chỉ shop: ${shopAddress.addressLine}, Địa chỉ nhận hàng: ${defaultAddress?.address}\nĐang chọn phương thức vận chuyển...`,
-    // );
     setShippingSelections((prev) => ({
       ...prev,
       [shopId]: optionId,
     }));
 
     const selectedOption = shippingOptions.find((opt) => opt.id === optionId);
-
-    if (selectedOption?.calculateFeeAPI) {
-      setShippingFeeLoading((prev) => ({
-        ...prev,
-        [shopId]: true,
-      }));
-
-      const logisticsItems = cartItems
-        .filter((item) => item?.product?.shop?.id === shopId)
-        .map((item) => ({
-          name: item.productVariant?.variantName || item.product?.name || "",
-          quantity: item.quantity,
-          height: item.height || 0,
-          width: item.width || 0,
-          weight: item.weight || 0,
-          length: item.length || 0,
-        }));
-
-      console.log("Calculating fee with logistics items:", logisticsItems);
-
-      selectedOption
-        .calculateFeeAPI({
-          from_district_id: shopAddress?.district || 0, // giả sử lấy từ địa chỉ đầu tiên (cần điều chỉnh nếu có nhiều địa chỉ)
-          from_ward_code: shopAddress?.ward ? String(shopAddress.ward) : "", // giả sử lấy từ địa chỉ đầu tiên
-          // service_id: 53320,
-          //service_type_id: 5,
-          service_type_id: 5,
-          to_district_id: defaultAddress?.district || 0,
-          to_ward_code: defaultAddress?.ward ? String(defaultAddress.ward) : "",
-          height: logisticsItems[0]?.height || 0,
-          length: logisticsItems[0]?.length || 0,
-          weight: logisticsItems[0]?.weight || 0,
-          width: logisticsItems[0]?.width || 0,
-          insurance_value: 1000,
-          cod_failed_amount: 0,
-          coupon: null,
-          items: logisticsItems,
-        })
-        .then((fee) => {
-          setShippingFees((prev) => ({
-            ...prev,
-            [shopId]: fee,
-          }));
-          message.info(
-            `Đã chọn: ${selectedOption.name} (${selectedOption.estimatedDays}) - ${formatCurrency(fee || 0)}`,
-          );
-        })
-        .catch(() => {
-          message.error("Khong the tinh phi van chuyen. Vui long thu lai.");
-        })
-        .finally(() => {
-          setShippingFeeLoading((prev) => ({
-            ...prev,
-            [shopId]: false,
-          }));
-        });
-      return;
-    }
 
     setShippingFeeLoading((prev) => ({
       ...prev,
@@ -1034,15 +1112,15 @@ export default function CheckoutPage() {
 
     const orderItems: IOrderItem[] = await Promise.all(
       cartItems.map(async (item) => {
-        const user_id = item?.product?.shop?.userId || 0;
+        const user_id = Number(
+          item?.product?.shop?.userId ?? item?.product?.shop?.user_id ?? 0,
+        );
         let userInfo: any = null;
-        try {
+        if (user_id > 0) {
           userInfo = await getUserInfoById(user_id);
-        } catch {
-          // ignore, fallback to empty strings
         }
         return {
-          id: 1,
+          id: item?.id || 0,
           product_id: item?.product?.id || 0,
           shop_id: item?.product?.shop?.id || 0,
           order_id: 1,
@@ -1064,28 +1142,109 @@ export default function CheckoutPage() {
       }),
     );
 
-    createOrder({
-      user_id: paymentInfo.user_id || 0,
-      shop_id: cartItems[0]?.product?.shop?.id || 0,
-      recipient: recipient || {},
+    const orderItemsPayload = orderItems.map((item) => ({
+      id: Number(item.id || 0),
+      order_id: Number(item.order_id || 0),
+      shop_id: Number(item.shop_id || 0),
+      product_id: Number(item.product_id || 0),
+      variant_id: Number(item.variant_id || 0),
+      product_name: item.product_name || "",
+      variant_name: item.variant_name || "",
+      quantity: Number(item.quantity || 0),
+      price: Number(item.price || 0),
+      image_url: item.image_url || "",
+    }));
+
+    const orderShipmentPayload = ordersShipment.map((shipment) => ({
+      order_id: Number(shipment.orderId || shipment.order_id || 0),
+      shop_id: Number(shipment.shop_id || 0),
+      carrier_name: shipment.carrier_name || "LOG",
+      shipping_fee: Number(shipment.shipping_fee || 0),
+      total_amount: Number(shipment.total_amount || 0),
+      tracking_number: shipment.tracking_number || "",
+      shipping_status: shipment.shipping_status || "PENDING",
+    }));
+
+    const orderPayload = {
+      user_id: Number(userId || paymentInfo.user_id || 0),
+      recipient: defaultAddress
+        ? {
+            name: defaultAddress.name,
+            phone: defaultAddress.phone,
+            address: defaultAddress.address,
+            province: Number(defaultAddress.city || 0),
+            district: Number(defaultAddress.district || 0),
+            ward: Number(defaultAddress.ward || 0),
+          }
+        : {},
       order_number: "ORD20250318001",
       total_price: calculateSubtotal(),
-      payment_method: paymentInfo.method || "unknown",
-      address_id: selectedAddressId || 0,
+      payment_method: String(paymentInfo.method || "COD").toUpperCase(),
+      address_id: Number(defaultAddress?.id || selectedAddressId || 0),
       shipping_fee: effectiveShippingFee,
       discount_amount: voucherDiscount,
       final_amount: finalTotal,
-      orders_items: orderItems,
-      order_shipment: ordersShipment,
-      note: "",
+      voucher_id: selectedVoucher?.id || 0,
+      orders_items: orderItemsPayload,
+      order_shipment: orderShipmentPayload,
       tracking_number: "",
       id: 0,
       // Additional fields for testing rollback
       // Uncomment the line below to simulate a rollback scenario
       //cancel_reason: "SIMULATE_ROLLBACK",
-    })
-      .then((dt) => {
+    };
+
+    createOrder(orderPayload)
+      .then(async (dt) => {
         alert(`Đặt hàng thành công! Mã đơn hàng: ${dt.id}`);
+
+        const cleanupTasks: Promise<unknown>[] = [];
+
+        if (selectedVoucher?.userVoucherId) {
+          cleanupTasks.push(
+            fetch(`${API_URL}/api/user-vouchers/${selectedVoucher.userVoucherId}`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                status: "REDEEMED",
+                reservedOrderId: dt.id,
+                reservedAt: new Date().toISOString(),
+                redeemedAt: new Date().toISOString(),
+              }),
+            }).then(async (res) => {
+              if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || "Failed to update voucher status");
+              }
+            }),
+          );
+        }
+
+        cleanupTasks.push(
+          Promise.all(
+            cartItems
+              .map((item) => Number(item.id || 0))
+              .filter((cartId) => cartId > 0)
+              .map((cartId) => Cart.deleteCartItem(cartId)),
+          ),
+        );
+
+        const cleanupResults = await Promise.allSettled(cleanupTasks);
+        const hasCleanupFailure = cleanupResults.some(
+          (result) => result.status === "rejected",
+        );
+
+        if (!hasCleanupFailure) {
+          window.dispatchEvent(new Event("cart-updated"));
+        } else {
+          console.error("Checkout cleanup failed:", cleanupResults);
+          message.warning(
+            "Đơn hàng đã tạo nhưng cập nhật voucher hoặc giỏ hàng chưa hoàn tất.",
+          );
+        }
+
         setPaymentInfo((prev: any) => ({
           ...prev,
           orderId: dt.id,
@@ -1098,8 +1257,12 @@ export default function CheckoutPage() {
         }
       })
       .catch((e: AxiosError) => {
+        console.error("Create order payload:", orderPayload);
         const errorMessage =
-          (e.response?.data as any)?.status || "Lỗi không xác định";
+          (e.response?.data as any)?.message ||
+          (e.response?.data as any)?.error ||
+          (e.response?.data as any)?.status ||
+          "Lỗi không xác định";
         message.error(`Đặt hàng thất bại: ${errorMessage}`);
       });
   };
