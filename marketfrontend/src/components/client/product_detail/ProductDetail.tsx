@@ -27,6 +27,11 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
     data.images[0]?.image_url || "/assets/images/ecommerce/product-1.jpg",
   );
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
+  const sellerOwnerUserId = Number(shop?.user_id ?? shop?.userId ?? 0);
+  const isOwnShopProduct =
+    Boolean(userId) &&
+    sellerOwnerUserId > 0 &&
+    Number(userId) === sellerOwnerUserId;
 
   const formatPrice = (price?: number) => {
     if (!price) return "";
@@ -65,7 +70,21 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
 
   const displayImage = hoveredImage || mainImage;
 
+  if (isOwnShopProduct) {
+    return (
+      <div className="container py-5">
+        <div className="alert alert-info rounded-4 border-0 shadow-sm">
+          Sản phẩm của chính shop bạn không hiển thị ở giao diện mua hàng khi đang đăng nhập bằng tài khoản này.
+        </div>
+      </div>
+    );
+  }
+
   const handleAddToCart = (cart: ICart) => {
+    if (isOwnShopProduct) {
+      message.warning("Bạn không thể mua sản phẩm của chính shop mình.");
+      return;
+    }
     if (!userId) {
       const notifyCartUpdated = () => {
         window.dispatchEvent(new Event("cart-updated"));
@@ -341,6 +360,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                             <div className="col-md-6">
                               <button
                                 className="btn btn-danger w-100"
+                                disabled={isOwnShopProduct}
                                 onClick={() => {
                                   handleAddToCart({
                                     user_id: userId!,
@@ -350,7 +370,10 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                   });
                                 }}
                               >
-                                <i className="bi bi-cart me-2"></i>Add To Cart
+                                <i className="bi bi-cart me-2"></i>
+                                {isOwnShopProduct
+                                  ? "Cannot Buy Own Product"
+                                  : "Add To Cart"}
                               </button>
                             </div>
                             <div className="col-md-6">
@@ -359,6 +382,12 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                               </button>
                             </div>
                           </div>
+
+                          {isOwnShopProduct && (
+                            <div className="alert alert-warning mt-3 mb-0 py-2">
+                              You cannot buy products from your own shop.
+                            </div>
+                          )}
 
                           <hr className="mt-4 mb-2" />
 

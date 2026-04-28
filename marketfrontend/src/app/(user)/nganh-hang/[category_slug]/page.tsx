@@ -3,6 +3,7 @@ import CategoryProductListing from "@/components/client/category_page/CategoryPr
 import { filterDistinctAttributes } from "@/helper/utils";
 import { Attribute } from "@/validators/attribute";
 import { IProduct } from "@/validators/product";
+import { cookies } from "next/headers";
 
 interface CategoryItem {
   id: number;
@@ -59,6 +60,27 @@ const normalizeCategoryAttributes = (payload: any): Attribute[] => {
     .filter((item): item is Attribute => Boolean(item));
 };
 
+const getOwnShopId = async (): Promise<number | null> => {
+  const cookieStore = await cookies();
+  const userId = Number(cookieStore.get("user")?.value ?? 0);
+
+  if (!userId) return null;
+
+  try {
+    const res = await fetch(`${INTERNAL_API}/seller/shop/user/${userId}`, {
+      cache: "no-store",
+    });
+
+    if (!res.ok) return null;
+
+    const shop = await res.json();
+    const shopId = Number(shop?.id ?? shop?.shop_id ?? 0);
+    return shopId > 0 ? shopId : null;
+  } catch {
+    return null;
+  }
+};
+
 export default async function CategoryByIndustryPage({ params }: PageProps) {
   const { category_slug } = await params;
 
@@ -85,6 +107,7 @@ export default async function CategoryByIndustryPage({ params }: PageProps) {
   const products: Partial<IProduct>[] = Array.isArray(productsPayload)
     ? productsPayload
     : (productsPayload?.data ?? []);
+  const ownShopId = await getOwnShopId();
 
   const category = categories.find(
     (item) =>
@@ -102,7 +125,8 @@ export default async function CategoryByIndustryPage({ params }: PageProps) {
   const categoryProducts = products.filter(
     (item) =>
       Number(item.category_id) === Number(category.id) &&
-      Number(item.is_active ?? 1) === 1,
+      Number(item.is_active ?? 1) === 1 &&
+      (!ownShopId || Number(item.shop_id ?? 0) !== ownShopId),
   );
 
   let categoryAttributes: Attribute[] = [];

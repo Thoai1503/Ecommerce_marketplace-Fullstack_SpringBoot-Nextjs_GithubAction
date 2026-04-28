@@ -74,6 +74,7 @@
 
 .shortcutRow {
   display: flex;
+  justify-content: center;
   gap: 16px;
   overflow-x: auto;
   padding: 8px 4px;

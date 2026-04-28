@@ -8,7 +8,9 @@ export interface ICart {
 export interface Shop {
   id: number;
   userId: number;
+  user_id?: number;
   shopName: string;
+  shop_name?: string;
 }
 
 export interface ProductVariant {

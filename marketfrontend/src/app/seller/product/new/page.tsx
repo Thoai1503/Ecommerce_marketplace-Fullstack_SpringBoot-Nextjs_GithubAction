@@ -1,15 +1,28 @@
 "use client";
 import styles from "./new.module.css";
-import React, { useState, useRef, useEffect, use } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Modal, Upload, UploadFile, UploadProps, message } from "antd";
-import { Editor } from "@tinymce/tinymce-react";
 import { useAddImageSeller, useAddProductSeller } from "@/feature/seller/hooks";
 import CategorySelectorModal from "@/feature/seller/components/CategorySelectorModal";
 import { useSellerSideBarContext } from "@/context/SellerSideBarContext";
 import EditProductForm from "@/components/seller/add_product_page/EditProductForm";
 import { UPLOAD_API_URL } from "@/helper/api";
+
+const Editor = dynamic(
+  () => import("@tinymce/tinymce-react").then((mod) => mod.Editor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="border rounded bg-light-subtle p-3 text-muted small">
+        Đang tải trình soạn thảo...
+      </div>
+    ),
+  },
+);
 
 interface ProductFormData {
   name: string;
@@ -41,23 +54,19 @@ const AddProductForm: React.FC = () => {
 
   const editorRef = useRef(null) as any;
   const { setOpen } = useSellerSideBarContext();
+  const searchParams = useSearchParams();
   const [isEdit, setIsEdit] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Check if window is defined
-  const isBrowser = typeof window !== "undefined";
-
-  const params = isBrowser
-    ? new URLSearchParams(window.location.search)
-    : new URLSearchParams();
-  const id = params.get("id");
+  const id = searchParams.get("id");
   console.log("Shop ID from URL:", id);
 
   useEffect(() => {
+    setHasMounted(true);
     setOpen(false);
     console.log("Editor ref:", editorRef.current);
-    if (id) setIsEdit(true);
-  }, [editorRef, id]);
+    setIsEdit(Boolean(id));
+  }, [editorRef, id, setOpen]);
 
   const { fileList, handleChange, handleSave, handleSaveImageAfterProduct } =
     useAddImageSeller();
@@ -191,12 +200,13 @@ const AddProductForm: React.FC = () => {
     if (confirm("Bạn có chắc muốn hủy bỏ? Các thay đổi sẽ không được lưu.")) {
       // Reset form hoặc navigate back
       console.log("Discarding changes...");
-      if (isBrowser) {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-  if (isEdit) {
+  if (!hasMounted) {
+    return null;
+  }
+  if (isEdit && id) {
     return (
       <>
         <EditProductForm id={Number(id)} />
@@ -612,6 +622,9 @@ const AddProductForm: React.FC = () => {
                               description: newContent,
                             }));
                             console.log(newContent);
+                          }}
+                          onInit={(_, editor) => {
+                            editorRef.current = editor;
                           }}
                         />
                       </div>

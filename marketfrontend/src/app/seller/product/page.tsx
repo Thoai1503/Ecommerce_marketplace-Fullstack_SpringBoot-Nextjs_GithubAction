@@ -266,7 +266,8 @@ const page = () => {
         <table className="table table-hover mb-0">
           <thead className="table-light">
             <tr>
-              <th style={{ width: "40px" }}></th> {/* checkbox + expand icon */}
+              {/* checkbox + expand icon */}
+              <th style={{ width: "40px" }}></th>
               <th>Tên sản phẩm</th>
               <th>Giá</th>
               <th>Kho hàng</th>
@@ -407,7 +408,8 @@ const page = () => {
                       key={variant.id}
                       className="variant-row bg-light-subtle"
                     >
-                      <td></td> {/* để trống cột checkbox + expand */}
+                      {/* để trống cột checkbox + expand */}
+                      <td></td>
                       <td>
                         <div className="d-flex align-items-center ps-5">
                           {variant.image_url && (
@@ -435,7 +437,8 @@ const page = () => {
                       <td>đ{variant.price.toLocaleString()}</td>
                       <td>{variant.stock_quantity}</td>
                       <td>Doanh số 0</td>
-                      <td colSpan={2}></td> {/* để trống các cột còn lại */}
+                      {/* để trống các cột còn lại */}
+                      <td colSpan={2}></td>
                     </tr>
                   ));
 

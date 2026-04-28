@@ -1065,7 +1065,8 @@ const page = () => {
         <table className="table table-hover mb-0">
           <thead className="table-light">
             <tr>
-              <th style={{ width: "40px" }}></th> {/* checkbox + expand icon */}
+              {/* checkbox + expand icon */}
+              <th style={{ width: "40px" }}></th>
               <th>Mã đơn / Sản phẩm</th>
               <th>Tổng tiền</th>
               <th>Trạng thái</th>
@@ -1258,7 +1259,8 @@ const page = () => {
                       key={`${orderKey}-${item.id}`}
                       className="item-row bg-light-subtle"
                     >
-                      <td></td> {/* để trống cột checkbox + expand */}
+                      {/* để trống cột checkbox + expand */}
+                      <td></td>
                       <td>
                         <div className="d-flex align-items-start ps-5">
                           {item.image && (
@@ -1300,7 +1302,8 @@ const page = () => {
                           </strong>
                         </div>
                       </td>
-                      <td colSpan={4}></td> {/* để trống các cột còn lại */}
+                      {/* để trống các cột còn lại */}
+                      <td colSpan={4}></td>
                     </tr>
                   ));
 
