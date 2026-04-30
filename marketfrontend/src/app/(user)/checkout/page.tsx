@@ -123,10 +123,36 @@ type VoucherItemAmount = {
   amount: number;
 };
 
+type VoucherUsageDraft = {
+  voucherId: number;
+  shopId: number;
+  discountAmount: number;
+};
+
+type VoucherItemDiscountDraft = {
+  itemKey: string;
+  discountAmount: number;
+};
+
+type VoucherRedemptionDraft = {
+  voucher: OwnedVoucher;
+  discountAmount: number;
+  itemDiscounts: VoucherItemDiscountDraft[];
+};
+
+type OrderCheckoutRefs = {
+  orderNumber: string;
+  shipmentIdByShop: Map<number, number>;
+  orderItemIdByKey: Map<string, number>;
+};
+
 const normalizeVoucherNumber = (value: unknown) => {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const toMoneyAmount = (value: number) =>
+  Number(Math.max(0, value).toFixed(2));
 
 const normalizeVoucherBoolean = (value: unknown) => {
   if (typeof value === "boolean") return value;
@@ -143,6 +169,19 @@ const getCartItemSubtotal = (item: CartItem) =>
 
 const getCartItemShopId = (item: CartItem) =>
   Number(item?.product?.shop?.id ?? 0);
+
+const getOrderItemKey = (
+  shopId: number,
+  productId: number,
+  variantId: number,
+) => `${shopId}:${productId}:${variantId}`;
+
+const getCartItemOrderKey = (item: CartItem) =>
+  getOrderItemKey(
+    getCartItemShopId(item),
+    Number(item?.product?.id ?? 0),
+    Number(item?.productVariant?.id ?? 0),
+  );
 
 const itemMatchesScopeRule = (item: CartItem, rule: VoucherScopeRule) => {
   const scopeId = Number(rule.scopeId || 0);
@@ -453,6 +492,139 @@ const getVoucherAvailability = (
     isEligible: true,
     reason: null,
   };
+};
+
+const getOrderCheckoutRefs = async (
+  orderId: number,
+): Promise<OrderCheckoutRefs> => {
+  const res = await fetch(`${API_URL}/api/orders/${orderId}`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to load order shipments");
+  }
+
+  const data = await res.json();
+  const shipments = Array.isArray(data?.shipments)
+    ? data.shipments
+    : Array.isArray(data?.order_shipment)
+      ? data.order_shipment
+      : [];
+
+  const shipmentIdByShop = shipments.reduce(
+    (map: Map<number, number>, shipment: any) => {
+      const shopId = Number(shipment?.shopId ?? shipment?.shop_id ?? 0);
+      const shipmentId = Number(
+        shipment?.id ?? shipment?.shipmentId ?? shipment?.shipment_id ?? 0,
+      );
+
+      if (shopId > 0 && shipmentId > 0) {
+        map.set(shopId, shipmentId);
+      }
+
+      return map;
+    },
+    new Map<number, number>(),
+  );
+
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const orderItemIdByKey = items.reduce(
+    (map: Map<string, number>, item: any) => {
+      const orderItemId = Number(item?.id ?? item?.orderItemId ?? 0);
+      const shopId = Number(item?.shopId ?? item?.shop_id ?? 0);
+      const productId = Number(item?.productId ?? item?.product_id ?? 0);
+      const variantId = Number(item?.variantId ?? item?.variant_id ?? 0);
+
+      if (orderItemId > 0 && shopId > 0 && productId > 0) {
+        map.set(getOrderItemKey(shopId, productId, variantId), orderItemId);
+      }
+
+      return map;
+    },
+    new Map<string, number>(),
+  );
+
+  return {
+    orderNumber: String(data?.orderNumber ?? data?.order_number ?? ""),
+    shipmentIdByShop,
+    orderItemIdByKey,
+  };
+};
+
+const createVoucherUsageHistory = async (payload: {
+  voucherId: number;
+  userId: number;
+  orderId: number;
+  orderShipmentId: number;
+  discountAmount: number;
+}) => {
+  const res = await fetch(`${API_URL}/api/voucher-usage-legacy`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to create voucher usage history");
+  }
+};
+
+const createVoucherRedemption = async (payload: {
+  userVoucherId: number;
+  voucherId: number;
+  userId: number;
+  orderId: number;
+  orderCode: string;
+  originalShippingFee: number;
+  originalOrderAmount: number;
+  discountAmountApplied: number;
+  finalOrderAmount: number;
+  status: string;
+}) => {
+  const res = await fetch(`${API_URL}/api/voucher-redemptions`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to create voucher redemption");
+  }
+
+  return res.json();
+};
+
+const createVoucherRedemptionItem = async (payload: {
+  voucherRedemptionId: number;
+  orderItemId: number;
+  discountAmount: number;
+}) => {
+  const res = await fetch(`${API_URL}/api/voucher-redemptions/items`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Failed to create voucher redemption item");
+  }
+
+  return res.json();
 };
 
 export default function CheckoutPage() {
@@ -1061,6 +1233,269 @@ export default function CheckoutPage() {
     shopVoucherCalculation.itemAmounts,
     shippingSelections,
     cartItems,
+  ]);
+
+  const voucherUsageDrafts = useMemo(() => {
+    const drafts: VoucherUsageDraft[] = [];
+    let itemAmounts = getInitialVoucherItemAmounts(cartItems);
+
+    const pushUsage = (
+      voucher: OwnedVoucher,
+      shopId: number,
+      discountAmount: number,
+    ) => {
+      if (shopId <= 0 || voucher.id <= 0) return;
+
+      drafts.push({
+        voucherId: voucher.id,
+        shopId,
+        discountAmount: Math.max(0, Math.round(discountAmount)),
+      });
+    };
+
+    Object.entries(selectedShopVouchersByShop).forEach(
+      ([shopIdStr, vouchers]) => {
+        const shopId = Number(shopIdStr);
+
+        vouchers.forEach((voucher) => {
+          const beforeAmounts = itemAmounts;
+          const result = applyVoucherToItemAmounts(voucher, beforeAmounts);
+          itemAmounts = result.itemAmounts;
+
+          if (result.discount > 0) {
+            pushUsage(voucher, shopId, result.discount);
+            return;
+          }
+
+          if (
+            isVoucherFreeShippingForShop(
+              voucher,
+              shopId,
+              cartItems,
+              beforeAmounts,
+            )
+          ) {
+            pushUsage(
+              voucher,
+              shopId,
+              getShippingFeeForShop(shopId, shippingSelections[shopId]),
+            );
+          }
+
+          if (String(voucher.discountType ?? "").toUpperCase() === "GIFT_ITEM") {
+            pushUsage(voucher, shopId, 0);
+          }
+        });
+      },
+    );
+
+    selectedPlatformVouchers.forEach((voucher) => {
+      const beforeAmounts = itemAmounts;
+      const result = applyVoucherToItemAmounts(voucher, beforeAmounts);
+      const discountByShop = new Map<number, number>();
+
+      beforeAmounts.forEach((entry, index) => {
+        const afterAmount = result.itemAmounts[index]?.amount ?? entry.amount;
+        const reduction = Math.max(0, entry.amount - afterAmount);
+        const shopId = getCartItemShopId(entry.item);
+
+        if (shopId > 0 && reduction > 0) {
+          discountByShop.set(
+            shopId,
+            (discountByShop.get(shopId) || 0) + reduction,
+          );
+        }
+      });
+
+      itemAmounts = result.itemAmounts;
+
+      if (discountByShop.size > 0) {
+        discountByShop.forEach((discountAmount, shopId) => {
+          pushUsage(voucher, shopId, discountAmount);
+        });
+        return;
+      }
+
+      const shopIds = Array.from(
+        new Set(cartItems.map((item) => getCartItemShopId(item))),
+      ).filter((shopId) => shopId > 0);
+
+      shopIds.forEach((shopId) => {
+        if (
+          isVoucherFreeShippingForShop(
+            voucher,
+            shopId,
+            cartItems,
+            beforeAmounts,
+          )
+        ) {
+          pushUsage(
+            voucher,
+            shopId,
+            getShippingFeeForShop(shopId, shippingSelections[shopId]),
+          );
+        }
+      });
+
+      if (String(voucher.discountType ?? "").toUpperCase() === "GIFT_ITEM") {
+        shopIds.forEach((shopId) => {
+          const hasApplicableItem = getVoucherApplicableCartItems(
+            voucher,
+            cartItems,
+          ).some((item) => getCartItemShopId(item) === shopId);
+
+          if (hasApplicableItem) {
+            pushUsage(voucher, shopId, 0);
+          }
+        });
+      }
+    });
+
+    return drafts;
+  }, [
+    cartItems,
+    selectedShopVouchersByShop,
+    selectedPlatformVouchers,
+    shippingSelections,
+  ]);
+
+  const voucherRedemptionDrafts = useMemo(() => {
+    const draftMap = new Map<number, VoucherRedemptionDraft>();
+    let itemAmounts = getInitialVoucherItemAmounts(cartItems);
+
+    const getDraft = (voucher: OwnedVoucher) => {
+      let draft = draftMap.get(voucher.id);
+      if (!draft) {
+        draft = {
+          voucher,
+          discountAmount: 0,
+          itemDiscounts: [],
+        };
+        draftMap.set(voucher.id, draft);
+      }
+      return draft;
+    };
+
+    const addVoucherDiscount = (
+      voucher: OwnedVoucher,
+      discountAmount: number,
+    ) => {
+      if (voucher.id <= 0 || discountAmount <= 0) return;
+      const draft = getDraft(voucher);
+      draft.discountAmount = toMoneyAmount(
+        draft.discountAmount + discountAmount,
+      );
+    };
+
+    const applyItemVoucher = (voucher: OwnedVoucher) => {
+      const beforeAmounts = itemAmounts;
+      const result = applyVoucherToItemAmounts(voucher, beforeAmounts);
+      itemAmounts = result.itemAmounts;
+
+      if (result.discount <= 0) return false;
+
+      const draft = getDraft(voucher);
+      draft.discountAmount = toMoneyAmount(
+        draft.discountAmount + result.discount,
+      );
+
+      beforeAmounts.forEach((entry, index) => {
+        const afterAmount = result.itemAmounts[index]?.amount ?? entry.amount;
+        const reduction = toMoneyAmount(entry.amount - afterAmount);
+
+        if (reduction > 0) {
+          draft.itemDiscounts.push({
+            itemKey: getCartItemOrderKey(entry.item),
+            discountAmount: reduction,
+          });
+        }
+      });
+
+      return true;
+    };
+
+    Object.entries(selectedShopVouchersByShop).forEach(
+      ([shopIdStr, vouchers]) => {
+        const shopId = Number(shopIdStr);
+
+        vouchers.forEach((voucher) => {
+          const beforeAmounts = itemAmounts;
+          const hasItemDiscount = applyItemVoucher(voucher);
+
+          if (hasItemDiscount) return;
+
+          if (
+            isVoucherFreeShippingForShop(
+              voucher,
+              shopId,
+              cartItems,
+              beforeAmounts,
+            )
+          ) {
+            addVoucherDiscount(
+              voucher,
+              getShippingFeeForShop(shopId, shippingSelections[shopId]),
+            );
+          }
+
+          if (String(voucher.discountType ?? "").toUpperCase() === "GIFT_ITEM") {
+            getDraft(voucher);
+          }
+        });
+      },
+    );
+
+    selectedPlatformVouchers.forEach((voucher) => {
+      const beforeAmounts = itemAmounts;
+      const hasItemDiscount = applyItemVoucher(voucher);
+
+      if (hasItemDiscount) return;
+
+      const shopIds = Array.from(
+        new Set(cartItems.map((item) => getCartItemShopId(item))),
+      ).filter((shopId) => shopId > 0);
+
+      shopIds.forEach((shopId) => {
+        if (
+          isVoucherFreeShippingForShop(
+            voucher,
+            shopId,
+            cartItems,
+            beforeAmounts,
+          )
+        ) {
+          addVoucherDiscount(
+            voucher,
+            getShippingFeeForShop(shopId, shippingSelections[shopId]),
+          );
+        }
+      });
+
+      if (String(voucher.discountType ?? "").toUpperCase() === "GIFT_ITEM") {
+        const hasApplicableItem = getVoucherApplicableCartItems(
+          voucher,
+          cartItems,
+        ).length > 0;
+
+        if (hasApplicableItem) {
+          getDraft(voucher);
+        }
+      }
+    });
+
+    return Array.from(draftMap.values()).filter(
+      (draft) =>
+        draft.voucher.userVoucherId > 0 &&
+        (draft.discountAmount > 0 ||
+          draft.itemDiscounts.length > 0 ||
+          String(draft.voucher.discountType ?? "").toUpperCase() ===
+            "GIFT_ITEM"),
+    );
+  }, [
+    cartItems,
+    selectedShopVouchersByShop,
+    selectedPlatformVouchers,
+    shippingSelections,
   ]);
 
   const finalTotal = Math.max(
@@ -1694,9 +2129,83 @@ export default function CheckoutPage() {
 
     createOrder(orderPayload as any)
       .then(async (dt) => {
-        alert(`Đặt hàng thành công! Mã đơn hàng: ${dt.id}`);
+        const orderId = Number(dt.id || dt.orderId || 0);
+        alert(`Đặt hàng thành công! Mã đơn hàng: ${orderId}`);
 
         const cleanupTasks: Promise<unknown>[] = [];
+
+        if (
+          orderId > 0 &&
+          (voucherUsageDrafts.length > 0 || voucherRedemptionDrafts.length > 0)
+        ) {
+          cleanupTasks.push(
+            getOrderCheckoutRefs(orderId).then((orderRefs) => {
+              const usageTasks = voucherUsageDrafts.map((usage) => {
+                const orderShipmentId = orderRefs.shipmentIdByShop.get(
+                  usage.shopId,
+                );
+
+                if (!orderShipmentId) {
+                  throw new Error(
+                    `Missing shipment id for shop ${usage.shopId}`,
+                  );
+                }
+
+                return createVoucherUsageHistory({
+                  voucherId: usage.voucherId,
+                  userId: Number(userId || paymentInfo.user_id || 0),
+                  orderId,
+                  orderShipmentId,
+                  discountAmount: usage.discountAmount,
+                });
+              });
+
+              const redemptionTasks = voucherRedemptionDrafts.map(
+                async (draft) => {
+                  const redemption = await createVoucherRedemption({
+                    userVoucherId: draft.voucher.userVoucherId,
+                    voucherId: draft.voucher.id,
+                    userId: Number(userId || paymentInfo.user_id || 0),
+                    orderId,
+                    orderCode: orderRefs.orderNumber,
+                    originalShippingFee: effectiveShippingFee,
+                    originalOrderAmount: calculateSubtotal(),
+                    discountAmountApplied: draft.discountAmount,
+                    finalOrderAmount: finalTotal,
+                    status: "SUCCESS",
+                  });
+                  const redemptionId = Number(redemption?.id || 0);
+
+                  if (redemptionId <= 0) {
+                    throw new Error("Missing voucher redemption id");
+                  }
+
+                  return Promise.all(
+                    draft.itemDiscounts.map((itemDiscount) => {
+                      const orderItemId = orderRefs.orderItemIdByKey.get(
+                        itemDiscount.itemKey,
+                      );
+
+                      if (!orderItemId) {
+                        throw new Error(
+                          `Missing order item id for ${itemDiscount.itemKey}`,
+                        );
+                      }
+
+                      return createVoucherRedemptionItem({
+                        voucherRedemptionId: redemptionId,
+                        orderItemId,
+                        discountAmount: itemDiscount.discountAmount,
+                      });
+                    }),
+                  );
+                },
+              );
+
+              return Promise.all([...usageTasks, ...redemptionTasks]);
+            }),
+          );
+        }
 
         selectedRedeemableVouchers
           .filter((voucher) => voucher.userVoucherId)
@@ -1709,7 +2218,7 @@ export default function CheckoutPage() {
                 },
                 body: JSON.stringify({
                   status: "REDEEMED",
-                  reservedOrderId: dt.id,
+                  reservedOrderId: orderId,
                   reservedAt: new Date().toISOString(),
                   redeemedAt: new Date().toISOString(),
                 }),
@@ -1747,13 +2256,13 @@ export default function CheckoutPage() {
 
         setPaymentInfo((prev: any) => ({
           ...prev,
-          orderId: dt.id,
+          orderId,
         }));
         if (paymentInfo.method !== "COD") {
           //checkOut({ ...paymentInfo, orderId: dt.id });
           window.location.href = `${dt.paymentUrl}`; // Chuyển hướng đến cổng thanh toán VNPAY
         } else {
-          window.location.href = `/orders/${dt.id}`; // Chuyển hướng đến trang thành công sau khi đặt hàng với phương thức khác
+          window.location.href = `/orders/${orderId}`; // Chuyển hướng đến trang thành công sau khi đặt hàng với phương thức khác
         }
       })
       .catch((e: AxiosError) => {

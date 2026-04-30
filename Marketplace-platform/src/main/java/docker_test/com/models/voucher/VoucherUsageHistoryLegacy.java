@@ -9,6 +9,7 @@ public class VoucherUsageHistoryLegacy {
 	private Long voucherId;
 	private Long userId;
 	private Long orderId;
+	private Long orderShipmentId;
 	private BigDecimal discountAmount;
 	private LocalDateTime usedAt;
 
@@ -21,6 +22,17 @@ public class VoucherUsageHistoryLegacy {
 		this.voucherId = voucherId;
 		this.userId = userId;
 		this.orderId = orderId;
+		this.discountAmount = discountAmount;
+		this.usedAt = usedAt;
+	}
+
+	public VoucherUsageHistoryLegacy(Long id, Long voucherId, Long userId, Long orderId, Long orderShipmentId,
+			BigDecimal discountAmount, LocalDateTime usedAt) {
+		this.id = id;
+		this.voucherId = voucherId;
+		this.userId = userId;
+		this.orderId = orderId;
+		this.orderShipmentId = orderShipmentId;
 		this.discountAmount = discountAmount;
 		this.usedAt = usedAt;
 	}
@@ -55,6 +67,14 @@ public class VoucherUsageHistoryLegacy {
 
 	public void setOrderId(Long orderId) {
 		this.orderId = orderId;
+	}
+
+	public Long getOrderShipmentId() {
+		return orderShipmentId;
+	}
+
+	public void setOrderShipmentId(Long orderShipmentId) {
+		this.orderShipmentId = orderShipmentId;
 	}
 
 	public BigDecimal getDiscountAmount() {
