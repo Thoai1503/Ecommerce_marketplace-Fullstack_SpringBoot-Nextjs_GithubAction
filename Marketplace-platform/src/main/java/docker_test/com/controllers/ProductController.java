@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,7 +28,6 @@ public class ProductController {
 		 this.iRepoFactory= factoryImpl;
 		 this.repositories = iRepoFactory.createRepo("product");
 	 }
-        
 	 
 	 
 	 
@@ -80,6 +80,11 @@ public class ProductController {
 		var categories = ((ProductRepository) repositories).getActiveCategoriesByShop(shopId);
 
 		return ResponseEntity.ok(categories);
+	}
+	@PutMapping("/{id}")
+	public ResponseEntity<?> updateProduct(@PathVariable int id, @RequestBody Product updatedProduct) {
+		 
+		return ResponseEntity.ok(((ProductRepository) repositories).Update(updatedProduct));
 	}
 }
 

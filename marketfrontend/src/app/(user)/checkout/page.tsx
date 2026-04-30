@@ -20,11 +20,17 @@ const cityMap = { 202: "TP. Hồ Chí Minh", 1: "Hà Nội" };
 import { useQuery } from "@tanstack/react-query";
 import { message } from "antd";
 import { ADDRESS_KEY, API_URL, PROVINCE_API } from "@/helper/api";
-import { VoucherScopeRule, VoucherSegmentRule } from "@/types";
+import {
+  CalculateFeePayload,
+  VoucherScopeRule,
+  VoucherSegmentRule,
+} from "@/types";
 import { AxiosError } from "axios";
 import { getUserInfoById } from "@/service/userInfo";
 import { Cart } from "@/types/data/Cart";
 import { getVoucherRules } from "@/service/vouchers";
+import { calculateFeeOfLOGS } from "@/service/calculateFeeAPI";
+import { getAddressByShopId } from "@/service/addresses";
 
 // Hàm fetch districts theo provinceId
 async function fetchDistrictsByProvince(provinceId: number) {
@@ -453,6 +459,7 @@ export default function CheckoutPage() {
   const { userId } = useUserAuth();
   const { data: addressesQuery } = useAddresses(userId || 0);
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const [shippingFees, setShippingFees] = useState<Record<number, number>>({});
   const [showAddressPanel, setShowAddressPanel] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState(0);
   const [recipient, setRecipient] = useState<any>(null);
@@ -598,9 +605,10 @@ export default function CheckoutPage() {
       name: "Giao hàng LOGS",
       estimatedDays: "3-5 ngày làm việc",
       fee: 0,
+      calculateFeeAPI: async (params: CalculateFeePayload) =>
+        calculateFeeOfLOGS(params),
     },
   ];
-
   // State để lưu lựa chọn vận chuyển cho mỗi shop
   const [shippingSelections, setShippingSelections] =
     useState<ShippingSelection>({});
@@ -655,6 +663,12 @@ export default function CheckoutPage() {
   const getShippingFeeForShop = (shopId: number, shippingOptionId: string) => {
     const option = getSelectedShippingOption(shopId, shippingOptionId);
     if (!option) return 0;
+
+    // Nếu option có calculateFeeAPI, dùng giá trị đã tính từ shippingFees
+    if (option.calculateFeeAPI) {
+      return shippingFees[shopId] ?? 0;
+    }
+
     return option.fee || 0;
   };
 
@@ -1419,12 +1433,82 @@ export default function CheckoutPage() {
     // alert(
     //   `Địa chỉ măc định: ${defaultAddress?.address}\nĐang chọn phương thức vận chuyển...`,
     // );
+    const shopAddress = await getAddressByShopId(shopId);
+    // alert(
+    //   `Địa chỉ shop: ${shopAddress.addressLine}, Địa chỉ nhận hàng: ${defaultAddress?.address}\nĐang chọn phương thức vận chuyển...`,
+    // );
     setShippingSelections((prev) => ({
       ...prev,
       [shopId]: optionId,
     }));
 
     const selectedOption = shippingOptions.find((opt) => opt.id === optionId);
+
+    if (selectedOption?.calculateFeeAPI) {
+      setShippingFeeLoading((prev) => ({
+        ...prev,
+        [shopId]: true,
+      }));
+
+      const logisticsItems = cartItems
+        .filter((item) => item?.product?.shop?.id === shopId)
+        .map((item) => ({
+          name: item.productVariant?.variantName || item.product?.name || "",
+          quantity: item.quantity,
+          height: item.height || 0,
+          width: item.width || 0,
+          weight: item.weight || 0,
+          length: item.length || 0,
+        }));
+
+      console.log("Calculating fee with logistics items:", logisticsItems);
+
+      selectedOption
+        .calculateFeeAPI({
+          from_district_id: shopAddress?.district || 0, // giả sử lấy từ địa chỉ đầu tiên (cần điều chỉnh nếu có nhiều địa chỉ)
+          from_ward_code: shopAddress?.ward ? String(shopAddress.ward) : "", // giả sử lấy từ địa chỉ đầu tiên
+          // service_id: 53320,
+          //service_type_id: 5,
+          service_type_id: 5,
+          to_district_id: defaultAddress?.district || 0,
+          to_ward_code: defaultAddress?.ward ? String(defaultAddress.ward) : "",
+          height: logisticsItems[0]?.height || 0,
+          length: logisticsItems[0]?.length || 0,
+          weight: logisticsItems[0]?.weight || 0,
+          width: logisticsItems[0]?.width || 0,
+          insurance_value: 1000,
+          cod_failed_amount: 0,
+          coupon: null,
+          items: logisticsItems,
+        })
+        .then((fee) => {
+          console.log(
+            "Calculated fee:",
+            fee,
+            "for shopId:",
+            shopId,
+            "with option:",
+            selectedOption,
+          );
+          setShippingFees((prev) => ({
+            ...prev,
+            [shopId]: fee,
+          }));
+          message.info(
+            `Đã chọn: ${selectedOption.name} (${selectedOption.estimatedDays}) - ${formatCurrency(fee || 0)}`,
+          );
+        })
+        .catch(() => {
+          message.error("Khong the tinh phi van chuyen. Vui long thu lai.");
+        })
+        .finally(() => {
+          setShippingFeeLoading((prev) => ({
+            ...prev,
+            [shopId]: false,
+          }));
+        });
+      return;
+    }
 
     setShippingFeeLoading((prev) => ({
       ...prev,

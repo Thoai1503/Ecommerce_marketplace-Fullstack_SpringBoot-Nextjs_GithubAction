@@ -163,4 +163,23 @@ public final class ProductVariant {
     public void setUpdated_at(LocalDateTime updated_at) {
         this.updated_at = updated_at;
     }
+    
+    @Override
+    public String toString() {
+		return "ProductVariant{" +
+				"id=" + id +
+				", product_id=" + product_id +
+				", variant_name='" + variant_name + '\'' +
+				", sku='" + sku + '\'' +
+				", price=" + price +
+				", stock_quantity=" + stock_quantity +
+				", image_url='" + image_url + '\'' +
+				", width=" + width +
+				", height=" + height +
+				", weight=" + weight +
+				", is_active=" + is_active +
+				", created_at=" + created_at +
+				", updated_at=" + updated_at +
+				'}';
+	}
 }

@@ -5,10 +5,18 @@ import { fetchProduct } from "@/feature/seller/reducer/productEditReducer";
 import { AppDispatch, RootState } from "@/lib/store";
 import { InboxOutlined } from "@ant-design/icons";
 import { Editor } from "@tinymce/tinymce-react";
-import { Upload } from "antd";
+import { message, Upload } from "antd";
 import React, { use, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { UPLOAD_API_URL } from "@/helper/api";
+import { API_URL, UPLOAD_API_URL } from "@/helper/api";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  Product,
+  useUpdateProductMutation,
+} from "@/types/data/product/Product";
+import { IProduct } from "@/validators/product";
+import { useUpdateProductVariantMutation } from "@/types/data/product/ProductVariant";
+import { IProductVariant } from "@/validators/productVariant";
 interface ProductFormData {
   name: string;
   category: string;
@@ -35,15 +43,20 @@ interface TabSection {
 }
 
 const EditProductForm = ({ id }: { id: number | null }) => {
-  const product = useSelector((state: RootState) => state.productForm.product);
+  Product.setup({ path: "/product", baseUrl: API_URL });
+  const { data: productData } = useQuery(Product.getById(id || 0));
+  console.log("product data: " + JSON.stringify(productData));
 
+  //const product = useSelector((state: RootState) => state.productForm.product);
+  const [product, setProducts] = useState<IProduct | null>(null);
   const dispatch = useDispatch<AppDispatch>();
   const editorRef = useRef<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { fileList, handleChange, handleSave, handleSaveImageAfterProduct } =
     useAddImageSeller(id || undefined);
-
+  const { mutate: updateProductVariant } = useUpdateProductVariantMutation();
   const [currentTab, setCurrentTab] = useState<number>(0);
+  const { mutate: updateProduct } = useUpdateProductMutation();
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
     category: "Watches & Accessories > Men's Watches",
@@ -115,11 +128,17 @@ const EditProductForm = ({ id }: { id: number | null }) => {
       observers.forEach((obs) => obs.disconnect());
     };
   }, []);
+  // useEffect(() => {
+  //   if (id !== null && id !== undefined) {
+  //     dispatch(fetchProduct(id));
+  //   }
+  // }, []);
   useEffect(() => {
-    if (id !== null && id !== undefined) {
-      dispatch(fetchProduct(id));
+    if (productData) {
+      setProducts(productData);
     }
-  }, []);
+  }, [productData]);
+
   const showModal = () => {
     setIsModalOpen(true);
   };
@@ -130,7 +149,8 @@ const EditProductForm = ({ id }: { id: number | null }) => {
     >,
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    // setFormData((prev) => ({ ...prev, [name]: value }));
+    setProducts((pre: any) => ({ ...pre, [name]: value }));
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,6 +185,67 @@ const EditProductForm = ({ id }: { id: number | null }) => {
       console.log("Discarding changes...");
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
+
+  const handleSubmit = () => {
+    //  alert("Submit form with data: " + JSON.stringify(product));
+    // alert(
+    //   "Variant list: " +
+    //     JSON.stringify(product?.variants) +
+    //     "\n\n" +
+    //     "Variant length: " +
+    //     product?.variants?.length,
+    // );
+    updateProduct(
+      {
+        id: id || 0,
+        updatedData: product!,
+      },
+      {
+        onSuccess: (data) => {
+          alert("Product updated successfully: " + JSON.stringify(data));
+          if (product?.variants && product?.variants?.length < 2) {
+            message.success("Product updated successfully!");
+            alert(JSON.stringify(product.variants[0]));
+            const variantData: IProductVariant = {
+              id: product.variants[0].id,
+              price: data.price,
+              sku: product.variants[0].sku,
+              product_id: data.id,
+              image_url: product.variants[0].image_url,
+              variant_name: data.product_name,
+              stock_quantity: data.stock_quantity,
+              weight: data.weight,
+              length: data.length,
+              width: data.width,
+
+              height: data.height,
+            };
+
+            updateProductVariant(variantData, {
+              onSuccess: (variantData) => {
+                alert(
+                  "Variant updated successfully: " +
+                    JSON.stringify(variantData),
+                );
+              },
+              onError: (error) => {
+                message.error(
+                  "Failed to update variant: " + JSON.stringify(error),
+                );
+              },
+            });
+          } else {
+            message.success(
+              "Product updated successfully! Please proceed to update variant details.",
+            );
+          }
+        },
+        onError: (error) => {
+          message.error("Failed to update product: " + JSON.stringify(error));
+        },
+      },
+    );
   };
 
   const {
@@ -432,7 +513,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                         <label className="form-label fw-semibold">
                           Product Name <span className="text-danger">*</span>
                           <span className="float-end text-muted small">
-                            {formData.name.length}/120
+                            {product?.product_name.length}/120
                           </span>
                         </label>
                         <input
@@ -440,7 +521,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                           className="form-control"
                           name="product_name"
                           value={product?.product_name}
-                          onChange={handleChangeProduct}
+                          onChange={handleInputChange}
                           placeholder="e.g. Minimalist Watch Series 5"
                         />
                       </div>
@@ -454,7 +535,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                             type="text"
                             className="form-control"
                             name="category_id"
-                            value={formData.category}
+                            value={product?.product_name}
                             onChange={handleInputChange}
                             readOnly
                           />
@@ -679,7 +760,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                   <div className="card-body">
                     <h3 className="h5 fw-bold mb-4">Pricing Configuration</h3>
                     <div className="row g-3">
-                      <div className="col-md-4">
+                      <div className="col-md-3">
                         <label className="form-label fw-semibold">
                           Base Price
                         </label>
@@ -690,18 +771,28 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                             className="form-control"
                             name="price"
                             value={product?.price}
-                            onChange={(event) => {
-                              const { value, name } = event.target;
-                              setProduct((pre: any) => ({
-                                ...pre,
-                                [name]: value,
-                                original_price: product?.price,
-                              }));
-                            }}
+                            onChange={handleInputChange}
                           />
                         </div>
                       </div>
-                      <div className="col-md-4">
+                      <div className="col-md-3">
+                        <label className="form-label fw-semibold">
+                          Inventory
+                        </label>
+                        <div className="input-group">
+                          <input
+                            type="number"
+                            min="0"
+                            className="form-control"
+                            name="stock_quantity"
+                            value={product?.stock_quantity ?? ""}
+                            onChange={handleInputChange}
+                            placeholder="0"
+                          />
+                          <span className="input-group-text">pcs</span>
+                        </div>
+                      </div>
+                      <div className="col-md-3">
                         <label className="form-label fw-semibold">
                           Compare at Price
                         </label>
@@ -714,7 +805,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                           />
                         </div>
                       </div>
-                      <div className="col-md-4">
+                      <div className="col-md-3">
                         <label className="form-label fw-semibold">
                           Cost per Item
                         </label>
@@ -761,35 +852,60 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                   <div className="card-body">
                     <h3 className="h5 fw-bold mb-4">Shipping Information</h3>
                     <div className="row g-3">
-                      <div className="col-md-4">
+                      <div className="col-md-6 col-lg-3">
                         <label className="form-label fw-semibold">Weight</label>
                         <div className="input-group">
                           <input
                             type="text"
                             className="form-control"
                             placeholder="0.0"
+                            value={product?.weight ?? ""}
+                            name="weight"
+                            onChange={handleInputChange}
                           />
-                          <span className="input-group-text">kg</span>
+
+                          <span className="input-group-text">g</span>
                         </div>
                       </div>
-                      <div className="col-md-4">
+                      <div className="col-md-6 col-lg-3">
                         <label className="form-label fw-semibold">Length</label>
                         <div className="input-group">
                           <input
                             type="text"
                             className="form-control"
                             placeholder="0"
+                            name="length"
+                            value={product?.length ?? ""}
+                            onChange={handleInputChange}
                           />
                           <span className="input-group-text">cm</span>
                         </div>
                       </div>
-                      <div className="col-md-4">
+                      <div className="col-md-6 col-lg-3">
                         <label className="form-label fw-semibold">Width</label>
                         <div className="input-group">
                           <input
                             type="text"
                             className="form-control"
                             placeholder="0"
+                            name="width"
+                            value={product?.width ?? ""}
+                            onChange={handleInputChange}
+                          />
+                          <span className="input-group-text">cm</span>
+                        </div>
+                      </div>
+
+                      <div className="col-md-6 col-lg-3">
+                        <label className="form-label fw-semibold">Height</label>
+                        <div className="input-group">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="0"
+                            name="height"
+                            value={product?.height ?? ""}
+                            onChange={handleInputChange}
                           />
                           <span className="input-group-text">cm</span>
                         </div>
@@ -798,7 +914,6 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                   </div>
                 </div>
               </div>
-
               {/* SECTION 4: Attributes & SEO */}
               <div
                 ref={attributesRef}
@@ -1084,7 +1199,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
                   <i className="bi bi-x-lg me-1"></i>
                   Cancel
                 </button>
-                <button className="action-save" onClick={handleSubmitProduct}>
+                <button className="action-save" onClick={handleSubmit}>
                   <i className="bi bi-check-lg me-1"></i>
                   {isLastTab ? "Publish Product" : "Save & Continue"}
                 </button>
