@@ -2,6 +2,9 @@ package docker_test.com.dto;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class OrderDTO {
   public String getOrder_number() {
 		return order_number;
@@ -89,6 +92,14 @@ public class OrderDTO {
 		return order_status;
 	}
 
+	public Long getVoucher_id() {
+		return voucher_id;
+	}
+
+	public void setVoucher_id(Long voucher_id) {
+		this.voucher_id = voucher_id;
+	}
+
 	public void setOrder_status(String order_status) {
 		this.order_status = order_status;
 	}
@@ -148,6 +159,7 @@ public class OrderDTO {
 	private String order_status;
 	private String tracking_number;
 	private String cancel_reason;
+	private Long voucher_id;
 
 	public double getTotal_price() {
 		return total_price;

@@ -65,6 +65,9 @@ public class Order {
       
       @Column(name = "tracking_number", nullable = true)
       private String trackingNumber;
+
+      @Column(name = "voucher_id", nullable = true)
+      private Long voucherId;
       
       @Column(name ="last_return_request_id")
       private Long lastReturnRequestId;

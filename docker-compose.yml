@@ -32,6 +32,7 @@ services:
       - "8000:8000"
     depends_on:
       - cart-service
+      - logistic-service
       #- order-service
       - marketplace-platform
     # environment:
@@ -83,6 +84,21 @@ services:
       - "4001:3000"
     environment:
       - NEXT_PUBLIC_LOGISTICS_API_BASE_URL=http://api-gateway:8000
+    networks:
+      - ecommerce-net
+
+  logistic-service:
+    build: ./logistic-service
+    container_name: logistic-service
+    ports:
+      - "8007:8007"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DATABASE_URL=${LOGISTIC_DATABASE_URL}
+      - DATABASE_USERNAME=${LOGISTIC_DATABASE_USERNAME}
+      - DATABASE_PASSWORD=${LOGISTIC_DATABASE_PASSWORD}
+      - LOGISTICS_FEE_PROVIDER_URL=${LOGISTICS_FEE_PROVIDER_URL}
+      - LOGISTICS_FEE_PROVIDER_TOKEN=${LOGISTICS_FEE_PROVIDER_TOKEN}
     networks:
       - ecommerce-net
 

@@ -19,6 +19,36 @@ import type { Address } from "@/components/client/checkout_page/types";
 
 type PaymentMethod = "COD" | "VNPAY" | "BANK";
 
+type CheckoutShopVoucher = {
+  id: number;
+  code: string;
+  title: string;
+  description?: string | null;
+  discountType?: string | null;
+  discountPercent?: number | null;
+  discountAmount?: number | null;
+  minOrderValue?: number | null;
+  stackable?: boolean | null;
+};
+
+type ShopVoucherAvailability = {
+  voucher: CheckoutShopVoucher;
+  isEligible: boolean;
+  reason: string | null;
+};
+
+const getShopVoucherLabel = (voucher: CheckoutShopVoucher) => {
+  const type = String(voucher.discountType ?? "").toUpperCase();
+
+  if (type === "FREE_SHIPPING") return "Free shipping";
+  if (type === "PERCENT")
+    return `Save ${Number(voucher.discountPercent || 0)}%`;
+  if (type === "FIXED")
+    return `Save ${Number(voucher.discountAmount || 0).toLocaleString("vi-VN")}d`;
+
+  return voucher.title;
+};
+
 const PAYMENT_OPTIONS: {
   id: PaymentMethod;
   label: string;
@@ -27,21 +57,21 @@ const PAYMENT_OPTIONS: {
 }[] = [
   {
     id: "COD",
-    label: "Thanh toán khi nhận hàng (COD)",
-    description: "Trả tiền mặt khi nhận hàng tại nhà.",
+    label: "Cash on delivery (COD)",
+    description: "Pay in cash when your order arrives.",
     icon: <Banknote size={24} color="#22c55e" strokeWidth={1.5} />,
   },
   {
     id: "VNPAY",
     label: "VNPay",
-    description: "Thanh toán qua cổng VNPay (ATM, QR, thẻ quốc tế).",
+    description: "Pay via VNPay gateway (ATM, QR, international cards).",
     icon: <CreditCard size={24} color="#137fec" strokeWidth={1.5} />,
   },
   {
     id: "BANK",
-    label: "Chuyển khoản ngân hàng",
-    description: "Chuyển khoản trực tiếp qua tài khoản ngân hàng.",
-    icon: <Wallet size={24} color="#f59e0b" strokeWidth={1.5} />,
+    label: "Bank transfer",
+    description: "Transfer directly to the bank account.",
+    icon: <Wallet size={24} color="#94a3b8" strokeWidth={1.5} />,
   },
 ];
 
@@ -61,9 +91,19 @@ interface CheckoutLeftStepsProps {
     shippingOptionId: string,
   ) => ShippingOption | undefined;
   getShippingFeeForShop: (shopId: number, shippingOptionId: string) => number;
+  getEffectiveShippingFeeForShop: (
+    shopId: number,
+    shippingOptionId: string,
+  ) => number;
   shippingFeeLoading: Record<number, boolean>;
   shippingOptions: ShippingOption[];
   formatCurrency: (amount: number) => string;
+  shopVoucherAvailabilityByShop: Record<number, ShopVoucherAvailability[]>;
+  selectedShopVoucherIds: Record<number, number[]>;
+  onApplyShopVoucherIds: (shopId: number, voucherIds: number[]) => void;
+  onClearShopVouchers: (shopId: number) => void;
+  getShopVoucherDiscount: (shopId: number) => number;
+  voucherLoading: boolean;
   onShippingOptionChange: (shopId: number, optionId: string) => void;
   onConfirmPayment: (method: PaymentMethod) => void;
   onPaymentMethodChange?: (method: PaymentMethod) => void;
@@ -82,26 +122,91 @@ export default function CheckoutLeftSteps({
   shippingSelections,
   getSelectedShippingOption,
   getShippingFeeForShop,
+  getEffectiveShippingFeeForShop,
   shippingFeeLoading,
   shippingOptions,
   formatCurrency,
+  shopVoucherAvailabilityByShop,
+  selectedShopVoucherIds,
+  onApplyShopVoucherIds,
+  onClearShopVouchers,
+  getShopVoucherDiscount,
+  voucherLoading,
   onShippingOptionChange,
   onConfirmPayment,
   onPaymentMethodChange,
 }: CheckoutLeftStepsProps) {
   const [selectedPayment, setSelectedPayment] =
     React.useState<PaymentMethod>("COD");
+  const [shopVoucherModalShopId, setShopVoucherModalShopId] =
+    React.useState<number | null>(null);
+  const [shopVoucherDraftIds, setShopVoucherDraftIds] = React.useState<
+    number[]
+  >([]);
   const hasAddress = Boolean(defaultAddress) && addresses.length > 0;
+
+  React.useEffect(() => {
+    if (shopVoucherModalShopId === null) return;
+
+    setShopVoucherDraftIds(selectedShopVoucherIds[shopVoucherModalShopId] || []);
+  }, [shopVoucherModalShopId, selectedShopVoucherIds]);
 
   const handleSelectPayment = (method: PaymentMethod) => {
     setSelectedPayment(method);
     onPaymentMethodChange?.(method);
   };
 
+  const activeShopId = shopVoucherModalShopId;
+  const activeShopGroup =
+    activeShopId === null ? undefined : groupedByShop[activeShopId];
+  const activeShopVoucherOptions =
+    activeShopId === null ? [] : shopVoucherAvailabilityByShop[activeShopId] || [];
+  const activeUsableShopVouchers = activeShopVoucherOptions.filter(
+    (item) => item.isEligible,
+  );
+  const activeShopSubtotal =
+    activeShopGroup?.items.reduce(
+      (total, item) =>
+        total + (item.productVariant?.price ?? 0) * item.quantity,
+      0,
+    ) ?? 0;
+
+  const handleOpenShopVoucherModal = (shopId: number) => {
+    setShopVoucherDraftIds(selectedShopVoucherIds[shopId] || []);
+    setShopVoucherModalShopId(shopId);
+  };
+
+  const handleToggleDraftShopVoucher = (voucher: CheckoutShopVoucher) => {
+    setShopVoucherDraftIds((current) => {
+      if (current.includes(voucher.id)) {
+        return current.filter((id) => id !== voucher.id);
+      }
+
+      if (!voucher.stackable) {
+        return [voucher.id];
+      }
+
+      const stackableCurrent = current.filter(
+        (id) =>
+          activeUsableShopVouchers.find((item) => item.voucher.id === id)
+            ?.voucher.stackable,
+      );
+      return [...stackableCurrent, voucher.id];
+    });
+  };
+
+  const handleApplyShopVoucherDraft = () => {
+    if (activeShopId === null) return;
+
+    onApplyShopVoucherIds(activeShopId, shopVoucherDraftIds);
+    setShopVoucherModalShopId(null);
+  };
+
   return (
+    <>
     <div className="col-12 col-lg-7">
       <div className="d-flex flex-column gap-3">
-        {/* ── BƯỚC 1: Địa chỉ nhận hàng ── */}
+        {/* STEP 1: Shipping address */}
         <section style={styles.cardCompleted}>
           <div className="d-flex align-items-start justify-content-between">
             <div className="d-flex gap-3 flex-grow-1">
@@ -109,7 +214,7 @@ export default function CheckoutLeftSteps({
                 <Check size={12} strokeWidth={3} />
               </div>
               <div className="flex-grow-1">
-                <h3 style={styles.stepTitle}>Địa chỉ nhận hàng</h3>
+                <h3 style={styles.stepTitle}>Shipping address</h3>
                 {hasAddress ? (
                   <>
                     <p
@@ -125,7 +230,7 @@ export default function CheckoutLeftSteps({
                 ) : (
                   <div
                     style={{
-                      border: "1px dashed #f59e0b",
+                      border: "1px dashed rgb(226, 232, 240)",
                       background: "#fffbeb",
                       borderRadius: 8,
                       padding: "10px 12px",
@@ -140,14 +245,14 @@ export default function CheckoutLeftSteps({
                         color: "#92400e",
                       }}
                     >
-                      Bạn chưa có địa chỉ nhận hàng
+                      You do not have a shipping address yet
                     </p>
                     <p
                       className="mb-0"
                       style={{ fontSize: 12, color: "#a16207" }}
                     >
-                      Vui lòng thêm địa chỉ để tiếp tục tính phí vận chuyển và
-                      đặt hàng.
+                      Please add an address to calculate shipping and place your
+                      order.
                     </p>
                   </div>
                 )}
@@ -157,7 +262,7 @@ export default function CheckoutLeftSteps({
               style={styles.linkPrimary}
               onClick={() => setShowAddressPanel(true)}
             >
-              {hasAddress ? "Thay đổi" : "Thêm địa chỉ"}
+              {hasAddress ? "Change" : "Add address"}
             </button>
             {showAddressPanel && (
               <AddressModal
@@ -171,7 +276,7 @@ export default function CheckoutLeftSteps({
           </div>
         </section>
 
-        {/* ── BƯỚC 2: Kiểm tra kiện hàng & chọn hãng vận chuyển ── */}
+        {/* STEP 2: Review packages & choose shipping */}
         <section style={styles.cardActive}>
           <div className="d-flex gap-3">
             <div style={styles.stepActive}>2</div>
@@ -183,7 +288,7 @@ export default function CheckoutLeftSteps({
                   letterSpacing: "0.03em",
                 }}
               >
-                Kiểm tra kiện hàng &amp; chọn hãng vận chuyển (
+                Review packages &amp; choose shipping (
                 {Object.values(groupedByShop).reduce(
                   (n, g) => n + g.items.length,
                   0,
@@ -203,8 +308,29 @@ export default function CheckoutLeftSteps({
                   shopId,
                   selectedOptionId,
                 );
+                const effectiveShippingFee = getEffectiveShippingFeeForShop(
+                  shopId,
+                  selectedOptionId,
+                );
+                const hasShippingVoucherDiscount =
+                  effectiveShippingFee < displayedShippingFee;
                 const isShippingFeeLoading =
                   shippingFeeLoading[shopId] ?? false;
+                const shopVoucherOptions =
+                  shopVoucherAvailabilityByShop[shopId] || [];
+                const eligibleShopVouchers = shopVoucherOptions.filter(
+                  (item) => item.isEligible,
+                );
+                const selectedShopVoucherIdsForShop =
+                  selectedShopVoucherIds[shopId] || [];
+                const selectedShopVouchers = eligibleShopVouchers
+                  .filter((item) =>
+                    selectedShopVoucherIdsForShop.includes(item.voucher.id),
+                  )
+                  .map((item) => item.voucher);
+                const shopVoucherDiscount = getShopVoucherDiscount(shopId);
+                const canChooseShopVoucher =
+                  !voucherLoading && eligibleShopVouchers.length > 0;
 
                 return (
                   <div
@@ -265,7 +391,7 @@ export default function CheckoutLeftSteps({
                                 style={{ fontSize: 11 }}
                               >
                                 {item.productVariant?.variantName &&
-                                  `Phân loại: ${item.productVariant.variantName}`}
+                                  `Variant: ${item.productVariant.variantName}`}
                                 {item.productVariant?.sku &&
                                   ` | SKU: ${item.productVariant.sku}`}
                               </p>
@@ -282,7 +408,7 @@ export default function CheckoutLeftSteps({
                                   )}
                                 </span>
                                 <span style={styles.qtyBadge}>
-                                  Số lượng:{" "}
+                                  Qty:{" "}
                                   {String(item.quantity).padStart(2, "0")}
                                 </span>
                               </div>
@@ -312,12 +438,120 @@ export default function CheckoutLeftSteps({
                             marginBottom: 10,
                           }}
                         >
+                          <i className="bi bi-ticket-perforated me-2"></i>
+                          Shop voucher
+                        </p>
+                        <div
+                          style={{
+                            background: "#F8FAFF",
+                            borderRadius: 8,
+                            padding: 12,
+                            border: "1px solid rgb(226, 232, 240)",
+                          }}
+                        >
+                          <button
+                            type="button"
+                            className="btn btn-light border rounded-4 text-start p-3 w-100"
+                            disabled={!canChooseShopVoucher}
+                            onClick={() => handleOpenShopVoucherModal(shopId)}
+                          >
+                            <div className="d-flex justify-content-between align-items-center gap-3">
+                              <div>
+                                <div className="small text-muted">
+                                  {selectedShopVouchers.length > 0
+                                    ? "Applied shop voucher"
+                                    : "Choose shop voucher"}
+                                </div>
+                                <div className="fw-semibold text-dark mt-1">
+                                  {voucherLoading
+                                    ? "Loading vouchers..."
+                                    : selectedShopVouchers.length > 0
+                                      ? selectedShopVouchers
+                                          .map((voucher) => voucher.code)
+                                          .join(", ")
+                                      : eligibleShopVouchers.length > 0
+                                        ? `${eligibleShopVouchers.length} eligible voucher${
+                                            eligibleShopVouchers.length === 1
+                                              ? ""
+                                              : "s"
+                                          }`
+                                        : "No matching shop vouchers"}
+                                </div>
+                                <div className="small text-muted mt-1">
+                                  {selectedShopVouchers.length > 0
+                                    ? `${selectedShopVouchers.length} shop voucher${
+                                        selectedShopVouchers.length === 1
+                                          ? ""
+                                          : "s"
+                                      } selected`
+                                    : "Only applies to this package"}
+                                </div>
+                              </div>
+                              <div className="text-end flex-shrink-0">
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    fontWeight: 800,
+                                    color: selectedShopVouchers.length > 0
+                                      ? "#16a34a"
+                                      : "rgb(19, 127, 236)",
+                                    textTransform: "uppercase",
+                                  }}
+                                >
+                                  {selectedShopVouchers.length > 0
+                                    ? `- ${formatCurrency(shopVoucherDiscount)}`
+                                    : canChooseShopVoucher
+                                      ? "Choose"
+                                      : ""}
+                                </div>
+                                <div
+                                  className="text-muted"
+                                  style={{ fontSize: 10 }}
+                                >
+                                  {canChooseShopVoucher
+                                    ? `${eligibleShopVouchers.length} voucher${
+                                        eligibleShopVouchers.length === 1
+                                          ? ""
+                                          : "s"
+                                      }`
+                                    : ""}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                          {selectedShopVouchers.length > 0 && (
+                            <button
+                              type="button"
+                              className="btn btn-link btn-sm text-danger p-0 mt-2"
+                              onClick={() => onClearShopVouchers(shopId)}
+                            >
+                              Remove shop voucher
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          borderTop: "1px solid #f1f5f9",
+                          marginTop: 16,
+                          paddingTop: 16,
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: "#475569",
+                            marginBottom: 10,
+                          }}
+                        >
                           <Truck
                             size={14}
                             className="me-2"
                             style={{ display: "inline" }}
                           />
-                          Chọn hãng vận chuyển
+                          Choose shipping carrier
                         </p>
                         <div
                           style={{
@@ -358,7 +592,7 @@ export default function CheckoutLeftSteps({
                                   fontSize: 12,
                                   fontWeight: 800,
                                   color:
-                                    displayedShippingFee === 0
+                                    effectiveShippingFee === 0
                                       ? "#22c55e"
                                       : "#137fec",
                                   textTransform: "uppercase",
@@ -371,19 +605,21 @@ export default function CheckoutLeftSteps({
                                       role="status"
                                       aria-hidden="true"
                                     />
-                                    Đang tính...
+                                    Calculating...
                                   </span>
-                                ) : displayedShippingFee === 0 ? (
-                                  "Miễn phí"
+                                ) : effectiveShippingFee === 0 ? (
+                                  "Free"
                                 ) : (
-                                  formatCurrency(displayedShippingFee)
+                                  formatCurrency(effectiveShippingFee)
                                 )}
                               </div>
                               <div
                                 className="text-muted"
                                 style={{ fontSize: 10 }}
                               >
-                                {selectedOption?.estimatedDays}
+                                {hasShippingVoucherDiscount
+                                  ? "Free shipping voucher"
+                                  : selectedOption?.estimatedDays}
                               </div>
                             </div>
                           </div>
@@ -404,14 +640,14 @@ export default function CheckoutLeftSteps({
                     letterSpacing: "0.1em",
                   }}
                 >
-                  Vui lòng rà soát kỹ các mặt hàng trước khi thanh toán
+                  Please review all items carefully before checkout
                 </span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ── BƯỚC 3: Phương thức thanh toán (bước cuối) ── */}
+        {/* STEP 3: Payment method */}
         <section style={styles.cardDefault}>
           <div className="d-flex gap-3">
             <div style={styles.stepPending}>3</div>
@@ -423,10 +659,10 @@ export default function CheckoutLeftSteps({
                   letterSpacing: "0.03em",
                 }}
               >
-                Phương thức thanh toán
+                Payment method
               </h3>
               <p className="text-muted mb-3" style={{ fontSize: 12 }}>
-                Chọn phương thức thanh toán phù hợp với bạn.
+                Choose the payment method that works best for you.
               </p>
 
               <div className="d-flex flex-column gap-2 mb-4">
@@ -512,7 +748,7 @@ export default function CheckoutLeftSteps({
                 className="w-100 d-flex align-items-center justify-content-center gap-2"
                 onClick={() => onConfirmPayment(selectedPayment)}
               >
-                XÁC NHẬN THANH TOÁN
+                CONFIRM PAYMENT
                 <CheckCircle size={16} strokeWidth={2} />
               </button>
             </div>
@@ -520,5 +756,156 @@ export default function CheckoutLeftSteps({
         </section>
       </div>
     </div>
+      {activeShopId !== null && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+          style={{
+            background: "rgba(15, 23, 42, 0.42)",
+            zIndex: 1055,
+            padding: "20px",
+          }}
+          onClick={() => setShopVoucherModalShopId(null)}
+        >
+          <div
+            className="bg-white rounded-4 shadow-lg w-100"
+            style={{ maxWidth: "640px", maxHeight: "85vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
+              <div>
+                <h5 className="mb-1">Choose shop voucher</h5>
+                <div className="small text-muted">
+                  {activeShopGroup?.shop?.shopName || "Shop"}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-light border"
+                onClick={() => setShopVoucherModalShopId(null)}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="px-4 py-3 border-bottom bg-light-subtle">
+              <div className="small text-muted">
+                Package subtotal: {formatCurrency(activeShopSubtotal)}
+              </div>
+              <div className="small text-muted">
+                {activeUsableShopVouchers.length} eligible voucher
+                {activeUsableShopVouchers.length === 1 ? "" : "s"}
+              </div>
+            </div>
+
+            <div
+              className="px-4 py-3 d-flex flex-column gap-3"
+              style={{ maxHeight: "52vh", overflowY: "auto" }}
+            >
+              {voucherLoading && (
+                <div className="text-muted small">Loading vouchers...</div>
+              )}
+
+              {!voucherLoading && activeShopVoucherOptions.length === 0 && (
+                <div className="alert alert-light small mb-0">
+                  This shop has no matching vouchers.
+                </div>
+              )}
+
+              {!voucherLoading &&
+                activeShopVoucherOptions.length > 0 &&
+                activeUsableShopVouchers.length === 0 && (
+                  <div className="alert alert-light small mb-0">
+                    No shop vouchers are eligible for this package.
+                  </div>
+                )}
+
+              {!voucherLoading &&
+                activeUsableShopVouchers.map(({ voucher, reason }) => {
+                  const isSelected = shopVoucherDraftIds.includes(voucher.id);
+
+                  return (
+                    <button
+                      key={`shop-voucher-${voucher.id}`}
+                      type="button"
+                      className={`btn text-start border rounded-4 p-0 overflow-hidden ${
+                        isSelected
+                          ? "border-warning shadow-sm"
+                          : "border-warning-subtle"
+                      }`}
+                      onClick={() => handleToggleDraftShopVoucher(voucher)}
+                    >
+                      <div className="row g-0 align-items-stretch">
+                        <div
+                          className="col-4 col-sm-3 d-flex flex-column justify-content-center text-white p-3"
+                          style={{ background: "#f97316" }}
+                        >
+                          <div className="fw-bold">{voucher.code}</div>
+                          <div className="small mt-2">
+                            {getShopVoucherLabel(voucher)}
+                          </div>
+                        </div>
+                        <div className="col-8 col-sm-9 p-3 bg-white">
+                          <div className="d-flex justify-content-between align-items-start gap-3">
+                            <div>
+                              <div className="fw-semibold text-dark">
+                                {voucher.title}
+                              </div>
+                              <div className="small text-muted mt-1">
+                                {voucher.description || voucher.title}
+                              </div>
+                              <div className="small text-muted mt-2">
+                                Min. order:{" "}
+                                {formatCurrency(
+                                  Number(voucher.minOrderValue || 0),
+                                )}
+                              </div>
+                              <div className="small text-muted">
+                                {voucher.stackable
+                                  ? "Stackable"
+                                  : "Not stackable"}
+                              </div>
+                              {reason && (
+                                <div className="small text-warning mt-2">
+                                  {reason}
+                                </div>
+                              )}
+                            </div>
+                            <span
+                              className={`badge ${
+                                isSelected
+                                  ? "bg-warning text-dark"
+                                  : "bg-success-subtle text-success"
+                              }`}
+                            >
+                              {isSelected ? "Selected" : "Available"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
+
+            <div className="d-flex justify-content-end gap-2 px-4 py-3 border-top">
+              <button
+                type="button"
+                className="btn btn-light border px-4"
+                onClick={() => setShopVoucherModalShopId(null)}
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary px-4"
+                onClick={handleApplyShopVoucherDraft}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

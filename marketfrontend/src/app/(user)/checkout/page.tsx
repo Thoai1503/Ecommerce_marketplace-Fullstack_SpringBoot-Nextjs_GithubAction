@@ -7,7 +7,6 @@ import {
   ShippingOption,
   ShippingSelection,
 } from "@/components/client/checkout_page/types";
-import { useCheckoutPage } from "@/feature/client/hook";
 import { CartItem, GroupedCartByShop } from "@/validators/cart";
 import { createOrder } from "@/feature/client/service";
 import { IOrderItem } from "@/validators/orderItem";
@@ -21,12 +20,17 @@ const cityMap = { 202: "TP. Hồ Chí Minh", 1: "Hà Nội" };
 import { useQuery } from "@tanstack/react-query";
 import { message } from "antd";
 import { ADDRESS_KEY, API_URL, PROVINCE_API } from "@/helper/api";
-import { calculateFeeOfLOGS } from "@/service/calculateFeeAPI";
-import { CalculateFeePayload } from "@/types";
-import { set } from "zod";
-import { getAddressByShopId } from "@/service/addresses";
+import {
+  CalculateFeePayload,
+  VoucherScopeRule,
+  VoucherSegmentRule,
+} from "@/types";
 import { AxiosError } from "axios";
-import { getUserInfoById, getUsersInfoByIds } from "@/service/userInfo";
+import { getUserInfoById } from "@/service/userInfo";
+import { Cart } from "@/types/data/Cart";
+import { getVoucherRules } from "@/service/vouchers";
+import { calculateFeeOfLOGS } from "@/service/calculateFeeAPI";
+import { getAddressByShopId } from "@/service/addresses";
 
 // Hàm fetch districts theo provinceId
 async function fetchDistrictsByProvince(provinceId: number) {
@@ -87,6 +91,7 @@ export function useWardName(districtId: number, wardCode: number) {
 }
 
 type OwnedVoucher = {
+  userVoucherId: number;
   id: number;
   code: string;
   title: string;
@@ -99,8 +104,12 @@ type OwnedVoucher = {
   validTo?: string | null;
   claimEndAt?: string | null;
   issuerType?: string | null;
+  issuerId?: number | null;
+  stackable: boolean;
   status: string;
   claimedAt?: string | null;
+  scopeRules: VoucherScopeRule[];
+  segmentRules: VoucherSegmentRule[];
 };
 
 type VoucherAvailability = {
@@ -109,14 +118,274 @@ type VoucherAvailability = {
   reason: string | null;
 };
 
+type VoucherItemAmount = {
+  item: CartItem;
+  amount: number;
+};
+
 const normalizeVoucherNumber = (value: unknown) => {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const normalizeVoucherBoolean = (value: unknown) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "1" || normalized === "true";
+  }
+  return false;
+};
+
+const getCartItemSubtotal = (item: CartItem) =>
+  (item.productVariant?.price ?? 0) * item.quantity;
+
+const getCartItemShopId = (item: CartItem) =>
+  Number(item?.product?.shop?.id ?? 0);
+
+const itemMatchesScopeRule = (item: CartItem, rule: VoucherScopeRule) => {
+  const scopeId = Number(rule.scopeId || 0);
+
+  switch (rule.scopeType) {
+    case "SHOP":
+      return getCartItemShopId(item) === scopeId;
+    case "PRODUCT":
+      return Number(item?.product?.id ?? 0) === scopeId;
+    case "CATEGORY":
+      return (
+        Number(
+          (item?.product as any)?.category_id ??
+            (item?.product as any)?.categoryId ??
+            0,
+        ) === scopeId
+      );
+    case "BRAND":
+      return (
+        Number(
+          (item?.product as any)?.brand_id ??
+            (item?.product as any)?.brand ??
+            0,
+        ) === scopeId
+      );
+    default:
+      return false;
+  }
+};
+
+const getVoucherApplicableCartItems = (
+  voucher: OwnedVoucher,
+  cartItems: CartItem[],
+) => {
+  const issuerType = String(voucher.issuerType ?? "").toUpperCase();
+  const includedScopeRules = voucher.scopeRules.filter(
+    (rule) => rule.includeExclude === "INCLUDE",
+  );
+  const excludedScopeRules = voucher.scopeRules.filter(
+    (rule) => rule.includeExclude === "EXCLUDE",
+  );
+
+  let applicableItems = cartItems;
+
+  if (issuerType === "SHOP") {
+    const issuerShopId = normalizeVoucherNumber(voucher.issuerId);
+    const includeShopIds = includedScopeRules
+      .filter((rule) => rule.scopeType === "SHOP")
+      .map((rule) => Number(rule.scopeId || 0))
+      .filter((shopId) => shopId > 0);
+
+    const shopIds = issuerShopId > 0 ? [issuerShopId] : includeShopIds;
+    if (shopIds.length === 0) {
+      return [];
+    }
+
+    const allowedShopIds = new Set(shopIds);
+    applicableItems = applicableItems.filter((item) =>
+      allowedShopIds.has(getCartItemShopId(item)),
+    );
+  }
+
+  if (excludedScopeRules.length > 0) {
+    applicableItems = applicableItems.filter(
+      (item) =>
+        !excludedScopeRules.some((rule) => itemMatchesScopeRule(item, rule)),
+    );
+  }
+
+  const productScopeRules =
+    issuerType === "SHOP"
+      ? includedScopeRules.filter((rule) => rule.scopeType !== "SHOP")
+      : includedScopeRules;
+
+  if (productScopeRules.length > 0) {
+    applicableItems = applicableItems.filter((item) =>
+      productScopeRules.some((rule) => itemMatchesScopeRule(item, rule)),
+    );
+  }
+
+  return applicableItems;
+};
+
+const getVoucherApplicableSubtotal = (
+  voucher: OwnedVoucher,
+  cartItems: CartItem[],
+) =>
+  getVoucherApplicableCartItems(voucher, cartItems).reduce(
+    (sum, item) => sum + getCartItemSubtotal(item),
+    0,
+  );
+
+const getInitialVoucherItemAmounts = (cartItems: CartItem[]) =>
+  cartItems.map((item) => ({
+    item,
+    amount: getCartItemSubtotal(item),
+  }));
+
+const getVoucherApplicableAmount = (
+  voucher: OwnedVoucher,
+  itemAmounts: VoucherItemAmount[],
+) => {
+  const applicableItems = new Set(
+    getVoucherApplicableCartItems(
+      voucher,
+      itemAmounts.map((entry) => entry.item),
+    ),
+  );
+
+  return itemAmounts.reduce(
+    (sum, entry) =>
+      applicableItems.has(entry.item) ? sum + entry.amount : sum,
+    0,
+  );
+};
+
+const getVoucherDiscountAmountForSubtotal = (
+  voucher: OwnedVoucher | undefined,
+  applicableSubtotal: number,
+) => {
+  if (!voucher) return 0;
+
+  const minOrderValue = normalizeVoucherNumber(voucher.minOrderValue);
+  if (minOrderValue > 0 && applicableSubtotal < minOrderValue) {
+    return 0;
+  }
+
+  const type = String(voucher.discountType ?? "").toUpperCase();
+
+  if (type === "FIXED") {
+    return Math.min(
+      applicableSubtotal,
+      normalizeVoucherNumber(voucher.discountAmount),
+    );
+  }
+
+  if (type === "PERCENT") {
+    const rawDiscount =
+      (applicableSubtotal * normalizeVoucherNumber(voucher.discountPercent)) /
+      100;
+    const maxDiscount = normalizeVoucherNumber(voucher.maxDiscountAmount);
+
+    return Math.min(
+      applicableSubtotal,
+      maxDiscount > 0 ? Math.min(rawDiscount, maxDiscount) : rawDiscount,
+    );
+  }
+
+  return 0;
+};
+
+const getVoucherDiscountAmountFromItemAmounts = (
+  voucher: OwnedVoucher | undefined,
+  itemAmounts: VoucherItemAmount[],
+) => {
+  if (!voucher) return 0;
+
+  return getVoucherDiscountAmountForSubtotal(
+    voucher,
+    getVoucherApplicableAmount(voucher, itemAmounts),
+  );
+};
+
+const applyVoucherToItemAmounts = (
+  voucher: OwnedVoucher,
+  itemAmounts: VoucherItemAmount[],
+) => {
+  const applicableItems = new Set(
+    getVoucherApplicableCartItems(
+      voucher,
+      itemAmounts.map((entry) => entry.item),
+    ),
+  );
+  const applicableAmount = itemAmounts.reduce(
+    (sum, entry) =>
+      applicableItems.has(entry.item) ? sum + entry.amount : sum,
+    0,
+  );
+  const discount = getVoucherDiscountAmountForSubtotal(
+    voucher,
+    applicableAmount,
+  );
+
+  if (discount <= 0 || applicableAmount <= 0) {
+    return { discount: 0, itemAmounts };
+  }
+
+  let remainingDiscount = discount;
+  let remainingApplicableAmount = applicableAmount;
+
+  return {
+    discount,
+    itemAmounts: itemAmounts.map((entry) => {
+      if (!applicableItems.has(entry.item) || entry.amount <= 0) {
+        return entry;
+      }
+
+      const reduction =
+        remainingApplicableAmount <= entry.amount
+          ? remainingDiscount
+          : (discount * entry.amount) / applicableAmount;
+      const safeReduction = Math.min(entry.amount, reduction);
+      remainingDiscount -= safeReduction;
+      remainingApplicableAmount -= entry.amount;
+
+      return {
+        item: entry.item,
+        amount: Math.max(0, entry.amount - safeReduction),
+      };
+    }),
+  };
+};
+
+const isVoucherFreeShippingForShop = (
+  voucher: OwnedVoucher | undefined,
+  shopId: number,
+  cartItems: CartItem[],
+  itemAmounts?: VoucherItemAmount[],
+) => {
+  if (!voucher) return false;
+
+  if (String(voucher.discountType ?? "").toUpperCase() !== "FREE_SHIPPING") {
+    return false;
+  }
+
+  const applicableSubtotal = itemAmounts
+    ? getVoucherApplicableAmount(voucher, itemAmounts)
+    : getVoucherApplicableSubtotal(voucher, cartItems);
+  const minOrderValue = normalizeVoucherNumber(voucher.minOrderValue);
+  if (minOrderValue > 0 && applicableSubtotal < minOrderValue) {
+    return false;
+  }
+
+  return getVoucherApplicableCartItems(voucher, cartItems).some(
+    (item) => getCartItemShopId(item) === shopId,
+  );
+};
+
 const getVoucherAvailability = (
   voucher: OwnedVoucher,
-  subtotal: number,
+  cartItems: CartItem[],
+  hasPreviousOrder: boolean,
+  itemAmounts?: VoucherItemAmount[],
 ): VoucherAvailability => {
   const status = String(voucher.status ?? "").toUpperCase();
   if (status && status !== "CLAIMED") {
@@ -136,21 +405,47 @@ const getVoucherAvailability = (
     };
   }
 
-  if (subtotal <= 0) {
+  const applicableSubtotal = itemAmounts
+    ? getVoucherApplicableAmount(voucher, itemAmounts)
+    : getVoucherApplicableSubtotal(voucher, cartItems);
+  if (applicableSubtotal <= 0) {
     return {
       voucher,
       isEligible: false,
-      reason: "Select products to use vouchers",
+      reason:
+        String(voucher.issuerType ?? "").toUpperCase() === "SHOP"
+          ? "Only applies to products from this shop"
+          : "Does not match voucher scope",
     };
   }
 
   const minOrderValue = normalizeVoucherNumber(voucher.minOrderValue);
-  if (minOrderValue > 0 && subtotal < minOrderValue) {
+  if (minOrderValue > 0 && applicableSubtotal < minOrderValue) {
     return {
       voucher,
       isEligible: false,
-      reason: `Min. order ${minOrderValue.toLocaleString("vi-VN")}d`,
+      reason: `Min. eligible amount ${minOrderValue.toLocaleString("vi-VN")}d`,
     };
+  }
+
+  for (const rule of voucher.segmentRules) {
+    const segmentType = String(rule.segmentType ?? "").toUpperCase();
+
+    if (segmentType === "NEW_USER" || segmentType === "FIRST_ORDER") {
+      if (hasPreviousOrder) {
+        return {
+          voucher,
+          isEligible: false,
+          reason: "Only for new users or first order",
+        };
+      }
+    } else {
+      return {
+        voucher,
+        isEligible: false,
+        reason: `Unsupported segment rule: ${segmentType}`,
+      };
+    }
   }
 
   return {
@@ -164,12 +459,27 @@ export default function CheckoutPage() {
   const { userId } = useUserAuth();
   const { data: addressesQuery } = useAddresses(userId || 0);
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const [shippingFees, setShippingFees] = useState<Record<number, number>>({});
+  const [showAddressPanel, setShowAddressPanel] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState(0);
+  const [recipient, setRecipient] = useState<any>(null);
   const [ownedVouchers, setOwnedVouchers] = useState<OwnedVoucher[]>([]);
   const [voucherLoading, setVoucherLoading] = useState(false);
-  const [selectedVoucherId, setSelectedVoucherId] = useState<number | null>(
-    null,
-  );
+  const [hasPreviousOrder, setHasPreviousOrder] = useState(false);
+  const [selectedPlatformVoucherIds, setSelectedPlatformVoucherIds] = useState<
+    number[]
+  >([]);
+  const [selectedShopVoucherIds, setSelectedShopVoucherIds] = useState<
+    Record<number, number[]>
+  >({});
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
+  const defaultAddress =
+    addresses.find((a) => a.id === selectedAddressId) ||
+    addresses.find((a) => a.isDefault === 1) ||
+    addresses[0];
+
+  const hasAddress = Boolean(defaultAddress) && addresses.length > 0;
 
   useEffect(() => {
     async function mapAddresses() {
@@ -226,7 +536,6 @@ export default function CheckoutPage() {
     }
     mapAddresses();
   }, [addressesQuery]);
-  const { checkOut } = useCheckoutPage();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -262,16 +571,14 @@ export default function CheckoutPage() {
     () =>
       cartItems.some((item) => {
         const sellerUserId = Number(
-          item?.product?.shop?.userId ??
-            item?.product?.shop?.user_id ??
-            0,
+          item?.product?.shop?.userId ?? item?.product?.shop?.user_id ?? 0,
         );
-        return Boolean(userId) && sellerUserId > 0 && sellerUserId === Number(userId);
+        return (
+          Boolean(userId) && sellerUserId > 0 && sellerUserId === Number(userId)
+        );
       }),
     [cartItems, userId],
   );
-
-  console.log("Grouped cart items by shop:", groupedByShop);
 
   // Shipping options (có thể lấy từ API)
   const shippingOptions: ShippingOption[] = [
@@ -302,20 +609,40 @@ export default function CheckoutPage() {
         calculateFeeOfLOGS(params),
     },
   ];
-
   // State để lưu lựa chọn vận chuyển cho mỗi shop
   const [shippingSelections, setShippingSelections] =
-    useState<ShippingSelection>(
-      Object.keys(groupedByShop).reduce((acc, shopId) => {
-        acc[Number(shopId)] = "standard"; // mặc định chọn tiêu chuẩn
-        return acc;
-      }, {} as ShippingSelection),
-    );
+    useState<ShippingSelection>({});
 
-  const [shippingFees, setShippingFees] = useState<Record<number, number>>({});
   const [shippingFeeLoading, setShippingFeeLoading] = useState<
     Record<number, boolean>
   >({});
+
+  useEffect(() => {
+    const shopIds = Object.keys(groupedByShop).map(Number).filter(Boolean);
+
+    if (shopIds.length === 0) {
+      setShippingSelections({});
+      return;
+    }
+
+    setShippingSelections((prev) => {
+      let changed = false;
+      const next: ShippingSelection = {};
+
+      for (const shopId of shopIds) {
+        next[shopId] = prev[shopId] || "standard";
+        if (prev[shopId] !== next[shopId]) {
+          changed = true;
+        }
+      }
+
+      if (!changed && Object.keys(prev).length === shopIds.length) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [groupedByShop]);
 
   // Hàm format currency
   const formatCurrency = (amount: number) => {
@@ -336,20 +663,13 @@ export default function CheckoutPage() {
   const getShippingFeeForShop = (shopId: number, shippingOptionId: string) => {
     const option = getSelectedShippingOption(shopId, shippingOptionId);
     if (!option) return 0;
+
+    // Nếu option có calculateFeeAPI, dùng giá trị đã tính từ shippingFees
     if (option.calculateFeeAPI) {
       return shippingFees[shopId] ?? 0;
     }
-    return option.fee || 0;
-  };
 
-  // Tính tổng phí vận chuyển
-  const calculateTotalShippingFee = () => {
-    return Object.entries(shippingSelections).reduce(
-      (total, [shopId, optionId]) => {
-        return total + getShippingFeeForShop(Number(shopId), optionId);
-      },
-      0,
-    );
+    return option.fee || 0;
   };
 
   const isAnyShippingFeeLoading =
@@ -366,7 +686,8 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!userId) {
       setOwnedVouchers([]);
-      setSelectedVoucherId(null);
+      setSelectedPlatformVoucherIds([]);
+      setSelectedShopVoucherIds({});
       return;
     }
 
@@ -374,12 +695,16 @@ export default function CheckoutPage() {
       setVoucherLoading(true);
 
       try {
-        const [userVouchersRes, vouchersRes] = await Promise.all([
+        const [userVouchersRes, vouchersRes, ordersRes] = await Promise.all([
           fetch(`${API_URL}/api/user-vouchers/user/${userId}`, {
             credentials: "include",
             cache: "no-store",
           }),
           fetch(`${API_URL}/api/vouchers`, {
+            credentials: "include",
+            cache: "no-store",
+          }),
+          fetch(`${API_URL}/api/orders?userId=${userId}&page=1&size=1`, {
             credentials: "include",
             cache: "no-store",
           }),
@@ -389,9 +714,10 @@ export default function CheckoutPage() {
           throw new Error("Failed to load vouchers");
         }
 
-        const [userVouchersJson, vouchersJson] = await Promise.all([
+        const [userVouchersJson, vouchersJson, ordersJson] = await Promise.all([
           userVouchersRes.json(),
           vouchersRes.json(),
+          ordersRes.ok ? ordersRes.json() : Promise.resolve(null),
         ]);
 
         const userVouchers = Array.isArray(userVouchersJson)
@@ -402,34 +728,85 @@ export default function CheckoutPage() {
           vouchers.map((voucher: any) => [Number(voucher.id), voucher]),
         );
 
-        const mappedVouchers: Array<OwnedVoucher | null> = userVouchers.map(
-          (item: any) => {
-            const voucher = voucherMap.get(
-              Number(item.voucherId ?? item.voucher_id),
-            );
-            if (!voucher) return null;
+        const claimedVoucherPairs = userVouchers.map((item: any) => ({
+          userVoucherId: Number(item.id ?? 0),
+          voucherId: Number(item.voucherId ?? item.voucher_id ?? 0),
+          claimedAt: item.claimedAt ?? item.claimed_at,
+          status: item.status,
+        }));
 
-            return {
-              id: Number(voucher.id),
-              code: voucher.code,
-              title: voucher.title,
-              description: voucher.description,
-              discountType: voucher.discountType ?? voucher.discount_type,
-              discountPercent:
-                voucher.discountPercent ?? voucher.discount_percent,
-              discountAmount:
-                voucher.discountAmount ?? voucher.discount_amount,
-              maxDiscountAmount:
-                voucher.maxDiscountAmount ?? voucher.max_discount_amount,
-              minOrderValue: voucher.minOrderValue ?? voucher.min_order_value,
-              validTo: voucher.validTo ?? voucher.valid_to,
-              claimEndAt: voucher.claimEndAt ?? voucher.claim_end_at,
-              issuerType: voucher.issuerType ?? voucher.issuer_type,
-              status: item.status,
-              claimedAt: item.claimedAt ?? item.claimed_at,
-            } satisfies OwnedVoucher;
-          },
+        const voucherRulesEntries = await Promise.all(
+          claimedVoucherPairs.map(async ({ voucherId }) => {
+            try {
+              const rules = await getVoucherRules(String(voucherId));
+
+              return [voucherId, rules] as [
+                number,
+                {
+                  scopeRules: VoucherScopeRule[];
+                  segmentRules: VoucherSegmentRule[];
+                },
+              ];
+            } catch (error) {
+              console.error("Load voucher rules error:", voucherId, error);
+
+              return [
+                voucherId,
+                {
+                  scopeRules: [],
+                  segmentRules: [],
+                },
+              ] as [
+                number,
+                {
+                  scopeRules: VoucherScopeRule[];
+                  segmentRules: VoucherSegmentRule[];
+                },
+              ];
+            }
+          }),
         );
+
+        const voucherRulesMap = new Map(voucherRulesEntries);
+
+        const mappedVouchers: Array<OwnedVoucher | null> =
+          claimedVoucherPairs.map(
+            ({ userVoucherId, voucherId, claimedAt, status }) => {
+              const voucher = voucherMap.get(voucherId);
+              if (!voucher) return null;
+              const rules = voucherRulesMap.get(voucherId) || {
+                scopeRules: [],
+                segmentRules: [],
+              };
+
+              return {
+                userVoucherId,
+                id: Number(voucher.id),
+                code: voucher.code,
+                title: voucher.title,
+                description: voucher.description,
+                discountType: voucher.discountType ?? voucher.discount_type,
+                discountPercent:
+                  voucher.discountPercent ?? voucher.discount_percent,
+                discountAmount:
+                  voucher.discountAmount ?? voucher.discount_amount,
+                maxDiscountAmount:
+                  voucher.maxDiscountAmount ?? voucher.max_discount_amount,
+                minOrderValue: voucher.minOrderValue ?? voucher.min_order_value,
+                validTo: voucher.validTo ?? voucher.valid_to,
+                claimEndAt: voucher.claimEndAt ?? voucher.claim_end_at,
+                issuerType: voucher.issuerType ?? voucher.issuer_type,
+                issuerId: voucher.issuerId ?? voucher.issuer_id,
+                stackable: normalizeVoucherBoolean(
+                  voucher.stackable ?? voucher.stackable_flag,
+                ),
+                status,
+                claimedAt,
+                scopeRules: rules.scopeRules,
+                segmentRules: rules.segmentRules,
+              } satisfies OwnedVoucher;
+            },
+          );
 
         const merged: OwnedVoucher[] = mappedVouchers
           .filter((item): item is OwnedVoucher => item !== null)
@@ -440,9 +817,11 @@ export default function CheckoutPage() {
           });
 
         setOwnedVouchers(merged);
+        setHasPreviousOrder(Number(ordersJson?.totalRecords ?? 0) > 0);
       } catch (error) {
         console.error("Load checkout vouchers error:", error);
         setOwnedVouchers([]);
+        setHasPreviousOrder(false);
       } finally {
         setVoucherLoading(false);
       }
@@ -451,66 +830,238 @@ export default function CheckoutPage() {
     loadOwnedVouchers();
   }, [userId]);
 
-  const voucherAvailabilityList = useMemo(() => {
-    const subtotal = calculateSubtotal();
-    return ownedVouchers.map((voucher) =>
-      getVoucherAvailability(voucher, subtotal),
-    );
-  }, [ownedVouchers, cartItems]);
-
-  const selectedVoucher = ownedVouchers.find(
-    (voucher) => voucher.id === selectedVoucherId,
+  const platformVouchers = useMemo(
+    () =>
+      ownedVouchers.filter(
+        (voucher) =>
+          String(voucher.issuerType ?? "").toUpperCase() === "PLATFORM",
+      ),
+    [ownedVouchers],
   );
 
-  const voucherDiscount = useMemo(() => {
-    if (!selectedVoucher) return 0;
+  const shopVouchers = useMemo(
+    () =>
+      ownedVouchers.filter(
+        (voucher) => String(voucher.issuerType ?? "").toUpperCase() === "SHOP",
+      ),
+    [ownedVouchers],
+  );
 
-    const subtotal = calculateSubtotal();
-    const minOrderValue = normalizeVoucherNumber(selectedVoucher.minOrderValue);
-    if (minOrderValue > 0 && subtotal < minOrderValue) {
-      return 0;
+  const shopVoucherAvailabilityByShop = useMemo(() => {
+    return Object.keys(groupedByShop).reduce(
+      (acc, shopIdStr) => {
+        const shopId = Number(shopIdStr);
+        acc[shopId] = shopVouchers
+          .filter((voucher) =>
+            getVoucherApplicableCartItems(voucher, cartItems).some(
+              (item) => getCartItemShopId(item) === shopId,
+            ),
+          )
+          .map((voucher) =>
+            getVoucherAvailability(voucher, cartItems, hasPreviousOrder),
+          );
+        return acc;
+      },
+      {} as Record<number, VoucherAvailability[]>,
+    );
+  }, [groupedByShop, shopVouchers, cartItems, hasPreviousOrder]);
+
+  const selectedPlatformVouchers = useMemo(() => {
+    const voucherMap = new Map(
+      platformVouchers.map((voucher) => [voucher.id, voucher]),
+    );
+
+    return selectedPlatformVoucherIds
+      .map((voucherId) => voucherMap.get(voucherId))
+      .filter((voucher): voucher is OwnedVoucher => Boolean(voucher));
+  }, [selectedPlatformVoucherIds, platformVouchers]);
+
+  const selectedShopVouchersByShop = useMemo(() => {
+    const voucherMap = new Map(
+      shopVouchers.map((voucher) => [voucher.id, voucher]),
+    );
+
+    return Object.entries(selectedShopVoucherIds).reduce(
+      (acc, [shopIdStr, voucherIds]) => {
+        const shopId = Number(shopIdStr);
+        acc[shopId] = voucherIds
+          .map((voucherId) => voucherMap.get(voucherId))
+          .filter((voucher): voucher is OwnedVoucher => Boolean(voucher));
+        return acc;
+      },
+      {} as Record<number, OwnedVoucher[]>,
+    );
+  }, [selectedShopVoucherIds, shopVouchers]);
+
+  const shopVoucherCalculation = useMemo(() => {
+    let itemAmounts = getInitialVoucherItemAmounts(cartItems);
+    const discountByShop: Record<number, number> = {};
+
+    Object.entries(selectedShopVouchersByShop).forEach(
+      ([shopIdStr, vouchers]) => {
+        const shopId = Number(shopIdStr);
+
+        vouchers.forEach((voucher) => {
+          const result = applyVoucherToItemAmounts(voucher, itemAmounts);
+          itemAmounts = result.itemAmounts;
+          discountByShop[shopId] =
+            (discountByShop[shopId] || 0) + result.discount;
+        });
+      },
+    );
+
+    return {
+      itemAmounts,
+      discountByShop,
+      totalDiscount: Object.values(discountByShop).reduce(
+        (total, discount) => total + discount,
+        0,
+      ),
+    };
+  }, [cartItems, selectedShopVouchersByShop]);
+
+  const platformVoucherAvailabilityList = useMemo(() => {
+    return platformVouchers.map((voucher) =>
+      getVoucherAvailability(
+        voucher,
+        cartItems,
+        hasPreviousOrder,
+        shopVoucherCalculation.itemAmounts,
+      ),
+    );
+  }, [
+    platformVouchers,
+    cartItems,
+    hasPreviousOrder,
+    shopVoucherCalculation.itemAmounts,
+  ]);
+
+  const platformVoucherCalculation = useMemo(() => {
+    let itemAmounts = shopVoucherCalculation.itemAmounts;
+    let totalDiscount = 0;
+
+    selectedPlatformVouchers.forEach((voucher) => {
+      const result = applyVoucherToItemAmounts(voucher, itemAmounts);
+      itemAmounts = result.itemAmounts;
+      totalDiscount += result.discount;
+    });
+
+    return {
+      itemAmounts,
+      totalDiscount,
+    };
+  }, [selectedPlatformVouchers, shopVoucherCalculation.itemAmounts]);
+
+  const selectedRedeemableVouchers = useMemo(() => {
+    const voucherMap = new Map<number, OwnedVoucher>();
+    Object.values(selectedShopVouchersByShop).forEach((vouchers) => {
+      vouchers.forEach((voucher) => voucherMap.set(voucher.id, voucher));
+    });
+    selectedPlatformVouchers.forEach((voucher) => {
+      voucherMap.set(voucher.id, voucher);
+    });
+    return Array.from(voucherMap.values());
+  }, [selectedPlatformVouchers, selectedShopVouchersByShop]);
+
+  const shopVoucherDiscountByShop = shopVoucherCalculation.discountByShop;
+  const shopVoucherDiscount = shopVoucherCalculation.totalDiscount;
+  const platformVoucherDiscount = platformVoucherCalculation.totalDiscount;
+  const voucherDiscount = shopVoucherDiscount + platformVoucherDiscount;
+
+  const handleApplyPlatformVoucherIds = (voucherIds: number[]) => {
+    const nextVouchers = voucherIds
+      .map((voucherId) =>
+        platformVouchers.find((voucher) => voucher.id === voucherId),
+      )
+      .filter((voucher): voucher is OwnedVoucher => Boolean(voucher));
+    const nonStackableVoucher = [...nextVouchers]
+      .reverse()
+      .find((voucher) => !voucher.stackable);
+
+    if (nonStackableVoucher) {
+      setSelectedPlatformVoucherIds([nonStackableVoucher.id]);
+      return;
     }
 
-    const type = String(selectedVoucher.discountType ?? "").toUpperCase();
+    setSelectedPlatformVoucherIds(nextVouchers.map((voucher) => voucher.id));
+  };
 
-    if (type === "FIXED") {
-      return Math.min(
-        subtotal,
-        normalizeVoucherNumber(selectedVoucher.discountAmount),
-      );
+  const handleApplyShopVoucherIds = (shopId: number, voucherIds: number[]) => {
+    const shopVoucherPool = (shopVoucherAvailabilityByShop[shopId] || []).map(
+      (item) => item.voucher,
+    );
+    const nextVouchers = voucherIds
+      .map((voucherId) =>
+        shopVoucherPool.find((voucher) => voucher.id === voucherId),
+      )
+      .filter((voucher): voucher is OwnedVoucher => Boolean(voucher));
+
+    if (nextVouchers.length === 0) {
+      setSelectedShopVoucherIds((current) => ({
+        ...current,
+        [shopId]: [],
+      }));
+      return;
     }
 
-    if (type === "PERCENT") {
-      const rawDiscount =
-        (subtotal * normalizeVoucherNumber(selectedVoucher.discountPercent)) /
-        100;
-      const maxDiscount = normalizeVoucherNumber(
-        selectedVoucher.maxDiscountAmount,
-      );
+    const nonStackableVoucher = [...nextVouchers]
+      .reverse()
+      .find((voucher) => !voucher.stackable);
 
-      return Math.min(
-        subtotal,
-        maxDiscount > 0 ? Math.min(rawDiscount, maxDiscount) : rawDiscount,
-      );
-    }
+    setSelectedShopVoucherIds((current) => ({
+      ...current,
+      [shopId]: nonStackableVoucher
+        ? [nonStackableVoucher.id]
+        : nextVouchers.map((voucher) => voucher.id),
+    }));
+  };
 
-    return 0;
-  }, [selectedVoucher, cartItems]);
+  const handleClearShopVouchers = (shopId: number) => {
+    setSelectedShopVoucherIds((current) => ({
+      ...current,
+      [shopId]: [],
+    }));
+  };
+
+  const getShopVoucherDiscount = (shopId: number) =>
+    shopVoucherDiscountByShop[shopId] || 0;
+
+  const isShippingFreeByVoucherForShop = (shopId: number) =>
+    selectedPlatformVouchers.some((voucher) =>
+      isVoucherFreeShippingForShop(
+        voucher,
+        shopId,
+        cartItems,
+        shopVoucherCalculation.itemAmounts,
+      ),
+    ) ||
+    (selectedShopVouchersByShop[shopId] || []).some((voucher) =>
+      isVoucherFreeShippingForShop(voucher, shopId, cartItems),
+    );
+
+  const getEffectiveShippingFeeForShop = (
+    shopId: number,
+    shippingOptionId: string,
+  ) =>
+    isShippingFreeByVoucherForShop(shopId)
+      ? 0
+      : getShippingFeeForShop(shopId, shippingOptionId);
 
   const effectiveShippingFee = useMemo(() => {
-    if (!selectedVoucher) return calculateTotalShippingFee();
-
-    const subtotal = calculateSubtotal();
-    const minOrderValue = normalizeVoucherNumber(selectedVoucher.minOrderValue);
-    if (minOrderValue > 0 && subtotal < minOrderValue) {
-      return calculateTotalShippingFee();
-    }
-
-    return String(selectedVoucher.discountType ?? "").toUpperCase() ===
-      "FREE_SHIPPING"
-      ? 0
-      : calculateTotalShippingFee();
-  }, [selectedVoucher, shippingFees, shippingSelections, cartItems]);
+    return Object.entries(shippingSelections).reduce(
+      (total, [shopId, optionId]) => {
+        const numericShopId = Number(shopId);
+        return total + getEffectiveShippingFeeForShop(numericShopId, optionId);
+      },
+      0,
+    );
+  }, [
+    selectedPlatformVouchers,
+    selectedShopVouchersByShop,
+    shopVoucherCalculation.itemAmounts,
+    shippingSelections,
+    cartItems,
+  ]);
 
   const finalTotal = Math.max(
     0,
@@ -518,22 +1069,47 @@ export default function CheckoutPage() {
   );
 
   useEffect(() => {
-    if (!selectedVoucherId) return;
+    if (selectedPlatformVoucherIds.length === 0) return;
 
-    const stillUsable = voucherAvailabilityList.some(
-      (item) => item.isEligible && item.voucher.id === selectedVoucherId,
+    const usableIds = selectedPlatformVoucherIds.filter((voucherId) =>
+      platformVoucherAvailabilityList.some(
+        (item) => item.isEligible && item.voucher.id === voucherId,
+      ),
     );
 
-    if (!stillUsable) {
-      setSelectedVoucherId(null);
+    if (usableIds.length !== selectedPlatformVoucherIds.length) {
+      setSelectedPlatformVoucherIds(usableIds);
     }
-  }, [selectedVoucherId, voucherAvailabilityList]);
+  }, [selectedPlatformVoucherIds, platformVoucherAvailabilityList]);
+
+  useEffect(() => {
+    setSelectedShopVoucherIds((current) => {
+      let changed = false;
+      const next = { ...current };
+
+      Object.entries(current).forEach(([shopIdStr, voucherIds]) => {
+        if (voucherIds.length === 0) return;
+        const shopId = Number(shopIdStr);
+        const usableIds = voucherIds.filter((voucherId) =>
+          (shopVoucherAvailabilityByShop[shopId] || []).some(
+            (item) => item.isEligible && item.voucher.id === voucherId,
+          ),
+        );
+
+        if (usableIds.length !== voucherIds.length) {
+          next[shopId] = usableIds;
+          changed = true;
+        }
+      });
+
+      return changed ? next : current;
+    });
+  }, [shopVoucherAvailabilityByShop]);
   const [paymentInfo, setPaymentInfo] = useState<any>({
     amount: finalTotal,
     orderId: Date.now(),
-
-    user_id: 1,
-    method: "vnpay",
+    user_id: Number(userId || 0),
+    method: "COD",
     bankCode: "NCB",
     orderInfo: "Thanh toán đơn hàng #123456" + Date.now(),
   });
@@ -543,8 +1119,9 @@ export default function CheckoutPage() {
     setPaymentInfo((prev: any) => ({
       ...prev,
       amount: finalTotal,
+      user_id: Number(userId || 0),
     }));
-  }, [finalTotal]);
+  }, [finalTotal, userId]);
 
   const stepNumberBase: React.CSSProperties = {
     width: 24,
@@ -782,7 +1359,7 @@ export default function CheckoutPage() {
     inputLabel: {
       fontSize: 11,
       fontWeight: 700,
-      color: "#64748b",
+      color: "#64748B",
       textTransform: "uppercase",
       letterSpacing: "0.06em",
     },
@@ -822,18 +1399,6 @@ export default function CheckoutPage() {
       position: "relative",
     },
   };
-
-  const [showAddressPanel, setShowAddressPanel] = useState(false);
-  const [selectedAddressId, setSelectedAddressId] = useState(0);
-
-  const [recipient, setRecipient] = useState<any>(null);
-
-  const defaultAddress =
-    addresses.find((a) => a.id === selectedAddressId) ||
-    addresses.find((a) => a.isDefault === 1) ||
-    addresses[0];
-
-  const hasAddress = Boolean(defaultAddress) && addresses.length > 0;
 
   useEffect(() => {
     if (defaultAddress) {
@@ -917,6 +1482,14 @@ export default function CheckoutPage() {
           items: logisticsItems,
         })
         .then((fee) => {
+          console.log(
+            "Calculated fee:",
+            fee,
+            "for shopId:",
+            shopId,
+            "with option:",
+            selectedOption,
+          );
           setShippingFees((prev) => ({
             ...prev,
             [shopId]: fee,
@@ -977,27 +1550,28 @@ export default function CheckoutPage() {
         const shopCartItems = cartItems.filter(
           (item) => item?.product?.shop?.id === shopId,
         );
+        const shopShippingFee = getEffectiveShippingFeeForShop(
+          shopId,
+          shippingSelections[shopId],
+        );
+        const shopSubtotal = shopCartItems.reduce(
+          (sum, item) =>
+            sum + (item.productVariant?.price || 0) * item.quantity,
+          0,
+        );
+        const shopVoucherDiscount = getShopVoucherDiscount(shopId);
+
         return {
           id: 0,
           orderId: 0,
           shop_id: shopId,
           shipmentId: 0,
           shipmentCode: `SHIP-${baseTrackingSeed}-${index + 1}`,
-      shipping_fee:
-            String(selectedVoucher?.discountType ?? "").toUpperCase() ===
-              "FREE_SHIPPING"
-              ? 0
-              : getShippingFeeForShop(shopId, shippingSelections[shopId]) || 0,
-          total_amount:
-            shopCartItems.reduce(
-              (sum, item) =>
-                sum + (item.productVariant?.price || 0) * item.quantity,
-              0,
-            ) +
-            (String(selectedVoucher?.discountType ?? "").toUpperCase() ===
-            "FREE_SHIPPING"
-              ? 0
-              : getShippingFeeForShop(shopId, shippingSelections[shopId])),
+          shipping_fee: shopShippingFee,
+          total_amount: Math.max(
+            0,
+            shopSubtotal - shopVoucherDiscount + shopShippingFee,
+          ),
           carrier_name: "LOG",
           tracking_number: `TRK-${baseTrackingSeed}-${shopId}`,
           shipping_status: "PENDING",
@@ -1034,15 +1608,15 @@ export default function CheckoutPage() {
 
     const orderItems: IOrderItem[] = await Promise.all(
       cartItems.map(async (item) => {
-        const user_id = item?.product?.shop?.userId || 0;
+        const user_id = Number(
+          item?.product?.shop?.userId ?? item?.product?.shop?.user_id ?? 0,
+        );
         let userInfo: any = null;
-        try {
+        if (user_id > 0) {
           userInfo = await getUserInfoById(user_id);
-        } catch {
-          // ignore, fallback to empty strings
         }
         return {
-          id: 1,
+          id: item?.id || 0,
           product_id: item?.product?.id || 0,
           shop_id: item?.product?.shop?.id || 0,
           order_id: 1,
@@ -1064,28 +1638,113 @@ export default function CheckoutPage() {
       }),
     );
 
-    createOrder({
-      user_id: paymentInfo.user_id || 0,
-      shop_id: cartItems[0]?.product?.shop?.id || 0,
-      recipient: recipient || {},
+    const orderItemsPayload = orderItems.map((item) => ({
+      id: Number(item.id || 0),
+      order_id: Number((item as any).order_id || 0),
+      shop_id: Number((item as any).shop_id || 0),
+      product_id: Number(item.product_id || 0),
+      variant_id: Number(item.variant_id || 0),
+      product_name: item.product_name || "",
+      variant_name: item.variant_name || "",
+      quantity: Number(item.quantity || 0),
+      price: Number(item.price || 0),
+      image_url: item.image_url || "",
+    }));
+
+    const orderShipmentPayload = ordersShipment.map((shipment) => ({
+      order_id: Number(shipment.orderId || (shipment as any).order_id || 0),
+      shop_id: Number(shipment.shop_id || 0),
+      carrier_name: shipment.carrier_name || "LOG",
+      shipping_fee: Number(shipment.shipping_fee || 0),
+      total_amount: Number(shipment.total_amount || 0),
+      tracking_number: shipment.tracking_number || "",
+      shipping_status: shipment.shipping_status || "PENDING",
+    }));
+
+    const primaryVoucher = selectedRedeemableVouchers[0];
+
+    const orderPayload = {
+      user_id: Number(userId || paymentInfo.user_id || 0),
+      recipient: defaultAddress
+        ? {
+            name: defaultAddress.name,
+            phone: defaultAddress.phone,
+            address: defaultAddress.address,
+            province: Number(defaultAddress.city || 0),
+            district: Number(defaultAddress.district || 0),
+            ward: Number(defaultAddress.ward || 0),
+          }
+        : {},
       order_number: "ORD20250318001",
       total_price: calculateSubtotal(),
-      payment_method: paymentInfo.method || "unknown",
-      address_id: selectedAddressId || 0,
+      payment_method: String(paymentInfo.method || "COD").toUpperCase(),
+      address_id: Number(defaultAddress?.id || selectedAddressId || 0),
       shipping_fee: effectiveShippingFee,
       discount_amount: voucherDiscount,
       final_amount: finalTotal,
-      orders_items: orderItems,
-      order_shipment: ordersShipment,
-      note: "",
+      voucher_id: primaryVoucher?.id || 0,
+      orders_items: orderItemsPayload,
+      order_shipment: orderShipmentPayload,
       tracking_number: "",
       id: 0,
       // Additional fields for testing rollback
       // Uncomment the line below to simulate a rollback scenario
       //cancel_reason: "SIMULATE_ROLLBACK",
-    })
-      .then((dt) => {
+    };
+
+    createOrder(orderPayload as any)
+      .then(async (dt) => {
         alert(`Đặt hàng thành công! Mã đơn hàng: ${dt.id}`);
+
+        const cleanupTasks: Promise<unknown>[] = [];
+
+        selectedRedeemableVouchers
+          .filter((voucher) => voucher.userVoucherId)
+          .forEach((voucher) => {
+            cleanupTasks.push(
+              fetch(`${API_URL}/api/user-vouchers/${voucher.userVoucherId}`, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  status: "REDEEMED",
+                  reservedOrderId: dt.id,
+                  reservedAt: new Date().toISOString(),
+                  redeemedAt: new Date().toISOString(),
+                }),
+              }).then(async (res) => {
+                if (!res.ok) {
+                  const text = await res.text();
+                  throw new Error(text || "Failed to update voucher status");
+                }
+              }),
+            );
+          });
+
+        cleanupTasks.push(
+          Promise.all(
+            cartItems
+              .map((item) => Number(item.id || 0))
+              .filter((cartId) => cartId > 0)
+              .map((cartId) => Cart.deleteCartItem(cartId)),
+          ),
+        );
+
+        const cleanupResults = await Promise.allSettled(cleanupTasks);
+        const hasCleanupFailure = cleanupResults.some(
+          (result) => result.status === "rejected",
+        );
+
+        if (!hasCleanupFailure) {
+          window.dispatchEvent(new Event("cart-updated"));
+        } else {
+          console.error("Checkout cleanup failed:", cleanupResults);
+          message.warning(
+            "Đơn hàng đã tạo nhưng cập nhật voucher hoặc giỏ hàng chưa hoàn tất.",
+          );
+        }
+
         setPaymentInfo((prev: any) => ({
           ...prev,
           orderId: dt.id,
@@ -1098,8 +1757,12 @@ export default function CheckoutPage() {
         }
       })
       .catch((e: AxiosError) => {
+        console.error("Create order payload:", orderPayload);
         const errorMessage =
-          (e.response?.data as any)?.status || "Lỗi không xác định";
+          (e.response?.data as any)?.message ||
+          (e.response?.data as any)?.error ||
+          (e.response?.data as any)?.status ||
+          "Lỗi không xác định";
         message.error(`Đặt hàng thất bại: ${errorMessage}`);
       });
   };
@@ -1137,9 +1800,16 @@ export default function CheckoutPage() {
             shippingSelections={shippingSelections}
             getSelectedShippingOption={getSelectedShippingOption}
             getShippingFeeForShop={getShippingFeeForShop}
+            getEffectiveShippingFeeForShop={getEffectiveShippingFeeForShop}
             shippingFeeLoading={shippingFeeLoading}
             shippingOptions={shippingOptions}
             formatCurrency={formatCurrency}
+            shopVoucherAvailabilityByShop={shopVoucherAvailabilityByShop}
+            selectedShopVoucherIds={selectedShopVoucherIds}
+            onApplyShopVoucherIds={handleApplyShopVoucherIds}
+            onClearShopVouchers={handleClearShopVouchers}
+            getShopVoucherDiscount={getShopVoucherDiscount}
+            voucherLoading={voucherLoading}
             onShippingOptionChange={handleShippingOptionChange}
             onConfirmPayment={handleConfirmPayment}
             onPaymentMethodChange={handlePaymentMethodChange}
@@ -1152,13 +1822,15 @@ export default function CheckoutPage() {
             shippingFee={effectiveShippingFee}
             isShippingFeeLoading={isAnyShippingFeeLoading}
             voucherDiscount={voucherDiscount}
+            shopVoucherDiscount={shopVoucherDiscount}
+            platformVoucherDiscount={platformVoucherDiscount}
             total={finalTotal}
             formatCurrency={formatCurrency}
-            ownedVouchers={ownedVouchers}
-            voucherAvailabilityList={voucherAvailabilityList}
-            selectedVoucher={selectedVoucher}
-            selectedVoucherId={selectedVoucherId}
-            setSelectedVoucherId={setSelectedVoucherId}
+            ownedVouchers={platformVouchers}
+            voucherAvailabilityList={platformVoucherAvailabilityList}
+            selectedVouchers={selectedPlatformVouchers}
+            selectedVoucherIds={selectedPlatformVoucherIds}
+            onApplyVoucherIds={handleApplyPlatformVoucherIds}
             voucherLoading={voucherLoading}
             onOrder={handleOrder}
           />

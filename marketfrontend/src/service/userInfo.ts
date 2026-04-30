@@ -14,11 +14,20 @@ export interface UserInfo {
  * @returns User information
  */
 export const getUserInfoById = async (userId: number): Promise<UserInfo> => {
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return {
+      id: userId || 0,
+      email: "",
+      fullName: "",
+      phone: "",
+      avatar: "",
+    };
+  }
+
   try {
     const response = await http.get(`/users/${userId}`);
     return response.data;
   } catch (error) {
-    console.error(`Failed to fetch user info for user_id=${userId}:`, error);
     return {
       id: userId,
       email: "",

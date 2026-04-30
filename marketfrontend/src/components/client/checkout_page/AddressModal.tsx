@@ -702,7 +702,7 @@ const AddressModal = ({
                       Chọn tỉnh / thành phố
                     </option>
                     {provinces.map((p: Province) => (
-                      <option key={p.Code} value={p.ProvinceID}>
+                      <option key={p.ProvinceID} value={p.ProvinceID}>
                         {p.ProvinceName}
                       </option>
                     ))}

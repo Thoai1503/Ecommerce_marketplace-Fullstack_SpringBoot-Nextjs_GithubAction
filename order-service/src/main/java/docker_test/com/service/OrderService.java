@@ -302,8 +302,13 @@ public class OrderService {
                 .paymentMethod(dto.getPayment_method())
                 .paymentStatus("PENDING")
                 .orderStatus("PENDING")
+                .voucherId(normalizeVoucherId(dto.getVoucher_id()))
                 .returnStatusSummary(ReturnStatusSummary.NONE)
                 .build();
+    }
+
+    private Long normalizeVoucherId(Long voucherId) {
+        return voucherId != null && voucherId > 0 ? voucherId : null;
     }
     private OrderShipment buildOrderShipment (OrderShipmentDTO dto) {
         OrderShipment shipment = new OrderShipment();
