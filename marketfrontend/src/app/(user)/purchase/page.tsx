@@ -708,41 +708,6 @@ export default function PurchasePage() {
     });
   }, [activeTab, searchTerm, shipments]);
 
-  const tabCounts = useMemo(() => {
-    const counts = PURCHASE_TABS.reduce(
-      (next, tab) => ({
-        ...next,
-        [tab.key]: tab.key === "all" ? shipments.length : 0,
-      }),
-      {} as Record<PurchaseTabKey, number>,
-    );
-
-    shipments.forEach((shipment) => {
-      const tab = getShipmentTab(shipment);
-      if (tab !== "all") {
-        counts[tab] += 1;
-      }
-    });
-
-    return counts;
-  }, [shipments]);
-
-  const purchaseStats = useMemo(() => {
-    const totalItems = shipments.reduce(
-      (total, shipment) => total + shipment.items.length,
-      0,
-    );
-    const activeShipments = shipments.filter(
-      (shipment) => getShipmentTab(shipment) !== "canceled",
-    ).length;
-    const totalSpend = shipments.reduce(
-      (total, shipment) => total + shipment.totalAmount,
-      0,
-    );
-
-    return { totalItems, activeShipments, totalSpend };
-  }, [shipments]);
-
   const handleCancelShipment = async (shipment: PurchaseShipment) => {
     if (!isPendingShipment(shipment)) return;
 
@@ -840,38 +805,6 @@ export default function PurchasePage() {
         .purchase-shell {
           max-width: 1220px;
         }
-        .purchase-heading {
-          border-bottom: 1px solid #e8edf3;
-          padding: 2px 0 18px;
-        }
-        .purchase-kicker {
-          color: ${BRAND_BLUE};
-          font-size: 12px;
-          font-weight: 800;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-        }
-        .purchase-stat {
-          min-width: 132px;
-          border-left: 1px solid #e5e7eb;
-          padding-left: 18px;
-        }
-        .purchase-stat:first-child {
-          border-left: 0;
-          padding-left: 0;
-        }
-        .purchase-stat-label {
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 700;
-          text-transform: uppercase;
-        }
-        .purchase-stat-value {
-          color: #111827;
-          font-size: 20px;
-          font-weight: 800;
-          line-height: 1.15;
-        }
         .purchase-sidebar {
           position: sticky;
           top: 92px;
@@ -927,16 +860,6 @@ export default function PurchasePage() {
           white-space: nowrap;
           transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
         }
-        .purchase-tab-count {
-          min-width: 24px;
-          height: 22px;
-          border-radius: 11px;
-          background: #f1f5f9;
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 800;
-          padding: 2px 7px;
-        }
         .purchase-tab:hover {
           background: #f8fbff;
           color: ${BRAND_BLUE};
@@ -946,21 +869,12 @@ export default function PurchasePage() {
           border-bottom-color: ${BRAND_BLUE};
           font-weight: 700;
         }
-        .purchase-tab.active .purchase-tab-count {
-          background: #eaf3ff;
-          color: ${BRAND_BLUE};
-        }
         .purchase-search {
           height: 52px;
           border: 1px solid #edf0f3;
           border-radius: 8px;
           background: #fff;
           box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
-        }
-        .purchase-result-meta {
-          color: #64748b;
-          font-size: 13px;
-          font-weight: 600;
         }
         .purchase-card {
           border: 1px solid #e8edf3;
@@ -974,9 +888,6 @@ export default function PurchasePage() {
           border-color: #d8e7fb;
           box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
           transform: translateY(-1px);
-        }
-        .purchase-card-head {
-          background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
         }
         .shop-action {
           height: 30px;
@@ -998,24 +909,6 @@ export default function PurchasePage() {
           border: 1px solid #e5e7eb;
           background: #f8fafc;
           object-fit: cover;
-        }
-        .product-row {
-          border-radius: 6px;
-          padding: 10px;
-          margin: 0 -10px;
-          transition: background 0.18s ease;
-        }
-        .product-row:hover {
-          background: #f8fbff;
-        }
-        .line-chip {
-          border: 1px solid #e5e7eb;
-          border-radius: 4px;
-          color: #64748b;
-          font-size: 12px;
-          font-weight: 700;
-          padding: 4px 8px;
-          white-space: nowrap;
         }
         .purchase-summary {
           background: #fbfcfe;
@@ -1046,11 +939,6 @@ export default function PurchasePage() {
           border-color: ${ACCENT_ORANGE};
           color: #fff;
         }
-        .purchase-btn-accent:hover {
-          background: #d83f22;
-          border-color: #d83f22;
-          color: #fff;
-        }
         .purchase-muted-panel {
           border: 1px solid #edf0f3;
           border-radius: 8px;
@@ -1067,11 +955,6 @@ export default function PurchasePage() {
           .purchase-tab {
             flex: 1 1 150px;
             font-size: 14px;
-          }
-          .purchase-stat {
-            min-width: 0;
-            border-left: 0;
-            padding-left: 0;
           }
         }
         @media (max-width: 575.98px) {
@@ -1137,40 +1020,6 @@ export default function PurchasePage() {
           </aside>
 
           <section className="col-12 col-lg-10">
-            <div className="purchase-heading d-flex flex-column flex-lg-row justify-content-between gap-3 mb-3">
-              <div>
-                <div className="purchase-kicker mb-1">Order Center</div>
-                <h1 className="h3 fw-bold mb-1">My Purchases</h1>
-                <p className="text-muted mb-0">
-                  Track shipments, review order details, and contact sellers in one place.
-                </p>
-              </div>
-              <div className="d-flex flex-wrap align-items-center gap-4">
-                <div className="purchase-stat">
-                  <div className="purchase-stat-label">Shipments</div>
-                  <div className="purchase-stat-value">{shipments.length}</div>
-                </div>
-                <div className="purchase-stat">
-                  <div className="purchase-stat-label">Active</div>
-                  <div className="purchase-stat-value">
-                    {purchaseStats.activeShipments}
-                  </div>
-                </div>
-                <div className="purchase-stat">
-                  <div className="purchase-stat-label">Items</div>
-                  <div className="purchase-stat-value">
-                    {purchaseStats.totalItems}
-                  </div>
-                </div>
-                <div className="purchase-stat">
-                  <div className="purchase-stat-label">Total Spend</div>
-                  <div className="purchase-stat-value">
-                    {formatMoney(purchaseStats.totalSpend)}
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <div className="bg-white mb-3 purchase-tabs">
               <div className="purchase-tab-list">
                 {PURCHASE_TABS.map((tab) => (
@@ -1182,10 +1031,7 @@ export default function PurchasePage() {
                     }`}
                     onClick={() => setActiveTab(tab.key)}
                   >
-                    <span>{tab.label}</span>
-                    <span className="purchase-tab-count ms-2">
-                      {tabCounts[tab.key]}
-                    </span>
+                    {tab.label}
                   </button>
                 ))}
               </div>
@@ -1202,15 +1048,6 @@ export default function PurchasePage() {
                 placeholder="Search by shop name, order ID, tracking number, or product name"
               />
             </div>
-
-            {!loading && !error && shipments.length > 0 && (
-              <div className="purchase-result-meta d-flex justify-content-between align-items-center mb-3 px-1">
-                <span>
-                  Showing {filteredShipments.length} of {shipments.length} shipments
-                </span>
-                <span>{PURCHASE_TABS.find((tab) => tab.key === activeTab)?.label}</span>
-              </div>
-            )}
 
             {loading && (
               <div className="purchase-muted-panel p-4 text-center text-muted">
@@ -1263,7 +1100,7 @@ export default function PurchasePage() {
                       .filter(Boolean)
                       .join(" · ")}
                   >
-                    <div className="purchase-card-head d-flex flex-column flex-md-row justify-content-between gap-3 px-4 py-3 border-bottom">
+                    <div className="d-flex flex-column flex-md-row justify-content-between gap-3 px-4 py-3 border-bottom">
                       <div style={{ minWidth: 0 }}>
                         <div className="d-flex flex-wrap align-items-center gap-2">
                           <Store size={18} className="text-secondary" />
@@ -1300,18 +1137,9 @@ export default function PurchasePage() {
                             </button>
                           )}
                         </div>
-                        <div className="d-flex flex-wrap align-items-center gap-2 mt-2">
-                          <span className="small text-muted text-truncate">
-                            {shipment.orderNumber} · Shipment #{shipment.shipmentId}
-                          </span>
-                          <span className="line-chip">{shipment.carrierName}</span>
-                          <span className="line-chip">
-                            {shipment.trackingNumber}
-                          </span>
-                          <span className="line-chip">
-                            {shipment.items.length}{" "}
-                            {shipment.items.length === 1 ? "item" : "items"}
-                          </span>
+                        <div className="small text-muted mt-2 text-truncate">
+                          {shipment.orderNumber} · Shipment #{shipment.shipmentId} ·{" "}
+                          {shipment.carrierName} · {shipment.trackingNumber}
                         </div>
                       </div>
                       <div
@@ -1335,7 +1163,7 @@ export default function PurchasePage() {
                           return (
                             <div
                               key={`${shipment.shipmentId}-${item.id}-${index}`}
-                              className="product-row d-flex flex-wrap flex-sm-nowrap gap-3 align-items-start"
+                              className="d-flex flex-wrap flex-sm-nowrap gap-3 align-items-start py-2"
                             >
                               <img
                                 src={item.image}
@@ -1343,7 +1171,7 @@ export default function PurchasePage() {
                                 className="product-thumb flex-shrink-0"
                               />
                               <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                                <div className="fs-6 fw-semibold text-truncate">
+                                <div className="fs-6 text-truncate">
                                   {item.productName}
                                 </div>
                                 {item.variantName && (
@@ -1359,7 +1187,6 @@ export default function PurchasePage() {
                                 className="product-price text-end flex-shrink-0"
                                 style={{ minWidth: 128 }}
                               >
-                                <div className="small text-muted mb-1">Line total</div>
                                 {item.discountAmount > 0 ? (
                                   <div className="d-flex justify-content-end gap-2 flex-wrap">
                                     <span className="text-muted text-decoration-line-through">

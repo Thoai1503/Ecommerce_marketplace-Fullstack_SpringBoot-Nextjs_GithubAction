@@ -15,6 +15,7 @@ import {
   ReceiptText,
   ShieldCheck,
   Star,
+  Truck,
 } from "lucide-react";
 
 import {
@@ -415,6 +416,13 @@ const styles: Record<string, CSSProperties> = {
     background: "#f8fafc",
     padding: "12px 16px",
     borderBottom: "1px solid #f1f5f9",
+  },
+  shipmentEmpty: {
+    border: "1px dashed #cbd5e1",
+    borderRadius: 8,
+    background: "#f8fafc",
+    padding: "22px 16px",
+    color: "#64748b",
   },
   timelineChipDone: {
     background: "rgba(34,197,94,0.1)",
@@ -1686,12 +1694,34 @@ export default function UserOrderDetailPage() {
                           textTransform: "uppercase",
                           letterSpacing: "0.03em",
                         }}
-                        className="mb-3"
+                        className="mb-3 d-flex align-items-center gap-2"
                       >
-                        Van chuyen ({order.shipments?.length || 0} kien)
+                        <Truck size={16} color="#137fec" />
+                        Shipping ({order.shipments?.length || 0}{" "}
+                        {(order.shipments?.length || 0) === 1
+                          ? "package"
+                          : "packages"}
+                        )
                       </h3>
 
                       <div className="d-flex flex-column gap-3">
+                        {(!order.shipments || order.shipments.length === 0) && (
+                          <div
+                            className="d-flex align-items-center gap-3"
+                            style={styles.shipmentEmpty}
+                          >
+                            <Truck size={24} color="#94a3b8" />
+                            <div>
+                              <p className="fw-semibold mb-1">
+                                No shipment information yet
+                              </p>
+                              <p className="mb-0" style={{ fontSize: 12 }}>
+                                Tracking details will appear here after the
+                                seller creates a package for this order.
+                              </p>
+                            </div>
+                          </div>
+                        )}
                         {order.shipments?.map((shipment) => {
                           const currentStep = shipmentStepOrder.indexOf(
                             shipment.shipping_status,
