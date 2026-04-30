@@ -257,6 +257,7 @@ const toOrderItem = (raw: any): OrderItem => ({
   quantity: asNumber(raw?.quantity, 0),
   lastReturnRequestId: raw?.lastReturnRequestId,
   price: asNumber(raw?.price, 0),
+  discount: asNumber(raw?.discountAmount ?? raw?.discount_amount, 0),
   status: "Ready" as const,
 });
 
@@ -1200,6 +1201,39 @@ export default function UserOrderDetailPage() {
           orderData?.items ||
           [];
 
+        const redemptionItems =
+          (await getFirstSuccess<any[]>([
+            `/api/voucher-redemptions/order/${id}/items`,
+          ])) || [];
+        const itemDiscountByOrderItemId = redemptionItems.reduce(
+          (map: Map<string, number>, item: any) => {
+            const orderItemId = String(
+              item?.orderItemId ?? item?.order_item_id ?? "",
+            );
+            const discountAmount = asNumber(
+              item?.discountAmount ?? item?.discount_amount,
+              0,
+            );
+
+            if (orderItemId) {
+              map.set(
+                orderItemId,
+                (map.get(orderItemId) || 0) + discountAmount,
+              );
+            }
+
+            return map;
+          },
+          new Map<string, number>(),
+        );
+        const toOrderItemWithRedemptionDiscount = (item: any) =>
+          toOrderItem({
+            ...item,
+            discountAmount:
+              itemDiscountByOrderItemId.get(String(item?.id ?? "")) ??
+              item?.discountAmount,
+          });
+
         const seedShipments: any[] = Array.isArray(orderData?.shipments)
           ? orderData.shipments
           : Array.isArray(orderData?.order_shipment)
@@ -1339,7 +1373,7 @@ export default function UserOrderDetailPage() {
                     shipment?.shipping_fee,
                   0,
                 ),
-                items: items.map(toOrderItem),
+                items: items.map(toOrderItemWithRedemptionDiscount),
                 statusHistory: ensurePendingFirst(shipment?.statusHistory),
                 recipient,
                 adjustment_request: adjustmentRequest,
@@ -1351,25 +1385,19 @@ export default function UserOrderDetailPage() {
             }),
         );
 
-        const fallbackItems = rawItems.map(toOrderItem);
+        const fallbackItems = rawItems.map(toOrderItemWithRedemptionDiscount);
         const orderItems: OrderItem[] =
           shipments.flatMap((s: any) => s.items || []).length > 0
             ? shipments.flatMap((s: any) => s.items || [])
             : fallbackItems;
 
         const uniqueItems: OrderItem[] =
-          //  Array.from(
-          //   new Map(
-          //     orderItems.map((item: OrderItem) => [item.id, item]),
-          //   ).values(),
-          // );
-          orderData?.items.map((item: any) => {
-            console.log("Mapping order item:", item);
-            return {
-              ...item,
-              productImage: item.image,
-            };
-          }) || [];
+          Array.isArray(orderData?.items) && orderData.items.length > 0
+            ? orderData.items.map((item: any) => {
+                console.log("Mapping order item:", item);
+                return toOrderItemWithRedemptionDiscount(item);
+              })
+            : orderItems;
 
         // orderData?.item.forEach((item: any) => {
         //   console.log("Shipment ID from order item:", item?.shipmentId);
@@ -1617,15 +1645,25 @@ export default function UserOrderDetailPage() {
                                 {item.variant ? ` | ${item.variant}` : ""}
                               </p>
                               <div className="d-flex align-items-center justify-content-between">
-                                <span
-                                  style={{
-                                    fontSize: 12,
-                                    fontWeight: 800,
-                                    color: "#137fec",
-                                  }}
-                                >
-                                  {formatMoney(item.price)}
-                                </span>
+                                <div className="d-flex flex-column">
+                                  <span
+                                    style={{
+                                      fontSize: 12,
+                                      fontWeight: 800,
+                                      color: "#137fec",
+                                    }}
+                                  >
+                                    {formatMoney(item.price)}
+                                  </span>
+                                  {Number(item.discount || 0) > 0 && (
+                                    <span
+                                      className="text-danger"
+                                      style={{ fontSize: 11, fontWeight: 700 }}
+                                    >
+                                      -{formatMoney(item.discount || 0)}
+                                    </span>
+                                  )}
+                                </div>
                                 <span style={styles.qtyBadge}>
                                   So luong:{" "}
                                   {String(item.quantity).padStart(2, "0")}
@@ -2332,15 +2370,32 @@ export default function UserOrderDetailPage() {
                                               SKU: {item.sku}
                                             </p>
                                             <div className="d-flex align-items-center justify-content-between gap-2">
-                                              <span
-                                                style={{
-                                                  fontSize: 12,
-                                                  fontWeight: 800,
-                                                  color: "#137fec",
-                                                }}
-                                              >
-                                                {formatMoney(item.price)}
-                                              </span>
+                                              <div className="d-flex flex-column">
+                                                <span
+                                                  style={{
+                                                    fontSize: 12,
+                                                    fontWeight: 800,
+                                                    color: "#137fec",
+                                                  }}
+                                                >
+                                                  {formatMoney(item.price)}
+                                                </span>
+                                                {Number(item.discount || 0) >
+                                                  0 && (
+                                                  <span
+                                                    className="text-danger"
+                                                    style={{
+                                                      fontSize: 11,
+                                                      fontWeight: 700,
+                                                    }}
+                                                  >
+                                                    -
+                                                    {formatMoney(
+                                                      item.discount || 0,
+                                                    )}
+                                                  </span>
+                                                )}
+                                              </div>
                                               <span style={styles.qtyBadge}>
                                                 So luong:{" "}
                                                 {String(item.quantity).padStart(
