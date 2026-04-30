@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import docker_test.com.dto.CancelShipmentByOosRequestDTO;
 import docker_test.com.dto.CancelShipmentByOosResponseDTO;
+import docker_test.com.dto.CancelShipmentRequestDTO;
 import docker_test.com.dto.ConfirmReceivedResponseDTO;
 import docker_test.com.dto.ConfirmPackagedResponseDTO;
 import docker_test.com.dto.CreateAdjustmentRequestDTO;
@@ -73,6 +74,14 @@ public class OrderShipmentController {
 			@RequestBody CancelShipmentByOosRequestDTO request
 	) {
 		return ResponseEntity.ok(orderShipmentService.cancelShipmentByOutOfStock(shipmentId, request));
+	}
+
+	@PostMapping("/{shipmentId}/cancel")
+	public ResponseEntity<CancelShipmentByOosResponseDTO> cancelPendingByBuyer(
+			@PathVariable Long shipmentId,
+			@RequestBody CancelShipmentRequestDTO request
+	) {
+		return ResponseEntity.ok(orderShipmentService.cancelPendingShipmentByBuyer(shipmentId, request));
 	}
 
 }

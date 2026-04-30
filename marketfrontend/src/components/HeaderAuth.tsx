@@ -133,6 +133,9 @@ export default function HeaderAuth() {
             <a href="/profile" className="dropdown-item">
               Profile
             </a>
+            <a href="/purchase" className="dropdown-item">
+              Purchase order
+            </a>
             <button
               onClick={handleLogout}
               className="dropdown-item text-danger"

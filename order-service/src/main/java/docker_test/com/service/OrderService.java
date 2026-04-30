@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -99,7 +100,7 @@ public class OrderService {
 		    orderShipmetDto.setTotalAmount(os.getTotal_amount());
 						var orderShipment =
 			orderShipmentRepository.save(orderShipmetDto);
-		    dto.getOrders_items().stream().filter(item->item.getShop_id()==os.getShop_id()).forEach(item->{
+		    dto.getOrders_items().stream().filter(item -> Objects.equals(item.getShop_id(), os.getShop_id())).forEach(item->{
 		    	System.out.println("Shipment id = {}"+ orderShipment.getId());
 		    		     		item.setShipment_id(orderShipment.getId());
 		    		     		
