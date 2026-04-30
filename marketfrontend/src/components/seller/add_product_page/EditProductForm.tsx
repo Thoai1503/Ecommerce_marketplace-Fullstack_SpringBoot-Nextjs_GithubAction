@@ -231,7 +231,7 @@ const EditProductForm = ({ id }: { id: number | null }) => {
               },
               onError: (error) => {
                 message.error(
-                  "Failed to update variant: " + JSON.stringify(error.message),
+                  "Failed to update variant: " + JSON.stringify(error),
                 );
               },
             });
