@@ -86,7 +86,7 @@ public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Lo
 			FROM order_shipment os
 			INNER JOIN orders o ON o.id = os.order_id
 			INNER JOIN address a ON a.id = o.address_id
-			LEFT JOIN shop s ON s.shop_id = os.shop_id
+			LEFT JOIN shop s ON s.id = os.shop_id
 			WHERE os.id = :id
 			ORDER BY os.id DESC
 			""", nativeQuery = true)
