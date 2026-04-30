@@ -12,7 +12,7 @@ import {
 } from "./service";
 import { message, UploadFile, UploadProps } from "antd";
 import { useSellerAuth } from "@/context/SellerAuthContext";
-import { ProductVariant } from "@/validators/productVariant";
+import { IProductVariant } from "@/validators/productVariant";
 
 export const useAddProductSeller = (
   onSuccessCallback: (id: number) => void,
@@ -67,7 +67,7 @@ export const useAddProductSeller = (
   // });
 
   const { mutate: createVariant } = useMutation({
-    mutationFn: (en: ProductVariant) => createProductVariant(en),
+    mutationFn: (en: IProductVariant) => createProductVariant(en),
     onSuccess: (data) => {
       console.log("Variant created:", data);
       message.success(`Tạo biến thể sản phẩm thành công`);
@@ -359,4 +359,8 @@ export const useAddImageSeller = (id?: number) => {
   }, [data, isLoading, isError]);
 
   return { fileList, handleChange, handleSave, handleSaveImageAfterProduct };
+};
+
+export const useEditProductDetails = (id: number) => {
+  return {};
 };

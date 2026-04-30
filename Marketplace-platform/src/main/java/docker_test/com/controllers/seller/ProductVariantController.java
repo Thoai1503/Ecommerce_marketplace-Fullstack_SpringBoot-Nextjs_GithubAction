@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -57,6 +58,15 @@ public class ProductVariantController  {
 		var en = ((ProductVariantRepository)repositories).Create(productVariant);
 		return ResponseEntity.ok(en);
 	}
+	
+	@PutMapping("/{id}")
+	
+	public ResponseEntity updateProductVariant(@PathVariable int id, @RequestBody ProductVariant updatedVariant) throws SQLException {
+		updatedVariant.setId(id);
+		var savedVariant = repositories.Update(updatedVariant);
+		return ResponseEntity.ok(savedVariant);
+	}
+	
 	
 	@PostMapping(value = {"/{id}", "/{id}/image"}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity updateImageForVariant(@PathVariable int id, @RequestPart(value = "image", required = false) MultipartFile image ) throws SQLException {

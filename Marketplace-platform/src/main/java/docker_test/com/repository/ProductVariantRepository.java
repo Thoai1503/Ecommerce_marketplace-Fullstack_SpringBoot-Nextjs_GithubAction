@@ -93,8 +93,35 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 
 	@Override
 	public ProductVariant Update(ProductVariant item) {
-		// TODO Auto-generated method stub
+		
+		String sql = "update product_variant set price = ?, stock_quantity = ? , variant_name = ?, image_url = ?,  stock_quantity = ?,  width = ?,  weight = ?,  height = ? where id = ?";
+		try(Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)){
+			 
+			
+			  ps.setDouble(1, item.getPrice());
+			  
+			  ps.setInt(2, item.getStock_quantity());
+			  ps.setString(3, item.getVariant_name());
+			  ps.setString(4, item.getImage_url());
+			  ps.setInt(5, item.getStock_quantity());
+			  ps.setLong(6, item.getWidth());
+			  ps.setLong(7, item.getWeight());
+			  ps.setLong(8, item.getHeight());
+			  ps.setInt(9, item.getId());
+			  
+			  
+			
+			  int affectedRows = ps.executeUpdate();
+			  if (affectedRows > 0) {
+				  return GetById(item.getId());
+			  }
+		}
+		catch(Exception ex) {
+			ex.printStackTrace();
+		}
 		return null;
+		
 	}
 
 	@Override

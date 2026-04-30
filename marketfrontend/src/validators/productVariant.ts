@@ -1,4 +1,4 @@
-export interface ProductVariant {
+export interface IProductVariant {
   id: number;
   product_id: number;
   variant_name: string;

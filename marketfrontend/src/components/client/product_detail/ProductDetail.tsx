@@ -6,6 +6,7 @@ import { API_URL } from "@/helper/api";
 import { Cart, useAddToCartMutation } from "@/types/data/Cart";
 import { ICart } from "@/validators/cart";
 import { IProduct, Variant } from "@/validators/product";
+import { IProductVariant } from "@/validators/productVariant";
 import { message } from "antd";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -21,8 +22,8 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fullUrl = pathname + "?" + searchParams.toString();
-  const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
-  const [variant, setVariant] = useState<Variant | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<number | null>(null);
+  const [variant, setVariant] = useState<IProductVariant | null>(null);
   const [mainImage, setMainImage] = useState(
     data.images[0]?.image_url || "/assets/images/ecommerce/product-1.jpg",
   );
@@ -74,7 +75,8 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
     return (
       <div className="container py-5">
         <div className="alert alert-info rounded-4 border-0 shadow-sm">
-          Sản phẩm của chính shop bạn không hiển thị ở giao diện mua hàng khi đang đăng nhập bằng tài khoản này.
+          Sản phẩm của chính shop bạn không hiển thị ở giao diện mua hàng khi
+          đang đăng nhập bằng tài khoản này.
         </div>
       </div>
     );
@@ -158,7 +160,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
       if (data.variants) {
         if (data.variants.length < 2 && data.variants.length > 0) {
           setVariant(data.variants[0]);
-          setSelectedVariant(data.variants[0].id);
+          setSelectedVariant(Number(data?.variants[0].id));
         }
       }
     }
@@ -245,7 +247,6 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                       <div className="col-xl-6 col-12">
                         <div className="my-5 mx-xl-10">
                           <h3>{data.product_name}</h3>
-
                           <div className="mb-3">
                             <span className="me-2 text-dark fw-bold">
                               4.4{" "}
@@ -253,9 +254,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                             </span>
                             <span>592 Customer Reviews</span>
                           </div>
-
                           <hr className="my-3" />
-
                           <div className="mb-5">
                             <h4 className="mb-1">
                               {formatPrice(variant?.price ?? data.price)}đ
@@ -270,7 +269,6 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                               inclusive of all taxes
                             </small>
                           </div>
-
                           {/* Color */}
                           <div className="mb-4">
                             <h4 className="mb-3">Classify</h4>
@@ -335,7 +333,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                         "/assets/images/ecommerce/product-1.jpg"
                                       }
                                       alt={
-                                        variant.name ||
+                                        (variant as any).name ||
                                         variant.sku ||
                                         data.product_name ||
                                         "Product variant"
@@ -354,7 +352,6 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                                 ))}
                             </div>
                           </div>
-
                           {/* Buttons */}
                           <div className="row g-3">
                             <div className="col-md-6">
@@ -382,17 +379,13 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                               </button>
                             </div>
                           </div>
-
                           {isOwnShopProduct && (
                             <div className="alert alert-warning mt-3 mb-0 py-2">
                               You cannot buy products from your own shop.
                             </div>
                           )}
-
                           <hr className="mt-4 mb-2" />
-
                           variant
-
                         </div>
                       </div>
                     </div>
@@ -535,66 +528,63 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                               </tbody>
                             </table>
                           </div>
-                          
                         </div>
                       </div>
                     </div>
-                                              {/* Ratings & Reviews */}
-                          <div className="mt-5">
-                            <h3 className="mb-4">Ratings & Reviews</h3>
+                    {/* Ratings & Reviews */}
+                    <div className="mt-5">
+                      <h3 className="mb-4">Ratings & Reviews</h3>
 
-                            <div className="row align-items-center mb-4">
-                              <div className="col-md-4 text-center mb-4 mb-md-0">
-                                <h2 className="display-3 fw-bold">4.5</h2>
-                                <div className="text-success">
-                                  <i className="bi bi-star-fill"></i>
-                                  <i className="bi bi-star-fill"></i>
-                                  <i className="bi bi-star-fill"></i>
-                                  <i className="bi bi-star-fill"></i>
-                                  <i className="bi bi-star-fill"></i>
-                                </div>
-                                <p className="mb-0">595 Verified Buyers</p>
-                              </div>
-
-                              <div className="col-md-8">
-                                <div className="d-flex align-items-center mb-2">
-                                  <div className="text-nowrap me-3 text-muted">
-                                    5 <i className="bi bi-star-fill ms-1"></i>
-                                  </div>
-                                  <div
-                                    className="progress w-100"
-                                    style={{ height: "6px" }}
-                                  >
-                                    <div
-                                      className="progress-bar bg-success"
-                                      role="progressbar"
-                                      style={{ width: "60%" }}
-                                      aria-valuenow={60}
-                                      aria-valuemin={0}
-                                      aria-valuemax={100}
-                                    ></div>
-                                  </div>
-                                  <span className="text-muted ms-3">420</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Sample Reviews */}
-                            <div className="border-top py-4">
-                              <span className="badge bg-light text-dark border px-3 py-2 rounded-pill mb-2">
-                                4.4{" "}
-                                <i className="bi bi-star-fill text-success"></i>
-                              </span>
-                              <p>
-                                It's awesome, I never thought about Dash UI that
-                                awesome shoes...
-                              </p>
-                              <div className="text-muted small">
-                                James Ennis{" "}
-                                <span className="ms-3">28 Nov 2023</span>
-                              </div>
-                            </div>
+                      <div className="row align-items-center mb-4">
+                        <div className="col-md-4 text-center mb-4 mb-md-0">
+                          <h2 className="display-3 fw-bold">4.5</h2>
+                          <div className="text-success">
+                            <i className="bi bi-star-fill"></i>
+                            <i className="bi bi-star-fill"></i>
+                            <i className="bi bi-star-fill"></i>
+                            <i className="bi bi-star-fill"></i>
+                            <i className="bi bi-star-fill"></i>
                           </div>
+                          <p className="mb-0">595 Verified Buyers</p>
+                        </div>
+
+                        <div className="col-md-8">
+                          <div className="d-flex align-items-center mb-2">
+                            <div className="text-nowrap me-3 text-muted">
+                              5 <i className="bi bi-star-fill ms-1"></i>
+                            </div>
+                            <div
+                              className="progress w-100"
+                              style={{ height: "6px" }}
+                            >
+                              <div
+                                className="progress-bar bg-success"
+                                role="progressbar"
+                                style={{ width: "60%" }}
+                                aria-valuenow={60}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                              ></div>
+                            </div>
+                            <span className="text-muted ms-3">420</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sample Reviews */}
+                      <div className="border-top py-4">
+                        <span className="badge bg-light text-dark border px-3 py-2 rounded-pill mb-2">
+                          4.4 <i className="bi bi-star-fill text-success"></i>
+                        </span>
+                        <p>
+                          It's awesome, I never thought about Dash UI that
+                          awesome shoes...
+                        </p>
+                        <div className="text-muted small">
+                          James Ennis <span className="ms-3">28 Nov 2023</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

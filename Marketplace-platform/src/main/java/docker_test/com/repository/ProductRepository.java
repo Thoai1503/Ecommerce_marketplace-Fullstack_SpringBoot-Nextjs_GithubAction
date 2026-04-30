@@ -84,8 +84,33 @@ public class ProductRepository implements IRepositories<Product> {
 
 	@Override
 	public Product Update(Product item) {
-		// TODO Auto-generated method stub
-		return null;
+	
+		 String sql = "update product set shop_id=?,category_id=?,description=?,product_name=?,product_slug=?,price=?,original_price=?,weight=?,length=?,width=?,height=?,stock_quantity=? where id=?";
+		 try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+			 ps.setLong(1, item.getShop_id());
+			 ps.setLong(2, item.getCategory_id());
+			 ps.setString(3, item.getDescription());
+			 ps.setString(4, item.getProduct_name());
+			 ps.setString(5, item.getProduct_slug());
+			 ps.setDouble(6, item.getPrice());
+			 ps.setDouble(7, item.getOriginal_price());
+			 ps.setInt(8, item.getWeight());
+			 ps.setInt(9, item.getLength());
+			 ps.setInt(10, item.getWidth());
+			 ps.setInt(11, item.getHeight());
+			 ps.setInt(12, item.getStock_quantity());
+			 ps.setInt(13, item.getId());
+
+			 int rows = ps.executeUpdate();
+
+			 if (rows > 0) {
+				 return item;
+			 }
+		 } catch (Exception ex) {
+			 ex.printStackTrace();
+		 }
+		 return null;
+		
 	}
 
 	@Override
@@ -140,6 +165,9 @@ public class ProductRepository implements IRepositories<Product> {
 				                'sku', pv.sku,
 				                'price', pv.price,
 				                'stock_quantity', pv.stock_quantity,
+				                'weight', pv.weight,
+				                'width', pv.width,
+				                'height', pv.height,
 				                'image_url', pv.image_url,
 				                'is_active', pv.is_active
 				            )
@@ -163,9 +191,19 @@ public class ProductRepository implements IRepositories<Product> {
 				Product product = new Product();
 				product.setId(rs.getInt("id"));
 				product.setShop_id(rs.getInt("shop_id"));
+				product.setCategory_id(rs.getInt("category_id"));
 				product.setProduct_name(rs.getString("product_name"));
 				product.setProduct_slug(rs.getString("product_slug"));
 				product.setPrice(rs.getDouble("price"));
+				product.setOriginal_price(rs.getDouble("original_price"));
+				product.setDescription(rs.getString("description"));
+				product.setStock_quantity(rs.getInt("stock_quantity"));
+				product.setWeight(rs.getInt("weight"));
+				product.setLength(rs.getInt("length"));
+				product.setWidth(rs.getInt("width"));
+				product.setHeight(rs.getInt("height"));
+			//    product.setBrand(rs.getInt("brand"));
+			     
 
 				String variantsJson = rs.getString("variants");
 
