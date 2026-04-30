@@ -8,7 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import docker_test.com.models.attribute.Attribute;
+import docker_test.com.models.CategoryAttribute;
 import docker_test.com.repository.AttributeRepository;
+import docker_test.com.repository.CategoryAttributeRepository;
 
 @RestController
 @RequestMapping("api/attributes")
@@ -41,13 +43,48 @@ public class AttributeController {
 
     // ================= CREATE =================
     @PostMapping
-    public ResponseEntity<Attribute> create(@RequestBody Attribute item) throws SQLException {
+    public ResponseEntity<?> create(@RequestBody Attribute item,
+                                    @RequestParam(required = false) Integer autoAddCategoryId) throws SQLException {
 
         if (item.getName() == null || item.getName().isBlank()) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body("Attribute name cannot be empty");
+        }
+
+        // Auto generate slug if not provided
+        if (item.getSlug() == null || item.getSlug().isBlank()) {
+            item.setSlug(item.getName().toLowerCase().replaceAll("\\s+", "-"));
+        }
+
+        // Set default status to ACTIVE (1) if null
+        if (item.getStatus() == null) {
+            item.setStatus(1);
         }
 
         Attribute saved = attributeRepository.Create(item);
+
+        // 🔥 If autoAddCategoryId provided, create category_attribute link
+        if (autoAddCategoryId != null && autoAddCategoryId > 0 && saved != null && saved.getId() != null && saved.getId() > 0) {
+            try {
+                CategoryAttribute categoryAttribute = new CategoryAttribute();
+                categoryAttribute.setCategoryId(autoAddCategoryId);
+                categoryAttribute.setAttributeId(saved.getId());
+                categoryAttribute.setStatus(1);
+
+                CategoryAttributeRepository categoryAttributeRepo = CategoryAttributeRepository.Instance();
+                categoryAttributeRepo.Create(categoryAttribute);
+                System.out.println("✅ Successfully linked attribute " + saved.getId() + " to category " + autoAddCategoryId);
+            } catch (SQLException e) {
+                // Check if it's a duplicate entry
+                if (e.getMessage() != null && e.getMessage().contains("Duplicate")) {
+                    System.out.println("ℹ️ Attribute already linked to this category (duplicate)");
+                } else {
+                    System.err.println("❌ Error linking attribute to category: " + e.getMessage());
+                    e.printStackTrace();
+                }
+                // Don't fail - attribute was already created successfully
+            }
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 

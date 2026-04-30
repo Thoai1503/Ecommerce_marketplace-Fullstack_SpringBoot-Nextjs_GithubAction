@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.*;
 
 import docker_test.com.factory.RepoFactoryImpl;
 import docker_test.com.models.Brand;
+import docker_test.com.models.CategoryBrand;
 import docker_test.com.repository.IRepositories;
+import docker_test.com.repository.CategoryBrandRepository;
 
 @RestController
 @RequestMapping("/api/brands")
@@ -42,7 +44,8 @@ public class BrandController {
 
     // ===== CREATE =====
     @PostMapping("")
-    public ResponseEntity<?> create(@RequestBody Brand item) {
+    public ResponseEntity<?> create(@RequestBody Brand item, 
+                                    @RequestParam(required = false) Integer autoAddCategoryId) {
 
         try {
 
@@ -60,6 +63,24 @@ public class BrandController {
             }
 
             Brand created = repositories.Create(item);
+
+            // 🔥 Nếu có autoAddCategoryId, tạo liên kết category_brand
+            if (autoAddCategoryId != null && autoAddCategoryId > 0 && created != null) {
+                try {
+                    CategoryBrand categoryBrand = new CategoryBrand();
+                    categoryBrand.setCategory_id(autoAddCategoryId);
+                    categoryBrand.setBrand_id(created.getId());
+                    categoryBrand.setStatus(1);
+
+                    IRepositories<CategoryBrand> categoryBrandRepo = 
+                        RepoFactoryImpl.Instance().createRepo("category_brand");
+                    categoryBrandRepo.Create(categoryBrand);
+                } catch (Exception e) {
+                    // Log nhưng không fail, brand đã được tạo
+                    e.printStackTrace();
+                    System.out.println("Warning: Could not link brand to category");
+                }
+            }
 
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
 

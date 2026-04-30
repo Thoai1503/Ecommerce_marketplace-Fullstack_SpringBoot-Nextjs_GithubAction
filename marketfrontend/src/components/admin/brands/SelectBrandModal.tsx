@@ -1,5 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -8,6 +10,7 @@ type Props = {
   onSubmit: (ids: number[]) => Promise<void>;
   existingIds?: number[];
   loading?: boolean;
+  categoryId?: string | number;
 };
 
 export default function SelectBrandModal({
@@ -17,7 +20,9 @@ export default function SelectBrandModal({
   onSubmit,
   existingIds = [],
   loading = false,
+  categoryId,
 }: Props) {
+  const router = useRouter();
   const [selected, setSelected] = useState<number[]>([]);
   const [search, setSearch] = useState("");
 
@@ -53,6 +58,15 @@ export default function SelectBrandModal({
     await onSubmit(selected);
   };
 
+  // ➕ handle create new brand
+  const handleCreateNewBrand = () => {
+    if (!search.trim()) return;
+    
+    const createUrl = `/admin/categories/brands/new?brandName=${encodeURIComponent(search)}&autoAddCategoryId=${categoryId}`;
+    router.push(createUrl);
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white w-[520px] rounded-2xl shadow-xl p-6 animate-fadeIn">
@@ -71,9 +85,21 @@ export default function SelectBrandModal({
         {/* LIST */}
         <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
           {filteredBrands.length === 0 && (
-            <p className="text-sm text-slate-400 text-center py-6">
-              No brands found
-            </p>
+            <div className="space-y-3 py-6">
+              <p className="text-sm text-slate-400 text-center">
+                No brands found
+              </p>
+
+              {search.trim() && categoryId && (
+                <button
+                  onClick={handleCreateNewBrand}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-50 border border-blue-300 text-blue-700 hover:bg-blue-100 transition font-medium text-sm"
+                >
+                  <Plus size={16} />
+                  Create new brand "{search}" & add to category
+                </button>
+              )}
+            </div>
           )}
 
           {filteredBrands.map((b: any) => {

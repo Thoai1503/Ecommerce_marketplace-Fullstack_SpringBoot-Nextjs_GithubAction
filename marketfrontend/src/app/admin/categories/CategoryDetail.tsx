@@ -666,6 +666,7 @@ export default function CategoryDetail() {
         onClose={() => setOpenAttributeModal(false)}
         attributes={attributes}
         existingIds={categoryAttributes.map((a) => Number(a.attributeId))}
+        categoryId={category?.id}
         onSubmit={async (ids) => {
           try {
             await addAttributes(ids);
