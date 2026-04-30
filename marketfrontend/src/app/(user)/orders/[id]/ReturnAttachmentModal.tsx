@@ -12,15 +12,22 @@ const ReturnAttachmentModal = ({
   order: any;
   setViewReturnMediaShipmentId: (id: number | null) => void;
 }) => {
-  console.log("ReturnAttachmentModal - returnRequestId:", returnRequestId);
   ReturnRequestAttachment.setup({
     path: `${API_URL}/api/refunds-requests-attachments`,
   });
-  const { data: attachments } = useQuery(
-    ReturnRequestAttachment.getByReturnRequestId(returnRequestId || -1),
-  );
 
-  console.log("ReturnAttachmentModal - attachments:", attachments);
+  const isValidRequestId =
+    typeof returnRequestId === "number" && returnRequestId > 0;
+
+  const { data: attachments } = useQuery({
+    ...(isValidRequestId
+      ? ReturnRequestAttachment.getByReturnRequestId(returnRequestId)
+      : { queryKey: ["attachments", "invalid"] }),
+    enabled: isValidRequestId,
+  });
+
+  //  alert(JSON.stringify(attachments)); // Debugging line to check the attachments data
+
   const styles: Record<string, CSSProperties> = {
     modalBackdrop: {
       position: "fixed",
@@ -56,6 +63,7 @@ const ReturnAttachmentModal = ({
       maxHeight: "calc(88vh - 82px)",
     },
   };
+
   return (
     <div
       style={styles.modalBackdrop}
@@ -69,7 +77,7 @@ const ReturnAttachmentModal = ({
               fontWeight: 800,
             }}
           >
-            Yêu cầu trả hàng - Hình ảnh & Video
+            Yêu cầu trả hàng - Hình ảnh & Video {returnRequestId}
           </h3>
           <button
             type="button"
@@ -80,38 +88,23 @@ const ReturnAttachmentModal = ({
           </button>
         </div>
         <div style={styles.modalBody}>
-          {(() => {
-            if (!returnRequestId) {
-              return (
-                <p className="text-muted">
-                  Không tìm thấy yêu cầu trả hàng nào liên quan đến đơn hàng
-                  này.
-                </p>
-              );
-            }
-
-            return (
-              <>
-                {attachments?.length === 0 ? (
-                  <p className="text-muted">Không có tệp đính kèm nào.</p>
-                ) : (
-                  <div>
-                    {attachments?.map((attachment) => (
-                      <div key={attachment.id}>
-                        <a
-                          href={attachment.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {attachment.description}
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            );
-          })()}
+          <div>
+            <h4 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
+              Hình ảnh & Video đính kèm
+            </h4>
+          
+            {attachments?.map((attachment) => (
+              <div key={attachment.id}>
+                <a
+                  href={attachment.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {attachment.description}
+                </a>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -957,11 +957,7 @@ export default function UserOrderDetailPage() {
   };
 
   const handleSubmitReturnRequest = async () => {
-    // alert(
-    //   "Vui long dien day du thong tin de gui yeu cau tra hang hoan tien den shop. Neu backend chua ho tro endpoint, noi dung yeu cau tra hang cua ban van duoc luu tam thoi tren giao dien va se duoc gui den shop khi backend san sang.",
-    // );
     if (!activeReturnShipment) return;
-    //  alert(activeReturnShipment.id);
     const shipmentId = activeReturnShipment.id;
     const draft = returnRequestDrafts[shipmentId];
     console.log("Submitting return request with draft:", draft);
@@ -1050,8 +1046,6 @@ export default function UserOrderDetailPage() {
     let submittedByApi = false;
     console.log("Submitting return request to API with formData:", formData);
     try {
-      //Hàm không chạy được đến đây
-
       alert(
         "Vui long dien day du thong tin de gui yeu cau tra hang hoan tien den shop. Neu backend chua ho tro endpoint, noi dung yeu cau tra hang cua ban van duoc luu tam thoi tren giao dien va se duoc gui den shop khi backend san sang.",
       );
@@ -1358,11 +1352,6 @@ export default function UserOrderDetailPage() {
             : fallbackItems;
 
         const uniqueItems: OrderItem[] =
-          //  Array.from(
-          //   new Map(
-          //     orderItems.map((item: OrderItem) => [item.id, item]),
-          //   ).values(),
-          // );
           orderData?.items.map((item: any) => {
             console.log("Mapping order item:", item);
             return {
@@ -1370,16 +1359,6 @@ export default function UserOrderDetailPage() {
               productImage: item.image,
             };
           }) || [];
-
-        // orderData?.item.forEach((item: any) => {
-        //   console.log("Shipment ID from order item:", item?.shipmentId);
-        //   if (requestIdShipmentMap[item?.shipmentId]) return;
-
-        //   setRequestIdShipmentMap((prev) => ({
-        //     ...prev,
-        //     [item.shipmentId]: item.lastAdjustmentRequestId,
-        //   }));
-        // });
 
         orderData?.items.forEach((item: any) => {
           console.log(
@@ -1668,7 +1647,7 @@ export default function UserOrderDetailPage() {
                             shipment.shipping_status,
                           );
                           const adjustmentRequest = shipment.adjustment_request;
-                          const requestId = requestIdShipmentMap[shipment.id];
+
                           return (
                             <div key={shipment.id} style={styles.shipmentItem}>
                               <div style={styles.shipmentHead}>
@@ -1804,7 +1783,7 @@ export default function UserOrderDetailPage() {
                                             Trả hàng hoàn tiền
                                           </button>
                                         )}
-                                      {/* View Return Request Media Button */}
+
                                       {shipment.returnStatusSummary &&
                                         shipment.returnStatusSummary !==
                                           "NONE" && (
@@ -1821,16 +1800,6 @@ export default function UserOrderDetailPage() {
                                           </button>
                                         )}
                                     </div>
-                                  )}
-                                  {/* Modal for viewing return request media */}
-                                  {viewReturnMediaShipmentId && (
-                                    <ReturnAttachmentModal
-                                      returnRequestId={requestId}
-                                      setViewReturnMediaShipmentId={
-                                        setViewReturnMediaShipmentId
-                                      }
-                                      order={order}
-                                    />
                                   )}
                                 </div>
 
@@ -2666,6 +2635,7 @@ export default function UserOrderDetailPage() {
         </div>
       </main>
 
+      {/* Review Modal */}
       {activeReviewShipment && (
         <div style={styles.modalBackdrop} onClick={closeReviewModal}>
           <div
@@ -2878,6 +2848,7 @@ export default function UserOrderDetailPage() {
         </div>
       )}
 
+      {/* Return Request Modal */}
       {activeReturnShipment && (
         <ReturnRequestModal
           shipment={activeReturnShipment}
@@ -2907,6 +2878,15 @@ export default function UserOrderDetailPage() {
             qtyBadge: styles.qtyBadge,
             reviewTextarea: styles.reviewTextarea,
           }}
+        />
+      )}
+
+      {/* ✅ FIX: ReturnAttachmentModal moved here to top-level, outside shipments.map loop */}
+      {viewReturnMediaShipmentId !== null && (
+        <ReturnAttachmentModal
+          returnRequestId={requestIdShipmentMap[viewReturnMediaShipmentId]}
+          setViewReturnMediaShipmentId={setViewReturnMediaShipmentId}
+          order={order}
         />
       )}
     </>
