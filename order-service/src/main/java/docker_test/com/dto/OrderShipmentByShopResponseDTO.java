@@ -6,6 +6,7 @@ public record OrderShipmentByShopResponseDTO(
         Long shipmentId,
         Long orderId,
         Long shopId,
+        String shopName,
         Long shippingFee,
         Long totalAmount,
         String carrierName,
