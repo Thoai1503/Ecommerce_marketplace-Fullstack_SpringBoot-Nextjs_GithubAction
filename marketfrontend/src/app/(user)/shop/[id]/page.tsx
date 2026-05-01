@@ -2,18 +2,62 @@
 
 import { useSearchParams } from "next/navigation";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ShopSidebar from "@/components/client/shop/ShopSidebar";
 import Link from "next/link";
 import { API_URL } from "@/helper/api";
 import VoucherClaimButton from "@/components/client/voucher/VoucherClaimButton";
 import { useUserAuth } from "@/context/UserAuthContext";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+const getVoucherClaimEndTime = (voucher: any) => {
+  const claimEnd = voucher.claimEndAt ?? voucher.claim_end_at;
+  if (!claimEnd) return null;
+
+  const time = new Date(claimEnd).getTime();
+  return Number.isFinite(time) ? time : null;
+};
+
+const isVoucherClaimExpired = (voucher: any) => {
+  const claimEndTime = getVoucherClaimEndTime(voucher);
+  return claimEndTime !== null && claimEndTime < Date.now();
+};
+
+const getVisibleShopVouchers = (vouchers: any[], shopId: unknown) =>
+  vouchers
+    .filter((voucher: any) => {
+      const issuerType = String(
+        voucher.issuerType ?? voucher.issuer_type ?? "",
+      ).toUpperCase();
+      const issuerId = Number(voucher.issuerId ?? voucher.issuer_id ?? 0);
+      const status = String(voucher.status ?? "").toUpperCase();
+
+      return (
+        issuerType === "SHOP" &&
+        issuerId === Number(shopId) &&
+        ["ACTIVE", "DRAFT", "PAUSED"].includes(status) &&
+        !isVoucherClaimExpired(voucher)
+      );
+    })
+    .sort(
+      (a: any, b: any) =>
+        Number(b.priority ?? 0) - Number(a.priority ?? 0),
+    );
+
+const getVoucherRemainingCount = (voucher: any) => {
+  const total = Number(voucher.totalQuota ?? voucher.total_quota ?? 0);
+  if (!total) return "∞";
+
+  const claimed = Number(voucher.claimedCount ?? voucher.claimed_count ?? 0);
+  return Math.max(total - claimed, 0).toLocaleString("en-US");
+};
 
 export default function ShopPage() {
   const params = useParams();
   const shopId = params?.id;
   const { userId } = useUserAuth();
   const searchParams = useSearchParams();
+  const voucherStripRef = useRef<HTMLDivElement | null>(null);
   const [keyword, setKeyword] = useState("");
   const [shop, setShop] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
@@ -39,26 +83,7 @@ export default function ShopPage() {
       const data = await res.json();
       const vouchers = Array.isArray(data) ? data : [];
 
-      const filtered = vouchers
-        .filter((voucher: any) => {
-          const issuerType = String(
-            voucher.issuerType ?? voucher.issuer_type ?? "",
-          ).toUpperCase();
-          const issuerId = Number(voucher.issuerId ?? voucher.issuer_id ?? 0);
-          const status = String(voucher.status ?? "").toUpperCase();
-
-          return (
-            issuerType === "SHOP" &&
-            issuerId === Number(shopId) &&
-            ["ACTIVE", "DRAFT", "PAUSED"].includes(status)
-          );
-        })
-        .sort(
-          (a: any, b: any) =>
-            Number(b.priority ?? 0) - Number(a.priority ?? 0),
-        );
-
-      setShopVouchers(filtered);
+      setShopVouchers(getVisibleShopVouchers(vouchers, shopId));
     };
 
     const fetchData = async () => {
@@ -127,6 +152,9 @@ export default function ShopPage() {
   const formatPrice = (n?: number) =>
     new Intl.NumberFormat("vi-VN").format(n || 0) + " đ";
 
+  const formatVoucherMoney = (value: unknown) =>
+    `${Number(value || 0).toLocaleString("en-US")} VND`;
+
   const formatVoucherDiscount = (voucher: any) => {
     const type = String(
       voucher.discountType ?? voucher.discount_type ?? "",
@@ -135,14 +163,25 @@ export default function ShopPage() {
       return `Save ${Number(voucher.discountPercent ?? voucher.discount_percent ?? 0)}%`;
     }
     if (type === "FIXED") {
-      return `Save ${Number(
+      return `Save ${formatVoucherMoney(
         voucher.discountAmount ?? voucher.discount_amount ?? 0,
-      ).toLocaleString("vi-VN")}đ`;
+      )}`;
     }
     if (type === "FREE_SHIPPING") {
       return "Free shipping";
     }
     return "Gift item";
+  };
+
+  const scrollVouchers = (direction: "left" | "right") => {
+    const strip = voucherStripRef.current;
+    if (!strip) return;
+
+    const scrollAmount = Math.max(320, Math.floor(strip.clientWidth * 0.8));
+    strip.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
   };
 
   // ===== FILTER (GIỮ NGUYÊN) =====
@@ -240,105 +279,92 @@ export default function ShopPage() {
 
       {shopVouchers.length > 0 && (
         <div className="card border-0 shadow-sm rounded-4 mb-4">
-          <div className="card-body p-4">
-            <div className="d-flex justify-content-between align-items-center mb-3">
+          <div className="card-body p-3">
+            <div className="d-flex justify-content-between align-items-center gap-3 mb-2">
               <div>
                 <h5 className="mb-1 fw-bold">Shop vouchers</h5>
                 <div className="text-muted small">
                   Collect vouchers from this shop before placing your order.
                 </div>
               </div>
-              <span className="badge bg-danger-subtle text-danger border">
-                {shopVouchers.length} voucher(s)
-              </span>
+              <div className="voucher-head-actions">
+                <span className="badge bg-danger-subtle text-danger border">
+                  {shopVouchers.length} voucher(s)
+                </span>
+                <button
+                  type="button"
+                  className="voucher-nav-button"
+                  aria-label="Previous vouchers"
+                  onClick={() => scrollVouchers("left")}
+                >
+                  <ChevronLeft size={18} strokeWidth={2.4} />
+                </button>
+                <button
+                  type="button"
+                  className="voucher-nav-button"
+                  aria-label="Next vouchers"
+                  onClick={() => scrollVouchers("right")}
+                >
+                  <ChevronRight size={18} strokeWidth={2.4} />
+                </button>
+              </div>
             </div>
 
-            <div className="row g-3">
+            <div className="voucher-strip" ref={voucherStripRef}>
               {shopVouchers.map((voucher) => (
-                <div className="col-lg-6" key={voucher.id}>
-                  <div className="border rounded-4 p-3 h-100 voucher-card">
-                    <div className="d-flex gap-3">
-                      <div className="voucher-mark text-white fw-bold">S</div>
-                      <div className="flex-grow-1">
-                        <div className="d-flex justify-content-between gap-3 align-items-start">
-                          <div>
-                            <div className="fw-bold">{voucher.title}</div>
-                            <div className="small text-muted">
-                              Code: {voucher.code}
-                            </div>
-                          </div>
-                          <span className="badge bg-light text-dark border">
-                            {String(voucher.status ?? "").toUpperCase()}
-                          </span>
-                        </div>
-
-                        <div className="small mt-2 text-danger fw-semibold">
-                          {formatVoucherDiscount(voucher)}
-                        </div>
-                        <div className="small text-muted mt-1">
-                          Min. order:{" "}
-                          {Number(
-                            voucher.minOrderValue ?? voucher.min_order_value ?? 0,
-                          ).toLocaleString("vi-VN")}
-                          đ
-                        </div>
-                        <div className="small text-muted">
-                          Claimed:{" "}
-                          {Number(
-                            voucher.claimedCount ?? voucher.claimed_count ?? 0,
-                          )}
-                          /
-                          {Number(
-                            voucher.totalQuota ?? voucher.total_quota ?? 0,
-                          ) || "∞"}
-                        </div>
-                        <div className="small text-muted">
-                          Claim until:{" "}
-                          {voucher.claimEndAt || voucher.claim_end_at
-                            ? new Date(
-                                voucher.claimEndAt ?? voucher.claim_end_at,
-                              ).toLocaleString("en-GB")
-                            : "N/A"}
-                        </div>
-
-                        <div className="mt-3">
-                          <VoucherClaimButton
-                            voucherId={Number(voucher.id)}
-                            voucherCode={voucher.code}
-                            voucherStatus={voucher.status}
-                            claimStartAt={voucher.claimStartAt ?? voucher.claim_start_at}
-                            claimEndAt={voucher.claimEndAt ?? voucher.claim_end_at}
-                            totalQuota={Number(
-                              voucher.totalQuota ?? voucher.total_quota ?? 0,
-                            )}
-                            claimedCount={Number(
-                              voucher.claimedCount ?? voucher.claimed_count ?? 0,
-                            )}
-                            className="btn btn-danger btn-sm px-3"
-                            onClaimSuccess={async () => {
-                              const res = await fetch(`${API_URL}/api/vouchers`, {
-                                cache: "no-store",
-                              });
-                              const data = await res.json();
-                              const vouchers = Array.isArray(data) ? data : [];
-                              setShopVouchers(
-                                vouchers.filter((item: any) => {
-                                  const issuerType = String(
-                                    item.issuerType ?? item.issuer_type ?? "",
-                                  ).toUpperCase();
-                                  const issuerId = Number(
-                                    item.issuerId ?? item.issuer_id ?? 0,
-                                  );
-                                  return (
-                                    issuerType === "SHOP" &&
-                                    issuerId === Number(shopId)
-                                  );
-                                }),
-                              );
-                            }}
-                          />
-                        </div>
+                <div className="voucher-coupon" key={voucher.id}>
+                  <div className="voucher-coupon-content">
+                    <div className="voucher-main-text">
+                      <div className="voucher-discount">
+                        {formatVoucherDiscount(voucher)}
                       </div>
+                      <div className="voucher-min-order">
+                        Min spend{" "}
+                        {formatVoucherMoney(
+                          voucher.minOrderValue ?? voucher.min_order_value ?? 0,
+                        )}
+                      </div>
+                      <div className="voucher-scope">Selected products</div>
+                      <div className="voucher-expiry">
+                        Valid until:{" "}
+                        {voucher.claimEndAt || voucher.claim_end_at
+                          ? new Date(
+                              voucher.claimEndAt ?? voucher.claim_end_at,
+                            ).toLocaleDateString("en-GB")
+                          : "No limit"}
+                      </div>
+                    </div>
+
+                    <div className="voucher-side">
+                      <div className="voucher-quantity">
+                        x{getVoucherRemainingCount(voucher)}
+                      </div>
+                      <VoucherClaimButton
+                        voucherId={Number(voucher.id)}
+                        voucherCode={voucher.code}
+                        voucherStatus={voucher.status}
+                        claimStartAt={voucher.claimStartAt ?? voucher.claim_start_at}
+                        claimEndAt={voucher.claimEndAt ?? voucher.claim_end_at}
+                        totalQuota={Number(
+                          voucher.totalQuota ?? voucher.total_quota ?? 0,
+                        )}
+                        claimedCount={Number(
+                          voucher.claimedCount ?? voucher.claimed_count ?? 0,
+                        )}
+                        claimLabel="Save"
+                        claimedLabel="Saved"
+                        claimingLabel="Saving..."
+                        successMessage={`Voucher ${voucher.code} saved successfully!`}
+                        className="voucher-save-button"
+                        onClaimSuccess={async () => {
+                          const res = await fetch(`${API_URL}/api/vouchers`, {
+                            cache: "no-store",
+                          });
+                          const data = await res.json();
+                          const vouchers = Array.isArray(data) ? data : [];
+                          setShopVouchers(getVisibleShopVouchers(vouchers, shopId));
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -347,7 +373,6 @@ export default function ShopPage() {
           </div>
         </div>
       )}
-
       {/* ===== SEARCH ===== */}
       <div className="mb-4">
         <div className="search-wrapper position-relative">
@@ -476,19 +501,158 @@ export default function ShopPage() {
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
-        .voucher-card {
-          background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%);
+        .voucher-head-actions {
+          align-items: center;
+          display: flex;
+          flex-shrink: 0;
+          gap: 8px;
         }
 
-        .voucher-mark {
-          width: 44px;
-          height: 44px;
-          border-radius: 14px;
-          display: flex;
+        .voucher-nav-button {
           align-items: center;
+          background: #fff;
+          border: 1px solid #ffd0d0;
+          border-radius: 999px;
+          color: #d70018;
+          display: inline-flex;
+          height: 30px;
           justify-content: center;
-          background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-          flex-shrink: 0;
+          transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+          width: 30px;
+        }
+
+        .voucher-nav-button:hover {
+          background: #d70018;
+          border-color: #d70018;
+          color: #fff;
+        }
+
+        .voucher-strip {
+          display: flex;
+          gap: 18px;
+          overflow-x: auto;
+          padding: 2px 4px 8px;
+          scrollbar-width: none;
+          scroll-snap-type: x proximity;
+        }
+
+        .voucher-strip::-webkit-scrollbar {
+          display: none;
+        }
+
+        .voucher-coupon {
+          background: #fff1f1;
+          border: 1px solid #ffcaca;
+          box-shadow: 0 2px 6px rgba(220, 38, 38, 0.08);
+          flex: 0 0 360px;
+          min-height: 138px;
+          position: relative;
+          scroll-snap-align: start;
+        }
+
+        .voucher-coupon::before {
+          background: radial-gradient(
+              circle at left 7px,
+              #fff 0 4px,
+              transparent 4.5px
+            )
+            left top / 9px 14px repeat-y;
+          bottom: 0;
+          content: "";
+          left: -1px;
+          position: absolute;
+          top: 0;
+          width: 9px;
+        }
+
+        .voucher-coupon-content {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 94px;
+          min-height: 138px;
+        }
+
+        .voucher-main-text {
+          color: #e60012;
+          min-width: 0;
+          padding: 20px 18px 16px 14px;
+        }
+
+        .voucher-discount {
+          font-size: 18px;
+          line-height: 1.2;
+          margin-bottom: 6px;
+        }
+
+        .voucher-min-order {
+          font-size: 15px;
+          line-height: 1.25;
+          margin-bottom: 7px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .voucher-scope {
+          border: 1px solid #e60012;
+          display: inline-block;
+          font-size: 13px;
+          line-height: 1.15;
+          margin-bottom: 9px;
+          max-width: 100%;
+          overflow: hidden;
+          padding: 2px 7px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .voucher-expiry {
+          color: #6b7280;
+          font-size: 12px;
+          line-height: 1.2;
+        }
+
+        .voucher-side {
+          align-items: center;
+          border-left: 1px dashed #f3caca;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          position: relative;
+        }
+
+        .voucher-quantity {
+          background: #ffe4e4;
+          border-radius: 999px;
+          color: #e60012;
+          font-size: 13px;
+          line-height: 1;
+          min-width: 52px;
+          padding: 8px 12px;
+          position: absolute;
+          right: 10px;
+          text-align: center;
+          top: 4px;
+        }
+
+        :global(.voucher-save-button) {
+          background: #d70018;
+          border: 0;
+          border-radius: 2px;
+          color: #fff;
+          font-size: 14px;
+          font-weight: 700;
+          height: 32px;
+          max-width: 74px;
+          min-width: 64px;
+          overflow: hidden;
+          padding: 0 12px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        :global(.voucher-save-button:disabled) {
+          cursor: not-allowed;
+          opacity: 0.65;
         }
 
         .product-col {
@@ -502,6 +666,18 @@ export default function ShopPage() {
         }
 
         @media (max-width: 768px) {
+          .voucher-coupon {
+            flex-basis: 320px;
+          }
+
+          .voucher-coupon-content {
+            grid-template-columns: minmax(0, 1fr) 84px;
+          }
+
+          .voucher-main-text {
+            padding: 18px 14px 14px 12px;
+          }
+
           .product-col {
             width: 50%; /* mobile: 2 sp */
           }

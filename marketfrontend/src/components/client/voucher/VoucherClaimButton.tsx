@@ -16,6 +16,10 @@ type Props = {
   claimedCount?: number | null;
   className?: string;
   style?: CSSProperties;
+  claimLabel?: string;
+  claimedLabel?: string;
+  claimingLabel?: string;
+  successMessage?: string;
   onClaimSuccess?: () => void | Promise<void>;
 };
 
@@ -72,6 +76,10 @@ export default function VoucherClaimButton({
   claimedCount,
   className,
   style,
+  claimLabel = "Claim voucher",
+  claimedLabel = "Claimed",
+  claimingLabel = "Claiming...",
+  successMessage,
   onClaimSuccess,
 }: Props) {
   const router = useRouter();
@@ -161,7 +169,7 @@ export default function VoucherClaimButton({
         queryKey: ["user-vouchers", currentUserId],
       });
       await onClaimSuccess?.();
-      window.alert(`Voucher ${voucherCode} claimed successfully`);
+      window.alert(successMessage || `Voucher ${voucherCode} claimed successfully`);
     },
     onError: (error: any) => {
       window.alert(error?.message || "Failed to claim voucher");
@@ -186,12 +194,12 @@ export default function VoucherClaimButton({
   };
 
   const buttonLabel = isAlreadyClaimed
-    ? "Claimed"
+    ? claimedLabel
     : claimMutation.isPending
-      ? "Claiming..."
+      ? claimingLabel
       : disabledReason
         ? disabledReason
-        : "Claim voucher";
+        : claimLabel;
 
   return (
     <button

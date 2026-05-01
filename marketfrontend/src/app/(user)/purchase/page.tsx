@@ -694,6 +694,26 @@ export default function PurchasePage() {
     };
   }, [userId]);
 
+  const tabCounts = useMemo(() => {
+    const counts = PURCHASE_TABS.reduce(
+      (acc, tab) => {
+        acc[tab.key] = 0;
+        return acc;
+      },
+      {} as Record<PurchaseTabKey, number>,
+    );
+
+    counts.all = shipments.length;
+    shipments.forEach((shipment) => {
+      const tab = getShipmentTab(shipment);
+      if (tab !== "all") {
+        counts[tab] += 1;
+      }
+    });
+
+    return counts;
+  }, [shipments]);
+
   const filteredShipments = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
@@ -860,6 +880,20 @@ export default function PurchasePage() {
           white-space: nowrap;
           transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
         }
+        .purchase-tab-count {
+          align-items: center;
+          background: #eef2f7;
+          border-radius: 999px;
+          color: #475569;
+          display: inline-flex;
+          font-size: 12px;
+          font-weight: 700;
+          height: 22px;
+          justify-content: center;
+          line-height: 1;
+          min-width: 22px;
+          padding: 0 7px;
+        }
         .purchase-tab:hover {
           background: #f8fbff;
           color: ${BRAND_BLUE};
@@ -868,6 +902,10 @@ export default function PurchasePage() {
           color: ${BRAND_BLUE};
           border-bottom-color: ${BRAND_BLUE};
           font-weight: 700;
+        }
+        .purchase-tab.active .purchase-tab-count {
+          background: #dbeafe;
+          color: ${BRAND_BLUE};
         }
         .purchase-search {
           height: 52px;
@@ -1031,7 +1069,10 @@ export default function PurchasePage() {
                     }`}
                     onClick={() => setActiveTab(tab.key)}
                   >
-                    {tab.label}
+                    <span>{tab.label}</span>
+                    <span className="purchase-tab-count">
+                      {tabCounts[tab.key]}
+                    </span>
                   </button>
                 ))}
               </div>
