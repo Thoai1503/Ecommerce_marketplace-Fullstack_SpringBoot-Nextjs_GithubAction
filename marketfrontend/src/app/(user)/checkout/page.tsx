@@ -151,8 +151,7 @@ const normalizeVoucherNumber = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const toMoneyAmount = (value: number) =>
-  Number(Math.max(0, value).toFixed(2));
+const toMoneyAmount = (value: number) => Number(Math.max(0, value).toFixed(2));
 
 const normalizeVoucherBoolean = (value: unknown) => {
   if (typeof value === "boolean") return value;
@@ -1282,7 +1281,9 @@ export default function CheckoutPage() {
             );
           }
 
-          if (String(voucher.discountType ?? "").toUpperCase() === "GIFT_ITEM") {
+          if (
+            String(voucher.discountType ?? "").toUpperCase() === "GIFT_ITEM"
+          ) {
             pushUsage(voucher, shopId, 0);
           }
         });
@@ -1438,7 +1439,9 @@ export default function CheckoutPage() {
             );
           }
 
-          if (String(voucher.discountType ?? "").toUpperCase() === "GIFT_ITEM") {
+          if (
+            String(voucher.discountType ?? "").toUpperCase() === "GIFT_ITEM"
+          ) {
             getDraft(voucher);
           }
         });
@@ -1472,10 +1475,8 @@ export default function CheckoutPage() {
       });
 
       if (String(voucher.discountType ?? "").toUpperCase() === "GIFT_ITEM") {
-        const hasApplicableItem = getVoucherApplicableCartItems(
-          voucher,
-          cartItems,
-        ).length > 0;
+        const hasApplicableItem =
+          getVoucherApplicableCartItems(voucher, cartItems).length > 0;
 
         if (hasApplicableItem) {
           getDraft(voucher);

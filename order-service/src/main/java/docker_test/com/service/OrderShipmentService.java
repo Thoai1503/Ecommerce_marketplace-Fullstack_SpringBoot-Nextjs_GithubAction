@@ -145,8 +145,9 @@ public class OrderShipmentService {
     
 
         @Transactional(readOnly = true)
-    public List<OrderShipmentByShopResponseDTO> getShipmentsByShopId(Long shopId) {
-        List<OrderShipmentWithOrderAndRecipientProjection> rows = orderShipmentRepository.findShipmentDetailsByShopId(shopId);
+    public List<OrderShipmentByShopResponseDTO> getShipmentsByShopId(Long shopId,String status, int page, int size, String sortBy, String sortOrder, String search,String paymentStatus) {
+        	
+        List<OrderShipmentWithOrderAndRecipientProjection> rows = orderShipmentRepository.findShipmentDetailsByShopId(shopId,status, paymentStatus);
         System.out.println("Fetched " + rows.size() + " shipments for shopId: " + shopId);
         System.out.println("Total amount of first shipment: " + (rows.isEmpty() ? "N/A" : rows.get(0).getTotalAmount()));
         List<Long> shipmentIds = rows.stream()
