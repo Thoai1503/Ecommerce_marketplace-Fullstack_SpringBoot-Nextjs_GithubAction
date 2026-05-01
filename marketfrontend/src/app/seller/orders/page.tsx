@@ -21,6 +21,8 @@ import {
   XCircle,
 } from "lucide-react";
 import React, { useState, useMemo, useEffect } from "react";
+import { useOrderShipmentFilter } from "@/hooks/seller/useOrderShipmentFilter";
+import { useRouter } from "next/navigation";
 
 type PendingShipmentOrder = {
   shipmentId: number;
@@ -66,8 +68,8 @@ const mapShippingStatusToUiStatus = (shippingStatus?: string) => {
       return "failed";
     case "RETURNED":
       return "returned";
-    case "SHIPPED":
-      return "shipped";
+    case "COMPLETED":
+      return "completed";
     case "CANCELED":
     case "CANCELLED":
       return "cancelled";
@@ -116,8 +118,8 @@ const getStatusLabel = (status?: string): string => {
       return "Thất bại";
     case "returned":
       return "Trả hàng";
-    case "shipped":
-      return "Đã gửi";
+    case "completed":
+      return "Hoàn thành";
     case "pending_payment":
       return "Chờ thanh toán";
     case "cancelled":
@@ -703,11 +705,32 @@ function OutOfStockAdjustmentModal({
 
 const page = () => {
   const { shop: shopData } = useSellerAuth();
+  const {
+    apiParams,
+    filters,
+    updateFilters,
+
+    updatePage,
+    isHydrated,
+    clearFilters,
+  } = useOrderShipmentFilter();
+  const router = useRouter();
+
+  const [allOrderShipments, setAllOrderShipments] = useState<IOrderShipment[]>(
+    [],
+  );
   console.log("Shop Data in Order Page:", JSON.stringify(shopData, null, 2));
   OrderShipments.setup({ path: "/seller/order-shipment" });
-  const { data: orderShipments, refetch: refetchOrderShipments } = useQuery<
-    IOrderShipment[]
-  >(OrderShipments.getByShopId(shopData?.id || 0));
+  const { data: orderShipments, refetch } = useQuery({
+    ...OrderShipments.getByShopId(shopData?.id || 0, apiParams),
+    enabled: !!shopData?.id && isHydrated,
+  });
+
+  useEffect(() => {
+    if (orderShipments && allOrderShipments.length === 0) {
+      setAllOrderShipments( orderShipments);
+    }
+  }, [orderShipments, allOrderShipments.length]);
 
   console.log("Order Shipments Data:", JSON.stringify(orderShipments, null, 2));
   const { shop, orders: mockOrders } = useOrderPage();
@@ -815,7 +838,7 @@ const page = () => {
       const message =
         nested?.message != null ? String(nested.message) : undefined;
 
-      await refetchOrderShipments();
+      await refetch();
       setLogisticsConfirmSuccess({
         trackingCode,
         shippingStatus,
@@ -843,7 +866,7 @@ const page = () => {
           items: payload.items,
         },
       );
-      await refetchOrderShipments();
+      await refetch();
       alert("Đã gửi đề xuất điều chỉnh số lượng cho buyer.");
       setAdjustmentShipmentOrder(null);
     } catch (error) {
@@ -866,7 +889,7 @@ const page = () => {
           reason,
         },
       );
-      await refetchOrderShipments();
+      await refetch();
       alert("Đã hủy kiện do thiếu hàng.");
       setAdjustmentShipmentOrder(null);
     } catch (error) {
@@ -937,7 +960,10 @@ const page = () => {
                   ? "active border-danger text-danger"
                   : "text-dark"
               } border-0 border-bottom-3`}
-              onClick={() => setActiveTab("all")}
+              onClick={() => {
+                router.push("/seller/orders?status=ALL");
+                setActiveTab("all");
+              }}
             >
               Tất cả
             </button>
@@ -949,10 +975,20 @@ const page = () => {
                   ? "active border-danger text-danger"
                   : "text-dark"
               } border-0 border-bottom-3`}
-              onClick={() => setActiveTab("waiting-for-payment")}
+              onClick={() => {
+                router.push("/seller/orders?paymentStatus=PENDING");
+                setActiveTab("waiting-for-payment");
+              }}
             >
               Chờ thanh toán{" "}
-              <span className="badge bg-danger rounded-circle ms-1">0</span>
+              <span className="badge bg-danger rounded-circle ms-1">
+                {
+                  allOrderShipments?.filter(
+                    (shipment: any) =>
+                      shipment.order.paymentStatus === "PENDING",
+                  ).length
+                }
+              </span>
             </button>
           </li>
           <li className="nav-item">
@@ -962,10 +998,19 @@ const page = () => {
                   ? "active border-danger text-danger"
                   : "text-dark"
               } border-0 border-bottom-3`}
-              onClick={() => setActiveTab("waiting-for-shipping")}
+              onClick={() => {
+                router.push("/seller/orders?status=CONFIRMED");
+                setActiveTab("waiting-for-shipping");
+              }}
             >
               Chờ gửi hàng{" "}
-              <span className="badge bg-danger rounded-circle ms-1">0</span>
+              <span className="badge bg-danger rounded-circle ms-1">
+                {
+                  allOrderShipments?.filter(
+                    (shipment: any) => shipment.shippingStatus === "CONFIRMED",
+                  ).length
+                }
+              </span>
             </button>
           </li>
           <li className="nav-item">

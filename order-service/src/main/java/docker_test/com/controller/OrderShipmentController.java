@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import docker_test.com.dto.CancelShipmentByOosRequestDTO;
@@ -33,8 +34,18 @@ public class OrderShipmentController {
 	}
 
 	@GetMapping("/shop/{shopId}")
-	public ResponseEntity<List<OrderShipmentByShopResponseDTO>> getShipmentsByShopId(@PathVariable Long shopId) {
-		return ResponseEntity.ok(orderShipmentService.getShipmentsByShopId(shopId));
+	public ResponseEntity<List<OrderShipmentByShopResponseDTO>> getShipmentsByShopId(@PathVariable Long shopId,
+			@RequestParam(defaultValue = "ALL") String status,
+			@RequestParam(defaultValue = "ALL") String paymentStatus,
+			@RequestParam(defaultValue = "1") int page,
+			@RequestParam(defaultValue = "50") int size,
+			@RequestParam(defaultValue = "desc") String sortOrder,
+			@RequestParam(required = false) String sortBy,
+			@RequestParam(required = false) String search
+			
+			) {
+		System.out.println("Received request for shopId: " + shopId + ", status: " + status + ", paymentStatus: " + paymentStatus + ", page: " + page + ", size: " + size + ", sortOrder: " + sortOrder + ", sortBy: " + sortBy + ", search: " + search);
+		return ResponseEntity.ok(orderShipmentService.getShipmentsByShopId(shopId, status, page, size, sortOrder, sortBy, search, paymentStatus));
 	}
 	@GetMapping("/{shipmentId}")
 	public ResponseEntity<OrderShipmentResponeDTO> getShipmentById(@PathVariable Long shipmentId) {
