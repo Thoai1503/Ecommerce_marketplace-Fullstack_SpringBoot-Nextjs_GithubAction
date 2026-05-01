@@ -38,7 +38,7 @@ export const useOrderFilters = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<OrderFilters>(DEFAULT_FILTERS);
-  const [isHydrated, setIsHydrated] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false); // To prevent updating URL before initial load
 
   // Load filters from URL on mount
   useEffect(() => {
