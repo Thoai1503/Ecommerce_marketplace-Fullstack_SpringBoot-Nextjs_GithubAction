@@ -728,7 +728,7 @@ const page = () => {
 
   useEffect(() => {
     if (orderShipments && allOrderShipments.length === 0) {
-      setAllOrderShipments( orderShipments);
+      setAllOrderShipments(orderShipments);
     }
   }, [orderShipments, allOrderShipments.length]);
 
