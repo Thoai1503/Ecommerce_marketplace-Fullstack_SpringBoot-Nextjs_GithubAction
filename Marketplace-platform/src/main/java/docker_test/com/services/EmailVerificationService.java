@@ -33,7 +33,7 @@ public class EmailVerificationService {
     @Value("${spring.mail.username:}")
     private String mailUsername;
 
-    @Value("${app.frontend-url:http://localhost:3000}")
+    @Value("${app.frontend-url}")
     private String frontendUrl;
 
     @Value("${app.email-verification.secret:nexamart-local-email-secret}")
