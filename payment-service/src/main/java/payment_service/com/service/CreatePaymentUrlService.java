@@ -77,7 +77,7 @@ public class CreatePaymentUrlService {
                 .findOptionalByOrderId(request.getOrderId())
                 .orElseGet(() -> buildNewTransaction(request, provider, fallbackIpAddress));
 
-        transaction.setStatus("PROCESSING");
+        transaction.setStatus("PENDING");
         transaction.setFailureReason(null);
         transaction.setGatewayCode(provider.name());
         transaction.setPaymentMethod(provider.name());
@@ -92,7 +92,7 @@ public class CreatePaymentUrlService {
             transaction.setGatewayRefCode(result.getTxnRef());
             transaction.setGatewayOrderId(String.valueOf(request.getOrderId()));
             transaction.setPaymentUrl(result.getPaymentUrl());
-            transaction.setStatus("PENDING");
+            transaction.setStatus("PROCESSING");
             transaction.setGatewayResponseMsg("PAYMENT_URL_CREATED");
             transaction.setExpiredAt(parseGatewayDate(result.getExpireDate()));
             paymentTransactionService.createTransaction(transaction);
