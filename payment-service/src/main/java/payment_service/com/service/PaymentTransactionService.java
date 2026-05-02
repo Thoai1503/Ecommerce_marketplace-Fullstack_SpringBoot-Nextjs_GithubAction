@@ -58,18 +58,6 @@ public class PaymentTransactionService {
         
         PaymentTransaction saved = transactionRepository.save(transaction);
         
-        // Create status history
-        PaymentStatusHistory history = PaymentStatusHistory.builder()
-            .transaction(transaction)
-            .fromStatus(oldStatus)
-            .toStatus(newStatus)
-            .reason(reason)
-            .changedBy(changedBy)
-            .actorId(actorId)
-            .build();
-        
-        statusHistoryRepository.save(history);
-        
         return saved;
     }
     
