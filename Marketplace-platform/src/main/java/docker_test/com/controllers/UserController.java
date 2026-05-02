@@ -12,11 +12,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import docker_test.com.dto.LoginRequest;
 import docker_test.com.dto.LoginResponse;
+import docker_test.com.dto.ForgotPasswordRequest;
 import docker_test.com.dto.RegisterRequest;
+import docker_test.com.dto.ResetPasswordRequest;
 import docker_test.com.models.User;
 import docker_test.com.repository.UserRepository;
 import docker_test.com.utils.PasswordUtil;
 import docker_test.com.services.CloudinaryService;
+import docker_test.com.services.EmailVerificationService;
+import docker_test.com.services.PasswordResetService;
 import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
@@ -28,6 +32,12 @@ public class UserController {
     
     @Autowired
     private CloudinaryService cloudinaryService;
+
+    @Autowired
+    private EmailVerificationService emailVerificationService;
+
+    @Autowired
+    private PasswordResetService passwordResetService;
 
     public UserController() {
         this.userRepository = UserRepository.Instance();
@@ -86,6 +96,7 @@ public class UserController {
             User user = new User();
             user.setEmail(req.getEmail());
             user.setFullName(req.getFullName());
+            user.setIsVerified(0);
 
             // 🔐 HASH PASSWORD (BẮT BUỘC)
             user.setPasswordHash(
@@ -93,28 +104,17 @@ public class UserController {
             );
 
             User created = userRepository.Create(user);
+            try {
+                emailVerificationService.sendVerificationEmail(created);
+            } catch (Exception mailError) {
+                System.err.println("Failed to send verification email to " + created.getEmail());
+                mailError.printStackTrace();
+            }
             
             System.out.println("Created user: " + created.toString());
 
             // ❌ không trả password
             created.setPasswordHash(null);
-            
-            ResponseCookie roleCookie = ResponseCookie.from("role", created.getUserType())
-        		    .httpOnly(true)
-        		    .secure(false)          // requires HTTPS
-        		    .path("/")
-        		    .maxAge(7 * 24 * 60 * 60)
-        		    .sameSite("Lax")
-        		    .build();
-        		response.addHeader("Set-Cookie", roleCookie.toString());
-                ResponseCookie userCookie = ResponseCookie.from("user", String.valueOf(created.getId()))
-            		    .httpOnly(true)
-            		    .secure(false)          // requires HTTPS
-            		    .path("/")
-            		    .maxAge(7 * 24 * 60 * 60)
-            		    .sameSite("Lax")
-            		    .build();
-            		response.addHeader("Set-Cookie", userCookie.toString());
             
             System.out.println("User registered successfully: " + created.toString());
             return ResponseEntity
@@ -126,6 +126,40 @@ public class UserController {
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Register failed");
+        }
+    }
+
+    /* ================= VERIFY EMAIL ================= */
+    // GET http://localhost:8000/users/verify-email?token=...
+    @GetMapping(value = "/verify-email", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
+        try {
+            String email = emailVerificationService.readEmailFromToken(token);
+            User user = userRepository.findByEmail(email);
+
+            if (user == null) {
+                return ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body("<h1>Verification failed</h1><p>User not found.</p>");
+            }
+
+            if (user.getIsVerified() != null && user.getIsVerified() == 1) {
+                return ResponseEntity.ok(
+                        "<h1>Email already verified</h1><p>You can log in to Nexamart now.</p>");
+            }
+
+            if (!userRepository.markEmailVerified(email)) {
+                return ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("<h1>Verification failed</h1><p>Unable to update this account.</p>");
+            }
+
+            return ResponseEntity.ok(
+                    "<h1>Email verified successfully</h1><p>You can log in to Nexamart now.</p>");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity
+                    .badRequest()
+                    .body("<h1>Verification failed</h1><p>" + e.getMessage() + "</p>");
         }
     }
 
@@ -201,6 +235,65 @@ public class UserController {
                 user.getUserType()
             )
         );
+    }
+
+    /* ================= FORGOT PASSWORD ================= */
+    // POST http://localhost:8000/users/forgot-password
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest req) {
+        if (req == null || req.getEmail() == null || req.getEmail().isBlank()) {
+            return ResponseEntity
+                    .badRequest()
+                    .body("Email không được để trống");
+        }
+
+        try {
+            passwordResetService.requestPasswordReset(req.getEmail());
+            return ResponseEntity.ok("Nếu email tồn tại, hệ thống đã gửi link đặt lại mật khẩu");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Không thể tạo yêu cầu đặt lại mật khẩu");
+        }
+    }
+
+    /* ================= RESET PASSWORD ================= */
+    // POST http://localhost:8000/users/reset-password
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest req) {
+        if (req == null || req.getToken() == null || req.getToken().isBlank()) {
+            return ResponseEntity
+                    .badRequest()
+                    .body("Token không được để trống");
+        }
+
+        if (req.getPassword() == null || req.getPassword().isBlank()) {
+            return ResponseEntity
+                    .badRequest()
+                    .body("Mật khẩu mới không được để trống");
+        }
+
+        if (req.getPassword().length() < 6) {
+            return ResponseEntity
+                    .badRequest()
+                    .body("Mật khẩu mới phải có ít nhất 6 ký tự");
+        }
+
+        try {
+            if (!passwordResetService.resetPassword(req.getToken(), req.getPassword())) {
+                return ResponseEntity
+                        .badRequest()
+                        .body("Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn");
+            }
+
+            return ResponseEntity.ok("Đổi mật khẩu thành công");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Không thể đổi mật khẩu");
+        }
     }
 
     /* ================= DELETE USER ================= */

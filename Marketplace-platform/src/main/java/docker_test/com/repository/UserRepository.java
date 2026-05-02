@@ -268,6 +268,23 @@ public class UserRepository implements IRepositories<User> {
         return null;
     }
 
+    public boolean markEmailVerified(String email) {
+
+        String sql = "UPDATE user SET is_verified = 1, updated_at = ? WHERE email = ?";
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setString(2, email);
+            return ps.executeUpdate() > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     public Long findUserIdByEmail(String email) {
 
         String sql = "SELECT id FROM user WHERE email = ? LIMIT 1";
