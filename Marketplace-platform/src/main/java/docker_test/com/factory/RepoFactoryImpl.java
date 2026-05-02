@@ -4,9 +4,11 @@ package docker_test.com.factory;
 import org.springframework.stereotype.Component;
 
 import docker_test.com.models.product.ProductVariant;
+import docker_test.com.repository.AdminRepository;
 import docker_test.com.repository.AttributeRepository;
 import docker_test.com.repository.AttributeValueRepository;
 import docker_test.com.repository.BrandRepository;
+import docker_test.com.repository.BuyerRepository;
 import docker_test.com.repository.CategoryAttributeRepository;
 import docker_test.com.repository.CategoryBrandRepository;
 import docker_test.com.repository.CategoryRepository;
@@ -15,6 +17,7 @@ import docker_test.com.repository.OrderRepository;
 import docker_test.com.repository.ProductImageRepository;
 import docker_test.com.repository.ProductRepository;
 import docker_test.com.repository.ProductVariantRepository;
+import docker_test.com.repository.SellerRepository;
 import docker_test.com.repository.ShopRepository;
 import docker_test.com.repository.UnitRepository;
 import docker_test.com.repository.UserRepository;
@@ -88,5 +91,3 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	}
 
 }
-
-
