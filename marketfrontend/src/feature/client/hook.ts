@@ -37,9 +37,6 @@ export const useCheckoutPage = () => {
   });
 
   return { products, checkOut };
-<<<<<<< HEAD
-};
-=======
 };
 
 export const useAddBatchCartItemsMutation = () => {
@@ -60,4 +57,3 @@ export const useAddBatchCartItemsMutation = () => {
     // },
   });
 };
->>>>>>> 1baaa4b887a4d539478b503d2ca6afaa6be25518
