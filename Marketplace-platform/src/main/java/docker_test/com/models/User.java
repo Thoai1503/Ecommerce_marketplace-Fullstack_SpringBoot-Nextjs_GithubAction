@@ -23,7 +23,7 @@ public final class User {
     public User() {
         this.userType = "buyer";
         this.isActive = 1;
-        this.isVerified = 1;
+        this.isVerified = 0;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
