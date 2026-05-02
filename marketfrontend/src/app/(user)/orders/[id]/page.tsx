@@ -257,6 +257,7 @@ const toOrderItem = (raw: any): OrderItem => ({
   quantity: asNumber(raw?.quantity, 0),
   lastReturnRequestId: raw?.lastReturnRequestId,
   price: asNumber(raw?.price, 0),
+  discount: asNumber(raw?.discountAmount ?? raw?.discount_amount, 0),
   status: "Ready" as const,
 });
 
@@ -957,11 +958,7 @@ export default function UserOrderDetailPage() {
   };
 
   const handleSubmitReturnRequest = async () => {
-    // alert(
-    //   "Vui long dien day du thong tin de gui yeu cau tra hang hoan tien den shop. Neu backend chua ho tro endpoint, noi dung yeu cau tra hang cua ban van duoc luu tam thoi tren giao dien va se duoc gui den shop khi backend san sang.",
-    // );
     if (!activeReturnShipment) return;
-    //  alert(activeReturnShipment.id);
     const shipmentId = activeReturnShipment.id;
     const draft = returnRequestDrafts[shipmentId];
     console.log("Submitting return request with draft:", draft);
@@ -1050,8 +1047,6 @@ export default function UserOrderDetailPage() {
     let submittedByApi = false;
     console.log("Submitting return request to API with formData:", formData);
     try {
-      //Hàm không chạy được đến đây
-
       alert(
         "Vui long dien day du thong tin de gui yeu cau tra hang hoan tien den shop. Neu backend chua ho tro endpoint, noi dung yeu cau tra hang cua ban van duoc luu tam thoi tren giao dien va se duoc gui den shop khi backend san sang.",
       );
@@ -1200,6 +1195,39 @@ export default function UserOrderDetailPage() {
           orderData?.items ||
           [];
 
+        const redemptionItems =
+          (await getFirstSuccess<any[]>([
+            `/api/voucher-redemptions/order/${id}/items`,
+          ])) || [];
+        const itemDiscountByOrderItemId = redemptionItems.reduce(
+          (map: Map<string, number>, item: any) => {
+            const orderItemId = String(
+              item?.orderItemId ?? item?.order_item_id ?? "",
+            );
+            const discountAmount = asNumber(
+              item?.discountAmount ?? item?.discount_amount,
+              0,
+            );
+
+            if (orderItemId) {
+              map.set(
+                orderItemId,
+                (map.get(orderItemId) || 0) + discountAmount,
+              );
+            }
+
+            return map;
+          },
+          new Map<string, number>(),
+        );
+        const toOrderItemWithRedemptionDiscount = (item: any) =>
+          toOrderItem({
+            ...item,
+            discountAmount:
+              itemDiscountByOrderItemId.get(String(item?.id ?? "")) ??
+              item?.discountAmount,
+          });
+
         const seedShipments: any[] = Array.isArray(orderData?.shipments)
           ? orderData.shipments
           : Array.isArray(orderData?.order_shipment)
@@ -1339,7 +1367,7 @@ export default function UserOrderDetailPage() {
                     shipment?.shipping_fee,
                   0,
                 ),
-                items: items.map(toOrderItem),
+                items: items.map(toOrderItemWithRedemptionDiscount),
                 statusHistory: ensurePendingFirst(shipment?.statusHistory),
                 recipient,
                 adjustment_request: adjustmentRequest,
@@ -1351,18 +1379,19 @@ export default function UserOrderDetailPage() {
             }),
         );
 
-        const fallbackItems = rawItems.map(toOrderItem);
+        const fallbackItems = rawItems.map(toOrderItemWithRedemptionDiscount);
         const orderItems: OrderItem[] =
           shipments.flatMap((s: any) => s.items || []).length > 0
             ? shipments.flatMap((s: any) => s.items || [])
             : fallbackItems;
 
         const uniqueItems: OrderItem[] =
-          //  Array.from(
-          //   new Map(
-          //     orderItems.map((item: OrderItem) => [item.id, item]),
-          //   ).values(),
-          // );
+          Array.isArray(orderData?.items) && orderData.items.length > 0
+            ? orderData.items.map((item: any) => {
+                console.log("Mapping order item:", item);
+                return toOrderItemWithRedemptionDiscount(item);
+              })
+            : orderItems;
           orderData?.items.map((item: any) => {
             console.log("Mapping order item:", item);
             return {
@@ -1370,16 +1399,6 @@ export default function UserOrderDetailPage() {
               productImage: item.image,
             };
           }) || [];
-
-        // orderData?.item.forEach((item: any) => {
-        //   console.log("Shipment ID from order item:", item?.shipmentId);
-        //   if (requestIdShipmentMap[item?.shipmentId]) return;
-
-        //   setRequestIdShipmentMap((prev) => ({
-        //     ...prev,
-        //     [item.shipmentId]: item.lastAdjustmentRequestId,
-        //   }));
-        // });
 
         orderData?.items.forEach((item: any) => {
           console.log(
@@ -1617,15 +1636,25 @@ export default function UserOrderDetailPage() {
                                 {item.variant ? ` | ${item.variant}` : ""}
                               </p>
                               <div className="d-flex align-items-center justify-content-between">
-                                <span
-                                  style={{
-                                    fontSize: 12,
-                                    fontWeight: 800,
-                                    color: "#137fec",
-                                  }}
-                                >
-                                  {formatMoney(item.price)}
-                                </span>
+                                <div className="d-flex flex-column">
+                                  <span
+                                    style={{
+                                      fontSize: 12,
+                                      fontWeight: 800,
+                                      color: "#137fec",
+                                    }}
+                                  >
+                                    {formatMoney(item.price)}
+                                  </span>
+                                  {Number(item.discount || 0) > 0 && (
+                                    <span
+                                      className="text-danger"
+                                      style={{ fontSize: 11, fontWeight: 700 }}
+                                    >
+                                      -{formatMoney(item.discount || 0)}
+                                    </span>
+                                  )}
+                                </div>
                                 <span style={styles.qtyBadge}>
                                   So luong:{" "}
                                   {String(item.quantity).padStart(2, "0")}
@@ -1668,7 +1697,7 @@ export default function UserOrderDetailPage() {
                             shipment.shipping_status,
                           );
                           const adjustmentRequest = shipment.adjustment_request;
-                          const requestId = requestIdShipmentMap[shipment.id];
+
                           return (
                             <div key={shipment.id} style={styles.shipmentItem}>
                               <div style={styles.shipmentHead}>
@@ -1804,7 +1833,7 @@ export default function UserOrderDetailPage() {
                                             Trả hàng hoàn tiền
                                           </button>
                                         )}
-                                      {/* View Return Request Media Button */}
+
                                       {shipment.returnStatusSummary &&
                                         shipment.returnStatusSummary !==
                                           "NONE" && (
@@ -1821,16 +1850,6 @@ export default function UserOrderDetailPage() {
                                           </button>
                                         )}
                                     </div>
-                                  )}
-                                  {/* Modal for viewing return request media */}
-                                  {viewReturnMediaShipmentId && (
-                                    <ReturnAttachmentModal
-                                      returnRequestId={requestId}
-                                      setViewReturnMediaShipmentId={
-                                        setViewReturnMediaShipmentId
-                                      }
-                                      order={order}
-                                    />
                                   )}
                                 </div>
 
@@ -2332,15 +2351,32 @@ export default function UserOrderDetailPage() {
                                               SKU: {item.sku}
                                             </p>
                                             <div className="d-flex align-items-center justify-content-between gap-2">
-                                              <span
-                                                style={{
-                                                  fontSize: 12,
-                                                  fontWeight: 800,
-                                                  color: "#137fec",
-                                                }}
-                                              >
-                                                {formatMoney(item.price)}
-                                              </span>
+                                              <div className="d-flex flex-column">
+                                                <span
+                                                  style={{
+                                                    fontSize: 12,
+                                                    fontWeight: 800,
+                                                    color: "#137fec",
+                                                  }}
+                                                >
+                                                  {formatMoney(item.price)}
+                                                </span>
+                                                {Number(item.discount || 0) >
+                                                  0 && (
+                                                  <span
+                                                    className="text-danger"
+                                                    style={{
+                                                      fontSize: 11,
+                                                      fontWeight: 700,
+                                                    }}
+                                                  >
+                                                    -
+                                                    {formatMoney(
+                                                      item.discount || 0,
+                                                    )}
+                                                  </span>
+                                                )}
+                                              </div>
                                               <span style={styles.qtyBadge}>
                                                 So luong:{" "}
                                                 {String(item.quantity).padStart(
@@ -2666,6 +2702,7 @@ export default function UserOrderDetailPage() {
         </div>
       </main>
 
+      {/* Review Modal */}
       {activeReviewShipment && (
         <div style={styles.modalBackdrop} onClick={closeReviewModal}>
           <div
@@ -2878,6 +2915,7 @@ export default function UserOrderDetailPage() {
         </div>
       )}
 
+      {/* Return Request Modal */}
       {activeReturnShipment && (
         <ReturnRequestModal
           shipment={activeReturnShipment}
@@ -2907,6 +2945,15 @@ export default function UserOrderDetailPage() {
             qtyBadge: styles.qtyBadge,
             reviewTextarea: styles.reviewTextarea,
           }}
+        />
+      )}
+
+      {/* ✅ FIX: ReturnAttachmentModal moved here to top-level, outside shipments.map loop */}
+      {viewReturnMediaShipmentId !== null && (
+        <ReturnAttachmentModal
+          returnRequestId={requestIdShipmentMap[viewReturnMediaShipmentId]}
+          setViewReturnMediaShipmentId={setViewReturnMediaShipmentId}
+          order={order}
         />
       )}
     </>

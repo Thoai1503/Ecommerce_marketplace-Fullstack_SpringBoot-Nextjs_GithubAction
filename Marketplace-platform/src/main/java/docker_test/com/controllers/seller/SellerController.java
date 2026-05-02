@@ -11,11 +11,7 @@ import docker_test.com.models.PageResult;
 import docker_test.com.models.User;
 import docker_test.com.repository.SellerRepository;
 
-/**
- * SELLER CONTROLLER
- * Quản lý Nhà bán hàng (Sellers screen).
- * userType IN ('seller', 'both')
- */
+
 @RestController
 @RequestMapping("/sellers")
 public class SellerController {

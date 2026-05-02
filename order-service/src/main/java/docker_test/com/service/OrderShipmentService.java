@@ -17,6 +17,7 @@ import docker_test.com.dto.ConfirmPackagedResponseDTO;
 import docker_test.com.dto.ConfirmReceivedResponseDTO;
 import docker_test.com.dto.CancelShipmentByOosRequestDTO;
 import docker_test.com.dto.CancelShipmentByOosResponseDTO;
+import docker_test.com.dto.CancelShipmentRequestDTO;
 import docker_test.com.dto.CreateAdjustmentRequestDTO;
 import docker_test.com.dto.CreateAdjustmentResponseDTO;
 import docker_test.com.dto.GetAdjustmentRequestDTO;
@@ -106,6 +107,7 @@ public class OrderShipmentService {
                 row.getShipmentId(),
                 row.getOrderId(),
                 row.getShopId(),
+                row.getShopName(),
                 row.getShippingFee(),
                 Long.valueOf(row.getTotalAmount().longValue()),
                 row.getCarrierName(),
@@ -143,8 +145,9 @@ public class OrderShipmentService {
     
 
         @Transactional(readOnly = true)
-    public List<OrderShipmentByShopResponseDTO> getShipmentsByShopId(Long shopId) {
-        List<OrderShipmentWithOrderAndRecipientProjection> rows = orderShipmentRepository.findShipmentDetailsByShopId(shopId);
+    public List<OrderShipmentByShopResponseDTO> getShipmentsByShopId(Long shopId,String status, int page, int size, String sortBy, String sortOrder, String search,String paymentStatus) {
+        	
+        List<OrderShipmentWithOrderAndRecipientProjection> rows = orderShipmentRepository.findShipmentDetailsByShopId(shopId,status, paymentStatus);
         System.out.println("Fetched " + rows.size() + " shipments for shopId: " + shopId);
         System.out.println("Total amount of first shipment: " + (rows.isEmpty() ? "N/A" : rows.get(0).getTotalAmount()));
         List<Long> shipmentIds = rows.stream()
@@ -175,6 +178,7 @@ public class OrderShipmentService {
                         row.getShipmentId(),
                         row.getOrderId(),
                         row.getShopId(),
+                        row.getShopName(),
                         row.getShippingFee(),
                   Long.valueOf(row.getTotalAmount().longValue()),
                         row.getCarrierName(),
@@ -447,6 +451,52 @@ public class OrderShipmentService {
         );
     }
 
+    @Transactional
+    public CancelShipmentByOosResponseDTO cancelPendingShipmentByBuyer(Long shipmentId, CancelShipmentRequestDTO request) {
+        OrderShipment shipment = orderShipmentRepository.findById(shipmentId)
+                .orElseThrow(() -> new RuntimeException("Shipment not found: " + shipmentId));
+
+        String currentStatus = shipment.getShippingStatus() == null
+                ? ""
+                : shipment.getShippingStatus().toUpperCase(Locale.ROOT);
+
+        if (!"PENDING".equals(currentStatus)) {
+            throw new RuntimeException("Only PENDING shipment can be canceled by buyer");
+        }
+
+        Order order = orderRepository.findById(shipment.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Order not found: " + shipment.getOrderId()));
+
+        if (request != null && request.userId() != null && !request.userId().equals(order.getUserId())) {
+            throw new RuntimeException("Buyer can only cancel their own shipment");
+        }
+
+        shipment.setShippingStatus("CANCELED");
+        shipment.setBusinessStatus("CANCELLED_BY_BUYER");
+        shipment.setAdjustmentRequired(Boolean.FALSE);
+        orderShipmentRepository.save(shipment);
+
+        persistShipmentHistory(
+                shipment.getId(),
+                currentStatus,
+                "CANCELED",
+                "buyer",
+                request != null && request.reason() != null && !request.reason().isBlank()
+                        ? request.reason()
+                        : "buyer canceled pending shipment"
+        );
+
+        updateOrderStatusAfterShipmentCanceled(shipment.getOrderId());
+
+        return new CancelShipmentByOosResponseDTO(
+                shipment.getId(),
+                shipment.getOrderId(),
+                shipment.getShippingStatus(),
+                shipment.getBusinessStatus(),
+                "Shipment canceled by buyer"
+        );
+    }
+
         @Transactional
         public void applyShipmentStatusEvent(ShipmentStatusUpdatedEvent event) {
                 if (event == null || event.getTrackingCode() == null || event.getTrackingCode().isBlank()) {
@@ -522,6 +572,25 @@ public class OrderShipmentService {
                     order.setOrderStatus("SHIPPED");
                 }
 
+                orderRepository.save(order);
+            }
+
+            private void updateOrderStatusAfterShipmentCanceled(Long orderId) {
+                List<OrderShipment> shipments = orderShipmentRepository.findByOrderIdOrderByIdDesc(orderId);
+                if (shipments.isEmpty()) {
+                    return;
+                }
+
+                boolean allCanceled = shipments.stream()
+                        .allMatch(s -> "CANCELED".equalsIgnoreCase(s.getShippingStatus()));
+
+                if (!allCanceled) {
+                    return;
+                }
+
+                Order order = orderRepository.findById(orderId)
+                        .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+                order.setOrderStatus("CANCELED");
                 orderRepository.save(order);
             }
 }

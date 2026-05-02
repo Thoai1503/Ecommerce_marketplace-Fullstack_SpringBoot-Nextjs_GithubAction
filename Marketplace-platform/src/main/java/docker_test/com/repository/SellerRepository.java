@@ -200,5 +200,84 @@ public class SellerRepository extends UserRepository {
             int     pageSize
     ) {
         return FilterByType(TYPE_CLAUSE, keyword, isActive, page, pageSize);
+ 
     }
+
+    private PageResult<User> FilterByType(
+            String  typeClause,   // null = không lọc theo type → lấy tất cả
+            String  keyword,
+            Integer isActive,
+            int     page,
+            int     pageSize
+    ) {
+        String activeClause = (isActive != null) ? "is_active = " + isActive : "1=1";
+        String whereClause = typeClause + " AND " + activeClause;
+
+        if (keyword != null && !keyword.isBlank()) {
+            keyword = "%" + keyword.trim().replace(" ", "%") + "%";
+            whereClause += " AND (full_name LIKE ? OR email LIKE ? OR CAST(id AS CHAR) LIKE ?)";
+        }
+
+        String sqlCount = "SELECT COUNT(*) FROM `user` WHERE " + whereClause;
+        String sqlData = "SELECT * FROM `user` WHERE " + whereClause + " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+
+        try (Connection con = dbConnection.getConn()) {
+
+            // Count total records
+            long totalRecords;
+            try (PreparedStatement psCount = con.prepareStatement(sqlCount)) {
+                if (keyword != null && !keyword.isBlank()) {
+                    psCount.setString(1, keyword);
+                    psCount.setString(2, keyword);
+                    psCount.setString(3, keyword);
+                }
+                ResultSet rsCount = psCount.executeQuery();
+                rsCount.next();
+                totalRecords = rsCount.getLong(1);
+            }
+
+            // Fetch paginated data
+            try (PreparedStatement psData = con.prepareStatement(sqlData)) {
+                int paramIndex = 1;
+                if (keyword != null && !keyword.isBlank()) {
+                    psData.setString(paramIndex++, keyword);
+                    psData.setString(paramIndex++, keyword);
+                    psData.setString(paramIndex++, keyword);
+                }
+                psData.setInt(paramIndex++, pageSize);
+                psData.setInt(paramIndex, (page - 1) * pageSize);
+
+                ResultSet rsData = psData.executeQuery();
+
+                List<User> data = mapper.RowsMap(rsData);
+
+                return new PageResult<>(data, totalRecords, page, pageSize);
+
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return new PageResult<>(List.of(), 0, page, pageSize);
+    }
+
+
+    public boolean setActiveStatus(int id, int isActive) {
+
+        String sql = "UPDATE `user` SET is_active = ? WHERE id = ? AND " + TYPE_CLAUSE;
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, isActive);
+            ps.setInt(2, id);
+
+            int rows = ps.executeUpdate();
+            return rows > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
 }

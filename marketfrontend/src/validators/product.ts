@@ -1,4 +1,5 @@
 import { ProductImage } from "./productImage";
+import { IProductVariant } from "./productVariant";
 
 export interface IProduct {
   id: number; // instead of int
@@ -20,7 +21,8 @@ export interface IProduct {
   width: number;
   height: number;
   brand: number | null;
-  variants?: Variant[];
+  variants?: IProductVariant[];
+
   is_active: number;
 }
 

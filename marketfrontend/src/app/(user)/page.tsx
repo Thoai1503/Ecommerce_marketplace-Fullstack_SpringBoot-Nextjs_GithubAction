@@ -7,7 +7,10 @@ import { IProduct } from "@/validators/product";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import AllProduct from "@/components/client/home_page/AllProduct";
+import dynamic from "next/dynamic";
+import ProductFetcher from "@/components/client/home_page/ProductFetcher";
 import CategoryCarousel from "@/components/client/home_page/CategoryCarousel";
+import CategoryFetcher from "@/components/client/home_page/CategoryFetcher";
 import styles from "./page.module.css";
 // import { useHomePage } from "@/feature/client/hook";
 
@@ -57,46 +60,8 @@ export default async function Home() {
   //   );
   // }
 
-  const res = await fetch(`${INTERNAL_API}/api/categories`, {
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    console.error("API error");
-  }
-
-  const data = await res.json();
-
-  const categories = Array.isArray(data) ? data : data.data;
-
-  const parentCategories = categories
-    .filter((c: any) => Number(c.level) === 0 && Number(c.is_active) === 1)
-    .sort(
-      (a: any, b: any) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
-
-  console.log("Parent Categories:", parentCategories);
-  const res1 = await fetch(`${INTERNAL_API}/product`);
-  const productsPayload = await res1.json();
-  const rawProducts = unwrapCollection(productsPayload) as Partial<IProduct>[];
+  // Category is now loaded on client side
   const ownShopId = await getOwnShopId();
-  const products = rawProducts.filter(
-    (product) => !ownShopId || Number(product.shop_id ?? 0) !== ownShopId,
-  );
-<<<<<<< HEAD
-}
-export const dynamic = "force-dynamic";
-=======
-  // const { products } = useHomePage();
-
-  if (products.length === 0 || !products) {
-    return (
-      <div>
-        <h1>Loading...</h1>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.homePage}>
@@ -104,7 +69,9 @@ export const dynamic = "force-dynamic";
       <div className={styles.heroBanner}>
         <div className={styles.heroContent}>
           <h1 className={styles.heroTitle}>Discover</h1>
-          <p className={styles.heroSubtitle}>High-quality products - Best prices</p>
+          <p className={styles.heroSubtitle}>
+            High-quality products - Best prices
+          </p>
         </div>
         <div className={styles.heroOverlay}></div>
       </div>
@@ -149,7 +116,8 @@ export const dynamic = "force-dynamic";
               Category
             </h2>
           </div>
-          <CategoryCarousel categories={parentCategories} />
+          {/* Load categories on client side */}
+          <CategoryFetcher />
         </section>
 
         {/* Flash Sale Section */}
@@ -216,7 +184,9 @@ export const dynamic = "force-dynamic";
             ].map((product, idx) => (
               <div key={idx} className={styles.productCard}>
                 <div className={styles.cardBadge}>
-                  <span className={styles.discountBadge}>-{product.discount}%</span>
+                  <span className={styles.discountBadge}>
+                    -{product.discount}%
+                  </span>
                   {product.sold > 0 && product.sold >= 90 && (
                     <span className={styles.hotBadge}>HOT</span>
                   )}
@@ -232,7 +202,9 @@ export const dynamic = "force-dynamic";
                 </div>
                 <div className={styles.productInfo}>
                   <div className={styles.priceWrap}>
-                    <span className={styles.currentPrice}>{product.price}₫</span>
+                    <span className={styles.currentPrice}>
+                      {product.price}₫
+                    </span>
                     <span className={styles.oldPrice}>{product.oldPrice}₫</span>
                   </div>
                   {product.sold > 0 ? (
@@ -243,7 +215,9 @@ export const dynamic = "force-dynamic";
                           style={{ width: `${Math.min(product.sold, 100)}%` }}
                         ></div>
                       </div>
-                      <span className={styles.soldText}>Đã bán {product.sold}+</span>
+                      <span className={styles.soldText}>
+                        Đã bán {product.sold}+
+                      </span>
                     </div>
                   ) : (
                     <button className={styles.buyButton}>Mua ngay</button>
@@ -267,12 +241,11 @@ export const dynamic = "force-dynamic";
           </div>
 
           <div className={styles.suggestedGrid}>
-            <AllProduct products={products} />
+            {/* Fetch products on client side */}
+            <ProductFetcher ownShopId={ownShopId} />
           </div>
         </section>
       </div>
     </div>
   );
 }
-export const dynamic = "force-dynamic";
->>>>>>> 1baaa4b887a4d539478b503d2ca6afaa6be25518

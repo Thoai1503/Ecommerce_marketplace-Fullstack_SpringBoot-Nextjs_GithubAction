@@ -2,31 +2,17 @@ package docker_test.com.repository;
 
 import java.sql.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.mappers.UserMapper;
-import docker_test.com.models.PageResult;
 import docker_test.com.models.User;
 
-/**
- * BASE REPOSITORY — chứa toàn bộ CRUD dùng chung cho mọi userType.
- * Các repo con (AdminRepository, SellerRepository, BuyerRepository)
- * extend class này và chỉ thêm method/filter riêng của từng loại.
- */
 public class UserRepository implements IRepositories<User> {
 
-    private static UserRepository instance;
-    protected final DBConnection dbConnection;
-    protected final UserMapper   mapper = new UserMapper();
-
-    // userType constants
-    public static final String TYPE_ADMIN   = "admin";
-    public static final String TYPE_SELLER  = "seller";
-    public static final String TYPE_BUYER   = "buyer";
-    public static final String TYPE_SHIPPER = "shipper";
-    public static final String TYPE_BOTH    = "both";
+    public static UserRepository instance;
+    public final DBConnection dbConnection;
+    protected final UserMapper mapper = new UserMapper();
 
     protected UserRepository() {
         this.dbConnection = DBConnection.getInstance();
@@ -44,7 +30,7 @@ public class UserRepository implements IRepositories<User> {
     public User Create(User item) throws SQLException {
 
         String sql = """
-            INSERT INTO `user`
+            INSERT INTO user
             (email, phone, password_hash, full_name, avatar_url,
              date_of_birth, gender, user_type, is_verified, is_active,
              created_at, updated_at)
@@ -66,10 +52,10 @@ public class UserRepository implements IRepositories<User> {
                 ps.setNull(6, Types.DATE);
             }
 
-            ps.setString(7,  item.getGender());
-            ps.setString(8,  item.getUserType());
-            ps.setInt(9,     item.getIsVerified());
-            ps.setInt(10,    item.getIsActive());
+            ps.setString(7, item.getGender());
+            ps.setString(8, item.getUserType());
+            ps.setInt(9, item.getIsVerified());
+            ps.setInt(10, item.getIsActive());
             ps.setTimestamp(11, Timestamp.valueOf(item.getCreatedAt()));
             ps.setTimestamp(12, Timestamp.valueOf(item.getUpdatedAt()));
 
@@ -81,7 +67,6 @@ public class UserRepository implements IRepositories<User> {
                 }
             }
             return item;
-
         }
     }
 
@@ -90,7 +75,7 @@ public class UserRepository implements IRepositories<User> {
     @Override
     public User GetById(int id) {
 
-        String sql = "SELECT * FROM `user` WHERE id = ?";
+        String sql = "SELECT * FROM user WHERE id = ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -108,19 +93,11 @@ public class UserRepository implements IRepositories<User> {
         return null;
     }
 
-<<<<<<< HEAD
-    /* ================= GET ALL ================= */
-=======
->>>>>>> 1baaa4b887a4d539478b503d2ca6afaa6be25518
 
     @Override
     public List<User> GetAll() {
 
-<<<<<<< HEAD
-        String sql = "SELECT * FROM `user` ORDER BY created_at DESC";
-=======
     	String sql = "SELECT * FROM `user`";
->>>>>>> 1baaa4b887a4d539478b503d2ca6afaa6be25518
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql);
@@ -164,11 +141,10 @@ public class UserRepository implements IRepositories<User> {
     public User Update(User item) {
 
         String sql = """
-            UPDATE `user` SET
-                email         = ?, phone         = ?, full_name  = ?,
-                avatar_url    = ?, date_of_birth  = ?, gender     = ?,
-                user_type     = ?, is_verified    = ?, is_active  = ?,
-                updated_at    = ?
+            UPDATE user SET
+                email = ?, phone = ?, full_name = ?, avatar_url = ?,
+                date_of_birth = ?, gender = ?, user_type = ?,
+                is_verified = ?, is_active = ?, updated_at = ?
             WHERE id = ?
         """;
 
@@ -186,12 +162,6 @@ public class UserRepository implements IRepositories<User> {
                 ps.setNull(5, Types.DATE);
             }
 
-<<<<<<< HEAD
-            ps.setString(6,     item.getGender());
-            ps.setString(7,     item.getUserType());
-            ps.setInt(8,        item.getIsVerified());
-            ps.setInt(9,        item.getIsActive());
-=======
             // Xử lý null cho gender
             if (item.getGender() != null && !item.getGender().isEmpty()) {
                 ps.setString(6, item.getGender());
@@ -202,9 +172,8 @@ public class UserRepository implements IRepositories<User> {
             ps.setString(7, item.getUserType());
             ps.setInt(8, item.getIsVerified());
             ps.setInt(9, item.getIsActive());
->>>>>>> 1baaa4b887a4d539478b503d2ca6afaa6be25518
             ps.setTimestamp(10, Timestamp.valueOf(LocalDateTime.now()));
-            ps.setLong(11,      item.getId());
+            ps.setLong(11, item.getId());
 
             int rows = ps.executeUpdate();
             if (rows > 0) {
@@ -223,13 +192,14 @@ public class UserRepository implements IRepositories<User> {
     @Override
     public boolean Delete(int id) {
 
-        String sql = "DELETE FROM `user` WHERE id = ?";
+        String sql = "DELETE FROM user WHERE id = ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
+		
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -237,9 +207,6 @@ public class UserRepository implements IRepositories<User> {
         return false;
     }
 
-<<<<<<< HEAD
-    /* ================= SHARED EXTRAS ================= */
-=======
     /* ================= UPDATE AVATAR ================= */
 
     public User updateAvatar(int id, String avatarUrl) {
@@ -264,11 +231,10 @@ public class UserRepository implements IRepositories<User> {
     }
 
     /* ================= EXTRA ================= */
->>>>>>> 1baaa4b887a4d539478b503d2ca6afaa6be25518
 
     public boolean existsByEmail(String email) {
 
-        String sql = "SELECT 1 FROM `user` WHERE email = ? LIMIT 1";
+        String sql = "SELECT 1 FROM user WHERE email = ? LIMIT 1";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -281,10 +247,10 @@ public class UserRepository implements IRepositories<User> {
         }
         return false;
     }
-
+    
     public User findByEmail(String email) {
 
-        String sql = "SELECT * FROM `user` WHERE email = ? LIMIT 1";
+        String sql = "SELECT * FROM user WHERE email = ? LIMIT 1";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -302,70 +268,19 @@ public class UserRepository implements IRepositories<User> {
         return null;
     }
 
-<<<<<<< HEAD
-    public boolean setActiveStatus(int id, int isActive) {
-
-        String sql = "UPDATE `user` SET is_active = ?, updated_at = ? WHERE id = ?";
-=======
     public Long findUserIdByEmail(String email) {
 
         String sql = "SELECT id FROM user WHERE email = ? LIMIT 1";
->>>>>>> 1baaa4b887a4d539478b503d2ca6afaa6be25518
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-<<<<<<< HEAD
-            ps.setInt(1,        isActive);
-            ps.setTimestamp(2,  Timestamp.valueOf(LocalDateTime.now()));
-            ps.setInt(3,        id);
-            return ps.executeUpdate() > 0;
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    public long countByType(String userType) {
-
-        String sql = userType == null
-                ? "SELECT COUNT(*) FROM `user`"
-                : "SELECT COUNT(*) FROM `user` WHERE user_type = ?";
-
-        try (Connection con = dbConnection.getConn();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
-            if (userType != null) ps.setString(1, userType);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return rs.getLong(1);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return 0;
-    }
-    public User updateAvatar(int id, String avatarUrl) {
-
-        String sql = "UPDATE user SET avatar_url = ?, updated_at = ? WHERE id = ?";
-
-        try (Connection con = dbConnection.getConn();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setString(1, avatarUrl);
-            ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
-            ps.setLong(3, id);
-
-            if (ps.executeUpdate() > 0) {
-                return GetById(id);
-=======
             ps.setString(1, email);
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
                 Object idVal = rs.getObject("id");
                 return idVal != null ? ((Number) idVal).longValue() : null;
->>>>>>> 1baaa4b887a4d539478b503d2ca6afaa6be25518
             }
 
         } catch (Exception e) {
@@ -373,76 +288,4 @@ public class UserRepository implements IRepositories<User> {
         }
         return null;
     }
-<<<<<<< HEAD
-    /* ================= SHARED FILTER (dùng bởi các repo con) ================= */
-
-    /**
-     * @param typeClause  ví dụ: "user_type = 'seller'" hoặc "user_type IN ('seller','both')"
-     *                    null = không lọc theo type (dùng cho AdminRepository lấy tất cả)
-     */
-    protected PageResult<User> FilterByType(
-            String  typeClause,
-            String  keyword,
-            Integer isActive,
-            int     page,
-            int     pageSize
-    ) {
-        if (page < 1)     page     = 1;
-        if (pageSize < 1) pageSize = 20;
-
-        List<Object>  params = new ArrayList<>();
-        StringBuilder where  = new StringBuilder("WHERE 1=1 ");
-
-        if (typeClause != null && !typeClause.isBlank()) {
-            where.append("AND (").append(typeClause).append(") ");
-        }
-
-        if (keyword != null && !keyword.isBlank()) {
-            where.append("AND (email LIKE ? OR full_name LIKE ? OR phone LIKE ? OR CAST(id AS CHAR) LIKE ?) ");
-            String kw = "%" + keyword.trim() + "%";
-            params.add(kw);
-            params.add(kw);
-            params.add(kw);
-            params.add(kw);
-        }
-
-        if (isActive != null) {
-            where.append("AND is_active = ? ");
-            params.add(isActive);
-        }
-
-        String countSql = "SELECT COUNT(*) FROM `user` " + where;
-        String dataSql  = "SELECT * FROM `user` " + where
-                        + "ORDER BY created_at DESC LIMIT ? OFFSET ?";
-
-        int    offset = (page - 1) * pageSize;
-        long   total  = 0;
-        List<User> list = new ArrayList<>();
-
-        try (Connection con = dbConnection.getConn()) {
-
-            try (PreparedStatement ps = con.prepareStatement(countSql)) {
-                for (int i = 0; i < params.size(); i++)
-                    ps.setObject(i + 1, params.get(i));
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) total = rs.getLong(1);
-            }
-
-            try (PreparedStatement ps = con.prepareStatement(dataSql)) {
-                for (int i = 0; i < params.size(); i++)
-                    ps.setObject(i + 1, params.get(i));
-                ps.setInt(params.size() + 1, pageSize);
-                ps.setInt(params.size() + 2, offset);
-                ResultSet rs = ps.executeQuery();
-                list = mapper.RowsMap(rs);
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return new PageResult<>(list, total, page, pageSize);
-    }
-=======
->>>>>>> 1baaa4b887a4d539478b503d2ca6afaa6be25518
 }

@@ -13,6 +13,7 @@ type CheckoutVoucher = {
   discountAmount?: number | null;
   minOrderValue?: number | null;
   validTo?: string | null;
+  stackable?: boolean | null;
 };
 
 type VoucherAvailability = {
@@ -28,13 +29,15 @@ interface CheckoutOrderSummaryProps {
   shippingFee: number;
   isShippingFeeLoading: boolean;
   voucherDiscount: number;
+  shopVoucherDiscount: number;
+  platformVoucherDiscount: number;
   total: number;
   formatCurrency: (amount: number) => string;
   ownedVouchers: CheckoutVoucher[];
   voucherAvailabilityList: VoucherAvailability[];
-  selectedVoucher: CheckoutVoucher | undefined;
-  selectedVoucherId: number | null;
-  setSelectedVoucherId: React.Dispatch<React.SetStateAction<number | null>>;
+  selectedVouchers: CheckoutVoucher[];
+  selectedVoucherIds: number[];
+  onApplyVoucherIds: (voucherIds: number[]) => void;
   voucherLoading: boolean;
   onOrder: () => void;
 }
@@ -58,26 +61,52 @@ export default function CheckoutOrderSummary({
   shippingFee,
   isShippingFeeLoading,
   voucherDiscount,
+  shopVoucherDiscount,
+  platformVoucherDiscount,
   total,
   formatCurrency,
   ownedVouchers,
   voucherAvailabilityList,
-  selectedVoucher,
-  selectedVoucherId,
-  setSelectedVoucherId,
+  selectedVouchers,
+  selectedVoucherIds,
+  onApplyVoucherIds,
   voucherLoading,
   onOrder,
 }: CheckoutOrderSummaryProps) {
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
-  const [draftVoucherId, setDraftVoucherId] = useState<number | null>(null);
+  const [draftVoucherIds, setDraftVoucherIds] = useState<number[]>([]);
 
   useEffect(() => {
     if (isVoucherModalOpen) {
-      setDraftVoucherId(selectedVoucherId);
+      setDraftVoucherIds(selectedVoucherIds);
     }
-  }, [isVoucherModalOpen, selectedVoucherId]);
+  }, [isVoucherModalOpen, selectedVoucherIds]);
 
   const usableVouchers = voucherAvailabilityList.filter((x) => x.isEligible);
+  const hasSelectedVouchers = selectedVouchers.length > 0;
+  const subtotalAfterShopVouchers = Math.max(
+    0,
+    subtotal - shopVoucherDiscount,
+  );
+  const hasAnyVoucherDiscount = voucherDiscount > 0;
+
+  const toggleDraftVoucher = (voucher: CheckoutVoucher) => {
+    setDraftVoucherIds((current) => {
+      if (current.includes(voucher.id)) {
+        return current.filter((id) => id !== voucher.id);
+      }
+
+      if (!voucher.stackable) {
+        return [voucher.id];
+      }
+
+      const stackableCurrent = current.filter((id) =>
+        usableVouchers.find((item) => item.voucher.id === id)?.voucher
+          .stackable,
+      );
+      return [...stackableCurrent, voucher.id];
+    });
+  };
 
   return (
     <div className="col-12 col-lg-5">
@@ -102,15 +131,54 @@ export default function CheckoutOrderSummary({
                 <span className="text-muted">Subtotal</span>
                 <span className="fw-semibold">{formatCurrency(subtotal)}</span>
               </div>
+
               <div
                 className="d-flex justify-content-between align-items-center"
                 style={{ fontSize: 12 }}
               >
-                <span className="text-muted">Voucher discount</span>
+                <span className="text-muted">Shop vouchers</span>
+                <span className="fw-semibold text-success">
+                  - {formatCurrency(shopVoucherDiscount)}
+                </span>
+              </div>
+
+              {hasAnyVoucherDiscount && (
+                <div
+                  className="d-flex justify-content-between align-items-center px-2 py-1 rounded-2"
+                  style={{
+                    fontSize: 11,
+                    background: "#f8fafc",
+                    color: "#64748b",
+                  }}
+                >
+                  <span>After shop vouchers</span>
+                  <span>{formatCurrency(subtotalAfterShopVouchers)}</span>
+                </div>
+              )}
+
+              <div
+                className="d-flex justify-content-between align-items-center"
+                style={{ fontSize: 12 }}
+              >
+                <span className="text-muted">Platform vouchers</span>
+                <span className="fw-semibold text-success">
+                  - {formatCurrency(platformVoucherDiscount)}
+                </span>
+              </div>
+
+              <div
+                className="d-flex justify-content-between align-items-center pt-2"
+                style={{
+                  fontSize: 12,
+                  borderTop: "1px dashed #e2e8f0",
+                }}
+              >
+                <span className="text-muted">Total voucher discount</span>
                 <span className="fw-semibold text-success">
                   - {formatCurrency(voucherDiscount)}
                 </span>
               </div>
+
               <div
                 className="d-flex justify-content-between align-items-center"
                 style={{ fontSize: 12 }}
@@ -151,30 +219,34 @@ export default function CheckoutOrderSummary({
                 <div className="d-flex justify-content-between align-items-center gap-3">
                   <div>
                     <div className="small text-muted">
-                      {selectedVoucher
+                      {hasSelectedVouchers
                         ? "Applied voucher"
-                        : "Choose a voucher for this order"}
+                        : "Choose a platform voucher"}
                     </div>
                     <div className="fw-semibold text-dark mt-1">
-                      {selectedVoucher
-                        ? `${selectedVoucher.code} - ${getVoucherLabel(selectedVoucher)}`
+                      {hasSelectedVouchers
+                        ? selectedVouchers
+                            .map((voucher) => voucher.code)
+                            .join(", ")
                         : `${usableVouchers.length} eligible vouchers`}
                     </div>
                     <div className="small text-muted mt-1">
-                      {selectedVoucher
-                        ? selectedVoucher.description || selectedVoucher.title
-                        : "Tap here to choose a voucher"}
+                      {hasSelectedVouchers
+                        ? `${selectedVouchers.length} platform voucher${
+                            selectedVouchers.length === 1 ? "" : "s"
+                          } selected`
+                        : "Shop vouchers are selected inside each package"}
                     </div>
                   </div>
                   <span className="text-primary fw-semibold">Choose</span>
                 </div>
               </button>
 
-              {selectedVoucher && (
+              {hasSelectedVouchers && (
                 <button
                   type="button"
                   className="btn btn-link btn-sm text-danger p-0 align-self-start"
-                  onClick={() => setSelectedVoucherId(null)}
+                  onClick={() => onApplyVoucherIds([])}
                 >
                   Remove voucher
                 </button>
@@ -299,7 +371,7 @@ export default function CheckoutOrderSummary({
               <div>
                 <h5 className="mb-1">Choose voucher</h5>
                 <div className="small text-muted">
-                  Only eligible vouchers are shown for this order
+                  Only eligible platform vouchers are shown for this order
                 </div>
               </div>
               <button
@@ -313,7 +385,7 @@ export default function CheckoutOrderSummary({
 
             <div className="px-4 py-3 border-bottom bg-light-subtle">
               <div className="small text-muted">
-                Cart subtotal: {formatCurrency(subtotal)}
+                After shop vouchers: {formatCurrency(subtotalAfterShopVouchers)}
               </div>
               <div className="small text-muted">
                 {usableVouchers.length} eligible voucher
@@ -339,13 +411,13 @@ export default function CheckoutOrderSummary({
 
               {!voucherLoading && ownedVouchers.length > 0 && usableVouchers.length === 0 && (
                 <div className="alert alert-light small mb-0">
-                  There are no vouchers matching this cart yet.
+                  There are no platform vouchers matching this cart yet.
                 </div>
               )}
 
               {!voucherLoading &&
                 usableVouchers.map(({ voucher, isEligible, reason }) => {
-                  const isSelected = draftVoucherId === voucher.id;
+                  const isSelected = draftVoucherIds.includes(voucher.id);
 
                   return (
                     <button
@@ -356,11 +428,7 @@ export default function CheckoutOrderSummary({
                           ? "border-primary shadow-sm"
                            : "border-info-subtle"
                        }`}
-                       onClick={() =>
-                         setDraftVoucherId((current) =>
-                           current === voucher.id ? null : voucher.id,
-                         )
-                       }
+                       onClick={() => toggleDraftVoucher(voucher)}
                     >
                       <div className="row g-0 align-items-stretch">
                         <div
@@ -383,6 +451,11 @@ export default function CheckoutOrderSummary({
                               <div className="small text-muted mt-2">
                                 Min. order:{" "}
                                 {formatCurrency(Number(voucher.minOrderValue || 0))}
+                              </div>
+                              <div className="small text-muted">
+                                {voucher.stackable
+                                  ? "Stackable"
+                                  : "Not stackable"}
                               </div>
                               <div className="small text-muted">
                                 Expiry:{" "}
@@ -427,7 +500,7 @@ export default function CheckoutOrderSummary({
                 type="button"
                 className="btn btn-primary px-4"
                 onClick={() => {
-                  setSelectedVoucherId(draftVoucherId);
+                  onApplyVoucherIds(draftVoucherIds);
                   setIsVoucherModalOpen(false);
                 }}
               >

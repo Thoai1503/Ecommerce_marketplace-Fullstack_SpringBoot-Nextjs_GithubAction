@@ -63,6 +63,9 @@ public class OrderGatewayApplication {
         SpringApplication.run(OrderGatewayApplication.class, args);
     }
 
+    
+    
+    
     public static class LeftJoinSimulation {
 
         // Class đại diện cho dòng dữ liệu

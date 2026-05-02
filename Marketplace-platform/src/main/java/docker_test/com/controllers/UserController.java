@@ -310,47 +310,5 @@ public class UserController {
 
         return ResponseEntity.ok(updated);
     }
-    
-    /* ================= UPDATE AVATAR ================= */
-    // POST http://localhost:8000/users/{id}/avatar
-    @PostMapping(value = "/{id}/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> updateAvatar(
-            @PathVariable int id,
-            @RequestPart(value = "avatar", required = false) MultipartFile avatar
-    ) {
-        User existing = userRepository.GetById(id);
-
-        if (existing == null) {
-            return ResponseEntity
-                    .status(HttpStatus.NOT_FOUND)
-                    .body("User not found");
-        }
-
-        String avatarUrl = null;
-        if (avatar != null && !avatar.isEmpty()) {
-            try {
-                // Upload to Cloudinary
-                avatarUrl = cloudinaryService.uploadFile(avatar);
-            } catch (Exception e) {
-                return ResponseEntity
-                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body("Avatar upload failed: " + e.getMessage());
-            }
-        }
-
-        // Update avatar in database
-        User updated = userRepository.updateAvatar(id, avatarUrl);
-
-        if (updated == null) {
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to update avatar");
-        }
-
-        // ❌ KHÔNG TRẢ PASSWORD
-        updated.setPasswordHash(null);
-
-        return ResponseEntity.ok(updated);
-    }
 
 }

@@ -2,18 +2,9 @@ package cart_service.com.repository;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
->>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
-=======
-
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 import org.springframework.stereotype.Repository;
 
 import cart_service.com.models.Cart;
@@ -21,20 +12,6 @@ import cart_service.com.models.Cart;
 
 
 //@Repository
-<<<<<<< HEAD
-<<<<<<< HEAD
-public interface CartRepository extends JpaRepository<Cart, Long> {
-      
-
-    List<Cart> findByUserId(int userId);
-   Cart findByVariantIdAndUserId(long variantId,long userId);
-   Cart findByVariantId(long variantId);
-    void deleteByUserId(Long userId);
-   // void updateQuantiy();
-    void deleteByUserIdAndProductId(Long userId, Long productId);
-=======
-=======
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 public interface CartRepository extends JpaRepository<Cart, Long>,ICartRepositoryCustom {
       
 
@@ -61,8 +38,4 @@ default List<Cart> joinWithVariantByUser(int user_id) {
 	   
 	return null;
 }
-<<<<<<< HEAD
->>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
-=======
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
 }

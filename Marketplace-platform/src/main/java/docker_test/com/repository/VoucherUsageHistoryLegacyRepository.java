@@ -30,9 +30,9 @@ public class VoucherUsageHistoryLegacyRepository implements IRepositories<Vouche
 
 		String sql = """
 					INSERT INTO voucher_usage_history_legacy (
-						voucher_id, user_id, order_id, discount_amount, used_at
+						voucher_id, user_id, order_id, order_shipment_id, discount_amount, used_at
 					)
-					VALUES (?, ?, ?, ?, NOW())
+					VALUES (?, ?, ?, ?, ?, NOW())
 				""";
 
 		try (Connection con = dbConnection.getConn();
@@ -41,7 +41,8 @@ public class VoucherUsageHistoryLegacyRepository implements IRepositories<Vouche
 			ps.setObject(1, v.getVoucherId());
 			ps.setObject(2, v.getUserId());
 			ps.setObject(3, v.getOrderId());
-			ps.setObject(4, v.getDiscountAmount());
+			ps.setObject(4, v.getOrderShipmentId());
+			ps.setObject(5, v.getDiscountAmount());
 
 			ps.executeUpdate();
 

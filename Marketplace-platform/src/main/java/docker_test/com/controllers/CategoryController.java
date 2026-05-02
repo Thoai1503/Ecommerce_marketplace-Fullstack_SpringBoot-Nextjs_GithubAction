@@ -157,9 +157,6 @@ public class CategoryController {
 
 		return ResponseEntity.ok(list);
 	}
-<<<<<<< HEAD
-}
-=======
 
 	/* ================= CATEGORY PRODUCTS ================= */
 	// GET /api/categories/{id}/products
@@ -307,4 +304,3 @@ public class CategoryController {
 	}
 
 }
->>>>>>> 1baaa4b887a4d539478b503d2ca6afaa6be25518

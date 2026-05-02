@@ -3,7 +3,7 @@ import http from "@/lib/http";
 import { IProduct } from "@/validators/product";
 import { ProductImage } from "./types";
 import { Shop } from "@/validators/shop";
-import { ProductVariant } from "@/validators/productVariant";
+import { IProductVariant } from "@/validators/productVariant";
 
 export const addProduct = async (
   product: Partial<IProduct>,
@@ -69,8 +69,8 @@ export const getShopByUserId = async (user_id: number): Promise<Shop> => {
 };
 
 export const createProductVariant = async (
-  productVariant: ProductVariant,
-): Promise<ProductVariant> => {
+  productVariant: IProductVariant,
+): Promise<IProductVariant> => {
   return await http
     .post("/seller/product-variant", productVariant)
     .then((res) => res.data)

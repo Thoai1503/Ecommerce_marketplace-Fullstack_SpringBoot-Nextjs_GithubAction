@@ -62,23 +62,6 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-		<dependency>
-    <groupId>org.springframework.data</groupId>
-    <artifactId>spring-data-jpa</artifactId>
-    <version>4.0.3</version>
-    <scope>compile</scope>
-</dependency>
-=======
-
->>>>>>> a1ca836ab366b9e638f7e8f5f45978e34bac9691
-=======
-
->>>>>>> e4dd6569ac30ad63e61404155328fc3d319dbff5
-=======
->>>>>>> 93c8346aa5bbe8c27002b7a82db1b68b810dc7d9
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-data-jpa</artifactId>

@@ -415,7 +415,7 @@ const page = () => {
                           {variant.image_url && (
                             <img
                               src={variant.image_url}
-                              alt={variant.name}
+                              alt={variant.variant_name}
                               className="rounded me-3"
                               width="60"
                               height="60"
@@ -423,7 +423,9 @@ const page = () => {
                             />
                           )}
                           <div>
-                            <div className="fw-medium">{variant.name}</div>
+                            <div className="fw-medium">
+                              {(variant as any).name}
+                            </div>
                             <small className="text-muted">
                               SKU: {variant.sku || "-"}
                             </small>

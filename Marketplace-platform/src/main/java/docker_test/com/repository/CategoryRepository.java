@@ -210,11 +210,6 @@ public class CategoryRepository implements IRepositories<Category> {
 			ex.printStackTrace();
 		}
 
-<<<<<<< HEAD
-        return null;
-    }
-}
-=======
 		return null;
 	}
 
@@ -286,4 +281,3 @@ public class CategoryRepository implements IRepositories<Category> {
 	    return list;
 	}
 }
->>>>>>> 1baaa4b887a4d539478b503d2ca6afaa6be25518

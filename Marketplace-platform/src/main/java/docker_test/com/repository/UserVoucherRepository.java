@@ -99,7 +99,13 @@ public class UserVoucherRepository implements IRepositories<UserVoucher> {
 	@Override
 	public UserVoucher Update(UserVoucher u) {
 
-		String sql = """
+		String currentSql = """
+					SELECT voucher_id, status
+					FROM user_voucher
+					WHERE id = ?
+					FOR UPDATE
+				""";
+		String updateUserVoucherSql = """
 					UPDATE user_voucher SET
 						status = ?,
 						reserved_order_id = ?,
@@ -108,20 +114,79 @@ public class UserVoucherRepository implements IRepositories<UserVoucher> {
 						redeemed_at = ?
 					WHERE id = ?
 				""";
+		String incrementRedeemedSql = """
+					UPDATE voucher
+					SET redeemed_count = COALESCE(redeemed_count, 0) + 1,
+						updated_at = NOW()
+					WHERE id = ?
+				""";
 
-		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+		Connection con = null;
+		try {
+			con = dbConnection.getConn();
+			con.setAutoCommit(false);
 
-			ps.setString(1, u.getStatus());
-			ps.setObject(2, u.getReservedOrderId());
-			ps.setObject(3, u.getReservedAt());
-			ps.setObject(4, u.getExpiredAt());
-			ps.setObject(5, u.getRedeemedAt());
-			ps.setObject(6, u.getId());
+			Long voucherId = null;
+			String currentStatus = null;
 
-			return ps.executeUpdate() > 0 ? u : null;
+			try (PreparedStatement currentPs = con.prepareStatement(currentSql)) {
+				currentPs.setObject(1, u.getId());
+				try (ResultSet rs = currentPs.executeQuery()) {
+					if (!rs.next()) {
+						con.rollback();
+						return null;
+					}
+					voucherId = rs.getLong("voucher_id");
+					currentStatus = rs.getString("status");
+					u.setVoucherId(voucherId);
+				}
+			}
+
+			try (PreparedStatement ps = con.prepareStatement(updateUserVoucherSql)) {
+				ps.setString(1, u.getStatus());
+				ps.setObject(2, u.getReservedOrderId());
+				ps.setObject(3, u.getReservedAt());
+				ps.setObject(4, u.getExpiredAt());
+				ps.setObject(5, u.getRedeemedAt());
+				ps.setObject(6, u.getId());
+
+				if (ps.executeUpdate() <= 0) {
+					con.rollback();
+					return null;
+				}
+			}
+
+			boolean redeemingNow = "REDEEMED".equalsIgnoreCase(u.getStatus())
+					&& !"REDEEMED".equalsIgnoreCase(currentStatus);
+			if (redeemingNow) {
+				try (PreparedStatement redeemPs = con.prepareStatement(incrementRedeemedSql)) {
+					redeemPs.setObject(1, voucherId);
+					if (redeemPs.executeUpdate() <= 0) {
+						throw new SQLException("Voucher not found: " + voucherId);
+					}
+				}
+			}
+
+			con.commit();
+			return u;
 
 		} catch (Exception e) {
+			if (con != null) {
+				try {
+					con.rollback();
+				} catch (SQLException rollbackEx) {
+					e.addSuppressed(rollbackEx);
+				}
+			}
 			throw new RuntimeException(e);
+		} finally {
+			if (con != null) {
+				try {
+					con.setAutoCommit(true);
+					con.close();
+				} catch (SQLException ignored) {
+				}
+			}
 		}
 	}
 

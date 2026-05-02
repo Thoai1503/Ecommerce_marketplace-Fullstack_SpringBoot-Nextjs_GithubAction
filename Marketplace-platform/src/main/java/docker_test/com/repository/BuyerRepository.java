@@ -157,4 +157,82 @@ public class BuyerRepository extends UserRepository {
     ) {
         return FilterByType(TYPE_CLAUSE, keyword, isActive, page, pageSize);
     }
+
+    private PageResult<User> FilterByType(
+            String  typeClause, // e.g. "user_type = 'seller'" or "user_type IN ('buyer', 'shipper')"
+            String  keyword,
+            Integer isActive,
+            int     page,
+            int     pageSize
+    ) {
+        StringBuilder where = new StringBuilder("WHERE " + typeClause);
+
+        if (keyword != null && !keyword.isBlank()) {
+            where.append(" AND (full_name LIKE ? OR email LIKE ? OR phone LIKE ?)");
+        }
+        if (isActive != null) {
+            where.append(" AND is_active = ?");
+        }
+
+        String sqlCount = "SELECT COUNT(*) FROM `user` " + where;
+        String sqlData  = "SELECT * FROM `user` " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement psCount = con.prepareStatement(sqlCount);
+             PreparedStatement psData  = con.prepareStatement(sqlData)) {
+
+            int paramIndex = 1;
+            if (keyword != null && !keyword.isBlank()) {
+                String likeKeyword = "%" + keyword.trim() + "%";
+                psCount.setString(paramIndex, likeKeyword);
+                psCount.setString(paramIndex + 1, likeKeyword);
+                psCount.setString(paramIndex + 2, likeKeyword);
+                psData.setString(paramIndex, likeKeyword);
+                psData.setString(paramIndex + 1, likeKeyword);
+                psData.setString(paramIndex + 2, likeKeyword);
+                paramIndex += 3;
+            }
+            if (isActive != null) {
+                psCount.setInt(paramIndex, isActive);
+                psData.setInt(paramIndex, isActive);
+                paramIndex++;
+            }
+            psData.setInt(paramIndex, pageSize);
+            psData.setInt(paramIndex + 1, (page - 1) * pageSize);
+
+            ResultSet rsCount = psCount.executeQuery();
+            if (rsCount.next()) {
+                int totalRecords = rsCount.getInt(1);
+
+                ResultSet rsData = psData.executeQuery();
+                List<User> users = mapper.RowsMap(rsData);
+                return new PageResult<>(users, totalRecords, page, pageSize);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new PageResult<>(List.of(), 0, page, pageSize);
+    
+    }
+
+    /* ================= UPDATE BUYER INFO (Admin edit buyer) ================= */
+
+    public boolean setActiveStatus(int id, int isActive) {
+
+        String sql = "UPDATE `user` SET is_active = ? WHERE id = ? AND " + TYPE_CLAUSE;
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, isActive);
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
 }
