@@ -20,15 +20,31 @@ public class AddressService {
         if (address == null) {
             return null;
         }
-        if (address.getUserId() <= 0) {
+        if (address.getUserId() == null || address.getUserId() <= 0) {
             return null;
         }
         if (address.getAddressLine() == null || address.getAddressLine().isBlank()) {
             return null;
         }
 
-        // Normal user address should not carry shop_id.
-        address.setShop_id(Long.valueOf(0));
+        // Ensure this is a user address, not a shop address.
+        address.setShop_id(null);
+        return addressRepository.Create(address);
+    }
+
+    public Address createShopAddress(Address address) throws SQLException {
+        if (address == null) {
+            return null;
+        }
+        if (address.getShop_id() == null || address.getShop_id() <= 0) {
+            return null;
+        }
+        if (address.getAddressLine() == null || address.getAddressLine().isBlank()) {
+            return null;
+        }
+
+        // Ensure this is a shop address, not a user address.
+        address.setUserId(null);
         return addressRepository.Create(address);
     }
 }
