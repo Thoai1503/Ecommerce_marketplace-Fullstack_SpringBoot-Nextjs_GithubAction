@@ -5,6 +5,15 @@ import java.util.List;
 public class RefundRequestDTO {
     private Long orderId;
 	private Long orderItemId;
+	private Long orderShipmentId;
+	public Long getOrderShipmentId() {
+		return orderShipmentId;
+	}
+
+	public void setOrderShipmentId(Long orderShipmentId) {
+		this.orderShipmentId = orderShipmentId;
+	}
+
 	private Long shopId;
 	private Long customerId;
 	private String reason;
