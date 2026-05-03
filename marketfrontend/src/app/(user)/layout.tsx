@@ -5,6 +5,7 @@ import Script from "next/script";
 import HeaderAuth from "@/components/HeaderAuth";
 import { cookies } from "next/headers";
 import { UserAuthProvider } from "@/context/UserAuthContext";
+import GoSellerButton from "@/components/GoSellerButton";
 
 import CustomProgressBar from "@/components/common/CustomProgressBar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -43,7 +44,7 @@ export default async function UserLayout({
                 <div className="row">
                   <div className="col-6">
                     <div className="d-flex gap-3">
-                      <a href="/seller/createshop">Human Sales Channel</a>
+                      <GoSellerButton />
                       <a href="#">Download the application</a>
                       <span>
                         Connect{" "}
@@ -266,7 +267,6 @@ export default async function UserLayout({
               </div>
             </div>
           </footer>
-
         </UserAuthProvider>
       </RootPrivider>
     </>
