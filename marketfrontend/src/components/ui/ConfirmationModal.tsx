@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AlertTriangle, CheckCircle, HelpCircle, XCircle } from 'lucide-react';
 
 export type ModalVariant = 'danger' | 'success' | 'warning' | 'info';
@@ -27,6 +27,19 @@ export default function ConfirmationModal({
   variant = 'danger',
   isLoading = false
 }: ConfirmationModalProps) {
+  useEffect(() => {
+    if (!isOpen || isLoading) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isLoading, onClose]);
+
   if (!isOpen) return null;
 
   const config = {

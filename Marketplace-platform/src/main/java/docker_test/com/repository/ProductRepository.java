@@ -89,7 +89,11 @@ public class ProductRepository implements IRepositories<Product> {
 				original_price = COALESCE(?, original_price),
 				stock_quantity = COALESCE(?, stock_quantity),
 				category_id = COALESCE(?, category_id),
-				reject_reason = ?
+				reject_reason = ?,
+				hidden_at = ?,
+				hidden_by = ?,
+				hidden_reason = ?,
+				hidden_by_role = ?
 			WHERE id = ?
 		""";
 		try (Connection con = dbConnection.getConn();
@@ -103,7 +107,12 @@ public class ProductRepository implements IRepositories<Product> {
 			ps.setObject(6, item.getStock_quantity());
 			ps.setObject(7, item.getCategory_id());
 			ps.setString(8, item.getReject_reason());
-			ps.setInt(9, item.getId());
+			ps.setTimestamp(9, item.getHiddenAt() != null ? java.sql.Timestamp.valueOf(item.getHiddenAt()) : null);
+			if (item.getHiddenBy() != null) ps.setLong(10, item.getHiddenBy());
+			else ps.setNull(10, java.sql.Types.BIGINT);
+			ps.setString(11, item.getHiddenReason());
+			ps.setString(12, item.getHiddenByRole());
+			ps.setInt(13, item.getId());
 
 			int rows = ps.executeUpdate();
 			if (rows > 0) return GetById(item.getId());
@@ -147,9 +156,13 @@ SELECT
     p.length,
     p.width,
     p.height,
-    p.brand,
+    p.brand_id,
     p.is_active,
     p.reject_reason,
+    p.hidden_at,
+    p.hidden_by,
+    p.hidden_reason,
+    p.hidden_by_role,
     p.created_at,
     p.updated_at,
     (
@@ -160,16 +173,16 @@ SELECT
                 'display_order', pi.display_order,
                 'is_thumbnail', pi.is_thumbnail
             )
+            ORDER BY pi.display_order ASC
         )
         FROM product_image pi
         WHERE pi.product_id = p.id
-        ORDER BY pi.display_order ASC
     ) AS images,
     (
         SELECT JSON_ARRAYAGG(
             JSON_OBJECT(
                 'id', pv.id,
-                'product_id',pv.product_id,
+                'product_id', pv.product_id,
                 'variant_name', pv.variant_name,
                 'sku', pv.sku,
                 'price', pv.price,
@@ -210,8 +223,26 @@ WHERE p.id = ?;
 	                product.setReview_count(rs.getInt("review_count"));
 	                product.setIs_active(rs.getInt("is_active"));
 	                try { product.setReject_reason(rs.getString("reject_reason")); } catch (Exception ignore) { /* column may be absent pre-migration */ }
+	                try {
+	                    var hiddenAt = rs.getTimestamp("hidden_at");
+	                    if (hiddenAt != null) product.setHiddenAt(hiddenAt.toLocalDateTime());
+	                } catch (Exception ignore) {}
+	                try {
+	                    long hiddenBy = rs.getLong("hidden_by");
+	                    if (!rs.wasNull()) product.setHiddenBy(hiddenBy);
+	                } catch (Exception ignore) {}
+	                try { product.setHiddenReason(rs.getString("hidden_reason")); } catch (Exception ignore) {}
+	                try { product.setHiddenByRole(rs.getString("hidden_by_role")); } catch (Exception ignore) {}
+	                try { product.setWeight(rs.getDouble("weight")); } catch (Exception ignore) {}
+	                try { product.setLength(rs.getDouble("length")); } catch (Exception ignore) {}
+	                try { product.setWidth(rs.getDouble("width")); } catch (Exception ignore) {}
+	                try { product.setHeight(rs.getDouble("height")); } catch (Exception ignore) {}
 	                var ts = rs.getTimestamp("created_at");
 	                if (ts != null) product.setCreated_at(ts.toLocalDateTime());
+	                try {
+	                    var uts = rs.getTimestamp("updated_at");
+	                    if (uts != null) product.setUpdated_at(uts.toLocalDateTime());
+	                } catch (Exception ignore) {}
 	                
 	                // Lấy JSON dưới dạng String
 	                String variantsJson = rs.getString("variants");
@@ -265,7 +296,8 @@ WHERE p.id = ?;
 			SELECT
 			    p.id, p.shop_id, p.category_id, p.product_name, p.product_slug,
 			    p.description, p.price, p.original_price, p.stock_quantity,
-			    p.is_active, p.reject_reason, p.created_at,
+			    p.is_active, p.reject_reason, p.hidden_at, p.hidden_by,
+			    p.hidden_reason, p.hidden_by_role, p.created_at,
 			    s.shop_name AS shop_name,
 			    (
 			        SELECT pi.image_url FROM product_image pi
@@ -307,6 +339,16 @@ WHERE p.id = ?;
 		          image.setDescription(rs.getString("description"));
 		          image.setImage_url(rs.getString("image_url"));
 		          try { image.setReject_reason(rs.getString("reject_reason")); } catch (Exception ignore) {}
+		          try {
+		              var hiddenAt = rs.getTimestamp("hidden_at");
+		              if (hiddenAt != null) image.setHiddenAt(hiddenAt.toLocalDateTime());
+		          } catch (Exception ignore) {}
+		          try {
+		              long hiddenBy = rs.getLong("hidden_by");
+		              if (!rs.wasNull()) image.setHiddenBy(hiddenBy);
+		          } catch (Exception ignore) {}
+		          try { image.setHiddenReason(rs.getString("hidden_reason")); } catch (Exception ignore) {}
+		          try { image.setHiddenByRole(rs.getString("hidden_by_role")); } catch (Exception ignore) {}
 		          try { image.setShop_name(rs.getString("shop_name")); } catch (Exception ignore) {}
 		          var ts = rs.getTimestamp("created_at");
 		          if (ts != null) image.setCreated_at(ts.toLocalDateTime());

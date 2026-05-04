@@ -10,6 +10,10 @@ public final class ProductVariant {
     private Double price;
     private int stock_quantity;
     private String image_url;
+    private Long weight;
+    private Long length;
+    private Long width;
+    private Long height;
     private Integer is_active;
     
     private LocalDateTime created_at;
@@ -91,6 +95,38 @@ public final class ProductVariant {
 
     public void setImage_url(String image_url) {
         this.image_url = image_url;
+    }
+
+    public Long getWeight() {
+        return weight;
+    }
+
+    public void setWeight(Long weight) {
+        this.weight = weight;
+    }
+
+    public Long getLength() {
+        return length;
+    }
+
+    public void setLength(Long length) {
+        this.length = length;
+    }
+
+    public Long getWidth() {
+        return width;
+    }
+
+    public void setWidth(Long width) {
+        this.width = width;
+    }
+
+    public Long getHeight() {
+        return height;
+    }
+
+    public void setHeight(Long height) {
+        this.height = height;
     }
 
     public int isActive() {

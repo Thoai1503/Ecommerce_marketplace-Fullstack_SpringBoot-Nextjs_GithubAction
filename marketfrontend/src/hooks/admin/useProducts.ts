@@ -1,6 +1,6 @@
-
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getProducts, deleteProducts, approveProduct, rejectProduct, getProductById, duplicateProduct, updateProductStatus, createProduct, updateProduct, ProductPayload } from '@/service/products';
+import { getProducts, deleteProducts, approveProduct, rejectProduct, getProductById, duplicateProduct, updateProductStatus, createProduct, updateProduct, ProductPayload, getProductStatusHistory, trackProductView } from '@/service/products';
 import { Product, ProductStatus } from '@/types/index';
 
 interface UseProductsParams {
@@ -39,8 +39,12 @@ export const useProducts = (params?: UseProductsParams) => {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: ProductStatus }) => updateProductStatus(id, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }),
+    mutationFn: ({ id, status, reason }: { id: string; status: ProductStatus; reason?: string }) => updateProductStatus(id, status, reason),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'products', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'products', variables.id, 'history'] });
+    },
   });
 
   return {
@@ -67,6 +71,21 @@ export const useProductDetail = (id: string) => {
     enabled: !!id,
   });
 
+  const statusHistoryQuery = useQuery({
+    queryKey: ['admin', 'products', id, 'history'],
+    queryFn: () => getProductStatusHistory(id),
+    enabled: !!id,
+  });
+
+  useEffect(() => {
+    if (!id || !query.data) return;
+    const timer = window.setTimeout(() => {
+      trackProductView(id);
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [id, query.data?.id]);
+
   const createMutation = useMutation({
     mutationFn: (payload: ProductPayload) => createProduct(payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }),
@@ -85,6 +104,8 @@ export const useProductDetail = (id: string) => {
     isLoading: query.isLoading,
     isError: query.isError,
     refetch: query.refetch,
+    statusHistory: statusHistoryQuery.data || [],
+    isHistoryLoading: statusHistoryQuery.isLoading,
     createProduct: createMutation.mutateAsync,
     updateProduct: updateMutation.mutateAsync,
     isSaving: createMutation.isPending || updateMutation.isPending,

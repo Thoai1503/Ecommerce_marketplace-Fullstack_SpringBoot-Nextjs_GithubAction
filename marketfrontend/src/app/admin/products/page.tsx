@@ -1,112 +1,227 @@
-
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { useProducts } from '@/hooks/admin/useProducts';
-import { useToast } from '@/context/ToastContext';
+import type { ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Search, Plus, Filter, Trash2, Edit3, Eye, CheckCircle, XCircle,
-  AlertCircle, Package, ArrowUpDown, Copy, X
-} from 'lucide-react';
-import { Product, ProductStatus } from '@/types';
-import { TableRowSkeleton } from '@/components/ui/Skeleton';
-import EmptyState from '@/components/ui/EmptyState';
-import ErrorState from '@/components/ui/ErrorState';
-import RejectProductModal from '@/components/admin/products/RejectProductModal';
-import ConfirmationModal from '@/components/ui/ConfirmationModal';
-import Breadcrumbs from '@/components/ui/Breadcrumbs';
-import Pagination from '@/components/ui/Pagination';
-
+  AlertCircle,
+  ArrowUpDown,
+  CheckCircle,
+  Eye,
+  EyeOff,
+  Filter,
+  Lock,
+  Package,
+  RotateCcw,
+  Search,
+  Trash2,
+  X,
+  XCircle,
+} from "lucide-react";
 import {
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  flexRender,
   createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
   SortingState,
-  ColumnFiltersState,
-} from '@tanstack/react-table';
+  useReactTable,
+} from "@tanstack/react-table";
+import Breadcrumbs from "@/components/ui/Breadcrumbs";
+import EmptyState from "@/components/ui/EmptyState";
+import ErrorState from "@/components/ui/ErrorState";
+import RejectProductModal from "@/components/admin/products/RejectProductModal";
+import HideProductModal from "@/components/admin/products/HideProductModal";
+import { TableRowSkeleton } from "@/components/ui/Skeleton";
+import { useToast } from "@/context/ToastContext";
+import { useProducts } from "@/hooks/admin/useProducts";
+import { Product, ProductStatus } from "@/types";
 
-const StatusConfig: Record<ProductStatus, { label: string; color: string; bgColor: string; borderColor: string; icon: any }> = {
-  PENDING: { label: 'Chờ duyệt', color: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200', icon: <AlertCircle size={14} /> },
-  APPROVED: { label: 'Đang bán', color: 'text-emerald-700', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200', icon: <CheckCircle size={14} /> },
-  REJECTED: { label: 'Từ chối', color: 'text-rose-700', bgColor: 'bg-rose-50', borderColor: 'border-rose-200', icon: <XCircle size={14} /> },
-  DRAFT: { label: 'Nháp', color: 'text-slate-600', bgColor: 'bg-slate-100', borderColor: 'border-slate-200', icon: <Edit3 size={14} /> },
-  HIDDEN: { label: 'Đang ẩn', color: 'text-indigo-700', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200', icon: <Package size={14} /> },
+const statusConfig: Record<ProductStatus, { label: string; className: string; icon: ReactNode }> = {
+  DRAFT: { label: "Nháp", className: "bg-gray-500 text-white border-gray-600 shadow-sm", icon: <Package size={14} /> },
+  PENDING: { label: "Chờ duyệt", className: "bg-amber-500 text-white border-amber-600 shadow-sm", icon: <AlertCircle size={14} /> },
+  APPROVED: { label: "Đang bán", className: "bg-emerald-500 text-white border-emerald-600 shadow-sm", icon: <CheckCircle size={14} /> },
+  REJECTED: { label: "Từ chối", className: "bg-red-500 text-white border-red-600 shadow-sm", icon: <XCircle size={14} /> },
+  HIDDEN: { label: "Đang ẩn", className: "bg-slate-600 text-white border-slate-700 shadow-sm", icon: <Package size={14} /> },
 };
 
-// Stock-status helper
-const stockMeta = (stock: number) => {
-  if (stock === 0) return { color: 'text-red-700', barColor: 'bg-red-500', tooltip: 'Hết hàng' };
-  if (stock < 5) return { color: 'text-red-600', barColor: 'bg-red-400', tooltip: 'Sắp hết hàng (<5)' };
-  return { color: 'text-slate-700', barColor: 'bg-emerald-500', tooltip: 'Còn hàng' };
+const columnHeaders = {
+  product: "Sản phẩm",
+  seller: "Nhà bán hàng",
+  price: "Giá bán",
+  stock: "Kho",
+  status: "Trạng thái",
+  createdAt: "Ngày tạo",
+  actions: "Duyệt",
 };
 
-const formatDateVN = (iso?: string) => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '—';
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const money = (value: number) =>
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
+
+const formatDate = (iso?: string) => {
+  if (!iso) return "-";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("vi-VN");
 };
 
 export default function ProductsPage() {
   const router = useRouter();
-  const { products, isLoading, isError, refetch, deleteProducts, approveProduct, rejectProduct, duplicateProduct } = useProducts();
   const toast = useToast();
-
-  // --- Table State ---
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
-
-  // --- Modal States ---
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<ProductStatus | "ALL">("ALL");
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [productToReject, setProductToReject] = useState<{ id: string; name: string } | null>(null);
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; ids: string[]; name?: string }>({ isOpen: false, ids: [] });
-  const [bulkConfirm, setBulkConfirm] = useState<{ isOpen: boolean; action: 'approve' | 'reject' | null }>({ isOpen: false, action: null });
+  const [isHideModalOpen, setIsHideModalOpen] = useState(false);
+  const [productToHide, setProductToHide] = useState<Product | null>(null);
+  const [isHideSubmitting, setIsHideSubmitting] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    type: "success" | "warning" | "danger";
+    confirmLabel: string;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
+  const [bulkRejectOpen, setBulkRejectOpen] = useState(false);
+  const [bulkRejectReason, setBulkRejectReason] = useState("");
 
-  // --- Handlers ---
-  const handleApprove = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
+  const params = useMemo(
+    () => ({
+      status: status === "ALL" ? undefined : status,
+      search: search.trim() || undefined,
+      page: 0,
+      size: 100,
+    }),
+    [search, status],
+  );
+
+  const { products, isLoading, isError, refetch, approveProduct, rejectProduct, updateProductStatus, deleteProducts } = useProducts(params);
+
+  // ESC closes any open modal
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (isHideModalOpen) { setIsHideModalOpen(false); return; }
+      if (bulkRejectOpen) { setBulkRejectOpen(false); return; }
+      if (confirmAction) { setConfirmAction(null); return; }
+      if (isRejectModalOpen) { setIsRejectModalOpen(false); return; }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [confirmAction, bulkRejectOpen, isRejectModalOpen, isHideModalOpen]);
+
+  const handleApprove = async (product: Product) => {
     try {
-      await approveProduct(id);
-      toast.success('Đã duyệt sản phẩm thành công!');
-    } catch { toast.error('Lỗi khi duyệt sản phẩm.'); }
-  };
-
-  const openDeleteModal = (ids: string[], name?: string) => {
-    setDeleteModal({ isOpen: true, ids, name });
-  };
-
-  const handleConfirmDelete = async () => {
-    if (deleteModal.ids.length === 0) return;
-    try {
-      await deleteProducts(deleteModal.ids);
-      toast.success(`Đã xóa ${deleteModal.ids.length} sản phẩm`);
-      setDeleteModal({ isOpen: false, ids: [] });
-      setRowSelection({});
+      await approveProduct(product.id);
+      toast.success("Đã duyệt sản phẩm");
     } catch {
-      toast.error('Lỗi khi xóa sản phẩm.');
+      toast.error("Lỗi khi duyệt sản phẩm");
     }
   };
 
-  const resetFilters = () => {
-    setGlobalFilter('');
-    setColumnFilters([]);
+  const handleReject = async (id: string, reason: string) => {
+    try {
+      await rejectProduct({ id, reason });
+      toast.success("Đã từ chối sản phẩm");
+    } catch {
+      toast.error("Lỗi khi từ chối sản phẩm");
+    }
   };
 
-  // --- Table Definitions ---
-  const columnHelper = createColumnHelper<Product>();
+  const handleHide = (product: Product) => {
+    setProductToHide(product);
+    setIsHideModalOpen(true);
+    if (confirmAction) setConfirmAction({
+      title: "Tạm ẩn sản phẩm?",
+      message: `Sản phẩm "${product.name}" sẽ không còn hiển thị trên store. Bạn có thể hiện lại bất cứ lúc nào.`,
+      type: "warning",
+      confirmLabel: "Tạm ẩn",
+      onConfirm: async () => {
+        try {
+          await updateProductStatus({ id: product.id, status: "HIDDEN" });
+          toast.success("Đã tạm ẩn sản phẩm");
+        } catch {
+          toast.error("Lỗi khi ẩn sản phẩm");
+        }
+        setConfirmAction(null);
+      },
+    });
+  };
 
-  const columns = useMemo(() => [
+  const confirmHide = async (reason: string) => {
+    if (!productToHide) return;
+    setIsHideSubmitting(true);
+    try {
+      await updateProductStatus({ id: productToHide.id, status: "HIDDEN", reason });
+      toast.success("Đã tạm ẩn sản phẩm");
+      setIsHideModalOpen(false);
+      setProductToHide(null);
+    } catch {
+      toast.error("Lỗi khi ẩn sản phẩm");
+    } finally {
+      setIsHideSubmitting(false);
+    }
+  };
+
+  const handleUnhide = (product: Product) => {
+    setConfirmAction({
+      title: "Hiện lại sản phẩm?",
+      message: `Sản phẩm "${product.name}" sẽ trở lại trạng thái "Đang bán" và hiển thị trên store.`,
+      type: "success",
+      confirmLabel: "Hiện lại",
+      onConfirm: async () => {
+        try {
+          await updateProductStatus({ id: product.id, status: "APPROVED" });
+          toast.success("Đã hiện lại sản phẩm");
+        } catch {
+          toast.error("Lỗi khi hiện lại sản phẩm");
+        }
+        setConfirmAction(null);
+      },
+    });
+  };
+
+  const handleRestore = (product: Product) => {
+    setConfirmAction({
+      title: "Phục hồi sản phẩm?",
+      message: `Sản phẩm "${product.name}" sẽ chuyển về trạng thái "Chờ duyệt" để seller có thể sửa và gửi lại.`,
+      type: "success",
+      confirmLabel: "Phục hồi",
+      onConfirm: async () => {
+        try {
+          await updateProductStatus({ id: product.id, status: "PENDING" });
+          toast.success("Đã phục hồi sản phẩm");
+        } catch {
+          toast.error("Lỗi khi phục hồi sản phẩm");
+        }
+        setConfirmAction(null);
+      },
+    });
+  };
+
+  const handleDelete = (product: Product) => {
+    setConfirmAction({
+      title: "Xóa vĩnh viễn?",
+      message: `Sản phẩm "${product.name}" sẽ bị xóa vĩnh viễn khỏi hệ thống. Hành động này không thể hoàn tác!`,
+      type: "danger",
+      confirmLabel: "Xóa vĩnh viễn",
+      onConfirm: async () => {
+        try {
+          await deleteProducts([product.id]);
+          toast.success("Đã xóa sản phẩm");
+        } catch {
+          toast.error("Lỗi khi xóa sản phẩm");
+        }
+        setConfirmAction(null);
+      },
+    });
+  };
+
+  const columnHelper = createColumnHelper<Product>();
+  const columns = [
     columnHelper.display({
-      id: 'select',
+      id: "select",
       header: ({ table }) => (
         <input
           type="checkbox"
@@ -120,314 +235,490 @@ export default function ProductsPage() {
           type="checkbox"
           checked={row.getIsSelected()}
           onChange={row.getToggleSelectedHandler()}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
           className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
         />
       ),
     }),
-    columnHelper.accessor('name', {
-      header: 'Thông tin sản phẩm',
+    columnHelper.accessor("name", {
+      header: "Sản phẩm",
       cell: ({ row }) => {
-        const firstImage = row.original.images?.[0];
+        const product = row.original;
+        const firstImage = product.images?.[0];
+        const slugTooltip = `Mã: ${product.sku || product.productCode}`;
         return (
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-50 border border-slate-200 shrink-0 flex items-center justify-center" title={firstImage ? row.original.name : 'Chưa có ảnh'}>
+            <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-50 border border-slate-200 shrink-0 flex items-center justify-center">
               {firstImage ? (
                 <img src={firstImage} alt="" className="w-full h-full object-cover" />
               ) : (
-                <Package size={22} className="text-slate-300" aria-label="Chưa có ảnh" />
+                <Package size={22} className="text-slate-300" />
               )}
             </div>
-            <div className="min-w-0">
-              <p
-                className="text-sm font-bold text-slate-800 truncate group-hover:text-blue-600 transition-colors max-w-[250px]"
-                title={row.original.name}
-              >
-                {row.original.name}
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <span
-                  className="text-[10px] font-mono font-bold bg-slate-100 text-slate-500 px-1.5 rounded border border-slate-200 truncate max-w-[200px] inline-block"
-                  title={row.original.sku || row.original.productCode}
-                >
-                  #{row.original.sku || row.original.productCode}
-                </span>
-                <span
-                  className="text-[10px] bg-white text-slate-500 border border-slate-200 px-1.5 rounded truncate max-w-[120px] inline-block"
-                  title={row.original.category}
-                >
-                  {row.original.category}
-                </span>
-              </div>
+            <div className="min-w-0" title={slugTooltip}>
+              <p className="text-sm font-bold text-slate-800 truncate max-w-[280px]">{product.name}</p>
+              <p className="text-[11px] text-slate-400 font-medium mt-0.5">#{product.id}</p>
             </div>
           </div>
         );
       },
     }),
-    columnHelper.accessor('sellerName', {
-      header: 'Nhà bán hàng',
-      cell: ({ row }) => (
-        <span
-          className="text-sm font-semibold text-slate-700 truncate max-w-[180px] inline-block"
-          title={row.original.sellerName || '—'}
-        >
-          {row.original.sellerName || '—'}
-        </span>
-      ),
-    }),
-    columnHelper.accessor('price', {
-      header: 'Giá bán',
-      cell: ({ getValue }) => <span className="font-black text-slate-800 text-sm">{getValue().toLocaleString()}₫</span>,
-    }),
-    columnHelper.accessor('stock', {
-      header: 'Kho hàng',
-      cell: ({ getValue }) => {
-        const stock = getValue();
-        const meta = stockMeta(stock);
+    columnHelper.accessor("sellerName", {
+      header: "Nhà bán hàng",
+      cell: ({ row, getValue }) => {
+        const product = row.original;
+        const name = getValue();
+        if (!name) return <span className="text-sm text-slate-400">-</span>;
         return (
-          <div className="flex flex-col items-center w-20" title={meta.tooltip}>
-            <span className={`font-bold text-sm ${meta.color}`}>{stock}</span>
-            <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden mt-1">
-              <div className={`h-full ${meta.barColor}`} style={{ width: `${Math.min(100, stock)}%` }}></div>
-            </div>
-          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (product.sellerId) router.push(`/admin/sellers/${product.sellerId}`);
+            }}
+            className="text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors text-left"
+          >
+            {name}
+          </button>
         );
       },
     }),
-    columnHelper.accessor('status', {
-      header: 'Trạng thái',
+    columnHelper.accessor("category", {
+      header: "Danh mục",
       cell: ({ getValue }) => {
-        const status = getValue();
-        const config = StatusConfig[status];
+        const cat = getValue();
+        if (!cat) return <span className="text-sm text-slate-400">-</span>;
         return (
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${config.bgColor} ${config.color} ${config.borderColor}`}>
-            {config.icon} {config.label}
+          <span className="inline-flex items-center px-2.5 py-1 bg-slate-100 text-slate-600 rounded-md text-xs font-semibold border border-slate-200">
+            {cat}
           </span>
         );
       },
     }),
-    columnHelper.accessor('createdAt', {
-      header: 'Ngày tạo',
-      cell: ({ getValue }) => (
-        <span className="text-xs font-medium text-slate-600 whitespace-nowrap">{formatDateVN(getValue())}</span>
-      ),
+    columnHelper.accessor("price", {
+      header: "Giá bán",
+      cell: ({ getValue }) => <span className="font-black text-slate-800 text-sm">{money(getValue())}</span>,
+    }),
+    columnHelper.accessor("stock", {
+      header: "Kho",
+      cell: ({ getValue }) => {
+        const stock = getValue();
+        if (stock === 0) {
+          return (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200">
+              <AlertCircle size={12} /> Hết hàng
+            </span>
+          );
+        }
+        if (stock > 0 && stock <= 5) {
+          return (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200" title="Sắp hết hàng">
+              <AlertCircle size={12} /> {stock}
+            </span>
+          );
+        }
+        return <span className="text-sm font-bold text-slate-700">{stock}</span>;
+      },
+    }),
+    columnHelper.accessor("status", {
+      header: "Trạng thái",
+      cell: ({ getValue }) => {
+        const config = statusConfig[getValue()];
+        return (
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase border whitespace-nowrap ${config.className}`}>
+            {config.icon}
+            {config.label}
+          </span>
+        );
+      },
+    }),
+    columnHelper.accessor("createdAt", {
+      header: "Ngày tạo",
+      cell: ({ getValue }) => {
+        const iso = getValue();
+        return (
+          <div className="text-xs">
+            <p className="font-bold text-slate-700">{formatDate(iso)}</p>
+            {iso && <p className="text-slate-400 text-[10px] mt-0.5">{new Date(iso).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</p>}
+          </div>
+        );
+      },
     }),
     columnHelper.display({
-      id: 'actions',
-      header: 'Hành động',
+      id: "actions",
+      header: "Hành động",
       cell: ({ row }) => {
-        const p = row.original;
+        const product = row.original;
         return (
-          <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-            {p.status === 'PENDING' && (
+          <div className="flex justify-end gap-1.5" onClick={(event) => event.stopPropagation()}>
+            {/* PENDING actions */}
+            {product.status === "PENDING" && (
               <>
                 <button
                   title="Duyệt sản phẩm"
-                  onClick={(e) => handleApprove(e, p.id)}
-                  className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg"
+                  onClick={() => handleApprove(product)}
+                  className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:shadow-sm rounded-lg transition-all"
                 >
                   <CheckCircle size={16} />
                 </button>
                 <button
-                  title="Từ chối"
-                  onClick={(e) => { e.stopPropagation(); setProductToReject({ id: p.id, name: p.name }); setIsRejectModalOpen(true); }}
-                  className="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg"
+                  title="Từ chối (nhập lý do)"
+                  onClick={() => {
+                    setProductToReject({ id: product.id, name: product.name });
+                    setIsRejectModalOpen(true);
+                  }}
+                  className="p-2 bg-red-50 text-red-600 hover:bg-red-100 hover:shadow-sm rounded-lg transition-all"
                 >
                   <XCircle size={16} />
                 </button>
               </>
             )}
+
+            {/* APPROVED actions */}
+            {product.status === "APPROVED" && (
+              <button
+                title="Tạm ẩn sản phẩm"
+                onClick={() => handleHide(product)}
+                className="p-2 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:shadow-sm rounded-lg transition-all"
+              >
+                <EyeOff size={16} />
+              </button>
+            )}
+
+            {/* REJECTED actions */}
+            {product.status === "REJECTED" && (
+              <>
+                <button
+                  title="Phục hồi → Chờ duyệt"
+                  onClick={() => handleRestore(product)}
+                  className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 hover:shadow-sm rounded-lg transition-all"
+                >
+                  <RotateCcw size={16} />
+                </button>
+                <button
+                  title="Xóa vĩnh viễn"
+                  onClick={() => handleDelete(product)}
+                  className="p-2 bg-red-50 text-red-600 hover:bg-red-100 hover:shadow-sm rounded-lg transition-all"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </>
+            )}
+
+            {/* HIDDEN actions */}
+            {product.status === "HIDDEN" && (
+              <>
+                <button
+                  title="Hiện lại → Đang bán"
+                  onClick={() => handleUnhide(product)}
+                  className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:shadow-sm rounded-lg transition-all"
+                >
+                  <Eye size={16} />
+                </button>
+                <button
+                  title="Xóa vĩnh viễn"
+                  onClick={() => handleDelete(product)}
+                  className="p-2 bg-red-50 text-red-600 hover:bg-red-100 hover:shadow-sm rounded-lg transition-all"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </>
+            )}
+
+            {/* View detail — always show */}
             <button
-              title="Xem chi tiết"
-              onClick={() => router.push(`/admin/products/${p.id}`)}
-              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+              title="Xem chi tiết sản phẩm"
+              onClick={() => router.push(`/admin/products/${product.id}`)}
+              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 hover:shadow-sm rounded-lg transition-all"
             >
               <Eye size={16} />
-            </button>
-            <button
-              title="Chỉnh sửa"
-              onClick={() => router.push(`/admin/products/${p.id}/edit`)}
-              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-            >
-              <Edit3 size={16} />
-            </button>
-            <button
-              title="Nhân bản"
-              onClick={async () => {
-                try {
-                  await duplicateProduct(p);
-                  toast.success('Đã nhân bản sản phẩm');
-                } catch { toast.error('Lỗi khi nhân bản.'); }
-              }}
-              className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg"
-            >
-              <Copy size={16} />
-            </button>
-            <button
-              title="Xóa"
-              onClick={(e) => { e.stopPropagation(); openDeleteModal([p.id], p.name); }}
-              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-            >
-              <Trash2 size={16} />
             </button>
           </div>
         );
       },
     }),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], []);
+  ];
 
   const table = useReactTable({
     data: products,
     columns,
-    state: { sorting, columnFilters, globalFilter, rowSelection, pagination },
+    state: { sorting, rowSelection },
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
     onRowSelectionChange: setRowSelection,
-    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId: (row) => row.id,
+    autoResetPageIndex: false,
+    autoResetExpanded: false,
   });
 
-  const selectedIds = Object.keys(rowSelection);
-  const selectedCount = selectedIds.length;
+  const selectedRows = table.getSelectedRowModel().rows.map((row) => row.original);
+  const selectedPending = selectedRows.filter((product) => product.status === "PENDING");
 
-  const runBulk = async (action: 'approve' | 'reject' | 'delete') => {
-    if (selectedIds.length === 0) return;
+  const bulkApprove = () => {
+    setConfirmAction({
+      title: `Duyệt ${selectedPending.length} sản phẩm?`,
+      message: `Tất cả ${selectedPending.length} sản phẩm đã chọn sẽ được đăng bán công khai trên store.`,
+      type: "success",
+      confirmLabel: `Duyệt ${selectedPending.length} sản phẩm`,
+      onConfirm: async () => {
+        try {
+          await Promise.all(selectedPending.map((product) => approveProduct(product.id)));
+          toast.success(`Đã duyệt ${selectedPending.length} sản phẩm`);
+        } catch {
+          toast.error("Thao tác hàng loạt thất bại");
+        }
+        setConfirmAction(null);
+      },
+    });
+  };
+
+  const bulkReject = () => {
+    setBulkRejectReason("");
+    setBulkRejectOpen(true);
+  };
+
+  const confirmBulkReject = async () => {
+    if (!bulkRejectReason.trim()) {
+      toast.error("Vui lòng nhập lý do từ chối");
+      return;
+    }
     try {
-      if (action === 'approve') {
-        await Promise.all(selectedIds.map((id) => approveProduct(id)));
-        toast.success(`Đã duyệt ${selectedIds.length} sản phẩm`);
-      } else if (action === 'reject') {
-        await Promise.all(selectedIds.map((id) => rejectProduct({ id, reason: 'Từ chối hàng loạt bởi quản trị viên' })));
-        toast.success(`Đã từ chối ${selectedIds.length} sản phẩm`);
-      } else if (action === 'delete') {
-        await deleteProducts(selectedIds);
-        toast.success(`Đã xóa ${selectedIds.length} sản phẩm`);
-      }
-      setRowSelection({});
+      await Promise.all(selectedPending.map((product) => rejectProduct({ id: product.id, reason: bulkRejectReason })));
+      toast.success(`Đã từ chối ${selectedPending.length} sản phẩm`);
+      setBulkRejectOpen(false);
+      setBulkRejectReason("");
     } catch {
-      toast.error('Thao tác hàng loạt thất bại.');
+      toast.error("Thao tác hàng loạt thất bại");
     }
   };
 
   return (
     <div className="p-6 lg:p-8 animate-in fade-in duration-500 space-y-6">
-
       <RejectProductModal
         isOpen={isRejectModalOpen}
         onClose={() => setIsRejectModalOpen(false)}
         onConfirm={async (reason) => {
-          if (productToReject) {
-            await rejectProduct({ id: productToReject.id, reason });
-            toast.success('Đã từ chối sản phẩm.');
-          }
+          if (productToReject) await handleReject(productToReject.id, reason);
           setIsRejectModalOpen(false);
         }}
-        productName={productToReject?.name || ''}
+        productName={productToReject?.name || ""}
       />
 
-      <ConfirmationModal
-        isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false, ids: [] })}
-        onConfirm={handleConfirmDelete}
-        title="Xác nhận xóa?"
-        description={`Bạn có chắc chắn muốn xóa ${deleteModal.ids.length > 1 ? `${deleteModal.ids.length} sản phẩm` : `sản phẩm "${deleteModal.name}"`} không? Hành động này không thể hoàn tác.`}
-        confirmLabel="Xóa ngay"
-        variant="danger"
+      <HideProductModal
+        isOpen={isHideModalOpen}
+        onClose={() => setIsHideModalOpen(false)}
+        onConfirm={confirmHide}
+        productName={productToHide?.name || ""}
+        isSubmitting={isHideSubmitting}
       />
 
-      <ConfirmationModal
-        isOpen={bulkConfirm.isOpen}
-        onClose={() => setBulkConfirm({ isOpen: false, action: null })}
-        onConfirm={async () => {
-          if (bulkConfirm.action) await runBulk(bulkConfirm.action);
-          setBulkConfirm({ isOpen: false, action: null });
-        }}
-        title={bulkConfirm.action === 'approve' ? 'Duyệt hàng loạt?' : 'Từ chối hàng loạt?'}
-        description={`Bạn sắp ${bulkConfirm.action === 'approve' ? 'duyệt' : 'từ chối'} ${selectedCount} sản phẩm. Tiếp tục?`}
-        confirmLabel={bulkConfirm.action === 'approve' ? 'Duyệt tất cả' : 'Từ chối tất cả'}
-        variant={bulkConfirm.action === 'approve' ? 'primary' : 'danger'}
-      />
-
-      <Breadcrumbs items={[{ label: 'Sản phẩm' }]} />
-
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">📦 Quản lý Sản phẩm</h1>
-          <p className="text-sm text-slate-500 font-medium">Kiểm duyệt và quản lý toàn bộ sản phẩm.</p>
-        </div>
-        <button
-          onClick={() => router.push('/admin/products/new')}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition-all border-0"
+      {/* Custom Confirmation Modal */}
+      {confirmAction && (
+        <div
+          className="fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setConfirmAction(null)}
+          onKeyDown={(e) => e.key === "Escape" && setConfirmAction(null)}
         >
-          <Plus size={20} /> Thêm sản phẩm
-        </button>
-      </div>
-
-      <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[600px]">
-        {/* Toolbar */}
-        <div className="p-6 border-b border-slate-100 flex flex-col gap-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 max-w-3xl">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Tìm tên sản phẩm, SKU..."
-                  value={globalFilter ?? ''}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/5 text-sm font-medium"
-                />
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4 mb-4">
+              <div
+                className={`p-3 rounded-full shrink-0 ${
+                  confirmAction.type === "success"
+                    ? "bg-emerald-100 text-emerald-600"
+                    : confirmAction.type === "danger"
+                    ? "bg-red-100 text-red-600"
+                    : "bg-amber-100 text-amber-600"
+                }`}
+              >
+                {confirmAction.type === "success" ? (
+                  <CheckCircle size={24} />
+                ) : confirmAction.type === "danger" ? (
+                  <Trash2 size={24} />
+                ) : (
+                  <AlertCircle size={24} />
+                )}
               </div>
-
-              {/* Status Filter */}
-              <div className="relative">
-                <select
-                  value={(table.getColumn('status')?.getFilterValue() as string) || 'ALL'}
-                  onChange={(e) => table.getColumn('status')?.setFilterValue(e.target.value === 'ALL' ? undefined : e.target.value)}
-                  className="pl-4 pr-10 py-3 bg-white border rounded-xl text-sm font-bold text-slate-600 focus:outline-none focus:ring-4 focus:ring-blue-500/5 cursor-pointer appearance-none"
-                >
-                  <option value="ALL">Tất cả trạng thái</option>
-                  {Object.entries(StatusConfig).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
-                  ))}
-                </select>
-                <Filter size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-black text-slate-800 mb-2">{confirmAction.title}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{confirmAction.message}</p>
               </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+              >
+                Hủy <kbd className="px-1.5 py-0.5 text-[10px] bg-slate-200 rounded">Esc</kbd>
+              </button>
+              <button
+                onClick={confirmAction.onConfirm}
+                className={`flex-1 py-2.5 text-white rounded-xl text-sm font-bold shadow-lg transition-all ${
+                  confirmAction.type === "success"
+                    ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
+                    : confirmAction.type === "danger"
+                    ? "bg-red-600 hover:bg-red-700 shadow-red-500/20"
+                    : "bg-amber-600 hover:bg-amber-700 shadow-amber-500/20"
+                }`}
+              >
+                {confirmAction.confirmLabel}
+              </button>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Sticky Bulk Action Bar */}
-        {selectedCount > 0 && (
-          <div className="sticky top-0 z-20 bg-blue-600 text-white px-6 py-3 flex items-center justify-between animate-in slide-in-from-top-2">
+      {/* Bulk Reject Modal */}
+      {bulkRejectOpen && (
+        <div
+          className="fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setBulkRejectOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4 mb-4">
+              <div className="p-3 rounded-full bg-red-100 text-red-600 shrink-0">
+                <XCircle size={24} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-black text-slate-800 mb-2">
+                  Từ chối {selectedPending.length} sản phẩm?
+                </h3>
+                <p className="text-sm text-slate-600 leading-relaxed mb-4">
+                  Vui lòng nhập lý do từ chối. Lý do này sẽ áp dụng cho tất cả sản phẩm đã chọn.
+                </p>
+                <textarea
+                  value={bulkRejectReason}
+                  onChange={(e) => setBulkRejectReason(e.target.value)}
+                  placeholder="Ví dụ: Hình ảnh không rõ ràng, mô tả thiếu thông tin..."
+                  rows={4}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-300 text-sm font-medium resize-none transition-all"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setBulkRejectOpen(false)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+              >
+                Hủy <kbd className="px-1.5 py-0.5 text-[10px] bg-slate-200 rounded">Esc</kbd>
+              </button>
+              <button
+                onClick={confirmBulkReject}
+                disabled={!bulkRejectReason.trim()}
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl text-sm font-bold shadow-lg shadow-red-500/20 transition-all"
+              >
+                Từ chối {selectedPending.length} sản phẩm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Breadcrumbs items={[{ label: "Sản phẩm" }]} />
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">Kiểm duyệt sản phẩm</h1>
+          <p className="text-sm text-slate-500 font-medium">
+            Admin chỉ duyệt hoặc từ chối sản phẩm do nhà bán hàng gửi lên.
+          </p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[600px]">
+        {/* Status Tabs với underline indicator */}
+        <div className="border-b border-slate-100">
+          <div className="flex items-center gap-1 px-6 pt-4 overflow-x-auto no-scrollbar">
+            {[
+              { value: "ALL", label: "Tất cả", icon: <Package size={15} />, color: "slate" },
+              { value: "PENDING", label: "Chờ duyệt", icon: <AlertCircle size={15} />, color: "amber" },
+              { value: "APPROVED", label: "Đang bán", icon: <CheckCircle size={15} />, color: "emerald" },
+              { value: "REJECTED", label: "Từ chối", icon: <XCircle size={15} />, color: "red" },
+              { value: "HIDDEN", label: "Đang ẩn", icon: <Package size={15} />, color: "slate" },
+            ].map((tab) => {
+              const isActive = status === tab.value;
+              const colorMap: Record<string, { active: string; inactive: string; underline: string }> = {
+                slate: {
+                  active: "text-slate-800",
+                  inactive: "text-slate-500 hover:text-slate-700",
+                  underline: "bg-slate-800",
+                },
+                amber: {
+                  active: "text-amber-600",
+                  inactive: "text-slate-500 hover:text-amber-600",
+                  underline: "bg-amber-500",
+                },
+                emerald: {
+                  active: "text-emerald-600",
+                  inactive: "text-slate-500 hover:text-emerald-600",
+                  underline: "bg-emerald-500",
+                },
+                red: {
+                  active: "text-red-600",
+                  inactive: "text-slate-500 hover:text-red-600",
+                  underline: "bg-red-500",
+                },
+              };
+              const colors = colorMap[tab.color];
+              return (
+                <button
+                  key={tab.value}
+                  onClick={() => { setStatus(tab.value as ProductStatus | "ALL"); setRowSelection({}); }}
+                  className={`relative px-5 py-3 text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+                    isActive ? colors.active : colors.inactive
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                  {isActive && (
+                    <span className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-t ${colors.underline}`}></span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Search bar */}
+        <div className="p-6 border-b border-slate-100">
+          <div className="relative max-w-2xl">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <input
+              type="text"
+              placeholder="Tìm tên sản phẩm, SKU..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-300 text-sm font-medium transition-all"
+            />
+          </div>
+        </div>
+
+        {selectedRows.length > 0 && (
+          <div className="sticky top-0 z-20 bg-blue-600 text-white px-6 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-sm font-bold">Đã chọn {selectedCount}</span>
+              <span className="text-sm font-bold">Đã chọn {selectedRows.length}</span>
               <span className="text-xs text-blue-100">sản phẩm</span>
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setBulkConfirm({ isOpen: true, action: 'approve' })}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg text-xs font-bold transition-all"
+                onClick={bulkApprove}
+                disabled={selectedPending.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50"
               >
                 <CheckCircle size={14} /> Duyệt tất cả
               </button>
               <button
-                onClick={() => setBulkConfirm({ isOpen: true, action: 'reject' })}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg text-xs font-bold transition-all"
+                onClick={bulkReject}
+                disabled={selectedPending.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50"
               >
                 <XCircle size={14} /> Từ chối tất cả
-              </button>
-              <button
-                onClick={() => openDeleteModal(selectedIds)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold transition-all"
-              >
-                <Trash2 size={14} /> Xóa
               </button>
               <button
                 onClick={() => setRowSelection({})}
@@ -439,9 +730,8 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {/* Content Table Area */}
         <div className="overflow-x-auto custom-scrollbar flex-1 relative">
-          <table className="w-full text-left border-collapse min-w-[1400px]">
+          <table className="w-full text-left border-collapse min-w-[1100px]">
             <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm shadow-sm">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id} className="border-b border-slate-100">
@@ -473,23 +763,9 @@ export default function ProductsPage() {
                 <tr>
                   <td colSpan={columns.length}>
                     <EmptyState
-                      title="Chưa có sản phẩm nào"
-                      description="Bắt đầu kinh doanh bằng cách thêm sản phẩm đầu tiên của bạn."
-                      actionLabel="Thêm sản phẩm mới"
-                      onAction={() => router.push('/admin/products/new')}
+                      title="Không có sản phẩm nào"
+                      description="Khi nhà bán hàng tạo sản phẩm mới, sản phẩm sẽ xuất hiện tại đây."
                       type="data"
-                    />
-                  </td>
-                </tr>
-              ) : table.getRowModel().rows.length === 0 ? (
-                <tr>
-                  <td colSpan={columns.length}>
-                    <EmptyState
-                      title="Không tìm thấy kết quả"
-                      description="Không có sản phẩm nào phù hợp với bộ lọc hiện tại."
-                      actionLabel="Xóa bộ lọc"
-                      onAction={resetFilters}
-                      type="search"
                     />
                   </td>
                 </tr>
@@ -512,16 +788,60 @@ export default function ProductsPage() {
           </table>
         </div>
 
-        {/* Pagination — always render when there is data */}
-        {!isLoading && !isError && products.length > 0 && (
-          <Pagination
-            currentPage={table.getState().pagination.pageIndex + 1}
-            totalPages={Math.max(1, table.getPageCount())}
-            onPageChange={(page) => table.setPageIndex(page - 1)}
-            totalItems={table.getFilteredRowModel().rows.length}
-            itemsPerPage={table.getState().pagination.pageSize}
-          />
-        )}
+        {/* Pagination */}
+        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="text-sm text-slate-600">
+            Hiển thị <span className="font-bold text-slate-800">{table.getRowModel().rows.length}</span> trong <span className="font-bold text-slate-800">{products.length}</span> sản phẩm
+          </div>
+
+          <div className="flex items-center gap-1">
+            {/* Previous Button */}
+            <button
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-white hover:border-slate-300 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-all"
+              title="Trang trước"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {/* Page Numbers */}
+            <div className="flex items-center gap-1 mx-2">
+              {Array.from({ length: table.getPageCount() }, (_, i) => i + 1).map((pageNum) => (
+                <button
+                  key={pageNum}
+                  onClick={() => table.setPageIndex(pageNum - 1)}
+                  className={`min-w-[36px] h-9 rounded-lg text-sm font-medium transition-all ${
+                    table.getState().pagination.pageIndex + 1 === pageNum
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "bg-white text-slate-600 border border-slate-200 hover:border-blue-300 hover:text-blue-600"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ))}
+            </div>
+
+            {/* Next Button */}
+            <button
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-white hover:border-slate-300 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-all"
+              title="Trang tiếp"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Page Info */}
+          <div className="text-sm text-slate-600">
+            Trang <span className="font-semibold">{table.getState().pagination.pageIndex + 1}</span> / <span className="font-semibold">{table.getPageCount()}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

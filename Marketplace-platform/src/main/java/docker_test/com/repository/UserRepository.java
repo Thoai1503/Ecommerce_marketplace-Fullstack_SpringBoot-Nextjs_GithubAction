@@ -2,19 +2,23 @@ package docker_test.com.repository;
 
 import java.sql.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.stereotype.Repository;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.mappers.UserMapper;
 import docker_test.com.models.User;
 
+@Repository
 public class UserRepository implements IRepositories<User> {
 
     private static UserRepository instance;
     private final DBConnection dbConnection;
     private final UserMapper mapper = new UserMapper();
 
-    private UserRepository() {
+    public UserRepository() {
         this.dbConnection = DBConnection.getInstance();
     }
 
@@ -94,12 +98,62 @@ public class UserRepository implements IRepositories<User> {
         return null;
     }
 
+    public User findById(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return GetById(id.intValue());
+    }
+
+    public List<User> findByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+
+        String placeholders = String.join(",", ids.stream().map(id -> "?").toList());
+        String sql = "SELECT * FROM user WHERE id IN (" + placeholders + ")";
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            for (int i = 0; i < ids.size(); i++) {
+                ps.setLong(i + 1, ids.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                return mapper.RowsMap(rs);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return new ArrayList<>();
+    }
+
     /* ================= GET ALL ================== */
 
     @Override
     public List<User> GetAll() {
 
         String sql = "SELECT * FROM user";
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            return mapper.RowsMap(rs);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return List.of();
+    }
+
+    public List<User> findPermissionUsers() {
+        String sql = """
+            SELECT * FROM user
+            WHERE COALESCE(role, 'USER') IN ('USER', 'CUSTOMER', 'SELLER')
+            ORDER BY created_at DESC
+        """;
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql);
@@ -177,6 +231,84 @@ public class UserRepository implements IRepositories<User> {
 
     /* ================= EXTRA ================= */
 
+    public User createAdminUser(String email, String fullName, String phone, String passwordHash) throws SQLException {
+        String sql = """
+            INSERT INTO user
+            (email, phone, password_hash, full_name, avatar_url,
+             date_of_birth, gender, user_type, role, is_verified, is_active,
+             created_at, updated_at)
+            VALUES (?, ?, ?, ?, NULL, NULL, NULL, 'both', 'ADMIN', 1, 1, ?, ?)
+        """;
+
+        LocalDateTime now = LocalDateTime.now();
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, email);
+            if (phone == null || phone.isBlank()) {
+                ps.setNull(2, Types.VARCHAR);
+            } else {
+                ps.setString(2, phone);
+            }
+            ps.setString(3, passwordHash);
+            ps.setString(4, fullName);
+            ps.setTimestamp(5, Timestamp.valueOf(now));
+            ps.setTimestamp(6, Timestamp.valueOf(now));
+            ps.executeUpdate();
+
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return findById(rs.getLong(1));
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean updateRole(long userId, String role) {
+        String sql = """
+            UPDATE user
+            SET role = ?, user_type = ?, updated_at = ?
+            WHERE id = ?
+        """;
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, role);
+            ps.setString(2, userTypeForRole(role));
+            ps.setTimestamp(3, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setLong(4, userId);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean updateActiveStatus(long userId, int isActive) {
+        String sql = "UPDATE user SET is_active = ?, updated_at = ? WHERE id = ?";
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, isActive);
+            ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setLong(3, userId);
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private String userTypeForRole(String role) {
+        if ("SELLER".equals(role)) {
+            return "seller";
+        }
+        if ("ADMIN".equals(role) || "SUPER_ADMIN".equals(role)) {
+            return "both";
+        }
+        return "buyer";
+    }
+
     public boolean updatePasswordHash(long userId, String newHash) {
         String sql = "UPDATE user SET password_hash = ?, updated_at = ? WHERE id = ?";
         try (Connection con = dbConnection.getConn();
@@ -188,6 +320,19 @@ public class UserRepository implements IRepositories<User> {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        }
+    }
+
+    public void updatePassword(Long userId, String hashedPassword) {
+        String sql = "UPDATE user SET password_hash = ?, updated_at = ? WHERE id = ?";
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, hashedPassword);
+            ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setLong(3, userId);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            throw new RuntimeException("Cập nhật mật khẩu thất bại: " + e.getMessage(), e);
         }
     }
 

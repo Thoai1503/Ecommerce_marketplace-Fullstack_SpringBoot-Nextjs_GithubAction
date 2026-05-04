@@ -213,6 +213,10 @@ public final class Product {
 	
     private Integer is_active=1;
     private String reject_reason;
+    private LocalDateTime hiddenAt;
+    private Long hiddenBy;
+    private String hiddenReason;
+    private String hiddenByRole;
     private String shop_name; // joined from shop table for listing
 
     public String getShop_name() { return shop_name; }
@@ -227,6 +231,38 @@ public final class Product {
 
     public void setReject_reason(String reject_reason) {
         this.reject_reason = reject_reason;
+    }
+
+    public LocalDateTime getHiddenAt() {
+        return hiddenAt;
+    }
+
+    public void setHiddenAt(LocalDateTime hiddenAt) {
+        this.hiddenAt = hiddenAt;
+    }
+
+    public Long getHiddenBy() {
+        return hiddenBy;
+    }
+
+    public void setHiddenBy(Long hiddenBy) {
+        this.hiddenBy = hiddenBy;
+    }
+
+    public String getHiddenReason() {
+        return hiddenReason;
+    }
+
+    public void setHiddenReason(String hiddenReason) {
+        this.hiddenReason = hiddenReason;
+    }
+
+    public String getHiddenByRole() {
+        return hiddenByRole;
+    }
+
+    public void setHiddenByRole(String hiddenByRole) {
+        this.hiddenByRole = hiddenByRole;
     }
 
     public Product() {
@@ -288,6 +324,10 @@ public final class Product {
                 ", height=" + height +
                 ", brand='" + brand + '\'' +
                 ", is_active=" + is_active +
+                ", hiddenAt=" + hiddenAt +
+                ", hiddenBy=" + hiddenBy +
+                ", hiddenReason='" + hiddenReason + '\'' +
+                ", hiddenByRole='" + hiddenByRole + '\'' +
                 ", created_at=" + created_at +
                 ", updated_at=" + updated_at +
                 '}';

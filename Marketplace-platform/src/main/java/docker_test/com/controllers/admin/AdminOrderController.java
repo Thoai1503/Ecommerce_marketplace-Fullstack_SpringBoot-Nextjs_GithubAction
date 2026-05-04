@@ -38,7 +38,7 @@ import docker_test.com.configs.DBConnection;
  */
 @RestController
 @RequestMapping("/admin/orders")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"}, allowCredentials = "true")
 public class AdminOrderController {
 
     private final DBConnection db = DBConnection.getInstance();

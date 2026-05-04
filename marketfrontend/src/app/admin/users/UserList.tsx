@@ -4,21 +4,28 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Search, Shield, MoreVertical, CheckCircle, XCircle, 
-  Lock, Unlock, UserCog, Filter, User as UserIcon, ShieldCheck
+  Lock, Unlock, UserCog, Filter, User as UserIcon, ShieldCheck, KeyRound
 } from 'lucide-react';
 import { useUsers } from '@/hooks/admin/useUsers';
 import { User, UserRole, UserStatus } from '@/types';
 import { useToast } from '@/context/ToastContext';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { ChangeRoleModal, BlockUserModal } from '@/components/admin/users/UserModals';
+import { ChangeRoleModal, BlockUserModal, ResetUserPasswordModal } from '@/components/admin/users/UserModals';
 import Pagination from '@/components/ui/Pagination';
 
 const ITEMS_PER_PAGE = 10;
 
-// MOCK CONSTANT: Assume this is the ID of the currently logged-in Admin
-const CURRENT_ADMIN_ID = 'U-0001'; 
+// Helper lấy chữ cái đầu để hiển thị avatar
+function getInitials(fullName?: string, email?: string): string {
+  if (fullName && fullName.trim()) {
+    const parts = fullName.trim().split(' ');
+    return parts[parts.length - 1].charAt(0).toUpperCase();
+  }
+  return (email || '?').charAt(0).toUpperCase();
+}
 
 const RoleConfig: Record<UserRole, { label: string; color: string; bgColor: string }> = {
+  SUPER_ADMIN: { label: 'Super Admin', color: 'text-indigo-700', bgColor: 'bg-indigo-100' },
   ADMIN: { label: 'Quản trị viên', color: 'text-purple-700', bgColor: 'bg-purple-100' },
   SELLER: { label: 'Người bán', color: 'text-blue-700', bgColor: 'bg-blue-100' },
   USER: { label: 'Khách hàng', color: 'text-slate-600', bgColor: 'bg-slate-100' },
@@ -31,7 +38,7 @@ const StatusLabel: Record<string, string> = {
 };
 
 export default function UserList() {
-  const { users, isLoading, updateUserRole, toggleUserStatus, isUpdating } = useUsers();
+  const { users, isLoading, updateUserRole, toggleUserStatus, resetUserPassword, isUpdating } = useUsers();
   const { success, error } = useToast();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,11 +50,13 @@ export default function UserList() {
   // Modal States
   const [changeRoleModal, setChangeRoleModal] = useState<{ isOpen: boolean; user: User | null }>({ isOpen: false, user: null });
   const [blockUserModal, setBlockUserModal] = useState<{ isOpen: boolean; user: User | null }>({ isOpen: false, user: null });
+  const [resetPasswordModal, setResetPasswordModal] = useState<{ isOpen: boolean; user: User | null }>({ isOpen: false, user: null });
 
-  // Filtering
+  // Filtering — ẩn ADMIN và SUPER_ADMIN khỏi danh sách này
   const filteredUsers = useMemo(() => {
     return users.filter(user => {
-      const matchSearch = user.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') return false;
+      const matchSearch = user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           user.id.toLowerCase().includes(searchQuery.toLowerCase());
       const matchRole = roleFilter === 'ALL' || user.role === roleFilter;
       const matchStatus = statusFilter === 'ALL' || user.status === statusFilter;
@@ -95,6 +104,17 @@ export default function UserList() {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!resetPasswordModal.user) return;
+    try {
+      await resetUserPassword({ id: resetPasswordModal.user.id });
+      success(`Đã gửi link cấp lại mật khẩu đến ${resetPasswordModal.user.email}.`);
+      setResetPasswordModal({ isOpen: false, user: null });
+    } catch (err: any) {
+      error(err.message || 'Không thể gửi email cấp lại mật khẩu.');
+    }
+  };
+
   return (
     <div className="p-6 lg:p-8 animate-in fade-in duration-500 space-y-6 pb-24">
       {/* MODALS */}
@@ -114,6 +134,16 @@ export default function UserList() {
           onClose={() => setBlockUserModal({ isOpen: false, user: null })}
           onConfirm={handleBlockToggle}
           user={blockUserModal.user}
+          isProcessing={isUpdating}
+        />
+      )}
+
+      {resetPasswordModal.user && (
+        <ResetUserPasswordModal
+          isOpen={resetPasswordModal.isOpen}
+          onClose={() => setResetPasswordModal({ isOpen: false, user: null })}
+          onConfirm={handleResetPassword}
+          user={resetPasswordModal.user}
           isProcessing={isUpdating}
         />
       )}
@@ -153,7 +183,6 @@ export default function UserList() {
                  <option value="ALL">Tất cả vai trò</option>
                  <option value="USER">Khách hàng</option>
                  <option value="SELLER">Người bán</option>
-                 <option value="ADMIN">Quản trị viên</option>
                </select>
                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                  <Filter size={14} />
@@ -187,12 +216,12 @@ export default function UserList() {
 
         {/* Table */}
         <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left border-collapse min-w-[900px]">
+          <table className="w-full text-left border-collapse min-w-[960px]">
             <thead>
               <tr className="border-b border-slate-100 bg-white">
-                <th className="px-6 py-4 w-12 text-center"><input type="checkbox" className="rounded border-slate-300" /></th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ID</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">EMAIL</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-16">#ID</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">NGƯỜI DÙNG</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">HỌ TÊN</th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">VAI TRÒ</th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">TRẠNG THÁI</th>
                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">NGÀY TẠO</th>
@@ -218,27 +247,37 @@ export default function UserList() {
               ) : (
                 paginatedUsers.map((user) => {
                   const roleStyle = RoleConfig[user.role];
-                  const isCurrentUser = user.id === CURRENT_ADMIN_ID;
-                  const isAdmin = user.role === 'ADMIN';
+                  const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+                  const initials = getInitials(user.fullName, user.email);
+
+                  // Avatar background màu theo role
+                  const avatarStyle = user.role === 'SUPER_ADMIN'
+                    ? 'bg-indigo-100 text-indigo-700'
+                    : user.role === 'ADMIN'
+                    ? 'bg-purple-100 text-purple-700'
+                    : user.role === 'SELLER'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-slate-200 text-slate-600';
 
                   return (
-                  <tr key={user.id} className={`hover:bg-slate-50/50 group ${isCurrentUser ? 'bg-blue-50/20' : ''}`}>
-                    <td className="px-6 py-5 text-center"><input type="checkbox" className="rounded border-slate-300" /></td>
+                  <tr key={user.id} className="hover:bg-slate-50/50 group">
                     <td className="px-6 py-5">
-                       <span className="font-mono text-xs font-bold text-slate-500">{user.id}</span>
+                       <span className="font-mono text-xs font-bold text-slate-400">#{user.id}</span>
                     </td>
                     <td className="px-6 py-5">
-                       <div className="flex items-center gap-2">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${isAdmin ? 'bg-purple-100 text-purple-600' : 'bg-slate-200 text-slate-500'}`}>
-                             {isAdmin ? <ShieldCheck size={14} /> : user.email.charAt(0).toUpperCase()}
+                       <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${avatarStyle}`}>
+                             {isAdmin ? <ShieldCheck size={15} /> : initials}
                           </div>
-                          <div>
-                             <p className={`text-sm font-bold ${isAdmin ? 'text-purple-700' : 'text-slate-800'}`}>
-                                {user.email}
-                             </p>
-                             {isCurrentUser && <span className="text-[9px] font-bold text-blue-600">(Bạn)</span>}
-                          </div>
+                          <p className="text-sm font-semibold text-slate-700 truncate max-w-[220px]">
+                            {user.email}
+                          </p>
                        </div>
+                    </td>
+                    <td className="px-6 py-5">
+                       <span className="text-sm font-medium text-slate-800">
+                         {user.fullName || <span className="text-slate-300 italic">—</span>}
+                       </span>
                     </td>
                     <td className="px-6 py-5">
                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${roleStyle.bgColor} ${roleStyle.color}`}>
@@ -246,15 +285,29 @@ export default function UserList() {
                        </span>
                     </td>
                     <td className="px-6 py-5">
-                       {user.status === 'ACTIVE' ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-green-700">
-                             <CheckCircle size={14} /> Hoạt động
-                          </span>
-                       ) : (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-lg">
-                             <XCircle size={14} /> Đã khóa
-                          </span>
-                       )}
+                       <button
+                         onClick={() => setBlockUserModal({ isOpen: true, user })}
+                         title={user.status === 'ACTIVE' ? 'Click để khóa' : 'Click để mở khóa'}
+                         className="flex items-center gap-2 group cursor-pointer bg-transparent border-0 p-0"
+                       >
+                         {/* Track */}
+                         <div className={`relative w-11 h-6 rounded-full transition-colors duration-300 ${
+                           user.status === 'ACTIVE' ? 'bg-green-500' : 'bg-slate-300'
+                         }`}>
+                           {/* Thumb */}
+                           <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-300 ${
+                             user.status === 'ACTIVE' ? 'left-5' : 'left-0.5'
+                           }`} />
+                         </div>
+                         {/* Label */}
+                         <span className={`text-xs font-bold transition-colors duration-200 ${
+                           user.status === 'ACTIVE'
+                             ? 'text-green-600 group-hover:text-green-700'
+                             : 'text-slate-400 group-hover:text-slate-600'
+                         }`}>
+                           {user.status === 'ACTIVE' ? 'Hoạt động' : 'Đã khóa'}
+                         </span>
+                       </button>
                     </td>
                     <td className="px-6 py-5">
                        <div className="flex flex-col">
@@ -263,43 +316,29 @@ export default function UserList() {
                        </div>
                     </td>
                     <td className="px-6 py-5 text-right relative">
-                       <button 
+                       <button
                           onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === user.id ? null : user.id); }}
-                          disabled={isCurrentUser}
-                          className={`p-2 rounded-lg transition-all ${
-                             isCurrentUser 
-                             ? 'text-slate-200 cursor-not-allowed' 
-                             : 'text-slate-400 hover:text-blue-600 hover:bg-slate-100'
-                          }`}
-                          title={isCurrentUser ? "Không thể chỉnh sửa chính mình" : "Quản lý"}
+                          className="p-2 rounded-lg transition-all text-slate-400 hover:text-blue-600 hover:bg-slate-100"
+                          title="Quản lý"
                        >
                           <MoreVertical size={18} />
                        </button>
 
                        {/* Context Menu */}
-                       {activeMenu === user.id && !isCurrentUser && (
+                       {activeMenu === user.id && (
                           <div className="absolute right-8 top-10 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-top-right">
-                             <button 
-                               onClick={() => setChangeRoleModal({ isOpen: true, user })}
-                               className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 border-b border-slate-50"
+                             <button
+                               onClick={() => { setChangeRoleModal({ isOpen: true, user }); setActiveMenu(null); }}
+                               className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                              >
                                 <UserCog size={16} className="text-slate-400" /> Đổi vai trò...
                              </button>
-                             {user.status === 'ACTIVE' ? (
-                                <button 
-                                  onClick={() => setBlockUserModal({ isOpen: true, user })}
-                                  className="w-full text-left px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                >
-                                   <Lock size={16} /> Khóa tài khoản
-                                </button>
-                             ) : (
-                                <button 
-                                  onClick={() => setBlockUserModal({ isOpen: true, user })}
-                                  className="w-full text-left px-4 py-3 text-sm font-bold text-green-600 hover:bg-green-50 flex items-center gap-2"
-                                >
-                                   <Unlock size={16} /> Mở khóa tài khoản
-                                </button>
-                             )}
+                             <button
+                               onClick={() => { setResetPasswordModal({ isOpen: true, user }); setActiveMenu(null); }}
+                               className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                             >
+                                <KeyRound size={16} className="text-blue-500" /> Cấp lại mật khẩu
+                             </button>
                           </div>
                        )}
                     </td>

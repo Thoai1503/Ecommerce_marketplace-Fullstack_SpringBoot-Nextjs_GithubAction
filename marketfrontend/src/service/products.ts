@@ -1,8 +1,8 @@
 
 import http from "@/lib/http";
-import { Product, ProductStatus } from "@/types/index";
+import { Product, ProductStatus, ProductStatusHistory } from "@/types/index";
 
-// Map is_active number → ProductStatus string
+// Map is_active number → ProductStatus string (fallback)
 const mapStatus = (is_active: number): ProductStatus => {
   switch (is_active) {
     case 1: return "APPROVED";
@@ -11,6 +11,20 @@ const mapStatus = (is_active: number): ProductStatus => {
     case 0: return "HIDDEN";
     default: return "PENDING";
   }
+};
+
+// Map backend status string → ProductStatus (preferred — backend now returns this)
+const normalizeStatus = (raw: unknown): ProductStatus => {
+  if (typeof raw === "string") {
+    const upper = raw.toUpperCase();
+    if (upper === "APPROVED" || upper === "PENDING" || upper === "REJECTED" || upper === "HIDDEN" || upper === "DRAFT") {
+      return upper as ProductStatus;
+    }
+  }
+  if (typeof raw === "number") {
+    return mapStatus(raw);
+  }
+  return "PENDING";
 };
 
 // Backend accepts one of: APPROVED | PENDING | REJECTED | HIDDEN
@@ -30,17 +44,45 @@ const mapProduct = (p: any): Product => ({
     ? [p.image_url]
     : [],
   category: String(p.category_id ?? p.category ?? ""),
+  categoryName: p.categoryName ?? p.category_name ?? undefined,
   price: p.price ?? 0,
-  originalPrice: p.original_price ?? undefined,
+  originalPrice: p.original_price ?? p.originalPrice ?? undefined,
   stock: p.stock_quantity ?? p.stock ?? 0,
-  status: mapStatus(p.is_active),
+  status: normalizeStatus(p.status ?? p.is_active),
   sellerId: String(p.shop_id ?? p.sellerId ?? ""),
   sellerName: p.sellerName ?? p.shop_name ?? "",
   sellerAvatar: p.sellerAvatar ?? undefined,
   attributes: p.attributes ?? undefined,
   createdAt: p.created_at ?? p.createdAt ?? new Date().toISOString(),
+  updatedAt: p.updated_at ?? p.updatedAt ?? undefined,
   rejectReason: p.reject_reason ?? p.rejectReason ?? undefined,
+  hiddenAt: p.hidden_at ?? p.hiddenAt ?? null,
+  hiddenBy: p.hidden_by ?? p.hiddenBy ?? null,
+  hiddenByName: p.hiddenByName ?? p.hidden_by_name ?? null,
+  hiddenReason: p.hidden_reason ?? p.hiddenReason ?? null,
+  hiddenByRole: p.hidden_by_role ?? p.hiddenByRole ?? null,
+  fraudCheck: p.fraudCheck ?? p.fraud_check ?? undefined,
   viewCount: p.viewCount ?? 0,
+  // Sales metrics
+  rating: p.rating ?? undefined,
+  reviewCount: p.review_count ?? p.reviewCount ?? undefined,
+  soldCount: p.sold_count ?? p.soldCount ?? undefined,
+  // Logistics
+  brand: p.brand ?? undefined,
+  weight: p.weight ?? undefined,
+  length: p.length ?? undefined,
+  width: p.width ?? undefined,
+  height: p.height ?? undefined,
+  // Variants
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  variants: Array.isArray(p.variants) ? p.variants.map((v: any) => ({
+    id: v.id,
+    sku: v.sku ?? undefined,
+    variantName: v.variant_name ?? v.variantName ?? undefined,
+    price: v.price ?? undefined,
+    stockQuantity: v.stock_quantity ?? v.stockQuantity ?? undefined,
+    attributes: v.attributes ?? undefined,
+  })) : undefined,
 });
 
 export const getProducts = async (params?: {
@@ -71,6 +113,7 @@ export const getProductById = async (id: string): Promise<Product | undefined> =
 };
 
 export const deleteProducts = async (ids: string[]): Promise<boolean> => {
+  // TODO: BE cần thêm bulk delete
   for (const id of ids) {
     await http.delete(`/admin/products/${id}`);
   }
@@ -96,30 +139,51 @@ export const rejectProduct = async (id: string, reason: string): Promise<boolean
 };
 
 export const duplicateProduct = async (product: Product): Promise<Product> => {
+  // TODO: BE cần thêm endpoint /admin/products/{id}/duplicate
+  return {
+    ...product,
+    id: `copy-${Date.now()}`,
+    productCode: `${product.productCode}-COPY`,
+    name: `${product.name} (Copy)`,
+    status: "DRAFT",
+    createdAt: new Date().toISOString(),
+    updatedAt: undefined,
+    viewCount: 0,
+  };
   // Backend chưa có endpoint duplicate → fallback tạo mới từ dữ liệu cũ
+};
+
+export const updateProductStatus = async (
+  id: string,
+  status: ProductStatus,
+  reason?: string,
+): Promise<boolean> => {
   return await http
-    .post("/admin/products", {
-      product_name: `${product.name} (Copy)`,
-      description: product.description,
-      price: product.price,
-      original_price: product.originalPrice,
-      stock_quantity: product.stock,
-      category_id: Number(product.category),
-      shop_id: Number(product.sellerId),
-    })
-    .then((res) => mapProduct(res.data))
+    .patch(`/admin/products/${id}/status`, { status, reason })
+    .then(() => true)
     .catch((error) => {
       throw error;
     });
 };
 
-export const updateProductStatus = async (id: string, status: ProductStatus): Promise<boolean> => {
+export const getProductStatusHistory = async (id: string): Promise<ProductStatusHistory[]> => {
   return await http
-    .patch(`/admin/products/${id}/status`, { status })
-    .then(() => true)
+    .get(`/admin/products/${id}/history`)
+    .then((res) => {
+      const body = res.data;
+      const list = Array.isArray(body) ? body : (body.data ?? []);
+      return list as ProductStatusHistory[];
+    })
     .catch((error) => {
       throw error;
     });
+};
+
+export const trackProductView = async (id: string): Promise<boolean> => {
+  return await http
+    .post(`/products/${id}/view`)
+    .then(() => true)
+    .catch(() => false);
 };
 
 // --- Create / Update payload shape (matches AdminProductCreateRequest / Product fields) ---

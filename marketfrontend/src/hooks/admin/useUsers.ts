@@ -1,7 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersQuery } from '@/query/users';
-import { updateUserRole, toggleUserStatus } from '@/service/users';
+import { resetUserPassword, toggleUserStatus, updateUserRole } from '@/service/users';
 import { UserRole, UserStatus } from '@/types/index';
 
 export const useUsers = () => {
@@ -19,6 +19,10 @@ export const useUsers = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
   });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ id }: { id: string }) => resetUserPassword(id),
+  });
+
   return {
     users: data || [],
     isLoading,
@@ -26,6 +30,7 @@ export const useUsers = () => {
     refetch,
     updateUserRole: roleMutation.mutateAsync,
     toggleUserStatus: statusMutation.mutateAsync,
-    isUpdating: roleMutation.isPending || statusMutation.isPending,
+    resetUserPassword: resetPasswordMutation.mutateAsync,
+    isUpdating: roleMutation.isPending || statusMutation.isPending || resetPasswordMutation.isPending,
   };
 };

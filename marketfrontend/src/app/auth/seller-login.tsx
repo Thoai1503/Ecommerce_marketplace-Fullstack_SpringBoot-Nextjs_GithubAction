@@ -1,44 +1,84 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, TrendingUp, Store, Users, Globe, ShieldCheck, ShoppingBag } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, TrendingUp, Users, Globe, ShieldCheck, ShoppingBag, Check } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
+import { useAuth } from '@/context/AuthContext';
+import { setAccessToken } from '@/lib/http';
+import { Logo } from '@/components/Logo';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().min(1, "Email không được để trống").email("Email không hợp lệ"),
+  password: z.string().min(1, "Mật khẩu không được để trống").min(6, "Mật khẩu tối thiểu 6 ký tự"),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+
+const mapError = (err: unknown) => {
+  const code = (err as { response?: { data?: { error?: string } } }).response?.data?.error;
+  if (code === 'INVALID_CREDENTIALS') return 'Email hoặc mật khẩu không đúng';
+  if (code === 'ACCOUNT_DISABLED') return 'Tài khoản đã bị khóa';
+  if (code === 'ROLE_NOT_ALLOWED') return 'Tài khoản này không phải Seller';
+  return 'Đăng nhập thất bại. Vui lòng thử lại.';
+};
 
 export default function SellerLoginPage() {
   const router = useRouter();
   const toast = useToast();
-  
-  const [email, setEmail] = useState('seller@store.com');
-  const [password, setPassword] = useState('12345678');
+  const { login, logout } = useAuth();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Load saved email từ localStorage sau khi mount (tránh SSR hydration error)
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('seller_savedEmail');
+    if (savedEmail) {
+      setValue('email', savedEmail);
+      setRememberMe(true);
+    }
+  }, [setValue]);
+
+  const handleLogin = async ({ email, password }: LoginFormValues) => {
     setIsLoading(true);
 
-    // Giả lập call API
-    setTimeout(() => {
-      setIsLoading(false);
-      
-      if (email && password.length >= 6) {
-        localStorage.setItem('token', 'mock_seller_token_' + Date.now());
-        // Lưu role để xử lý redirect sau này nếu cần
-        localStorage.setItem('role', 'SELLER'); 
-        
-        toast.success("Đăng nhập thành công! Chào mừng trở lại Kênh Người Bán.");
-        
-        setTimeout(() => {
-            // Trong thực tế sẽ redirect về /seller/dashboard
-            // Ở đây tạm thời redirect về trang admin chung
-            router.push('/admin'); 
-        }, 800);
-      } else {
-        toast.error("Email hoặc mật khẩu không đúng.");
+    if (rememberMe) {
+      localStorage.setItem('seller_savedEmail', email);
+    } else {
+      localStorage.removeItem('seller_savedEmail');
+    }
+
+    try {
+      const user = await login(email, password);
+      if (user.role !== 'SELLER') {
+        await logout();
+        setAccessToken(null);
+        toast.error('Tài khoản này không phải Seller. Vui lòng dùng trang đăng nhập phù hợp.');
+        return;
       }
-    }, 1500);
+      toast.success('Đăng nhập thành công! Chào mừng trở lại Kênh Người Bán.');
+      router.push('/seller');
+    } catch (err) {
+      toast.error(mapError(err));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -51,15 +91,15 @@ export default function SellerLoginPage() {
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-white/5 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3"></div>
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-3xl -translate-x-1/3 translate-y-1/3"></div>
         
-        {/* Content */}
+               {/* Content */}
         <div className="relative z-10">
             <div className="flex items-center gap-3 mb-10">
-                <div className="w-12 h-12 bg-white text-blue-700 rounded-2xl flex items-center justify-center shadow-xl shadow-black/10">
-                    <Store size={26} strokeWidth={2.5} />
+                <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/10 overflow-hidden">
+                    <Logo variant="white" size={32} />
                 </div>
-                <div>
-                    <span className="text-2xl font-black tracking-tight block leading-none">STAY-GO</span>
-                    <span className="text-sm font-medium text-blue-200 tracking-widest uppercase">Seller Center</span>
+                <div className="flex flex-col">
+                    <span className="text-2xl font-black tracking-tight text-white leading-none">VietCommerce Hub</span>
+                    <span className="text-xs font-bold text-blue-200 tracking-widest uppercase mt-1">Seller Center</span>
                 </div>
             </div>
 
@@ -111,7 +151,7 @@ export default function SellerLoginPage() {
         {/* Register Link */}
         <div className="absolute top-8 right-8 flex items-center gap-2 text-sm font-medium text-slate-600">
             Bạn chưa có cửa hàng?
-            <a href="#" className="text-blue-700 font-bold hover:underline">Đăng ký ngay</a>
+            <a href="/seller/register" className="text-blue-700 font-bold hover:underline">Đăng ký ngay</a>
         </div>
 
         <div className="max-w-[480px] w-full bg-white p-10 lg:p-14 rounded-[40px] shadow-2xl shadow-slate-200 border border-white relative">
@@ -123,35 +163,32 @@ export default function SellerLoginPage() {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleSubmit(handleLogin)} noValidate className="space-y-6">
                 <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 block">Email hoặc Số điện thoại</label>
                     <div className="relative group">
                         <input 
                             type="text" 
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            {...register('email')}
                             className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 font-bold text-slate-800 transition-all placeholder:font-medium placeholder:text-slate-400"
                             placeholder="seller@store.com"
-                            required
                         />
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={20} />
                     </div>
+                    {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email.message}</p>}
                 </div>
 
                 <div className="space-y-2">
                     <div className="flex justify-between items-center">
                         <label className="text-sm font-bold text-slate-700 block">Mật khẩu</label>
-                        <a href="#" className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline">Quên mật khẩu?</a>
+                        <a href="/seller/forgot-password" className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline">Quên mật khẩu?</a>
                     </div>
                     <div className="relative group">
                         <input 
                             type={showPassword ? "text" : "password"} 
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            {...register('password')}
                             className="w-full pl-12 pr-12 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-600 font-bold text-slate-800 transition-all placeholder:font-medium placeholder:text-slate-400"
                             placeholder="••••••••"
-                            required
                         />
                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={20} />
                         <button 
@@ -162,10 +199,29 @@ export default function SellerLoginPage() {
                             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
                     </div>
+                    {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password.message}</p>}
                 </div>
 
-                <button 
-                    type="submit" 
+                {/* Remember Me */}
+                <div className="flex items-center justify-between">
+                    <button
+                        type="button"
+                        onClick={() => setRememberMe(!rememberMe)}
+                        className="flex items-center gap-2.5 group cursor-pointer border-0 bg-transparent p-0"
+                    >
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
+                            rememberMe
+                                ? 'bg-blue-700 border-blue-700'
+                                : 'border-slate-300 group-hover:border-blue-500'
+                        }`}>
+                            {rememberMe && <Check size={12} className="text-white" strokeWidth={3} />}
+                        </div>
+                        <span className="text-sm font-medium text-slate-600 select-none">Duy trì đăng nhập</span>
+                    </button>
+                </div>
+
+                <button
+                    type="submit"
                     disabled={isLoading}
                     className="w-full py-4 bg-blue-700 hover:bg-blue-800 text-white rounded-2xl font-bold shadow-xl shadow-blue-700/20 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 text-base border-0 mt-2 group"
                 >

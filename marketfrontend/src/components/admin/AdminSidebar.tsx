@@ -12,13 +12,16 @@ import {
   Ticket,
   Wallet,
   Layers,
-  ShieldCheck,
   Settings,
+  UserCog,
+  Shield,
   ChevronDown,
   LogOut,
   ChevronLeft,
   X,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { Logo } from "@/components/Logo";
 
 const SidebarItem = ({
   label,
@@ -170,6 +173,7 @@ export default function AdminSidebar({
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const [pendingSellerCount, setPendingSellerCount] = useState<number>(0);
   const pathname = usePathname();
+  const { logout, user } = useAuth();
 
   // Đếm shop PENDING để hiện badge trên menu "Nhà bán hàng"
   useEffect(() => {
@@ -197,6 +201,9 @@ export default function AdminSidebar({
     }
     if (pathname.includes("/admin/finance")) {
       setOpenSubmenu("finance");
+    }
+    if (pathname.includes("/admin/settings")) {
+      setOpenSubmenu("settings");
     }
   }, [pathname]);
 
@@ -245,37 +252,80 @@ export default function AdminSidebar({
       ],
     },
     {
-      group: "CONFIGURATION",
+      group: "CẤU HÌNH",
       items: [
         {
-          label: "Categories",
+          label: "Danh mục",
           id: "categories",
           icon: <Layers />,
           children: [
             {
-              label: "Product industry",
+              label: "Ngành hàng",
               path: "/admin/categories/industries",
               active: pathname === "/admin/categories/industries",
             },
             {
-              label: "Attributes",
+              label: "Thuộc tính",
               path: "/admin/categories/attributes",
               active: pathname === "/admin/categories/attributes",
             },
             {
-              label: "Units",
+              label: "Đơn vị tính",
               path: "/admin/categories/units",
               active: pathname === "/admin/categories/units",
             },
             {
-              label: "Brands",
+              label: "Thương hiệu",
               path: "/admin/categories/brands",
               active: pathname === "/admin/categories/brands",
             },
           ],
         },
-        { label: "Phân quyền", path: "/admin/users", icon: <ShieldCheck /> },
-        { label: "Cài đặt", path: "/admin/settings", icon: <Settings /> },
+        { label: "Phân quyền", path: "/admin/users", icon: <Shield /> },
+        ...(user?.role === "SUPER_ADMIN"
+          ? [{ label: "Quản lý Admin", path: "/admin/manage-admins", icon: <UserCog /> }]
+          : []),
+        {
+          label: "Cài đặt",
+          id: "settings",
+          icon: <Settings />,
+          children: [
+            {
+              label: "Cấu hình chung",
+              path: "/admin/settings",
+              active: pathname === "/admin/settings",
+            },
+            {
+              label: "Hồ sơ & Bảo mật",
+              path: "/admin/settings/profile",
+              active: pathname === "/admin/settings/profile",
+            },
+            {
+              label: "Thông báo",
+              path: "/admin/settings/notifications",
+              active: pathname === "/admin/settings/notifications",
+            },
+            {
+              label: "Thanh toán",
+              path: "/admin/settings/payment",
+              active: pathname === "/admin/settings/payment",
+            },
+            {
+              label: "Vận chuyển",
+              path: "/admin/settings/shipping",
+              active: pathname === "/admin/settings/shipping",
+            },
+            ...(user?.role === "SUPER_ADMIN"
+              ? [
+                  {
+                    label: "Audit Log Toàn Hệ Thống",
+                    path: "/admin/settings/audit-logs",
+                    active: pathname === "/admin/settings/audit-logs",
+                  },
+                ]
+              : []),
+          ],
+        },
       ],
     },
   ];
@@ -299,14 +349,17 @@ export default function AdminSidebar({
           data-tooltip="Trang chủ"
           className="no-underline tooltip-trigger flex items-center gap-3 overflow-hidden"
         >
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
-            <span className="font-black text-xl text-white italic">S</span>
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0 overflow-hidden">
+            <Logo variant="admin" size={32} />
           </div>
-          <span
-            className={`font-bold text-xl tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent transition-opacity duration-300 ${isCollapsed ? "lg:opacity-0" : "opacity-100"}`}
-          >
-            STAY-GO
-          </span>
+          <div className={`flex flex-col transition-opacity duration-300 ${isCollapsed ? 'lg:opacity-0' : 'opacity-100'}`}>
+            <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent leading-none">
+              VietCommerce Hub
+            </span>
+            <span className="text-[9px] font-bold text-blue-400 tracking-widest uppercase leading-none mt-1">
+              Administrator
+            </span>
+          </div>
         </Link>
 
         <div className="flex items-center">
@@ -387,14 +440,15 @@ export default function AdminSidebar({
             className={`flex-1 min-w-0 transition-all duration-300 ${isCollapsed ? "lg:opacity-0 lg:w-0" : "opacity-100 w-auto"}`}
           >
             <p className="text-sm font-bold text-white truncate">
-              Admin Manager
+              {user?.fullName || user?.email || 'Admin'}
             </p>
             <p className="text-[10px] text-slate-500 truncate">
-              Sàn TMĐT STAY-GO
+              {user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Quản trị viên'}
             </p>
           </div>
 
           <button
+            onClick={() => logout()}
             title="Đăng xuất"
             className={`p-2 text-slate-500 hover:text-red-400 transition-all duration-300 border-0 bg-transparent shrink-0 ${isCollapsed ? "lg:opacity-0 lg:absolute" : "opacity-100"}`}
           >
@@ -403,7 +457,7 @@ export default function AdminSidebar({
 
           {isCollapsed && (
             <button
-              onClick={() => console.log("logout")}
+              onClick={() => logout()}
               className="absolute inset-0 opacity-0 cursor-pointer lg:block hidden"
               data-tooltip="Đăng xuất"
             />

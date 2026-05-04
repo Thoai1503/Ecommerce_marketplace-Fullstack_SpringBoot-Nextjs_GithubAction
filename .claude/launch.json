@@ -1,0 +1,54 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Marketplace Platform (Backend :8001)",
+      "runtimeExecutable": "mvn",
+      "runtimeArgs": ["spring-boot:run"],
+      "cwd": "Marketplace-platform",
+      "port": 8001
+    },
+    {
+      "name": "API Gateway (:8000)",
+      "runtimeExecutable": "mvn",
+      "runtimeArgs": ["spring-boot:run"],
+      "cwd": "api-gateway",
+      "port": 8000
+    },
+    {
+      "name": "Cart Service (:8003)",
+      "runtimeExecutable": "mvn",
+      "runtimeArgs": ["spring-boot:run"],
+      "cwd": "cart-service",
+      "port": 8003
+    },
+    {
+      "name": "Order Service (:8002)",
+      "runtimeExecutable": "mvn",
+      "runtimeArgs": ["spring-boot:run"],
+      "cwd": "order-service",
+      "port": 8002
+    },
+    {
+      "name": "Logistic Service (:8007)",
+      "runtimeExecutable": "mvn",
+      "runtimeArgs": ["spring-boot:run"],
+      "cwd": "logistic-service",
+      "port": 8007
+    },
+    {
+      "name": "Market Frontend (:3000)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "marketfrontend",
+      "port": 3000
+    },
+    {
+      "name": "Logistics Frontend (:3001)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "logistics-frontend",
+      "port": 3001
+    }
+  ]
+}

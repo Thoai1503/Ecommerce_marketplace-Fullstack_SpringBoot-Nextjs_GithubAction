@@ -24,28 +24,34 @@ export default async function Home() {
   //   );
   // }
 
-  const res = await fetch(`${INTERNAL_API}/api/categories`, {
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    console.error("API error");
+  let parentCategories: any[] = [];
+  try {
+    const res = await fetch(`${INTERNAL_API}/api/categories`, {
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const categories = Array.isArray(data) ? data : (data.data ?? []);
+      parentCategories = categories
+        .filter((c: any) => Number(c.level) === 0 && Number(c.is_active) === 1)
+        .sort(
+          (a: any, b: any) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+        );
+    }
+  } catch {
+    // API categories chưa chạy — bỏ qua
   }
 
-  const data = await res.json();
-
-  const categories = Array.isArray(data) ? data : data.data;
-
-  const parentCategories = categories
-    .filter((c: any) => Number(c.level) === 0 && Number(c.is_active) === 1)
-    .sort(
-      (a: any, b: any) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
-
-  console.log("Parent Categories:", parentCategories);
-  const res1 = await fetch(`${INTERNAL_API}/product`);
-  const products = ((await res1.json()) as Partial<IProduct>[]) || [];
+  let products: Partial<IProduct>[] = [];
+  try {
+    const res1 = await fetch(`${INTERNAL_API}/product`);
+    if (res1.ok) {
+      products = ((await res1.json()) as Partial<IProduct>[]) || [];
+    }
+  } catch {
+    // API products chưa chạy — bỏ qua
+  }
   // const { products } = useHomePage();
 
   if (products.length === 0 || !products) {

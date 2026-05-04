@@ -1,6 +1,7 @@
 package docker_test.com.controllers.admin;
 
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,30 +18,52 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import docker_test.com.dto.ApiError;
+import docker_test.com.dto.admin.RejectRequestDTO;
+import docker_test.com.dto.admin.StatusChangeRequestDTO;
 import docker_test.com.models.Shop;
+import docker_test.com.models.User;
 import docker_test.com.models.product.Product;
 import docker_test.com.models.product.ProductImage;
 import docker_test.com.repository.ProductImageRepository;
 import docker_test.com.repository.ProductRepository;
+import docker_test.com.repository.ProductStatusHistoryRepository;
 import docker_test.com.repository.ShopRepository;
+import docker_test.com.repository.UserRepository;
+import docker_test.com.services.AuditService;
+import docker_test.com.services.FraudDetectionService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/admin/products")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"}, allowCredentials = "true")
 public class AdminProductController {
 
     private final ProductRepository productRepository;
     private final ShopRepository shopRepository;
     private final ProductImageRepository productImageRepository;
+    private final ProductStatusHistoryRepository statusHistoryRepository;
+    private final UserRepository userRepository;
+    private final FraudDetectionService fraudDetectionService;
+    private final AuditService auditService;
 
-    public AdminProductController() {
+    public AdminProductController(FraudDetectionService fraudDetectionService, AuditService auditService) {
         this.productRepository = ProductRepository.Instance();
         this.shopRepository = ShopRepository.Instance();
         this.productImageRepository = ProductImageRepository.Instance();
+        this.statusHistoryRepository = ProductStatusHistoryRepository.Instance();
+        this.userRepository = UserRepository.Instance();
+        this.fraudDetectionService = fraudDetectionService;
+        this.auditService = auditService;
+    }
+
+    private boolean adminProductWritesDisabled() {
+        return true;
     }
 
     // ─── Request body cho POST create ────────────────────────────────────────
@@ -105,12 +128,66 @@ public class AdminProductController {
 
     private static int isActiveFromStatus(String status) {
         if (status == null) return 2;
-        return switch (status) {
+        return switch (status.trim().toUpperCase()) {
             case "APPROVED" -> 1;
             case "HIDDEN"   -> 0;
             case "REJECTED" -> 3;
             default         -> 2; // PENDING
         };
+    }
+
+    private static String requiredReason(Map<String, Object> body) {
+        Object reason = body != null ? body.get("reason") : null;
+        return reason != null ? reason.toString().trim() : "";
+    }
+
+    private static Long actorIdFrom(Map<String, Object> body, Long headerAdminId) {
+        if (headerAdminId != null) return headerAdminId;
+        Object bodyActor = body != null ? body.get("changedBy") : null;
+        if (bodyActor instanceof Number n) return n.longValue();
+        if (bodyActor != null) {
+            try { return Long.parseLong(bodyActor.toString()); } catch (Exception ignore) {}
+        }
+        return 1L;
+    }
+
+    private static String actorRoleFrom(Map<String, Object> body, String headerRole) {
+        if (headerRole != null && !headerRole.isBlank()) return headerRole.trim().toUpperCase();
+        Object bodyRole = body != null ? body.get("changedByRole") : null;
+        if (bodyRole != null && !bodyRole.toString().isBlank()) return bodyRole.toString().trim().toUpperCase();
+        return "ADMIN";
+    }
+
+    private static void clearHideAudit(Product product) {
+        product.setHiddenAt(null);
+        product.setHiddenBy(null);
+        product.setHiddenReason(null);
+        product.setHiddenByRole(null);
+    }
+
+    private void logStatusChange(Product product, String fromStatus, String toStatus, String reason, Long actorId, String actorRole) {
+        statusHistoryRepository.insert(product.getId(), fromStatus, toStatus, reason, actorId, actorRole);
+    }
+
+    private void logAudit(Long actorId, String actorRole, String action, int productId, String reason) {
+        String details = reason == null || reason.isBlank()
+                ? null
+                : String.format("{\"reason\":\"%s\"}", reason.replace("\"", "\\\""));
+        auditService.logAction(actorId, actorRole, action, "PRODUCT", (long) productId, details);
+    }
+
+    private String auditActionForStatus(String status) {
+        return switch (status) {
+            case "APPROVED" -> "APPROVE_PRODUCT";
+            case "REJECTED" -> "REJECT_PRODUCT";
+            case "HIDDEN" -> "HIDE_PRODUCT";
+            case "PENDING" -> "UNHIDE_PRODUCT";
+            default -> "UPDATE_PRODUCT_STATUS";
+        };
+    }
+
+    private ApiError apiError(HttpStatus status, String error, String message, String path) {
+        return new ApiError(status.value(), error, message, path);
     }
 
     private Map<String, Object> toProductDto(Product p) {
@@ -125,11 +202,45 @@ public class AdminProductController {
         dto.put("status", statusFromIsActive(p.getIs_active()));
         dto.put("reject_reason", p.getReject_reason());
         dto.put("rejectReason", p.getReject_reason());
+        try {
+            String hiddenAt = p.getHiddenAt() != null
+                    ? p.getHiddenAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                    : null;
+            dto.put("hiddenAt", hiddenAt);
+            dto.put("hidden_at", hiddenAt);
+            dto.put("hiddenBy", p.getHiddenBy());
+            dto.put("hidden_by", p.getHiddenBy());
+            dto.put("hiddenReason", p.getHiddenReason());
+            dto.put("hidden_reason", p.getHiddenReason());
+            dto.put("hiddenByRole", p.getHiddenByRole());
+            dto.put("hidden_by_role", p.getHiddenByRole());
+            if (p.getHiddenBy() != null) {
+                User hiddenBy = userRepository.GetById(p.getHiddenBy().intValue());
+                dto.put("hiddenByName", hiddenBy != null ? hiddenBy.getFullName() : null);
+            } else {
+                dto.put("hiddenByName", null);
+            }
+        } catch (Exception ignore) {}
         dto.put("category", p.getCategory_id() != null ? p.getCategory_id().toString() : null);
         dto.put("sellerId", p.getShop_id() != null ? p.getShop_id().toString() : null);
         dto.put("rating", p.getRating());
         dto.put("reviewCount", p.getReview_count());
         dto.put("soldCount", p.getSold_count());
+
+        // Logistics & brand
+        try { dto.put("weight", p.getWeight()); } catch (Exception ignore) {}
+        try { dto.put("length", p.getLength()); } catch (Exception ignore) {}
+        try { dto.put("width", p.getWidth()); } catch (Exception ignore) {}
+        try { dto.put("height", p.getHeight()); } catch (Exception ignore) {}
+        try { dto.put("brand", p.getBrand()); } catch (Exception ignore) {}
+
+        // Updated timestamp
+        try {
+            String updatedAt = p.getUpdated_at() != null
+                    ? p.getUpdated_at().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                    : null;
+            dto.put("updatedAt", updatedAt);
+        } catch (Exception ignore) {}
 
         // Seller name from shop (prefer joined shop_name from listing query)
         String sellerName = p.getShop_name();
@@ -229,6 +340,13 @@ public class AdminProductController {
     // ─── POST /admin/products ─────────────────────────────────────────────────
     @PostMapping("")
     public ResponseEntity<?> create(@RequestBody AdminProductCreateRequest req) {
+        if (adminProductWritesDisabled()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                            "message", "Admin khong duoc tao san pham. Product phai do seller tao va gui duyet.",
+                            "code", "ADMIN_PRODUCT_CREATE_DISABLED"));
+        }
+
         // Validate các field bắt buộc
         if (req == null || req.product_name == null || req.product_name.isBlank())
             return ResponseEntity.badRequest().body("product_name is required");
@@ -276,6 +394,9 @@ public class AdminProductController {
 
             // Lấy lại từ DB để trả về đầy đủ dữ liệu
             Product full = productRepository.GetById(created.getId());
+            if ("PENDING".equals(statusFromIsActive(created.getIs_active()))) {
+                fraudDetectionService.analyzeProductAsync(created.getId());
+            }
             return ResponseEntity.status(HttpStatus.CREATED).body(toProductDto(full != null ? full : created));
 
         } catch (SQLException e) {
@@ -285,30 +406,76 @@ public class AdminProductController {
 
     // ─── PATCH /admin/products/{id}/status ───────────────────────────────────
     @PatchMapping("{id}/status")
-    public ResponseEntity<?> updateStatus(@PathVariable int id, @RequestBody Map<String, Object> body) {
-        Object s = body != null ? body.get("status") : null;
-        if (s == null) return ResponseEntity.badRequest().body("status is required");
+    public ResponseEntity<?> updateStatus(@PathVariable int id,
+                                          @Valid @RequestBody StatusChangeRequestDTO request,
+                                          @RequestHeader(value = "X-Admin-Id", required = false) Long adminId,
+                                          @RequestHeader(value = "X-Admin-Role", required = false) String adminRole) {
+        String path = "/admin/products/" + id + "/status";
+        String nextStatus = request.getStatus().trim().toUpperCase();
+        String reason = request.getReason() != null ? request.getReason().trim() : "";
+        if ("HIDDEN".equals(nextStatus) && reason.isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(apiError(HttpStatus.BAD_REQUEST, "MISSING_REASON", "Lý do là bắt buộc khi ẩn sản phẩm.", path));
+        }
 
         Product product = productRepository.GetById(id);
-        if (product == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found");
+        if (product == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(apiError(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Không tìm thấy sản phẩm.", path));
+        }
 
-        product.setIs_active(isActiveFromStatus(s.toString()));
+        String fromStatus = statusFromIsActive(product.getIs_active());
+        Long actorId = actorIdFrom(null, adminId);
+        String actorRole = actorRoleFrom(null, adminRole);
+
+        product.setIs_active(isActiveFromStatus(nextStatus));
+        if ("HIDDEN".equals(nextStatus)) {
+            product.setHiddenAt(LocalDateTime.now());
+            product.setHiddenBy(actorId);
+            product.setHiddenReason(reason);
+            product.setHiddenByRole(actorRole);
+        } else if (!"HIDDEN".equals(fromStatus)) {
+            clearHideAudit(product);
+        }
         Product updated = productRepository.Update(product);
-        if (updated == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Update failed");
+        if (updated == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(apiError(HttpStatus.BAD_REQUEST, "UPDATE_FAILED", "Cập nhật trạng thái thất bại.", path));
+        }
+        logStatusChange(updated, fromStatus, nextStatus, reason.isBlank() ? null : reason, actorId, actorRole);
+        logAudit(actorId, actorRole, auditActionForStatus(nextStatus), id, reason);
+        if ("PENDING".equals(nextStatus)) {
+            fraudDetectionService.analyzeProductAsync(id);
+        }
 
         return ResponseEntity.ok(toProductDto(updated));
     }
 
+    @GetMapping("{id}/history")
+    public ResponseEntity<?> history(@PathVariable int id) {
+        Product product = productRepository.GetById(id);
+        if (product == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found");
+        return ResponseEntity.ok(Map.of("data", statusHistoryRepository.findByProductId(id)));
+    }
+
     // ─── PATCH /admin/products/{id}/approve ──────────────────────────────────
     @PatchMapping("{id}/approve")
-    public ResponseEntity<?> approve(@PathVariable int id) {
+    public ResponseEntity<?> approve(@PathVariable int id,
+                                     @RequestHeader(value = "X-Admin-Id", required = false) Long adminId,
+                                     @RequestHeader(value = "X-Admin-Role", required = false) String adminRole) {
         Product product = productRepository.GetById(id);
         if (product == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found");
 
+        String fromStatus = statusFromIsActive(product.getIs_active());
         product.setIs_active(1); // APPROVED
         product.setReject_reason(null); // clear any previous rejection reason
+        clearHideAudit(product);
         Product updated = productRepository.Update(product);
         if (updated == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Approve failed");
+        Long actorId = actorIdFrom(null, adminId);
+        String actorRole = actorRoleFrom(null, adminRole);
+        logStatusChange(updated, fromStatus, "APPROVED", null, actorId, actorRole);
+        logAudit(actorId, actorRole, "APPROVE_PRODUCT", id, null);
 
         return ResponseEntity.ok(toProductDto(updated));
     }
@@ -316,18 +483,31 @@ public class AdminProductController {
     // ─── PATCH /admin/products/{id}/reject ───────────────────────────────────
     @PatchMapping("{id}/reject")
     public ResponseEntity<?> reject(@PathVariable int id,
-                                    @RequestBody(required = false) Map<String, Object> body) {
-        String reason = body != null ? (String) body.get("reason") : null;
-        if (reason == null || reason.isBlank())
-            return ResponseEntity.badRequest().body("reason is required");
+                                    @Valid @RequestBody RejectRequestDTO request,
+                                    @RequestHeader(value = "X-Admin-Id", required = false) Long adminId,
+                                    @RequestHeader(value = "X-Admin-Role", required = false) String adminRole) {
+        String path = "/admin/products/" + id + "/reject";
+        String reason = request.getReason().trim();
 
         Product product = productRepository.GetById(id);
-        if (product == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found");
+        if (product == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(apiError(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "Không tìm thấy sản phẩm.", path));
+        }
 
+        String fromStatus = statusFromIsActive(product.getIs_active());
         product.setIs_active(3); // REJECTED
         product.setReject_reason(reason);
+        clearHideAudit(product);
         Product updated = productRepository.Update(product);
-        if (updated == null) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Reject failed");
+        if (updated == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(apiError(HttpStatus.BAD_REQUEST, "REJECT_FAILED", "Từ chối sản phẩm thất bại.", path));
+        }
+        Long actorId = actorIdFrom(null, adminId);
+        String actorRole = actorRoleFrom(null, adminRole);
+        logStatusChange(updated, fromStatus, "REJECTED", reason, actorId, actorRole);
+        logAudit(actorId, actorRole, "REJECT_PRODUCT", id, reason);
 
         return ResponseEntity.ok(toProductDto(updated));
     }
@@ -336,6 +516,13 @@ public class AdminProductController {
     @PutMapping("{id}")
     @SuppressWarnings("unchecked")
     public ResponseEntity<?> update(@PathVariable int id, @RequestBody Map<String, Object> req) {
+        if (adminProductWritesDisabled()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                            "message", "Admin khong duoc sua san pham cua seller. Hay duyet hoac tu choi san pham.",
+                            "code", "ADMIN_PRODUCT_UPDATE_DISABLED"));
+        }
+
         Product product = productRepository.GetById(id);
         if (product == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found");
 
@@ -380,6 +567,13 @@ public class AdminProductController {
     // ─── DELETE /admin/products/{id} ─────────────────────────────────────────
     @DeleteMapping("{id}")
     public ResponseEntity<?> delete(@PathVariable int id) {
+        if (adminProductWritesDisabled()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(
+                            "message", "Admin khong duoc xoa san pham cua seller.",
+                            "code", "ADMIN_PRODUCT_DELETE_DISABLED"));
+        }
+
         Product product = productRepository.GetById(id);
         if (product == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found");
 

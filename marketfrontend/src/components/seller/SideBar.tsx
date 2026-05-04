@@ -3,6 +3,7 @@
 import { JSX, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSellerSideBarContext } from "@/context/SellerSideBarContext";
+import { useAuth } from "@/context/AuthContext";
 
 interface MenuItem {
   id: string;
@@ -20,6 +21,7 @@ interface MenuItem {
 
 export default function Sidebar() {
   const { isOpen } = useSellerSideBarContext();
+  const { logout } = useAuth();
 
   const [openMenus, setOpenMenus] = useState<string[]>(["products"]);
 
@@ -70,8 +72,8 @@ export default function Sidebar() {
         </svg>
       ),
       submenu: [
-        { label: "Tất Cả Sản Phẩm", href: "/seller/product", active: true },
-        { label: "Thêm Sản Phẩm", href: "/seller/product/new" },
+        { label: "Tất Cả Sản Phẩm", href: "/seller/products", active: true },
+        { label: "Thêm Sản Phẩm", href: "/seller/products/new" },
       ],
     },
     {
@@ -255,6 +257,22 @@ export default function Sidebar() {
             )}
           </div>
         ))}
+      </div>
+
+      <div className="border-top mt-auto p-2">
+        <button
+          type="button"
+          onClick={logout}
+          className="btn btn-link text-decoration-none text-danger d-flex align-items-center w-100 px-3 py-2 text-start hover-bg-light"
+        >
+          <span className="me-2">
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+              <path fillRule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-7A1.5 1.5 0 0 1 1 11.5v-7A1.5 1.5 0 0 1 2.5 3h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .5.5h7a.5.5 0 0 1 .5.5z" />
+              <path fillRule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z" />
+            </svg>
+          </span>
+          <span className="small fw-semibold">Đăng xuất</span>
+        </button>
       </div>
 
       <style jsx>{`

@@ -17,32 +17,40 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import docker_test.com.dto.ApiError;
+import docker_test.com.dto.admin.RejectRequestDTO;
+import docker_test.com.dto.admin.StatusChangeRequestDTO;
 import docker_test.com.models.Shop;
 import docker_test.com.models.User;
 import docker_test.com.repository.ShopRepository;
 import docker_test.com.repository.UserRepository;
+import docker_test.com.services.AuditService;
 import docker_test.com.services.EmailService;
 import docker_test.com.utils.PasswordUtil;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @RestController
 @RequestMapping("/admin/sellers")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"}, allowCredentials = "true")
 public class AdminSellerController {
 
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
+    private final AuditService auditService;
 
     @Autowired
     private EmailService emailService;
 
-    public AdminSellerController() {
+    public AdminSellerController(AuditService auditService) {
         this.shopRepository = ShopRepository.Instance();
         this.userRepository = UserRepository.Instance();
+        this.auditService = auditService;
     }
 
     public static class AdminSellerUpsertRequest {
@@ -134,6 +142,25 @@ public class AdminSellerController {
     private ShopWithUser requireShopAndUser(long id) {
         ShopWithUser sw = loadShopAndUser(id);
         return (sw != null && sw.user() != null) ? sw : null;
+    }
+
+    private ApiError apiError(HttpStatus status, String error, String message, String path) {
+        return new ApiError(status.value(), error, message, path);
+    }
+
+    private static Long actorIdFrom(Long headerAdminId) {
+        return headerAdminId != null ? headerAdminId : 1L;
+    }
+
+    private static String actorRoleFrom(String headerRole) {
+        return headerRole != null && !headerRole.isBlank() ? headerRole.trim().toUpperCase() : "ADMIN";
+    }
+
+    private void logAudit(Long actorId, String actorRole, String action, long shopId, String reason) {
+        String details = reason == null || reason.isBlank()
+                ? null
+                : String.format("{\"reason\":\"%s\"}", reason.replace("\"", "\\\""));
+        auditService.logAction(actorId, actorRole, action, "SHOP", shopId, details);
     }
 
     /** Persists shop + user. Returns error ResponseEntity on failure, null on success. */
@@ -320,23 +347,32 @@ public class AdminSellerController {
 
     // PATCH /admin/sellers/{id}/status — đổi status (ACTIVE/BLOCKED/PENDING)
     @PatchMapping("{id}/status")
-    public ResponseEntity<?> updateStatus(@PathVariable long id, @RequestBody Map<String, Object> body) {
-        Object s = body != null ? body.get("status") : null;
-        if (s == null) return ResponseEntity.badRequest().body("status is required");
+    public ResponseEntity<?> updateStatus(
+            @PathVariable long id,
+            @Valid @RequestBody StatusChangeRequestDTO request) {
+        String path = "/admin/sellers/" + id + "/status";
 
         ShopWithUser sw = requireShopAndUser(id);
-        if (sw == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Seller not found");
+        if (sw == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(apiError(HttpStatus.NOT_FOUND, "SELLER_NOT_FOUND", "Không tìm thấy nhà bán hàng.", path));
+        }
 
-        applyStatusToEntities(s.toString(), sw.shop(), sw.user());
+        applyStatusToEntities(request.getStatus().trim().toUpperCase(), sw.shop(), sw.user());
 
         ResponseEntity<?> err = persistAndCheck(sw, "Update failed");
-        if (err != null) return err;
+        if (err != null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(apiError(HttpStatus.BAD_REQUEST, "UPDATE_FAILED", "Cập nhật trạng thái nhà bán hàng thất bại.", path));
+        }
         return ResponseEntity.ok(true);
     }
 
     // PATCH /admin/sellers/{id}/approve — duyệt seller PENDING → ACTIVE
     @PatchMapping("{id}/approve")
-    public ResponseEntity<?> approve(@PathVariable long id) {
+    public ResponseEntity<?> approve(@PathVariable long id,
+                                     @RequestHeader(value = "X-Admin-Id", required = false) Long adminId,
+                                     @RequestHeader(value = "X-Admin-Role", required = false) String adminRole) {
         ShopWithUser sw = requireShopAndUser(id);
         if (sw == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Seller not found");
 
@@ -354,33 +390,45 @@ public class AdminSellerController {
         } catch (Exception mailEx) {
             System.err.println("[AdminSellerController] Send approved email failed: " + mailEx.getMessage());
         }
+        logAudit(actorIdFrom(adminId), actorRoleFrom(adminRole), "APPROVE_SHOP", id, null);
 
         return ResponseEntity.ok(toSellerDto(sw.shop(), sw.user()));
     }
 
     // PATCH /admin/sellers/{id}/reject — từ chối seller PENDING → REJECTED (kèm lý do)
     @PatchMapping("{id}/reject")
-    public ResponseEntity<?> reject(@PathVariable long id, @RequestBody Map<String, Object> body) {
-        Object r = body != null ? body.get("reason") : null;
-        if (r == null || r.toString().isBlank()) return ResponseEntity.badRequest().body("reason is required");
+    public ResponseEntity<?> reject(
+            @PathVariable long id,
+            @Valid @RequestBody RejectRequestDTO request,
+            @RequestHeader(value = "X-Admin-Id", required = false) Long adminId,
+            @RequestHeader(value = "X-Admin-Role", required = false) String adminRole) {
+        String path = "/admin/sellers/" + id + "/reject";
+        String reason = request.getReason().trim();
 
         ShopWithUser sw = requireShopAndUser(id);
-        if (sw == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Seller not found");
+        if (sw == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(apiError(HttpStatus.NOT_FOUND, "SELLER_NOT_FOUND", "Không tìm thấy nhà bán hàng.", path));
+        }
 
         applyStatusToEntities("REJECTED", sw.shop(), sw.user());
-        sw.shop().setRejection_reason(r.toString());
+        sw.shop().setRejection_reason(reason);
 
         ResponseEntity<?> err = persistAndCheck(sw, "Reject failed");
-        if (err != null) return err;
+        if (err != null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(apiError(HttpStatus.BAD_REQUEST, "REJECT_FAILED", "Từ chối nhà bán hàng thất bại.", path));
+        }
 
         // Gửi email thông báo kèm lý do (không block response nếu lỗi)
         try {
             String shopName = sw.shop().getShop_name() != null ? sw.shop().getShop_name()
                     : (sw.user().getFullName() != null ? sw.user().getFullName() : sw.user().getEmail());
-            emailService.sendShopRejectedEmail(sw.user().getEmail(), shopName, r.toString());
+            emailService.sendShopRejectedEmail(sw.user().getEmail(), shopName, reason);
         } catch (Exception mailEx) {
             System.err.println("[AdminSellerController] Send rejected email failed: " + mailEx.getMessage());
         }
+        logAudit(actorIdFrom(adminId), actorRoleFrom(adminRole), "REJECT_SHOP", id, reason);
 
         return ResponseEntity.ok(toSellerDto(sw.shop(), sw.user()));
     }
@@ -405,33 +453,46 @@ public class AdminSellerController {
 
     // PATCH /admin/sellers/{id}/block — khóa shop kèm lý do
     @PatchMapping("{id}/block")
-    public ResponseEntity<?> block(@PathVariable long id, @RequestBody Map<String, Object> body) {
-        Object r = body != null ? body.get("reason") : null;
-        if (r == null || r.toString().isBlank()) return ResponseEntity.badRequest().body("reason is required");
+    public ResponseEntity<?> block(
+            @PathVariable long id,
+            @Valid @RequestBody RejectRequestDTO request,
+            @RequestHeader(value = "X-Admin-Id", required = false) Long adminId,
+            @RequestHeader(value = "X-Admin-Role", required = false) String adminRole) {
+        String path = "/admin/sellers/" + id + "/block";
+        String reason = request.getReason().trim();
 
         ShopWithUser sw = requireShopAndUser(id);
-        if (sw == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Seller not found");
+        if (sw == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(apiError(HttpStatus.NOT_FOUND, "SELLER_NOT_FOUND", "Không tìm thấy nhà bán hàng.", path));
+        }
 
         applyStatusToEntities("BLOCKED", sw.shop(), sw.user());
-        sw.shop().setBlock_reason(r.toString());
+        sw.shop().setBlock_reason(reason);
 
         ResponseEntity<?> err = persistAndCheck(sw, "Block failed");
-        if (err != null) return err;
+        if (err != null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(apiError(HttpStatus.BAD_REQUEST, "BLOCK_FAILED", "Khóa nhà bán hàng thất bại.", path));
+        }
 
         try {
             String shopName = sw.shop().getShop_name() != null ? sw.shop().getShop_name()
                     : (sw.user().getFullName() != null ? sw.user().getFullName() : sw.user().getEmail());
-            emailService.sendShopBlockedEmail(sw.user().getEmail(), shopName, r.toString());
+            emailService.sendShopBlockedEmail(sw.user().getEmail(), shopName, reason);
         } catch (Exception mailEx) {
             System.err.println("[AdminSellerController] Send blocked email failed: " + mailEx.getMessage());
         }
+        logAudit(actorIdFrom(adminId), actorRoleFrom(adminRole), "BLOCK_SHOP", id, reason);
 
         return ResponseEntity.ok(toSellerDto(sw.shop(), sw.user()));
     }
 
     // PATCH /admin/sellers/{id}/unblock — mở khóa shop → ACTIVE
     @PatchMapping("{id}/unblock")
-    public ResponseEntity<?> unblock(@PathVariable long id) {
+    public ResponseEntity<?> unblock(@PathVariable long id,
+                                     @RequestHeader(value = "X-Admin-Id", required = false) Long adminId,
+                                     @RequestHeader(value = "X-Admin-Role", required = false) String adminRole) {
         ShopWithUser sw = requireShopAndUser(id);
         if (sw == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Seller not found");
 
@@ -440,6 +501,7 @@ public class AdminSellerController {
 
         ResponseEntity<?> err = persistAndCheck(sw, "Unblock failed");
         if (err != null) return err;
+        logAudit(actorIdFrom(adminId), actorRoleFrom(adminRole), "UNBLOCK_SHOP", id, null);
         return ResponseEntity.ok(toSellerDto(sw.shop(), sw.user()));
     }
 

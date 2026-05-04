@@ -92,7 +92,7 @@ export default function LoginPage() {
               <ShieldCheck size={24} className="text-white" />
             </div>
             <span className="text-2xl font-black tracking-tight text-white">
-              STAY-GO <span className="text-indigo-400 font-medium">Administrator</span>
+              VietCommerce Hub <span className="text-indigo-400 font-medium">Administrator</span>
             </span>
           </div>
         </div>
@@ -144,7 +144,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="relative z-10 flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-widest border-t border-white/5 pt-8">
-          <span>© 2024 STAY-GO Inc.</span>
+          <span>© 2026 VietCommerce Hub.</span>
           <div className="flex gap-4 items-center">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
             <span className="text-green-500">System Operational</span>

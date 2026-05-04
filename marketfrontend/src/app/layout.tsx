@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import StoreProvider from "./StoreProvider";
+import { AuthProvider } from "@/context/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -119,7 +120,9 @@ export default function RootLayout({
           </style>
         </head>
         <body className={`index-page`} suppressHydrationWarning>
-          <main className="main">{children}</main>
+          <AuthProvider>
+            <main className="main">{children}</main>
+          </AuthProvider>
 
           {/* <Script src="/assets/js/main.js" strategy="afterInteractive" /> */}
         </body>

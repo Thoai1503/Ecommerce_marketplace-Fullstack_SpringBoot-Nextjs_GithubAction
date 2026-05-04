@@ -60,7 +60,7 @@ export const updateSeller = async (id: string, data: Partial<Seller>): Promise<S
 };
 
 export const deleteSellers = async (ids: string[]): Promise<boolean> => {
-  // backend currently supports deleting 1 by 1 (soft delete)
+  // TODO: BE cần thêm bulk delete
   for (const id of ids) {
     await http.delete(`/admin/sellers/${id}`);
   }
@@ -70,9 +70,20 @@ export const deleteSellers = async (ids: string[]): Promise<boolean> => {
 export const toggleSellerStatus = async (
   id: string,
   newStatus: SellerStatus,
+  reason?: string,
 ): Promise<boolean> => {
+  const action =
+    newStatus === "BLOCKED" ? "block"
+    : newStatus === "ACTIVE" ? "unblock"
+    : newStatus === "REJECTED" ? "reject"
+    : newStatus === "PENDING" ? "reopen"
+    : "approve";
+  const body = (newStatus === "BLOCKED" || newStatus === "REJECTED")
+    ? { reason: reason ?? "Admin cập nhật trạng thái" }
+    : {};
+
   return await http
-    .patch(`/admin/sellers/${id}/status`, { status: newStatus })
+    .patch(`/admin/sellers/${id}/${action}`, body)
     .then((res) => res.data)
     .catch((error) => {
       throw error;

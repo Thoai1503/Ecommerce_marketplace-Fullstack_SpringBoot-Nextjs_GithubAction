@@ -34,6 +34,12 @@ public final class UserMapper implements IMapper<User> {
             user.setUserType(rs.getString(StringValue.USER_TYPE_COL));
 
             // TINYINT(1) → boolean
+            try {
+                user.setRole(rs.getString("role"));
+            } catch (SQLException ignore) {
+                user.setRole(null);
+            }
+
             user.setIsVerified(rs.getInt(StringValue.USER_VERIFIED_COL));
             user.setIsActive(rs.getInt(StringValue.USER_ACTIVE_COL));
 

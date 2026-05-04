@@ -2,11 +2,19 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Lock, Unlock, AlertTriangle, UserCog, AlertCircle, ShoppingBag, User as UserIcon } from 'lucide-react';
+import { Shield, Lock, Unlock, AlertTriangle, UserCog, AlertCircle, ShoppingBag, User as UserIcon, KeyRound, Mail } from 'lucide-react';
 import { UserRole, User } from '@/types';
 
 // --- CONFIG FOR ROLES UX ---
 const RoleUX: Record<UserRole, { label: string; description: string; icon: any; color: string; border: string; bg: string }> = {
+  SUPER_ADMIN: {
+    label: 'Super Admin',
+    description: 'Toan quyen quan tri va phan quyen Admin.',
+    icon: <Shield size={20} />,
+    color: 'text-indigo-600',
+    border: 'border-indigo-200',
+    bg: 'bg-indigo-50'
+  },
   USER: { 
     label: 'Khách hàng (User)', 
     description: 'Có thể mua hàng, xem đơn hàng cá nhân.',
@@ -48,10 +56,18 @@ export const ChangeRoleModal = ({ isOpen, onClose, onConfirm, user, isProcessing
 
   useEffect(() => {
     if (isOpen) {
-        setSelectedRole(user.role);
-        setError(null);
+      setSelectedRole(user.role);
+      setError(null);
     }
   }, [isOpen, user]);
+
+  // Nhấn Esc để đóng
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -86,7 +102,7 @@ export const ChangeRoleModal = ({ isOpen, onClose, onConfirm, user, isProcessing
           )}
 
           <div className="space-y-3">
-            {(['USER', 'SELLER', 'ADMIN'] as UserRole[]).map((role) => {
+            {(['USER', 'SELLER'] as UserRole[]).map((role) => {
               const config = RoleUX[role];
               const isSelected = selectedRole === role;
               
@@ -158,8 +174,16 @@ interface BlockUserModalProps {
 }
 
 export const BlockUserModal = ({ isOpen, onClose, onConfirm, user, isProcessing }: BlockUserModalProps) => {
+  // Nhấn Esc để đóng
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
-  
+
   const isBlocking = user.status === 'ACTIVE'; // If active, action is to BLOCK
 
   return (
@@ -203,6 +227,74 @@ export const BlockUserModal = ({ isOpen, onClose, onConfirm, user, isProcessing 
             }`}
           >
             {isProcessing ? 'Đang xử lý...' : (isBlocking ? 'Xác nhận khóa' : 'Xác nhận mở khóa')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- RESET PASSWORD MODAL ---
+interface ResetUserPasswordModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  user: User;
+  isProcessing: boolean;
+}
+
+export const ResetUserPasswordModal = ({ isOpen, onClose, onConfirm, user, isProcessing }: ResetUserPasswordModalProps) => {
+  useEffect(() => {
+    if (!isOpen || isProcessing) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isOpen, isProcessing, onClose]);
+
+  if (!isOpen) return null;
+
+  const roleLabel = user.role === 'SELLER' ? 'nhà bán hàng' : 'người dùng';
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-6 text-center">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border-4 shadow-sm bg-blue-50 text-blue-600 border-blue-100">
+            <KeyRound size={36} />
+          </div>
+
+          <h3 className="text-xl font-black text-slate-800 mb-2">Cấp lại mật khẩu?</h3>
+          <p className="text-slate-500 text-sm font-medium mb-4 px-2">
+            Hệ thống sẽ gửi link đặt lại mật khẩu đến tài khoản {roleLabel}
+            <br />
+            <span className="font-bold text-slate-800">{user.email}</span>.
+          </p>
+
+          <div className="text-left bg-blue-50 p-3 rounded-xl border border-blue-100 mb-2">
+            <p className="text-xs text-blue-700 font-bold flex items-center gap-2 mb-1">
+              <Mail size={14} /> Email bảo mật:
+            </p>
+            <ul className="text-[10px] text-blue-600 list-disc pl-5 space-y-0.5">
+              <li>Link có thời hạn ngắn và chỉ dùng được một lần.</li>
+              <li>Audit log sẽ ghi lại người thực hiện và tài khoản bị tác động.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="p-5 bg-slate-50 border-t border-slate-100 flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={isProcessing}
+            className="flex-1 py-3 text-sm font-bold text-slate-500 hover:bg-slate-200 rounded-xl transition-all border-0 bg-transparent disabled:opacity-50"
+          >
+            Hủy bỏ
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isProcessing}
+            className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/20 disabled:opacity-50 transition-all border-0"
+          >
+            {isProcessing ? 'Đang gửi...' : 'Gửi email'}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import Sidebar from "@/components/seller/SideBar";
 import ProfileCompletionBanner from "@/components/seller/ProfileCompletionBanner";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { SellerAuthProvider } from "@/context/SellerAuthContext";
 import SellerProvider from "@/context/SellerProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,8 +12,11 @@ export default async function SellerLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const role = (await cookies()).get("role")?.value;
-  const user_id = (await cookies()).get("user")?.value as number | undefined;
+  const rawRole = (await cookies()).get("role")?.value;
+  const role: "buyer" | "seller" | "both" | undefined =
+    rawRole === "buyer" || rawRole === "seller" || rawRole === "both" ? rawRole : undefined;
+  const rawUserId = (await cookies()).get("user")?.value;
+  const user_id = rawUserId ? Number(rawUserId) : undefined;
   const pathname = (await headers()).get("x-pathname") || "";
   console.log("Seller role: " + role + " " + user_id + " path=" + pathname);
 
@@ -20,10 +24,13 @@ export default async function SellerLayout({
   const isPublicSellerRoute =
     pathname.startsWith("/seller/pending") ||
     pathname.startsWith("/seller/register") ||
-    pathname.startsWith("/seller/login");
+    pathname.startsWith("/seller/login") ||
+    pathname.startsWith("/seller/forgot-password") ||
+    pathname.startsWith("/seller/verify-otp") ||
+    pathname.startsWith("/seller/reset-password");
 
-  if (!isPublicSellerRoute && role != "seller" && role != "both") {
-    return redirect("/login");
+  if (!isPublicSellerRoute && role && role != "seller" && role != "both") {
+    return redirect("/seller/login");
   }
 
   // Check shop status — chặn seller PENDING/REJECTED truy cập dashboard
@@ -48,15 +55,17 @@ export default async function SellerLayout({
 
   return (
     <>
-      <SellerProvider role={role} user_id={user_id}>
-        <div className="d-flex vh-100 bg-light">
-          <Sidebar />
-          <div className="flex-grow-1 overflow-auto">
-            <ProfileCompletionBanner />
-            {children}
+      <ProtectedRoute requiredRole="SELLER">
+        <SellerProvider role={role} user_id={user_id}>
+          <div className="d-flex vh-100 bg-light">
+            <Sidebar />
+            <div className="flex-grow-1 overflow-auto">
+              <ProfileCompletionBanner />
+              {children}
+            </div>
           </div>
-        </div>
-      </SellerProvider>
+        </SellerProvider>
+      </ProtectedRoute>
     </>
   );
 }

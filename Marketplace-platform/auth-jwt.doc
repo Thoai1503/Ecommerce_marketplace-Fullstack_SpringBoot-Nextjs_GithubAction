@@ -1,0 +1,690 @@
+# Auth JWT (Cross-domain) — Access Token + Refresh Token + Axios Interceptors (Spring)
+
+Tài liệu này mô tả **10 bước** luồng xác thực/ủy quyền phổ biến cho hệ thống:
+- Frontend và backend **khác domain** (cross-site)
+- Backend dùng **Spring Boot / Spring Security**
+- Frontend dùng **Axios Interceptors**
+- **Access Token** ngắn hạn, **Refresh Token** dài hạn, có **Refresh Token Rotation**
+
+---
+
+## Mục tiêu thiết kế
+
+- **Access Token**: dùng để gọi API, thời gian sống ngắn (vd 10–15 phút).
+- **Refresh Token**: dùng để xin access token mới, thời gian sống dài (vd 7–14 ngày).
+- **Tách vai** để giảm rủi ro:
+  - Access token **giữ trong memory** (state/closure) nếu có thể, tránh localStorage để giảm nguy cơ bị **XSS đọc và “mang đi”**.
+  - Refresh token lưu ở **HttpOnly cookie** để JavaScript **không đọc được**.
+- **Server** quản lý refresh token theo **session** trong DB (khuyến nghị), hỗ trợ:
+  - **revoke/logout**
+  - **rotation** (phát hành refresh token mới, vô hiệu hóa token cũ)
+  - phát hiện **replay/reuse**
+
+---
+
+## 10 bước flow khuyến nghị
+
+### Bước 1: Login (API)
+
+- **Client** gửi thông tin đăng nhập đến backend.
+- Ví dụ: `POST /auth/login` với `{ username/email, password }`.
+
+**Kỳ vọng server**:
+- Xác thực user (DB).
+- Tạo **access token** + **refresh token**.
+
+---
+
+### Bước 2: Server trả Access Token + Set-Cookie Refresh Token
+
+- **Server trả về accessToken** trong **response body** (hoặc header).
+- **Server set refreshToken** bằng header `Set-Cookie` (HttpOnly cookie).
+
+Ví dụ phản hồi:
+- Body: `{ "accessToken": "..." , "user": {...} }`
+- Header: `Set-Cookie: ...refresh...`
+
+---
+
+### Bước 3: Client lưu token (khuyến nghị)
+
+**Khuyến nghị** (security-first):
+- **Frontend giữ accessToken trong memory** (React state/Redux store runtime/closure).
+- **Không lưu accessToken vào localStorage** nếu có thể.
+- **Refresh token nằm trong HttpOnly cookie** nên JS không đọc được.
+
+**Vì sao nên làm vậy**:
+- localStorage/sessionStorage **có thể bị đọc** nếu dính XSS → kẻ tấn công có thể **exfiltrate** token.
+- HttpOnly cookie giúp refresh token **không bị JS đọc** → giảm rủi ro “chiếm quyền dài hạn”.
+
+Lưu ý:
+- Vì access token ở memory sẽ mất khi reload, nên sau reload có thể gọi `/auth/refresh` để lấy access token mới (cookie refresh sẽ được gửi kèm nếu cấu hình đúng).
+
+---
+
+### Bước 4: Gọi API cần xác thực (ví dụ Dashboard API)
+
+- User truy cập API bảo vệ, ví dụ: `GET /dashboard`.
+
+---
+
+### Bước 5: Axios request interceptor đính kèm Access Token
+
+- Trước khi gửi request, interceptor gắn:
+
+`Authorization: Bearer <accessToken>`
+
+---
+
+### Bước 6: Access Token hợp lệ → Success
+
+- **Server verify** access token hợp lệ → trả dữ liệu.
+- Frontend hiển thị bình thường.
+
+---
+
+### Bước 7: Access Token hết hạn → 401
+
+- Nếu access token hết hạn/không hợp lệ, server trả **401 Unauthorized**.
+- Tốt nhất server trả thêm mã lỗi phân biệt (vd `TOKEN_EXPIRED`) để client chỉ refresh khi đúng trường hợp.
+
+**Interceptor** bắt lỗi 401 và chuẩn bị refresh.
+
+---
+
+### Bước 8: Axios tự gọi API Refresh Token (withCredentials)
+
+- Axios gọi `POST /auth/refresh` với `withCredentials: true` để browser gửi cookie refresh.
+- **Không** gọi refresh nếu request hiện tại chính là `/auth/refresh` (tránh vòng lặp).
+
+---
+
+### Bước 9: Refresh Token hợp lệ → Rotate + trả Access Token mới → Retry request
+
+**Server**:
+- Đọc refresh token từ cookie.
+- Kiểm tra:
+  - còn hạn, chưa revoke
+  - khớp session trong DB (khuyến nghị lưu **hash**)
+- Thực hiện **Refresh Token Rotation**:
+  - phát hành refresh token mới
+  - vô hiệu hóa refresh token cũ (để phát hiện replay)
+  - `Set-Cookie` refresh token mới
+- Trả **access token mới** cho client.
+
+**Client (Axios interceptor)**:
+- Cập nhật access token in-memory.
+- **Retry request ban đầu đúng 1 lần**.
+
+---
+
+### Bước 10: Refresh Token không hợp lệ → Logout/Ép đăng nhập lại
+
+- Nếu refresh token hết hạn/không hợp lệ/revoked, server trả **401** (hoặc 403 tùy thiết kế).
+- Client:
+  - xóa access token in-memory + clear user state
+  - chuyển user về trang login
+- Server:
+  - nên revoke session/refresh token tương ứng (và nếu phát hiện **reuse** thì revoke rộng hơn).
+
+---
+
+## Cookie config (khác domain / cross-site)
+
+### Trường hợp cross-site cần cookie được gửi kèm
+Thông thường cookie refresh cần:
+- `HttpOnly`
+- `Secure` (HTTPS)
+- `SameSite=None` (để cookie đi cross-site)
+- `Path` giới hạn scope (ví dụ `/auth`)
+
+Ví dụ (minh họa):
+
+Set-Cookie: __Secure-refresh=<opaque_random_token>;
+  HttpOnly;
+  Secure;
+  SameSite=None;
+  Path=/auth;
+  Max-Age=1209600
+
+Ghi chú về prefix:
+- `__Host-` yêu cầu `Secure`, không có `Domain`, và `Path=/` (không phù hợp nếu bạn muốn `Path=/auth`).
+- `__Secure-` yêu cầu `Secure` → phù hợp hơn khi bạn cần `Path=/auth`.
+
+---
+
+## CORS (bắt buộc khi gửi cookie cross-domain)
+
+Khi frontend và backend khác domain và bạn cần cookie được gửi kèm:
+- Backend phải trả:
+  - `Access-Control-Allow-Origin: https://<frontend-domain>` (không dùng `*`)
+  - `Access-Control-Allow-Credentials: true`
+- Frontend (Axios) bật:
+  - `withCredentials: true`
+
+Nếu CORS cấu hình sai, request refresh có thể:
+- không gửi cookie
+- hoặc bị browser chặn
+
+---
+
+## CSRF không được bỏ qua (rất quan trọng)
+
+Vì refresh token nằm trong cookie và browser tự gửi cookie:
+- `/auth/refresh`, `/auth/logout`, đổi mật khẩu/email, thanh toán… là **mục tiêu CSRF**.
+
+Khuyến nghị defense:
+- CSRF token cho các request thay đổi trạng thái (hoặc ít nhất cho các endpoint nhạy cảm).
+- Kiểm tra `Origin`/`Referer` (chặn origin lạ).
+- Không dùng GET cho thao tác thay đổi dữ liệu.
+
+Lưu ý:
+- `SameSite=Lax/Strict` giúp giảm rủi ro, nhưng với cross-site thường phải `SameSite=None` → bạn càng cần CSRF defense nghiêm túc.
+
+---
+
+## Refresh token storage phía server (Spring + DB)
+
+Khuyến nghị:
+- Tạo bảng/collection kiểu `refresh_sessions` (mỗi thiết bị/phiên một dòng).
+- Lưu **hash** refresh token (không lưu plain).
+- Trường tối thiểu:
+  - `id` (session id)
+  - `user_id`
+  - `token_hash`
+  - `expires_at`
+  - `revoked_at` (nullable)
+  - `created_at`, `last_used_at`
+  - `user_agent` / `device_id` / `ip` (tùy nhu cầu)
+
+Rotation:
+- Mỗi lần refresh thành công:
+  - update hash mới
+  - revoke hash cũ (hoặc đánh dấu rotated)
+- Phát hiện reuse (token cũ bị dùng lại) → revoke mạnh tay.
+
+---
+
+## Multi-device + “đăng nhập lâu” (Remember me) — khuyến nghị triển khai
+
+Mục tiêu:
+- User có thể đăng nhập **nhiều thiết bị** đồng thời (mỗi thiết bị/tab độc lập).
+- User có thể “đăng nhập lâu” dựa vào **refresh token TTL dài**.
+
+### Quy ước session (mỗi thiết bị = 1 session)
+
+- Mỗi lần login tạo **một refresh session mới** trong DB, không ghi đè session cũ.
+- Mỗi session đại diện cho 1 “thiết bị” (hoặc một lần đăng nhập) và có thể bị revoke độc lập.
+
+Khuyến nghị cột dữ liệu thêm:
+- `session_id`: UUID/ULID, dùng để truy vết và revoke theo phiên
+- `device_label` (optional): tên thiết bị do user đặt
+- `user_agent`, `ip_first`, `ip_last`
+- `created_at`, `last_used_at`
+- `expires_at`, `revoked_at`
+
+### TTL gợi ý (đăng nhập lâu nhưng vẫn kiểm soát rủi ro)
+
+- Access token: 10–15 phút
+- Refresh token: 14–30 ngày (tuỳ mức nhạy cảm)
+- Có thể áp dụng “sliding session”:
+  - mỗi lần refresh thành công, `expires_at` được gia hạn (tuỳ chính sách)
+  - hoặc giữ TTL cố định (an toàn hơn, predictable)
+
+### Endpoint gợi ý cho multi-device
+
+- `GET /auth/sessions`:
+  - trả danh sách session của user (id, device, lastUsedAt, ip, createdAt)
+- `POST /auth/logout`:
+  - revoke **session hiện tại** (dựa trên refresh cookie)
+- `POST /auth/logout-all`:
+  - revoke **tất cả sessions** của user (đăng xuất mọi thiết bị)
+- `POST /auth/sessions/{sessionId}/revoke`:
+  - revoke **một session cụ thể** (đăng xuất thiết bị đó)
+
+### Rotation + phát hiện replay (bắt buộc khi multi-device + TTL dài)
+
+- Mỗi lần `/auth/refresh` thành công:
+  - phát hành refresh token mới
+  - vô hiệu hóa refresh token cũ trong session (revoked/rotated marker)
+- Nếu phát hiện token cũ đã bị rotate mà vẫn được dùng lại (reuse):
+  - ít nhất: revoke session đó ngay lập tức
+  - production thường làm mạnh tay hơn: revoke tất cả sessions của user + yêu cầu login lại
+
+### Tác động tới FE (Next.js/Axios)
+
+- FE giữ access token in-memory.
+- Khi user “đăng nhập lâu”:
+  - tab còn mở: interceptor tự refresh như bình thường
+  - tab reload: gọi `/auth/refresh` để lấy access token mới (cookie refresh sẽ được gửi kèm)
+- Khi user logout-all / revoke device:
+  - refresh fail -> FE logout sạch và redirect login
+
+---
+
+## Axios interceptor checklist (tránh bug thường gặp)
+
+Một interceptor refresh token “đủ tốt” nên có:
+
+- Không retry vô hạn: mỗi request chỉ retry **1 lần** (flag `_retry`).
+- Không refresh khi request là `/auth/refresh`.
+- Queue/lock khi nhiều request cùng bị 401:
+  - chỉ cho **1 refresh** chạy
+  - các request còn lại chờ kết quả rồi retry
+- Chỉ refresh khi **401** (và tốt nhất là `TOKEN_EXPIRED`), không refresh khi **403** (thường là thiếu quyền).
+- Refresh fail → logout sạch: clear auth state, redirect login, tránh loop.
+
+---
+
+## Tóm tắt nhanh (1 dòng)
+
+Login trả access token (memory) + refresh cookie (HttpOnly); gọi API gắn Bearer; 401 thì refresh (cookie) + rotate + retry 1 lần; refresh fail thì logout và bắt login lại.
+
+MVP (làm đúng nền tảng để sau mở rộng dễ)
+Session model (bắt buộc cho multi-device)
+Bảng refresh_sessions (mỗi thiết bị = 1 row): id, userId, tokenHash, expiresAt, revokedAt, createdAt, lastUsedAt, userAgent, ip
+Login tạo session mới (không ghi đè session cũ).
+Refresh rotation
+/auth/refresh rotate refresh token + update session (hoặc tạo tokenHash mới) + set cookie mới
+Nếu refresh token không match DB / revoked / expired → 401 + clear cookie.
+Logout
+/auth/logout: revoke session hiện tại (đọc refresh cookie) + clear cookie.
+Logout all devices (MVP cho multi-device)
+/auth/logout-all: revoke tất cả sessions của user.
+FE
+Access token in-memory
+Axios interceptor refresh 401 + retry 1 lần
+Queue/lock tránh gọi refresh nhiều lần
+Cross-domain
+CORS allow-origin cụ thể + allow-credentials
+Refresh cookie: HttpOnly; SameSite=None; Secure (prod), Path=/auth
+“Đăng nhập lâu”
+Refresh token TTL dài (vd 14–30 ngày) + access token ngắn (10–15 phút)
+Production (để multi-device + long-lived “chịu được abuse”)
+Session/device UX
+Endpoint “list sessions” (thiết bị, lastUsedAt, ip) + “logout thiết bị này”
+Device label (optional) để user dễ nhận biết.
+Reuse / replay detection (rất quan trọng với long-lived)
+Nếu phát hiện refresh token cũ bị dùng lại sau rotation → revoke mạnh tay (ít nhất session đó, thường là revoke toàn bộ sessions).
+Hardening cookie
+Prefix __Secure-, scope Path chặt, cân nhắc Domain, always Secure (HTTPS)
+Rate limit / abuse control
+Rate limit /auth/login, /auth/refresh, OTP endpoints
+Lockout/cooldown theo user/IP
+CSRF/XSS
+CSRF defense cho /auth/refresh, /auth/logout, /auth/logout-all và mọi endpoint đổi trạng thái
+CSP + sanitize để giảm XSS (XSS vẫn có thể gọi API trong lúc user đang login)
+Observability
+Audit log login/refresh/logout (userId/sessionId/ip/userAgent)
+Alert khi refresh fail tăng đột biến / login fail tăng đột biến
+Sau reset-password
+Revoke tất cả refresh sessions của user (bắt đăng nhập lại mọi thiết bị)
+Nếu bạn muốn, mình sẽ thêm vào auth-jwt.doc một mục “Multi-device + remember me” (schema DB + các endpoint: list sessions, revoke 1 session, logout-all) để bạn dùng làm spec code luôn.
+
+---
+---
+
+# 📦 Concrete Contract for Codex (bổ sung — Vũ + Claude)
+
+> Phần này bổ sung sau bản spec gốc của Cursor. Cung cấp **JSON shape, SQL DDL, code skeleton** để Codex code không hallucinate. Đọc kèm phần 10 bước ở trên.
+
+## A. Endpoint contracts (request/response cụ thể)
+
+### A.1. POST /auth/login
+**Request:**
+```json
+{ "email": "vu@example.com", "password": "Password123" }
+```
+**Response 200:**
+```json
+{
+  "accessToken": "eyJhbGciOi...",
+  "user": { "id": 1, "email": "vu@example.com", "fullName": "Vu", "role": "ADMIN" }
+}
+```
+Header: `Set-Cookie: __Secure-refresh=<opaque>; HttpOnly; Secure; SameSite=None; Path=/auth; Max-Age=1209600`
+
+**Response 401 (sai password / user khong ton tai):**
+```json
+{ "status":401, "error":"INVALID_CREDENTIALS", "message":"Email hoac mat khau khong dung.", "path":"/auth/login" }
+```
+**Response 403 (account disabled):**
+```json
+{ "status":403, "error":"ACCOUNT_DISABLED", "message":"Tai khoan da bi khoa.", "path":"/auth/login" }
+```
+
+### A.2. POST /auth/refresh
+**Request:** khong body, browser tu gui cookie `__Secure-refresh`
+**Response 200:** body `{ "accessToken": "new_token..." }` + Set-Cookie refresh moi (rotation)
+**Response 401 (cookie het han / revoked / reuse):** `{ "status":401, "error":"REFRESH_INVALID", "message":"Phien da het han, vui long dang nhap lai." }` + clear cookie
+
+### A.3. POST /auth/logout
+**Request:** khong body, browser gui cookie refresh
+**Response 200:** `{ "success": true }` + Set-Cookie clear refresh
+**Side effect:** session hien tai set `revoked_at = NOW()`
+
+### A.4. POST /auth/logout-all
+**Request:** Authorization Bearer + cookie refresh
+**Response 200:** `{ "success": true, "revokedSessions": 3 }`
+**Side effect:** revoke ALL sessions cua user
+
+### A.5. GET /auth/me
+**Request:** Authorization Bearer
+**Response 200:** `{ "id":1, "email":"...", "fullName":"...", "role":"ADMIN" }`
+**Response 401:** `{ "status":401, "error":"TOKEN_EXPIRED", "message":"Access token het han." }`
+
+### A.6. GET /auth/sessions
+**Request:** Authorization Bearer
+**Response 200:**
+```json
+[
+  { "id":"uuid1", "userAgent":"Chrome 120", "ipLast":"1.2.3.4", "lastUsedAt":"2026-04-28T10:00:00Z", "createdAt":"...", "current":true },
+  { "id":"uuid2", "userAgent":"Safari iOS", "ipLast":"...", "lastUsedAt":"...", "current":false }
+]
+```
+
+### A.7. POST /auth/sessions/{sessionId}/revoke
+**Response 200:** `{ "success":true }`
+**Response 404:** session khong thuoc user.
+
+---
+
+## B. DB migration SQL (concrete schema)
+
+**File:** `Marketplace-platform/migrate_refresh_sessions.sql`
+
+```sql
+-- Phase Auth: refresh sessions table for multi-device JWT
+CREATE TABLE IF NOT EXISTS refresh_sessions (
+  id            VARCHAR(36)   NOT NULL,
+  user_id       BIGINT        NOT NULL,
+  token_hash    VARCHAR(255)  NOT NULL,
+  user_agent    VARCHAR(500)  DEFAULT NULL,
+  ip_first      VARCHAR(45)   DEFAULT NULL,
+  ip_last       VARCHAR(45)   DEFAULT NULL,
+  expires_at    TIMESTAMP     NOT NULL,
+  revoked_at    TIMESTAMP     NULL,
+  rotated_from  VARCHAR(36)   DEFAULT NULL,
+  created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  last_used_at  TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT fk_session_user FOREIGN KEY (user_id) REFERENCES `user`(id) ON DELETE CASCADE,
+  KEY idx_session_user (user_id),
+  KEY idx_session_token_hash (token_hash),
+  KEY idx_session_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Bo sung role neu chua co (project hien dung user_type enum buyer/seller/both)
+ALTER TABLE `user` ADD COLUMN role VARCHAR(20) DEFAULT 'CUSTOMER' AFTER user_type;
+-- gia tri: 'ADMIN' | 'SELLER' | 'CUSTOMER'
+
+-- Set 1 user thanh admin de test
+UPDATE `user` SET role = 'ADMIN' WHERE id = 1;
+UPDATE `user` SET role = 'SELLER' WHERE user_type IN ('seller', 'both') AND role = 'CUSTOMER';
+```
+
+---
+
+## C. Spring Security 6 config skeleton
+
+**File:** `Marketplace-platform/src/main/java/docker_test/com/configs/SecurityConfig.java`
+
+```java
+package docker_test.com.configs;
+
+import org.springframework.context.annotation.*;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.*;
+import java.util.List;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+    private final JwtAuthFilter jwtAuthFilter;
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter) { this.jwtAuthFilter = jwtAuthFilter; }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .cors(c -> c.configurationSource(corsSource()))
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/auth/login", "/auth/refresh", "/auth/seller/register").permitAll()
+                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/seller/**").hasAnyRole("SELLER", "ADMIN")
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
+
+    @Bean public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(12); }
+
+    @Bean
+    public CorsConfigurationSource corsSource() {
+        CorsConfiguration c = new CorsConfiguration();
+        c.setAllowedOrigins(List.of("http://localhost:3000", "http://127.0.0.1:3000"));
+        c.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+        c.setAllowedHeaders(List.of("*"));
+        c.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
+        src.registerCorsConfiguration("/**", c);
+        return src;
+    }
+}
+```
+
+**JwtAuthFilter skeleton:**
+```java
+@Component
+public class JwtAuthFilter extends OncePerRequestFilter {
+    private final JwtService jwtService;
+    public JwtAuthFilter(JwtService jwtService) { this.jwtService = jwtService; }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+            throws ServletException, IOException {
+        String header = req.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            String token = header.substring(7);
+            try {
+                Claims claims = jwtService.parseAccessToken(token);
+                Long userId = Long.valueOf(claims.getSubject());
+                String role = claims.get("role", String.class);
+                var auth = new UsernamePasswordAuthenticationToken(
+                    userId, null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                );
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            } catch (ExpiredJwtException ex) {
+                // controller hoac entry point xu ly 401 TOKEN_EXPIRED
+            } catch (Exception ignore) {}
+        }
+        chain.doFilter(req, res);
+    }
+}
+```
+
+**JwtService skeleton:**
+```java
+@Service
+public class JwtService {
+    private final SecretKey accessKey;
+    private final long accessTtlMinutes;
+    private final long refreshTtlDays;
+
+    public JwtService(@Value("${jwt.secret}") String secret,
+                     @Value("${jwt.access-ttl-minutes:15}") long atTtl,
+                     @Value("${jwt.refresh-ttl-days:14}") long rtTtl) {
+        this.accessKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.accessTtlMinutes = atTtl;
+        this.refreshTtlDays = rtTtl;
+    }
+
+    public String createAccessToken(long userId, String role) {
+        return Jwts.builder()
+            .subject(String.valueOf(userId))
+            .claim("role", role)
+            .issuedAt(new Date())
+            .expiration(Date.from(Instant.now().plus(accessTtlMinutes, ChronoUnit.MINUTES)))
+            .signWith(accessKey, Jwts.SIG.HS256)
+            .compact();
+    }
+
+    public Claims parseAccessToken(String token) {
+        return Jwts.parser().verifyWith(accessKey).build().parseSignedClaims(token).getPayload();
+    }
+
+    public String createOpaqueRefreshToken() {
+        byte[] bytes = new byte[32];
+        new SecureRandom().nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    public String hashRefresh(String plain) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(plain.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+    }
+
+    public long getRefreshTtlDays() { return refreshTtlDays; }
+}
+```
+
+---
+
+## D. Axios interceptor skeleton (queue/lock)
+
+**File:** `marketfrontend/src/lib/http.ts` (sua file hien co — KHONG tao moi)
+
+```typescript
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+
+let accessToken: string | null = null;
+export const setAccessToken = (t: string | null) => { accessToken = t; };
+export const getAccessToken = () => accessToken;
+
+const http = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001',
+  withCredentials: true,
+  timeout: 10000,
+});
+
+// Request interceptor: gan Bearer
+http.interceptors.request.use((cfg) => {
+  if (accessToken && cfg.headers) {
+    cfg.headers.Authorization = `Bearer ${accessToken}`;
+  }
+  return cfg;
+});
+
+// Queue/lock cho concurrent 401
+let isRefreshing = false;
+let refreshQueue: Array<(t: string | null) => void> = [];
+const flushQueue = (t: string | null) => { refreshQueue.forEach(cb => cb(t)); refreshQueue = []; };
+
+http.interceptors.response.use(
+  (res) => res,
+  async (err: AxiosError) => {
+    const original = err.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const status = err.response?.status;
+    const url = original?.url || '';
+
+    if (status !== 401 || original._retry || url.includes('/auth/refresh') || url.includes('/auth/login')) {
+      return Promise.reject(err);
+    }
+
+    original._retry = true;
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        refreshQueue.push((newToken) => {
+          if (newToken) {
+            if (original.headers) original.headers.Authorization = `Bearer ${newToken}`;
+            resolve(http(original));
+          } else { reject(err); }
+        });
+      });
+    }
+
+    isRefreshing = true;
+    try {
+      const r = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/auth/refresh`,
+        {},
+        { withCredentials: true }
+      );
+      const newToken = r.data.accessToken;
+      setAccessToken(newToken);
+      flushQueue(newToken);
+      if (original.headers) original.headers.Authorization = `Bearer ${newToken}`;
+      return http(original);
+    } catch (refreshErr) {
+      flushQueue(null);
+      setAccessToken(null);
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
+      }
+      return Promise.reject(refreshErr);
+    } finally {
+      isRefreshing = false;
+    }
+  }
+);
+
+export default http;
+```
+
+---
+
+## E. Pom dependencies can them
+
+**File:** `Marketplace-platform/pom.xml`
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-api</artifactId>
+    <version>0.12.6</version>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-impl</artifactId>
+    <version>0.12.6</version>
+    <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-jackson</artifactId>
+    <version>0.12.6</version>
+    <scope>runtime</scope>
+</dependency>
+```
+
+---
+
+## F. Environment variables (application.properties)
+
+```properties
+# JWT secrets
+jwt.secret=${JWT_SECRET:change-me-256bit-random-secret-for-dev-only-do-not-use-in-prod}
+jwt.access-ttl-minutes=15
+jwt.refresh-ttl-days=14
+jwt.cookie-name=__Secure-refresh
+jwt.cookie-secure=false
+jwt.cookie-same-site=Lax
+jwt.cookie-path=/auth
+```

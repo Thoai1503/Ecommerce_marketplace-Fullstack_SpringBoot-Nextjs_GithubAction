@@ -14,6 +14,7 @@ public final class User {
     private LocalDate dateOfBirth;
     private String gender;
     private String userType;
+    private String role;
     private Integer isVerified;
     private Integer isActive;
     private LocalDateTime createdAt;
@@ -100,6 +101,14 @@ public final class User {
 
     public void setUserType(String userType) {
         this.userType = userType;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 
     public Integer getIsVerified() {

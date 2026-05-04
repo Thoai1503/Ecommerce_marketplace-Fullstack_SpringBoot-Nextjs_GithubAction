@@ -20,16 +20,55 @@ export type CustomerStatus = "ACTIVE" | "BANNED" | "INACTIVE";
 export type SellerStatus = "ACTIVE" | "BLOCKED" | "PENDING" | "REJECTED";
 
 // --- USER MANAGEMENT TYPES ---
-export type UserRole = "USER" | "SELLER" | "ADMIN";
+export type UserRole = "USER" | "SELLER" | "ADMIN" | "SUPER_ADMIN";
 export type UserStatus = "ACTIVE" | "BLOCKED";
 
 export interface User {
   id: string;
   email: string;
+  fullName?: string;
   role: UserRole;
   status: UserStatus;
   createdAt: string;
-  lastLogin?: string; // Optional for Phase 2
+  lastLogin?: string;
+}
+
+// --- ADMIN ROLE MANAGEMENT TYPES ---
+export interface AdminUser {
+  id: string;
+  userId?: number;
+  email: string;
+  userName?: string;
+  role: "ADMIN" | "SUPER_ADMIN";
+  createdAt: string;
+  createdByName?: string;
+  lastLogin?: string;
+  isActive?: boolean;
+  accountActive?: boolean;
+}
+
+// --- AUDIT LOG TYPES ---
+export interface AuditLog {
+  id: string;
+  actorId?: number;
+  actorName?: string;
+  actorEmail?: string;
+  actorRole: string;
+  action: string;
+  resourceType: string;
+  resourceId?: string | number;
+  details?: Record<string, any> | null;
+  status: "SUCCESS" | "FAILED";
+  ipAddress?: string;
+  createdAt: string;
+  // Legacy fields from mock (for compatibility)
+  actor?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  resource?: string;
 }
 
 // --- NOTIFICATION TYPES (NEW) ---
@@ -241,6 +280,45 @@ export interface Shipment {
   updated_at: string;
 }
 
+export interface ProductVariant {
+  id: number;
+  sku?: string;
+  variantName?: string;
+  price?: number;
+  stockQuantity?: number;
+  attributes?: Record<string, string>;
+}
+
+export interface ProductStatusHistory {
+  id: number;
+  productId: number;
+  fromStatus: ProductStatus;
+  toStatus: ProductStatus;
+  reason?: string;
+  changedBy?: number | null;
+  changedByName?: string | null;
+  changedByRole?: string | null;
+  changedAt?: string | null;
+}
+
+export interface FraudRuleHit {
+  rule: string;
+  severity: "low" | "medium" | "high" | string;
+  message: string;
+  score: number;
+}
+
+export interface FraudCheckResult {
+  productId: number;
+  fraudScore: number;
+  concerns: string[];
+  recommendation: "approve" | "review" | "reject" | string;
+  reasoning?: string;
+  checkedBy?: string;
+  checkedAt?: string;
+  triggeredRules?: FraudRuleHit[];
+}
+
 export interface Product {
   id: string;
   productCode: string;
@@ -249,6 +327,7 @@ export interface Product {
   sku: string;
   images: string[];
   category: string;
+  categoryName?: string;
   price: number;
   originalPrice?: number;
   stock: number;
@@ -258,8 +337,27 @@ export interface Product {
   sellerAvatar?: string;
   attributes?: Record<string, string>;
   createdAt: string;
+  updatedAt?: string;
   rejectReason?: string;
+  hiddenAt?: string | null;
+  hiddenBy?: number | null;
+  hiddenByName?: string | null;
+  hiddenReason?: string | null;
+  hiddenByRole?: string | null;
+  fraudCheck?: FraudCheckResult;
   viewCount?: number;
+  // Sales metrics
+  rating?: number;
+  reviewCount?: number;
+  soldCount?: number;
+  // Brand & logistics
+  brand?: string;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  // Variants
+  variants?: ProductVariant[];
 }
 
 export interface Address {
@@ -332,6 +430,8 @@ export interface Order {
   internalNote?: string;
   isFlagged?: boolean;
   trackingNumber?: string; // Deprecated: use shipments[].tracking_number instead
+  sellerName?: string;
+  sellerId?: string;
 }
 
 // --- DASHBOARD TYPES (PHASE 1) ---
@@ -368,3 +468,19 @@ export interface TopProduct {
   stock: number;
   totalRevenue: number;
 }
+
+export type AuditLogAction =
+  | 'APPROVE_PRODUCT'
+  | 'REJECT_PRODUCT'
+  | 'APPROVE_PAYMENT'
+  | 'BLOCK_SELLER'
+  | 'UNBLOCK_SELLER'
+  | 'DELETE_SELLER'
+  | 'GRANT_ADMIN'
+  | 'REVOKE_ADMIN'
+  | 'UPDATE_SETTINGS'
+  | 'LOGIN_SUCCESS'
+  | 'LOGIN_FAILURE'
+  | 'BLOCK_USER';
+
+export type AuditLogResource = 'PRODUCT' | 'SHOP' | 'USER' | 'ADMIN' | 'ORDER' | 'FINANCE' | 'SYSTEM';

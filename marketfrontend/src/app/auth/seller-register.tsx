@@ -2,12 +2,14 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Store, User, Phone, CheckCircle, AlertCircle } from 'lucide-react';
-import { useToast } from '../../context/ToastContext.tsx';
+import { useToast } from '../../context/ToastContext';
+import { Logo } from '@/components/Logo';
 
 export default function SellerRegisterPage() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const toast = useToast();
   
   const [formData, setFormData] = useState({
@@ -84,7 +86,7 @@ export default function SellerRegisterPage() {
       toast.success("Đăng ký thành công! Vui lòng xác thực OTP.");
       
       setTimeout(() => {
-        navigate('/seller/verify-otp', { state: { email: formData.email } }); 
+        router.push(`/seller/verify-otp?email=${encodeURIComponent(formData.email)}`);
       }, 1000);
     }, 1500);
   };
@@ -102,11 +104,8 @@ export default function SellerRegisterPage() {
         {/* Content */}
         <div className="relative z-10">
             <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 bg-white text-blue-700 rounded-xl flex items-center justify-center shadow-xl shadow-black/10 overflow-hidden">
-                    <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                        (e.target as HTMLImageElement).parentElement!.innerHTML = '<span class="font-black text-xl text-blue-700 italic">V</span>';
-                    }} />
+                <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/10 overflow-hidden">
+                    <Logo variant="white" size={32} />
                 </div>
                 <div>
                     <span className="text-xl font-black tracking-tight block leading-none">VietCommerce Hub</span>
@@ -169,7 +168,7 @@ export default function SellerRegisterPage() {
         {/* Login Link */}
         <div className="absolute top-8 right-8 flex items-center gap-2 text-sm font-medium text-slate-600 z-20">
             Đã có tài khoản?
-            <Link to="/seller/login" className="text-blue-700 font-bold hover:underline">Đăng nhập</Link>
+            <Link href="/seller/login" className="text-blue-700 font-bold hover:underline">Đăng nhập</Link>
         </div>
 
         <div className="max-w-[600px] w-full bg-white p-8 lg:p-12 rounded-[32px] shadow-xl shadow-slate-200/50 border border-white relative my-auto">

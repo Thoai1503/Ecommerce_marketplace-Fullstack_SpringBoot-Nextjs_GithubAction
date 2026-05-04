@@ -6,28 +6,31 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import GeneralSettings from './GeneralSettings';
 import ProfileSettings from './ProfileSettings';
 import NotificationSettings from './NotificationSettings';
-import { Settings, User, CreditCard, Truck, Bell, Shield, ChevronRight } from 'lucide-react';
+import AuditLogsSettings from './AuditLogsSettings';
+import { Settings, CreditCard, Truck, Bell, Shield, ChevronRight, ClipboardList } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
-type SettingsTab = 'general' | 'profile' | 'payment' | 'shipping' | 'notifications';
+type SettingsTab = 'general' | 'profile' | 'payment' | 'shipping' | 'notifications' | 'audit-logs';
 
 // Nội dung chính của trang Settings, dùng useSearchParams bên trong Suspense
 function SettingsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
-  // Initialize activeTab based on URL query param 'tab', default to 'general'
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   useEffect(() => {
     const tabParam = searchParams.get('tab') as SettingsTab;
-    if (tabParam && ['general', 'profile', 'payment', 'shipping', 'notifications'].includes(tabParam)) {
+    const valid: SettingsTab[] = ['general', 'profile', 'payment', 'shipping', 'notifications', 'audit-logs'];
+    if (tabParam && valid.includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
 
   const handleTabChange = (tab: SettingsTab) => {
     setActiveTab(tab);
-    // Optional: Update URL without reloading to keep state in sync
     router.replace(`/admin/settings?tab=${tab}`);
   };
 
@@ -37,7 +40,8 @@ function SettingsContent() {
     { id: 'notifications', label: 'Thông báo', icon: <Bell size={18} />, desc: 'Email & Cảnh báo hệ thống' },
     { id: 'payment', label: 'Thanh toán', icon: <CreditCard size={18} />, disabled: true },
     { id: 'shipping', label: 'Vận chuyển', icon: <Truck size={18} />, disabled: true },
-  ];
+    ...(isSuperAdmin ? [{ id: 'audit-logs', label: 'Audit Log Hệ Thống', icon: <ClipboardList size={18} />, desc: 'Lịch sử hoạt động toàn hệ thống' }] : []),
+  ] as Array<{ id: string; label: string; icon: React.ReactNode; desc?: string; disabled?: boolean }>;
 
   return (
     <div className="min-h-screen pb-20">
@@ -98,6 +102,7 @@ function SettingsContent() {
             {activeTab === 'general' && <GeneralSettings />}
             {activeTab === 'profile' && <ProfileSettings />}
             {activeTab === 'notifications' && <NotificationSettings />}
+            {activeTab === 'audit-logs' && isSuperAdmin && <AuditLogsSettings />}
           </div>
         </div>
       </div>

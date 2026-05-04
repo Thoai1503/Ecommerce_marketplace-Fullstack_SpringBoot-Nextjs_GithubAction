@@ -4,6 +4,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Search, Menu, Moon, Sun, Monitor, ChevronDown, Check, User, Settings as SettingsIcon, History, LogOut, LayoutDashboard } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
 import ToastComponent, { ToastType } from '../../components/ui/Toast';
+import { useAuth } from '@/context/AuthContext';
+import { Logo } from '@/components/Logo';
 
 interface AdminHeaderProps {
   onMenuClick?: () => void;
@@ -14,6 +16,7 @@ type Theme = 'light' | 'dark' | 'system';
 const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const { logout } = useAuth();
   
   const [theme, setTheme] = useState<Theme>('system');
   const [isThemeOpen, setIsThemeOpen] = useState(false);
@@ -96,19 +99,9 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
     return 'Dashboard';
   };
 
-  const handleLogout = () => {
-    // Simulate logout process
+  const handleLogout = async () => {
     setIsProfileOpen(false);
-    setToast({ id: Date.now().toString(), message: "Đang đăng xuất...", type: "info" });
-    
-    setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token'); // Mock clearing token
-        // In a real app, redirect to login page. Here we reload or go to home.
-        // navigate('/login'); 
-        window.location.href = '/'; 
-      }
-    }, 800);
+    await logout();
   };
 
   const navigateTo = (path: string) => {
@@ -133,6 +126,10 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
         >
           <Menu size={24} />
         </button>
+
+        <div className="lg:hidden flex items-center justify-center">
+          <Logo variant="admin" size={32} />
+        </div>
 
         <div className="flex flex-col">
           <h1 className="text-[26px] font-bold text-[#1e293b] dark:text-white leading-tight tracking-tight">
