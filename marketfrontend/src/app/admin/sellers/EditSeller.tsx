@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSellerDetail } from "../../../hooks/admin/useSellers";
 import {
@@ -27,6 +27,7 @@ import { SellerStatus } from "../../../types/index";
 import ToastComponent, { ToastType } from "../../../components/ui/Toast";
 import { z } from "zod";
 import Breadcrumbs from "../../../components/ui/Breadcrumbs";
+import { API_URL } from "@/helper/api";
 
 // --- ZOD SCHEMA ---
 const sellerSchema = z.object({
@@ -57,6 +58,22 @@ const sellerSchema = z.object({
     ),
   status: z.enum(["ACTIVE", "BLOCKED", "PENDING"]),
   ownerName: z.string().min(1, "Tên người đại diện là bắt buộc."),
+  idCardFront: z
+    .string()
+    .optional()
+    .refine(
+      (val) =>
+        !val || /^(https?:\/\/|\/).+\.(jpg|jpeg|png|gif|webp)$/i.test(val),
+      "Đường dẫn ảnh mặt trước thẻ không hợp lệ.",
+    ),
+  idCardBack: z
+    .string()
+    .optional()
+    .refine(
+      (val) =>
+        !val || /^(https?:\/\/|\/).+\.(jpg|jpeg|png|gif|webp)$/i.test(val),
+      "Đường dẫn ảnh mặt sau thẻ không hợp lệ.",
+    ),
   password: z.string().optional(),
 });
 
@@ -69,6 +86,9 @@ export default function EditSeller() {
   const { seller, isLoading, createSeller, updateSeller, isSaving } =
     useSellerDetail(id || "");
 
+  const idCardFrontInputRef = useRef<HTMLInputElement>(null);
+  const idCardBackInputRef = useRef<HTMLInputElement>(null);
+
   // --- STATE ---
   const [formData, setFormData] = useState({
     brandTitle: "",
@@ -79,8 +99,12 @@ export default function EditSeller() {
     phone: "",
     status: "PENDING" as SellerStatus,
     ownerName: "",
+    idCardFront: "",
+    idCardBack: "",
     logoUrl: "",
   });
+
+  const [userInfo, setUserInfo] = useState<any>(null);
 
   // Password Management
   const [authMethod, setAuthMethod] = useState<"invite" | "manual">("invite");
@@ -95,23 +119,139 @@ export default function EditSeller() {
     type: ToastType;
   } | null>(null);
   const [isCheckDuplicating, setIsCheckDuplicating] = useState(false);
-
+  const [isVerified, setIsVerified] = useState(false);
   // Load data for Edit Mode
   useEffect(() => {
     if (isEditMode && seller) {
+      const s: any = seller;
+
       setFormData({
-        brandTitle: seller.brandTitle,
-        category: seller.category,
-        website: seller.website || "",
-        location: seller.location,
-        email: seller.email,
-        phone: seller.phone,
-        status: seller.status,
-        ownerName: seller.ownerName,
-        logoUrl: seller.logoUrl,
+        brandTitle: s.brandTitle || s.shop_name || "",
+        category: s.category || "Fashion",
+        website: s.website || "",
+        location: s.location || "",
+        email: s.email || "",
+        phone: s.phone || "",
+        status: s.is_active === 1 ? "ACTIVE" : s.status || "PENDING",
+        ownerName: s.owner_name || s.ownerName || "",
+        idCardFront: s.url_card_front || s.idCardFront || "",
+        idCardBack: s.url_card_back || s.idCardBack || "",
+        logoUrl: s.logoUrl || s.shop_logo || "",
       });
     }
   }, [isEditMode, seller]);
+
+  useEffect(() => {
+    const fetchShopImages = async () => {
+      if (!isEditMode || !id) return;
+
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/shops/${id}`,
+          {
+            credentials: "include",
+          },
+        );
+
+        if (!res.ok) return;
+
+        const shop = await res.json();
+
+        console.log("SHOP DETAIL:", shop);
+
+        // lấy is_verified từ bảng shop
+        setIsVerified(Number(shop.is_verified) === 1);
+
+        setFormData((prev) => ({
+          ...prev,
+          ownerName: shop.owner_name || prev.ownerName,
+          idCardFront: shop.url_card_front || "",
+          idCardBack: shop.url_card_back || "",
+          logoUrl: shop.shop_logo || prev.logoUrl,
+        }));
+      } catch (e) {
+        console.error("Load shop images failed", e);
+      }
+    };
+
+    fetchShopImages();
+  }, [isEditMode, id]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userId = (seller as any)?.user_id || (seller as any)?.userId;
+
+        if (!userId) return;
+
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`,
+          { credentials: "include" },
+        );
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        console.log("USER INFO:", data);
+
+        setUserInfo(data);
+
+        // 👇 đổ vào form luôn
+        setFormData((prev) => ({
+          ...prev,
+          ownerName: prev.ownerName || data.fullName || data.name || "",
+          email: prev.email || data.email || "",
+          phone: prev.phone || data.phone || "",
+        }));
+      } catch (e) {
+        console.error("Load user failed", e);
+      }
+    };
+
+    if (isEditMode && seller) {
+      fetchUser();
+    }
+  }, [isEditMode, seller]);
+
+  useEffect(() => {
+    const fetchAddress = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/addresses/shop/${id}`,
+          { credentials: "include" },
+        );
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        console.log("ADDRESS:", data);
+
+        const addressLine = data.address_line || data.addressLine || "";
+        const ward = data.ward_name || data.wardName || data.ward || "";
+        const district =
+          data.district_name || data.districtName || data.district || "";
+        const city = data.city_name || data.cityName || data.city || "";
+
+        const fullAddress = [addressLine, ward, district, city]
+          .filter(Boolean)
+          .join(", ");
+
+        setFormData((prev) => ({
+          ...prev,
+          phone: data.recipient_phone || data.recipientPhone || prev.phone,
+          location: fullAddress,
+        }));
+      } catch (e) {
+        console.error("Load address failed", e);
+      }
+    };
+
+    if (isEditMode && id) {
+      fetchAddress();
+    }
+  }, [isEditMode, id]);
 
   // --- LOGIC ---
 
@@ -176,6 +316,79 @@ export default function EditSeller() {
     return true;
   };
 
+  const saveShopAddress = async (shopId: number) => {
+    const shopAddressPayload = {
+      shop_id: shopId,
+      recipientName: formData.ownerName,
+      recipientPhone: formData.phone.trim(),
+      addressLine: formData.location.trim(),
+      ward: 0,
+      district: 0,
+      city: 0,
+      postalCode: "",
+      isDefault: 1,
+    };
+
+    const patchResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/addresses/shop/${shopId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(shopAddressPayload),
+      },
+    );
+
+    if (!patchResponse.ok) {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/addresses/shop`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(shopAddressPayload),
+      });
+    }
+  };
+
+  const uploadIdCardImage = async (
+    file: File,
+    field: "idCardFront" | "idCardBack",
+  ) => {
+    try {
+      const uploadForm = new FormData();
+      uploadForm.append("file", file);
+
+      const res = await fetch(`${API_URL}/api/upload/category`, {
+        method: "POST",
+        body: uploadForm,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data?.url) {
+        throw new Error("Upload failed");
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        [field]: data.url,
+      }));
+      setErrors((prev) => ({
+        ...prev,
+        [field]: "",
+      }));
+      setToast({
+        id: Date.now().toString(),
+        message: "Ảnh đã được tải lên thành công.",
+        type: "success",
+      });
+    } catch (error) {
+      setToast({
+        id: Date.now().toString(),
+        message: "Tải ảnh thất bại. Vui lòng thử lại.",
+        type: "error",
+      });
+    }
+  };
+
   const handleSubmit = async (action: "save" | "save_and_add") => {
     const isValid = await validateForm();
     if (!isValid) {
@@ -190,6 +403,18 @@ export default function EditSeller() {
     try {
       if (isEditMode) {
         await updateSeller(formData);
+        await saveShopAddress(Number(id));
+
+        // Update user_type to 'both' for accounts with shop
+        const userId = (seller as any)?.user_id || (seller as any)?.userId;
+        if (userId) {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ user_type: "both" }),
+          });
+        }
         setToast({
           id: Date.now().toString(),
           message: "Cập nhật thông tin thành công!",
@@ -198,12 +423,29 @@ export default function EditSeller() {
         setTimeout(() => router.push("/admin/sellers"), 1000);
       } else {
         // Create Logic
-        await createSeller({
+        const createdSeller = await createSeller({
           ...formData,
           logoUrl:
             formData.logoUrl ||
             `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.brandTitle)}&background=random`,
         });
+
+        const shopId = Number(createdSeller.id);
+        if (shopId) {
+          await saveShopAddress(shopId);
+        }
+
+        // Update user_type to 'both' for accounts with shop
+        const userId =
+          (createdSeller as any)?.user_id || (createdSeller as any)?.userId;
+        if (userId) {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ user_type: "both" }),
+          });
+        }
 
         setToast({
           id: Date.now().toString(),
@@ -222,6 +464,8 @@ export default function EditSeller() {
             phone: "",
             status: "PENDING",
             ownerName: "",
+            idCardFront: "",
+            idCardBack: "",
             logoUrl: "",
           });
           setManualPassword("");
@@ -235,6 +479,47 @@ export default function EditSeller() {
       setToast({
         id: Date.now().toString(),
         message: "Đã có lỗi xảy ra. Vui lòng thử lại.",
+        type: "error",
+      });
+    }
+  };
+
+  const handleVerify = async () => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/shops/${id}/verify`,
+        {
+          method: "PATCH",
+          credentials: "include",
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error("Verify failed");
+      }
+
+      // Update user_type to 'both' when shop is verified
+      const userId = (seller as any)?.user_id || (seller as any)?.userId;
+      if (userId) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ user_type: "both" }),
+        });
+      }
+
+      setToast({
+        id: Date.now().toString(),
+        message: "The shop has been verified!",
+        type: "success",
+      });
+
+      router.refresh(); // reload lại data
+    } catch (e) {
+      setToast({
+        id: Date.now().toString(),
+        message: "Failed to verify the shop!",
         type: "error",
       });
     }
@@ -272,12 +557,12 @@ export default function EditSeller() {
           </button>
           <div>
             <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
-              {isEditMode ? "Chỉnh sửa Seller" : "Thêm Nhà bán hàng"}
+              {isEditMode ? "Edit Seller" : "Add Seller"}
             </h1>
             <p className="text-sm text-slate-500 font-medium mt-1">
               {isEditMode
-                ? `Cập nhật thông tin cho mã: ${seller?.accountCode}`
-                : "Thiết lập hồ sơ và tài khoản cho đối tác mới."}
+                ? `Update the information for the code: ${seller?.accountCode}`
+                : "Set up the profile and account for the new partner."}
             </p>
           </div>
         </div>
@@ -286,7 +571,7 @@ export default function EditSeller() {
             onClick={() => router.push("/admin/sellers")}
             className="px-5 py-3 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all border-0 bg-transparent"
           >
-            Hủy
+            Cancel
           </button>
 
           {!isEditMode && (
@@ -295,7 +580,7 @@ export default function EditSeller() {
               disabled={isSaving || isCheckDuplicating}
               className="hidden md:flex items-center gap-2 px-5 py-3 bg-white border-2 border-blue-100 text-blue-600 text-sm font-bold rounded-xl hover:bg-blue-50 transition-all shadow-sm disabled:opacity-50"
             >
-              <RefreshCw size={18} /> Lưu & Thêm tiếp
+              <RefreshCw size={18} /> Save & Add More
             </button>
           )}
 
@@ -305,14 +590,14 @@ export default function EditSeller() {
             className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all border-0 disabled:opacity-50"
           >
             {isSaving ? (
-              "Đang xử lý..."
+              "Processing..."
             ) : isEditMode ? (
               <>
-                <Save size={18} /> Lưu thay đổi
+                <Save size={18} /> Save Changes
               </>
             ) : (
               <>
-                <UserPlus size={18} /> Tạo tài khoản
+                <UserPlus size={18} /> Create Account
               </>
             )}
           </button>
@@ -326,7 +611,7 @@ export default function EditSeller() {
           <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-8 space-y-6 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
             <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 border-b border-slate-100 pb-4">
-              <Store size={18} className="text-blue-500" /> Thông tin cửa hàng
+              <Store size={18} className="text-blue-500" /> Store information
             </h3>
 
             <div className="space-y-6">
@@ -355,12 +640,13 @@ export default function EditSeller() {
                 </div>
                 <div className="flex-1">
                   <label className="text-sm font-bold text-slate-700 block mb-2">
-                    Tên thương hiệu (Brand Title){" "}
+                    Brand name (Brand Title){" "}
                     <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.brandTitle}
+                    disabled
                     onChange={(e) => {
                       setFormData({ ...formData, brandTitle: e.target.value });
                       if (errors.brandTitle)
@@ -378,29 +664,6 @@ export default function EditSeller() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">
-                    Danh mục chính
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={formData.category}
-                      onChange={(e) =>
-                        setFormData({ ...formData, category: e.target.value })
-                      }
-                      className="w-full pl-4 pr-10 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 text-sm font-medium appearance-none cursor-pointer"
-                    >
-                      <option value="Fashion">Fashion</option>
-                      <option value="Electronics">Electronics</option>
-                      <option value="Watches">Watches</option>
-                      <option value="Home & Living">Home & Living</option>
-                      <option value="Accessories">Accessories</option>
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
-                      ▼
-                    </div>
-                  </div>
-                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">
                     Website
@@ -436,19 +699,20 @@ export default function EditSeller() {
           <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-8 space-y-6 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
             <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 border-b border-slate-100 pb-4">
-              <Contact size={18} className="text-purple-500" /> Thông tin liên
-              hệ
+              <Contact size={18} className="text-purple-500" /> Contact
+              information
             </h3>
 
             <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">
-                  Tên người đại diện (Owner Name){" "}
+                  Name of representative (Owner Name){" "}
                   <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.ownerName}
+                  disabled={isEditMode} // Không cho edit ownerName khi ở chế độ Edit
                   onChange={(e) => {
                     setFormData({ ...formData, ownerName: e.target.value });
                     if (errors.ownerName)
@@ -467,12 +731,120 @@ export default function EditSeller() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">
-                    Email (Tài khoản chính){" "}
+                    CCCD / ID card front
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => idCardFrontInputRef.current?.click()}
+                    disabled={isEditMode} // Không cho upload khi ở chế độ Edit
+                    className={`w-full h-52 rounded-3xl border-2 border-dashed text-slate-400 hover:border-purple-500 hover:bg-purple-50 transition-all overflow-hidden ${errors.idCardFront ? "border-red-300 bg-red-50" : "border-slate-200 bg-slate-50"}`}
+                  >
+                    {formData.idCardFront ? (
+                      <img
+                        src={formData.idCardFront}
+                        alt="ID card front"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex flex-col items-center justify-center gap-3 px-4 text-center">
+                        <UploadCloud size={28} />
+                        <div>
+                          <p className="font-bold text-slate-700">
+                            Click to upload front image
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            JPG, PNG, WEBP
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={idCardFrontInputRef}
+                    hidden
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      await uploadIdCardImage(file, "idCardFront");
+                    }}
+                  />
+                  {formData.idCardFront && (
+                    <p className="text-xs text-slate-500 break-words">
+                      URL: {formData.idCardFront}
+                    </p>
+                  )}
+                  {errors.idCardFront && (
+                    <p className="text-xs text-red-500 mt-1 font-bold">
+                      {errors.idCardFront}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">
+                    CCCD / ID card back
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => idCardBackInputRef.current?.click()}
+                    disabled={isEditMode} // Không cho upload khi ở chế độ Edit
+                    className={`w-full h-52 rounded-3xl border-2 border-dashed text-slate-400 hover:border-purple-500 hover:bg-purple-50 transition-all overflow-hidden ${errors.idCardBack ? "border-red-300 bg-red-50" : "border-slate-200 bg-slate-50"}`}
+                  >
+                    {formData.idCardBack ? (
+                      <img
+                        src={formData.idCardBack}
+                        alt="ID card back"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex flex-col items-center justify-center gap-3 px-4 text-center">
+                        <UploadCloud size={28} />
+                        <div>
+                          <p className="font-bold text-slate-700">
+                            Click to upload back image
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            JPG, PNG, WEBP
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={idCardBackInputRef}
+                    hidden
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      await uploadIdCardImage(file, "idCardBack");
+                    }}
+                  />
+                  {formData.idCardBack && (
+                    <p className="text-xs text-slate-500 break-words">
+                      URL: {formData.idCardBack}
+                    </p>
+                  )}
+                  {errors.idCardBack && (
+                    <p className="text-xs text-red-500 mt-1 font-bold">
+                      {errors.idCardBack}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">
+                    Email (Primary Account){" "}
                     <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
                     value={formData.email}
+                    disabled={isEditMode} // Không cho edit email khi ở chế độ Edit
                     onChange={(e) => {
                       setFormData({ ...formData, email: e.target.value });
                       if (errors.email) setErrors({ ...errors, email: "" });
@@ -488,11 +860,12 @@ export default function EditSeller() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">
-                    Số điện thoại <span className="text-red-500">*</span>
+                    Phone Number <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.phone}
+                    disabled={isEditMode} // Không cho edit phone khi ở chế độ Edit
                     onChange={(e) => {
                       setFormData({ ...formData, phone: e.target.value });
                       if (errors.phone) setErrors({ ...errors, phone: "" });
@@ -510,18 +883,22 @@ export default function EditSeller() {
 
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">
-                  Địa chỉ kho/văn phòng <span className="text-red-500">*</span>
+                  Warehouse/Office Address{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     value={formData.location}
-                    onChange={(e) => {
-                      setFormData({ ...formData, location: e.target.value });
-                      if (errors.location)
-                        setErrors({ ...errors, location: "" });
-                    }}
-                    className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl focus:outline-none focus:ring-4 text-sm font-medium transition-all ${errors.location ? "border-red-300 focus:ring-red-100" : "border-slate-200 focus:ring-purple-500/10"}`}
+                    disabled={isEditMode} // Không cho edit location khi ở chế độ Edit
+                    onChange={(e) =>
+                      setFormData({ ...formData, location: e.target.value })
+                    }
+                    className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl focus:outline-none focus:ring-4 text-sm font-medium transition-all ${
+                      errors.location
+                        ? "border-red-300 focus:ring-red-100"
+                        : "border-slate-200 focus:ring-purple-500/10"
+                    }`}
                     placeholder="VD: 123 Đường ABC, Quận 1..."
                   />
                   <MapPin
@@ -645,8 +1022,8 @@ export default function EditSeller() {
           {/* Section 4: Status Management */}
           <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-6 space-y-6">
             <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-              <ShieldCheck size={18} className="text-green-500" /> Trạng thái
-              hoạt động
+              <ShieldCheck size={18} className="text-green-500" /> Operating
+              status
             </h3>
 
             <div className="space-y-4">
@@ -714,17 +1091,18 @@ export default function EditSeller() {
           </div>
           {isEditMode && (
             <button
-              onClick={() => {
-                setToast({
-                  id: Date.now().toString(),
-                  message: "Đã bật xác minh cho shop!",
-                  type: "success",
-                });
-              }}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-green-500/20 transition-all"
+              onClick={handleVerify}
+              disabled={isVerified}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold rounded-xl transition-all
+                    ${
+                      isVerified
+                        ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700 text-white"
+                    }
+                  `}
             >
               <ShieldCheck size={18} />
-              Bật verify cho shop
+              {isVerified ? "Verified" : "Turn on verification for the shop"}
             </button>
           )}
 
