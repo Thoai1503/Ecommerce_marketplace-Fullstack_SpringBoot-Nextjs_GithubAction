@@ -45,6 +45,10 @@ public class ReturnRequest {
     @Column(name ="customer_id", nullable = false)
     private Long customerId;
     
+    
+    @Column(name = "order_shipment_id", nullable = false)
+    private Long orderShipmentId;
+    
     @Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
     @Builder.Default

@@ -656,20 +656,21 @@ export default function UserOrderDetailPage() {
 
     setReturnRequestDrafts((prev) => {
       const existing = prev[shipmentId];
-      const selectedItemIds = shipment.items.reduce<Record<string, boolean>>(
+      const selectedItemIds = shipment.items.reduce<Record<number, boolean>>(
         (acc, item) => {
-          acc[item.id] = existing?.selectedItemIds?.[item.id] || false;
+          acc[Number(item.id)] =
+            existing?.selectedItemIds?.[Number(item.id)] || false;
           return acc;
         },
         {},
       );
-
       return {
         ...prev,
         [shipmentId]: {
           selectedItemIds,
           reason: existing?.reason || "",
           files: existing?.files || [],
+          returnQuantities: existing?.returnQuantities || {},
         },
       };
     });
@@ -686,27 +687,41 @@ export default function UserOrderDetailPage() {
     patch: Partial<ReturnRequestDraft>,
   ) => {
     setReturnRequestDrafts((prev) => {
-      const current =
-        prev[shipmentId] ||
-        ({
-          selectedItemIds: {},
-          reason: "",
-          files: [],
-        } as ReturnRequestDraft);
-
+      const current: ReturnRequestDraft = prev[shipmentId] || {
+        selectedItemIds: {},
+        reason: "",
+        files: [],
+        returnQuantities: {},
+      };
       return {
         ...prev,
         [shipmentId]: {
           ...current,
           ...patch,
+          returnQuantities:
+            patch.returnQuantities ?? current.returnQuantities ?? {},
         },
       };
     });
   };
 
+  const onQuantityChange = (
+    shipmentId: number,
+    itemId: number,
+    quantity: number,
+  ) => {
+    const currentDraft = returnRequestDrafts[shipmentId];
+    updateReturnDraft(shipmentId, {
+      returnQuantities: {
+        ...(currentDraft?.returnQuantities || {}),
+        [itemId]: quantity,
+      },
+    });
+  };
+
   const toggleReturnItem = (
     shipmentId: number,
-    itemId: string,
+    itemId: number,
     checked: boolean,
   ) => {
     const currentDraft = returnRequestDrafts[shipmentId];
@@ -970,9 +985,13 @@ export default function UserOrderDetailPage() {
     const shipmentId = activeReturnShipment.id;
     const draft = returnRequestDrafts[shipmentId];
     console.log("Submitting return request with draft:", draft);
-    const selectedItems = activeReturnShipment.items.filter(
-      (item) => !!draft?.selectedItemIds?.[item.id],
-    );
+    const selectedItems = activeReturnShipment.items
+      .filter((item) => !!draft?.selectedItemIds?.[item.id])
+      .map((item) => ({
+        ...item,
+        // Use the quantity from draft.returnQuantities if present, otherwise fallback to 1
+        quantity: draft?.returnQuantities?.[item.id] ?? 1,
+      }));
     console.log("Selected items for return:", selectedItems);
     const reason = String(draft?.reason || "").trim();
 
@@ -1023,14 +1042,18 @@ export default function UserOrderDetailPage() {
       (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
       0,
     );
-    alert(
-      `Total quantity: ${totalQuantity}, Total requested amount: ${totalRequestedAmount}`,
-    );
+    // alert(
+    //   `Total quantity: ${totalQuantity}, Total requested amount: ${totalRequestedAmount}`,
+    // );
+    // alert("selectedItems data: " + JSON.stringify(selectedItems, null, 2));
+    alert("shipmentId: " + shipmentId);
+
     const formData = new FormData();
     formData.append("orderId", id);
     formData.append("shopId", String(activeReturnShipment.shop_id));
     formData.append("customerId", String(userId));
     formData.append("reason", reason);
+    formData.append("orderShipmentId", String(shipmentId));
     formData.append("quantity", String(totalQuantity));
     formData.append("requestedAmount", String(totalRequestedAmount));
     formData.append(
@@ -1039,6 +1062,7 @@ export default function UserOrderDetailPage() {
         selectedItems.map((item) => ({
           orderItemId: item.id,
           quantity: item.quantity,
+          orderShipmentId: shipmentId,
           requestedAmount: Number(item.price || 0) * Number(item.quantity || 0),
         })),
       ),
@@ -1400,13 +1424,13 @@ export default function UserOrderDetailPage() {
                 return toOrderItemWithRedemptionDiscount(item);
               })
             : orderItems;
-          orderData?.items.map((item: any) => {
-            console.log("Mapping order item:", item);
-            return {
-              ...item,
-              productImage: item.image,
-            };
-          }) || [];
+        orderData?.items.map((item: any) => {
+          console.log("Mapping order item:", item);
+          return {
+            ...item,
+            productImage: item.image,
+          };
+        }) || [];
 
         orderData?.items.forEach((item: any) => {
           console.log(
@@ -2948,11 +2972,14 @@ export default function UserOrderDetailPage() {
       {/* Return Request Modal */}
       {activeReturnShipment && (
         <ReturnRequestModal
+          onQuantityChange={(itemId, quantity) =>
+            onQuantityChange(activeReturnShipment.id, itemId, quantity)
+          }
           shipment={activeReturnShipment}
           draft={returnRequestDrafts[activeReturnShipment.id]}
           status={returnActionStatus[activeReturnShipment.id]}
           onClose={closeReturnModal}
-          onToggleItem={(itemId, checked) =>
+          onToggleItem={(itemId: number, checked) =>
             toggleReturnItem(activeReturnShipment.id, itemId, checked)
           }
           onReasonChange={(reason) =>
