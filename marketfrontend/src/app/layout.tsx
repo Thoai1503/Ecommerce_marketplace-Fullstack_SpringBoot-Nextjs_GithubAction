@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Script from "next/script";
 import StoreProvider from "./StoreProvider";
+import NextTopLoader from "nextjs-toploader";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -112,6 +113,17 @@ export default function RootLayout({
           </style>
         </head>
         <body className={`index-page`} suppressHydrationWarning>
+          <NextTopLoader
+            color="#ee4d2d"
+            initialPosition={0.08}
+            crawlSpeed={200}
+            height={3}
+            crawl={true}
+            showSpinner={false}
+            easing="ease"
+            speed={200}
+            zIndex={9999}
+          />
           <main className="main">{children}</main>
 
           {/* <Script src="/assets/js/main.js" strategy="afterInteractive" /> */}
