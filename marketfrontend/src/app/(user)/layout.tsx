@@ -35,7 +35,7 @@ export default async function UserLayout({
     <>
       <RootPrivider>
         <UserAuthProvider role={role} user_id={id}>
-          <CustomProgressBar />
+          {/* <CustomProgressBar /> */}
           {/* ================= HEADER ================= */}
           <header className="sticky-top bg-white shadow-sm">
             {/* Utility Bar */}

@@ -1,28 +1,18 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import NextTopLoader from "nextjs-toploader";
 
 export default function CustomProgressBar() {
-  const pathname = usePathname();
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    setLoading(false);
-  }, [pathname]);
-
-  return loading ? (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: "3px",
-        background: "var(--primary)",
-        zIndex: 9999,
-        animation: "progress 1s ease-in-out infinite",
-      }}
+  return (
+    <NextTopLoader
+      color="#8F0505"
+      initialPosition={0.08}
+      crawlSpeed={200}
+      height={5}
+      crawl={true}
+      showSpinner={true}
+      easing="ease"
+      speed={200}
+      zIndex={9999}
+      showAtBottom={false}
     />
-  ) : null;
+  );
 }

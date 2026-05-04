@@ -6,6 +6,8 @@ export type ReturnRequestDraft = {
   selectedItemIds: Record<string, boolean>;
   reason: string;
   files: File[];
+  // Thêm số lượng hoàn trả cho từng item
+  returnQuantities: Record<string, number>;
 };
 
 type OrderShipment = NonNullable<Order["shipments"]>[number];
@@ -23,7 +25,8 @@ type ReturnRequestModalProps = {
   status?: "idle" | "pending" | "submitted";
   attachments?: ReturnRequestAttachment[];
   onClose: () => void;
-  onToggleItem: (itemId: string, checked: boolean) => void;
+  onToggleItem: (itemId: number, checked: boolean) => void;
+  onQuantityChange: (itemId: number, quantity: number) => void;
   onReasonChange: (reason: string) => void;
   onFilesChange: (files: FileList | null) => void;
   onRemoveFile: (fileIndex: number) => void;
@@ -47,6 +50,7 @@ export default function ReturnRequestModal({
   attachments = [],
   onClose,
   onToggleItem,
+  onQuantityChange,
   onReasonChange,
   onFilesChange,
   onRemoveFile,
@@ -246,7 +250,8 @@ export default function ReturnRequestModal({
           <div className="d-flex flex-column gap-2 mb-4">
             {shipment.items.map((item) => {
               const checked = !!draft?.selectedItemIds?.[item.id];
-
+              const maxQty = item.quantity || 1;
+              const value = draft?.returnQuantities?.[item.id] ?? 0;
               return (
                 <label
                   key={`${shipment.id}-return-${item.id}`}
@@ -265,7 +270,7 @@ export default function ReturnRequestModal({
                     type="checkbox"
                     checked={checked}
                     onChange={(event) =>
-                      onToggleItem(item.id, event.target.checked)
+                      onToggleItem(Number(item.id), event.target.checked)
                     }
                     disabled={status === "pending"}
                   />
@@ -296,7 +301,7 @@ export default function ReturnRequestModal({
                     </p>
                   </div>
 
-                  <div className="text-end">
+                  <div className="text-end" style={{ minWidth: 120 }}>
                     <p
                       className="mb-1"
                       style={{
@@ -308,6 +313,43 @@ export default function ReturnRequestModal({
                       {formatMoney(item.price)}
                     </p>
                     <span style={styles.qtyBadge}>SL: {item.quantity}</span>
+                    {checked && (
+                      <div style={{ marginTop: 6 }}>
+                        <input
+                          type="number"
+                          min={1}
+                          max={maxQty}
+                          value={value}
+                          onChange={(e) => {
+                            let v = Math.max(
+                              1,
+                              Math.min(Number(e.target.value) || 1, maxQty),
+                            );
+                            // Nếu bỏ chọn thì không cho nhập
+                            if (!checked) v = 0;
+                            onQuantityChange(Number(item.id), v);
+                          }}
+                          disabled={status === "pending"}
+                          style={{
+                            width: 60,
+                            padding: 2,
+                            borderRadius: 4,
+                            border: "1px solid #cbd5e1",
+                            marginLeft: 8,
+                            fontSize: 12,
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "#64748b",
+                            marginLeft: 4,
+                          }}
+                        >
+                          / {maxQty}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </label>
               );

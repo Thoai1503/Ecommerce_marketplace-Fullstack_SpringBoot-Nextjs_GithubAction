@@ -1,5 +1,6 @@
 package docker_test.com.services;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -7,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import docker_test.com.dto.RefundRequestDTO;
 import docker_test.com.models.refunds.ReturnRequest;
+import docker_test.com.models.refunds.ReturnRequestStatus;
 import docker_test.com.repository.RefundRequestRepository;
 import docker_test.com.repository.ReturnReqestItemRepositrory;
 
@@ -36,6 +38,11 @@ public class RefundRequestService {
 		return savedRefundRequest;
 	}
 
+	
+	public ReturnRequest getRefundRequestsByOrderShipmentId(Long orderShipmentId) {
+		return refundRequestRepository.findByOrderShipmentId(orderShipmentId);
+	}
+	
 	public ReturnRequest createRefundRequestWithFiles(
 			RefundRequestDTO refundRequestDTO,
 			List<MultipartFile> files,
@@ -55,6 +62,7 @@ public class RefundRequestService {
 		refundRequest.setShopId(refundRequestDTO.getShopId());
 		refundRequest.setCustomerId(refundRequestDTO.getCustomerId());
 		refundRequest.setReason(refundRequestDTO.getReason());
+		refundRequest.setOrderShipmentId(refundRequestDTO.getOrderShipmentId());
 		refundRequest.setQuantity(refundRequestDTO.getQuantity());
 		refundRequest.setRequestedAmount(refundRequestDTO.getRequestedAmount());
 		var savedRefundRequest = refundRequestRepository.save(refundRequest);
@@ -80,7 +88,7 @@ public class RefundRequestService {
 		return savedRefundRequest;
 	}
 	 
-	public List<ReturnRequest> getRefundRequestsByCustomerId() {
+	public List<ReturnRequest> getAll() {
 		refundRequestRepository.findAll().forEach(request -> {
 			request.getItems().forEach(item -> {
 				System.out.println("OrderItemId: " + item.getOrderItemId() + " Quantity: " + item.getQuantity() + " RequestedAmount: " + item.getRequestedAmount());
@@ -94,6 +102,22 @@ public class RefundRequestService {
 	
 	public ReturnRequest getRefundRequestById(Long id) {
 		return refundRequestRepository.findById(id).orElse(null);
+	}
+
+	public ReturnRequest updateStatus(Long id, ReturnRequestStatus status, Double refundedAmount) {
+		ReturnRequest request = refundRequestRepository.findById(id).orElse(null);
+		if (request == null) {
+			return null;
+		}
+
+		request.setStatus(status);
+		if (status == ReturnRequestStatus.REFUNDED) {
+			request.setRefundedAmount(refundedAmount != null ? refundedAmount : request.getRequestedAmount());
+		} else if (refundedAmount != null) {
+			request.setRefundedAmount(refundedAmount);
+		}
+		request.setUpdatedAt(LocalDateTime.now());
+		return refundRequestRepository.save(request);
 	}
 	
 }
