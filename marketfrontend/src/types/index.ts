@@ -498,6 +498,7 @@ export interface SellerSettlementAdmin {
   paidAt?: string | null;
   bankTransferRef?: string | null;
   processedBy?: number | null;
+  is_verified: number;
   createdAt: string;
 }
 
@@ -705,6 +706,9 @@ export interface Seller {
   status: SellerStatus;
   createdAt: string;
   ownerName: string;
+  userId?: string;
+  idCardFront?: string;
+  idCardBack?: string;
   totalProducts: number;
   totalOrders: number;
   totalRevenue: number;

@@ -20,6 +20,9 @@ const mapShopToSeller = (shop: any): Seller => {
     status: (shop.is_active ? 'ACTIVE' : 'BLOCKED') as SellerStatus,
     createdAt: shop.created_at || new Date().toISOString(),
     ownerName: shop.owner_name || '',
+    idCardFront: shop.id_card_front || '',
+    idCardBack: shop.id_card_back || '',
+    userId: String(shop.user_id || shop.userId || ''),
     totalProducts: shop.total_products || 0,
     totalOrders: shop.total_orders || 0,
     totalRevenue: shop.total_revenue || 0,
@@ -61,6 +64,8 @@ export const createSeller = async (data: Omit<Seller, 'id' | 'accountCode' | 'cr
       phone: data.phone,
       shop_logo: data.logoUrl,
       owner_name: data.ownerName,
+      id_card_front: (data as any).idCardFront,
+      id_card_back: (data as any).idCardBack,
       is_active: data.status === 'ACTIVE' ? 1 : 0,
     };
     const response = await axios.post(`${API_URL}/shops`, payload);
@@ -83,6 +88,8 @@ export const updateSeller = async (id: string, data: Partial<Seller>): Promise<S
     if (data.phone) payload.phone = data.phone;
     if (data.logoUrl) payload.shop_logo = data.logoUrl;
     if (data.ownerName) payload.owner_name = data.ownerName;
+    if ((data as any).idCardFront !== undefined) payload.id_card_front = (data as any).idCardFront;
+    if ((data as any).idCardBack !== undefined) payload.id_card_back = (data as any).idCardBack;
     if (data.status) payload.is_active = data.status === 'ACTIVE' ? 1 : 0;
 
     const response = await axios.put(`${API_URL}/shops/${id}`, payload);

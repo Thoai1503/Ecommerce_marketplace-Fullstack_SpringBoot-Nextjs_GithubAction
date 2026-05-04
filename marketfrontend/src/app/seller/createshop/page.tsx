@@ -1,5 +1,5 @@
 "use client";
-
+import { API_URL } from "@/helper/api";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -33,7 +33,9 @@ type TaxFormData = {
 };
 
 type ShopFormErrors = Partial<Record<keyof ShopFormData, string>>;
-type IdentificationErrors = Partial<Record<keyof IdentificationFormData, string>>;
+type IdentificationErrors = Partial<
+  Record<keyof IdentificationFormData, string>
+>;
 type TaxFormErrors = Partial<Record<keyof TaxFormData, string>>;
 
 export default function ShopInfoPage() {
@@ -53,13 +55,12 @@ export default function ShopInfoPage() {
     wardCode: null,
   });
 
-  const [identification, setIdentification] =
-    useState<IdentificationFormData>({
-      fullName: "",
-      idNumber: "",
-      idFront: null,
-      idBack: null,
-    });
+  const [identification, setIdentification] = useState<IdentificationFormData>({
+    fullName: "",
+    idNumber: "",
+    idFront: null,
+    idBack: null,
+  });
 
   const [errors, setErrors] = useState<ShopFormErrors>({});
   const [idErrors, setIdErrors] = useState<IdentificationErrors>({});
@@ -67,6 +68,25 @@ export default function ShopInfoPage() {
     taxCode: "",
   });
   const [taxErrors, setTaxErrors] = useState<TaxFormErrors>({});
+
+  const getRegistrationStep = (shop: any) => {
+    if (!shop) return 0;
+
+    const hasShopInfo = !!shop.id;
+    const hasIdentification =
+      !!shop.owner_name &&
+      !!shop.business_license &&
+      !!shop.url_card_front &&
+      !!shop.url_card_back;
+
+    const hasTax = !!shop.tax_code;
+
+    if (!hasShopInfo) return 0;
+    if (!hasIdentification) return 1;
+    if (!hasTax) return 2;
+
+    return 3;
+  };
 
   useEffect(() => {
     const rawUser = localStorage.getItem("user");
@@ -144,6 +164,18 @@ export default function ShopInfoPage() {
           setShopId(existingShopId);
           localStorage.setItem("seller_shop_id", String(existingShopId));
           localStorage.setItem("seller_shop_user_id", String(parsedUser.id));
+
+          setStep(getRegistrationStep(shopData));
+
+          setIdentification((prev) => ({
+            ...prev,
+            fullName: shopData.owner_name || prev.fullName,
+            idNumber: shopData.business_license || "",
+          }));
+
+          setTaxInfo({
+            taxCode: shopData.tax_code || "",
+          });
         }
       } catch (err) {
         console.log("Unable to load existing shop for current user", err);
@@ -462,23 +494,60 @@ export default function ShopInfoPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const uploadImage = async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+
+    const res = await fetch(`${API_URL}/api/upload/category`, {
+      method: "POST",
+      body: form,
+    });
+
+    if (!res.ok) throw new Error("Upload ảnh thất bại");
+
+    const data = await res.json();
+    return data.url;
+  };
+
   const handleSubmitTaxInfo = async () => {
     if (!validateTaxInfo()) return;
 
+    saveStepTwo();
     saveStepThree();
 
     const currentShopId =
       shopId || Number(localStorage.getItem("seller_shop_id") || 0);
+
     if (!currentShopId) {
-      alert("Không tìm thấy shop ID để cập nhật thông tin thuế");
+      alert("Không tìm thấy shop ID để cập nhật thông tin");
       return;
     }
 
     try {
-      const updatePayload = {
+      let idCardFrontUrl = "";
+      let idCardBackUrl = "";
+
+      if (identification.idFront) {
+        idCardFrontUrl = await uploadImage(identification.idFront);
+      }
+
+      if (identification.idBack) {
+        idCardBackUrl = await uploadImage(identification.idBack);
+      }
+
+      const updatePayload: any = {
+        owner_name: identification.fullName.trim(),
         business_license: identification.idNumber.trim(),
         tax_code: taxInfo.taxCode.trim(),
       };
+
+      if (idCardFrontUrl) {
+        updatePayload.url_card_front = idCardFrontUrl;
+      }
+
+      if (idCardBackUrl) {
+        updatePayload.url_card_back = idCardBackUrl;
+      }
 
       const updateRes = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/shops/${currentShopId}`,
@@ -494,14 +563,14 @@ export default function ShopInfoPage() {
       if (!updateRes.ok) {
         const errorText = await updateRes.text();
         console.log("UPDATE SHOP ERROR:", errorText);
-        alert("Lưu thông tin thuế thất bại: " + errorText);
+        alert("Lưu thông tin xác minh thất bại: " + errorText);
         return;
       }
 
       setStep(3);
     } catch (err) {
       console.log(err);
-      alert("Có lỗi khi lưu thông tin thuế");
+      alert("Có lỗi khi upload ảnh hoặc lưu thông tin xác minh");
     }
   };
 
@@ -514,7 +583,10 @@ export default function ShopInfoPage() {
           "Tax information",
           "Complete",
         ].map((stepName, index) => (
-          <div key={stepName} className={`step ${index === step ? "active" : ""}`}>
+          <div
+            key={stepName}
+            className={`step ${index === step ? "active" : ""}`}
+          >
             {stepName}
           </div>
         ))}
@@ -733,7 +805,10 @@ export default function ShopInfoPage() {
             <button className="btn-outline" onClick={() => setStep(0)}>
               Back
             </button>
-            <button className="btn-primary" onClick={handleSubmitIdentification}>
+            <button
+              className="btn-primary"
+              onClick={handleSubmitIdentification}
+            >
               Next
             </button>
           </div>
@@ -782,7 +857,10 @@ export default function ShopInfoPage() {
             <button className="btn-outline" onClick={() => setStep(2)}>
               Back
             </button>
-            <button className="btn-primary" onClick={() => router.push("/seller")}>
+            <button
+              className="btn-primary"
+              onClick={() => router.push("/seller")}
+            >
               Go to Seller Center
             </button>
           </div>
