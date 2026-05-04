@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -169,6 +169,11 @@ export default function AdminSidebar({
 }: AdminSidebarProps) {
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const orderStatus = (searchParams.get("status") || "ALL").toUpperCase();
+  const paymentStatus = (
+    searchParams.get("paymentStatus") || "all"
+  ).toUpperCase();
 
   // Auto-expand parent menu when a child is active
   useEffect(() => {
@@ -178,6 +183,12 @@ export default function AdminSidebar({
     if (pathname.includes("/admin/finance")) {
       setOpenSubmenu("finance");
     }
+    if (
+      pathname.includes("/admin/orders") ||
+      pathname.includes("/admin/return-requests")
+    ) {
+      setOpenSubmenu("order-management");
+    }
   }, [pathname]);
 
   const navigation = [
@@ -185,18 +196,54 @@ export default function AdminSidebar({
       group: "CHÍNH",
       items: [
         { label: "Tổng quan", path: "/admin", icon: <LayoutDashboard /> },
-        {
-          label: "Đơn hàng",
-          path: "/admin/orders",
-          icon: <ShoppingCart />,
-          badge: 5,
-        },
       ],
     },
     {
       group: "KINH DOANH",
       items: [
         { label: "Sản phẩm", path: "/admin/products", icon: <Package /> },
+        {
+          label: "Quản lý đơn hàng",
+          id: "order-management",
+          icon: <ShoppingCart />,
+          children: [
+            {
+              label: "Đơn hàng",
+              path: "/admin/orders",
+              active:
+                pathname === "/admin/orders" &&
+                orderStatus === "ALL" &&
+                paymentStatus === "ALL",
+            },
+            {
+              label: "Đơn hàng thành công",
+              path: "/admin/orders?paymentStatus=PAID",
+              active: pathname === "/admin/orders" && paymentStatus === "PAID",
+            },
+            {
+              label: "Kiện hàng",
+              path: "/admin/orders?status=PROCESSING",
+              active:
+                pathname === "/admin/orders" && orderStatus === "PROCESSING",
+            },
+            {
+              label: "Đang giao",
+              path: "/admin/orders?status=SHIPPED",
+              active: pathname === "/admin/orders" && orderStatus === "SHIPPED",
+            },
+            {
+              label: "Đã giao",
+              path: "/admin/orders?status=COMPLETED",
+              active:
+                pathname === "/admin/orders" && orderStatus === "COMPLETED",
+            },
+            {
+              label: "Trả hàng hoàn tiền",
+              path: "/admin/return-requests",
+              active: pathname === "/admin/return-requests",
+            },
+          ],
+        },
         { label: "Khách hàng", path: "/admin/customers", icon: <Users /> },
         { label: "Nhà bán hàng", path: "/admin/sellers", icon: <Store /> },
         { label: "Mã giảm giá", path: "/admin/vouchers", icon: <Ticket /> },

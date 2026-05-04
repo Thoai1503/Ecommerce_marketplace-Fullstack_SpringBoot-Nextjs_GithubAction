@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 
 import { API_URL } from "@/helper/api";
 import { useUserAuth } from "@/context/UserAuthContext";
-import { uploadUserAvatar, User } from "@/services/userService";
+import { getUserById, uploadUserAvatar, User } from "@/services/userService";
 
 type OwnedVoucher = {
   id: number;
@@ -42,6 +42,12 @@ const getVoucherValue = (voucher: OwnedVoucher) => {
 
   return voucher.title;
 };
+
+const normalizeVoucherStatus = (value?: string | null) =>
+  String(value ?? "").trim().toUpperCase();
+
+const isClaimedUnusedVoucher = (voucher: OwnedVoucher) =>
+  normalizeVoucherStatus(voucher.status) === "CLAIMED";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -93,6 +99,28 @@ export default function ProfilePage() {
     // 🔒 Nếu đã có data trong DB (từ session trước) thì khóa
     const wasSaved = parsedUser.gender || parsedUser.dateOfBirth;
     setHasSavedToDb(!!wasSaved);
+
+    let ignore = false;
+    const refreshUser = async () => {
+      if (!parsedUser.id) return;
+
+      try {
+        const freshUser = await getUserById(Number(parsedUser.id));
+        if (ignore) return;
+
+        setUser(freshUser);
+        localStorage.setItem("user", JSON.stringify(freshUser));
+        setHasSavedToDb(!!(freshUser.gender || freshUser.dateOfBirth));
+      } catch (error) {
+        console.error("Refresh user profile error:", error);
+      }
+    };
+
+    refreshUser();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -140,7 +168,7 @@ export default function ProfilePage() {
               validTo: voucher.validTo,
               claimEndAt: voucher.claimEndAt,
               issuerType: voucher.issuerType,
-              status: item.status,
+              status: normalizeVoucherStatus(item.status),
               claimedAt: item.claimedAt ?? item.claimed_at,
             } satisfies OwnedVoucher;
           },
@@ -148,6 +176,7 @@ export default function ProfilePage() {
 
         const merged: OwnedVoucher[] = mappedVouchers
           .filter((item): item is OwnedVoucher => item !== null)
+          .filter(isClaimedUnusedVoucher)
           .sort((a, b) => {
             const left = a.claimedAt ? new Date(a.claimedAt).getTime() : 0;
             const right = b.claimedAt ? new Date(b.claimedAt).getTime() : 0;
@@ -434,7 +463,7 @@ export default function ProfilePage() {
             <div className="text-muted">Loading voucher list...</div>
           ) : ownedVouchers.length === 0 ? (
             <div className="text-muted">
-              You don't have any vouchers. Please visit the vouchers page to claim offers.
+              You don't have any claimed vouchers waiting to use.
             </div>
           ) : (
             <div className="row g-3">

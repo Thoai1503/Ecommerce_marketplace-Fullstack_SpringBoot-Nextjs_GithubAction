@@ -7,9 +7,11 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -84,8 +86,33 @@ public class ProductRepository implements IRepositories<Product> {
 
 	@Override
 	public Product Update(Product item) {
-		// TODO Auto-generated method stub
-		return null;
+	
+		 String sql = "update product set shop_id=?,category_id=?,description=?,product_name=?,product_slug=?,price=?,original_price=?,weight=?,length=?,width=?,height=?,stock_quantity=? where id=?";
+		 try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+			 ps.setLong(1, item.getShop_id());
+			 ps.setLong(2, item.getCategory_id());
+			 ps.setString(3, item.getDescription());
+			 ps.setString(4, item.getProduct_name());
+			 ps.setString(5, item.getProduct_slug());
+			 ps.setDouble(6, item.getPrice());
+			 ps.setDouble(7, item.getOriginal_price());
+			 ps.setInt(8, item.getWeight());
+			 ps.setInt(9, item.getLength());
+			 ps.setInt(10, item.getWidth());
+			 ps.setInt(11, item.getHeight());
+			 ps.setInt(12, item.getStock_quantity());
+			 ps.setInt(13, item.getId());
+
+			 int rows = ps.executeUpdate();
+
+			 if (rows > 0) {
+				 return item;
+			 }
+		 } catch (Exception ex) {
+			 ex.printStackTrace();
+		 }
+		 return null;
+		
 	}
 
 	@Override
@@ -140,6 +167,9 @@ public class ProductRepository implements IRepositories<Product> {
 				                'sku', pv.sku,
 				                'price', pv.price,
 				                'stock_quantity', pv.stock_quantity,
+				                'weight', pv.weight,
+				                'width', pv.width,
+				                'height', pv.height,
 				                'image_url', pv.image_url,
 				                'is_active', pv.is_active
 				            )
@@ -163,9 +193,19 @@ public class ProductRepository implements IRepositories<Product> {
 				Product product = new Product();
 				product.setId(rs.getInt("id"));
 				product.setShop_id(rs.getInt("shop_id"));
+				product.setCategory_id(rs.getInt("category_id"));
 				product.setProduct_name(rs.getString("product_name"));
 				product.setProduct_slug(rs.getString("product_slug"));
 				product.setPrice(rs.getDouble("price"));
+				product.setOriginal_price(rs.getDouble("original_price"));
+				product.setDescription(rs.getString("description"));
+				product.setStock_quantity(rs.getInt("stock_quantity"));
+				product.setWeight(rs.getInt("weight"));
+				product.setLength(rs.getInt("length"));
+				product.setWidth(rs.getInt("width"));
+				product.setHeight(rs.getInt("height"));
+			//    product.setBrand(rs.getInt("brand"));
+			     
 
 				String variantsJson = rs.getString("variants");
 
@@ -413,6 +453,284 @@ public class ProductRepository implements IRepositories<Product> {
 			e.printStackTrace();
 		}
 		return list;
+	}
+
+	private List<String> expandSearchTerms(String keyword) {
+		Set<String> terms = new LinkedHashSet<>();
+		if (keyword == null) {
+			return new ArrayList<>();
+		}
+
+		String value = keyword.trim().toLowerCase();
+		if (value.isEmpty()) {
+			return new ArrayList<>();
+		}
+
+		terms.add(value);
+
+		if (value.equals("tv") || value.contains(" tv") || value.contains("tv ")) {
+			terms.add(value.replace("tv", "tivi").trim());
+			terms.add(value.replace("tv", "television").trim());
+		}
+
+		if (value.equals("tivi") || value.contains(" tivi") || value.contains("tivi ")) {
+			terms.add(value.replace("tivi", "tv").trim());
+			terms.add(value.replace("tivi", "television").trim());
+		}
+
+		if (value.equals("television") || value.contains(" television") || value.contains("television ")) {
+			terms.add(value.replace("television", "tv").trim());
+			terms.add(value.replace("television", "tivi").trim());
+		}
+
+		terms.remove("");
+		return new ArrayList<>(terms);
+	}
+
+	private void appendKeywordFilter(StringBuilder sql, List<Object> params, String keyword, String... columns) {
+		List<String> terms = expandSearchTerms(keyword);
+		if (terms.isEmpty() || columns.length == 0) {
+			return;
+		}
+
+		sql.append(" AND (");
+		List<String> filters = new ArrayList<>();
+		for (String term : terms) {
+			for (String column : columns) {
+				filters.add(column + " LIKE ?");
+				params.add("%" + term + "%");
+			}
+		}
+		sql.append(String.join(" OR ", filters));
+		sql.append(")");
+	}
+
+	private String buildLikeFilter(List<String> terms, String... columns) {
+		List<String> filters = new ArrayList<>();
+		for (String ignored : terms) {
+			for (String column : columns) {
+				filters.add(column + " LIKE ?");
+			}
+		}
+		return "(" + String.join(" OR ", filters) + ")";
+	}
+
+	private void addLikeParams(List<Object> params, List<String> terms, int columnCount) {
+		for (String term : terms) {
+			for (int i = 0; i < columnCount; i++) {
+				params.add("%" + term + "%");
+			}
+		}
+	}
+
+	public List<Map<String, Object>> searchProducts(
+			String keyword,
+			Integer categoryId,
+			Integer brandId,
+			Double minPrice,
+			Double maxPrice,
+			String sort,
+			int page,
+			int limit) {
+
+		List<Object> params = new ArrayList<>();
+		StringBuilder sql = new StringBuilder("""
+				    SELECT
+				        p.id,
+				        p.shop_id,
+				        p.category_id,
+				        c.category_name,
+				        p.brand_id,
+				        b.name AS brand_name,
+				        s.shop_name,
+				        p.product_name,
+				        p.product_slug,
+				        p.description,
+				        p.price,
+				        p.original_price,
+				        p.stock_quantity,
+				        p.sold_count,
+				        p.rating,
+				        p.review_count,
+				        p.created_at,
+				        (
+				            SELECT pi.image_url
+				            FROM product_image pi
+				            WHERE pi.product_id = p.id
+				            ORDER BY pi.is_thumbnail DESC, pi.display_order ASC, pi.id ASC
+				            LIMIT 1
+				        ) AS image_url
+				    FROM product p
+				    LEFT JOIN category c ON p.category_id = c.id
+				    LEFT JOIN brand b ON p.brand_id = b.id
+				    LEFT JOIN shop s ON p.shop_id = s.id
+				    WHERE p.is_active = 1
+				      AND (p.status IS NULL OR p.status NOT IN ('REJECTED', 'HIDDEN'))
+				""");
+
+		appendKeywordFilter(
+				sql,
+				params,
+				keyword,
+				"p.product_name",
+				"p.product_slug",
+				"p.description",
+				"c.category_name",
+				"b.name",
+				"s.shop_name");
+
+		if (categoryId != null && categoryId > 0) {
+			sql.append("""
+					      AND (
+					          p.category_id = ?
+					          OR p.category_id IN (SELECT id FROM category WHERE parent_id = ?)
+					      )
+					""");
+			params.add(categoryId);
+			params.add(categoryId);
+		}
+
+		if (brandId != null && brandId > 0) {
+			sql.append(" AND p.brand_id = ?");
+			params.add(brandId);
+		}
+
+		if (minPrice != null && minPrice >= 0) {
+			sql.append(" AND p.price >= ?");
+			params.add(minPrice);
+		}
+
+		if (maxPrice != null && maxPrice >= 0) {
+			sql.append(" AND p.price <= ?");
+			params.add(maxPrice);
+		}
+
+		sql.append(" ORDER BY ");
+		switch (sort == null ? "" : sort) {
+		case "price_asc":
+			sql.append("p.price ASC, p.id DESC");
+			break;
+		case "price_desc":
+			sql.append("p.price DESC, p.id DESC");
+			break;
+		case "newest":
+			sql.append("p.created_at DESC, p.id DESC");
+			break;
+		case "rating":
+			sql.append("p.rating DESC, p.review_count DESC, p.id DESC");
+			break;
+		case "sold":
+		case "popular":
+		default:
+			sql.append("p.sold_count DESC, p.rating DESC, p.id DESC");
+			break;
+		}
+
+		int safeLimit = Math.max(1, Math.min(limit, 60));
+		int safePage = Math.max(1, page);
+		sql.append(" LIMIT ? OFFSET ?");
+		params.add(safeLimit);
+		params.add((safePage - 1) * safeLimit);
+
+		return query(sql.toString(), params.toArray());
+	}
+
+	public List<Map<String, Object>> searchSuggestions(String keyword, int limit) {
+		if (keyword == null || keyword.trim().isEmpty()) {
+			return new ArrayList<>();
+		}
+
+		List<String> terms = expandSearchTerms(keyword);
+		int safeLimit = Math.max(1, Math.min(limit, 20));
+
+		String categoryFilter = buildLikeFilter(terms, "c.category_name", "c.category_slug");
+		String productFilter = buildLikeFilter(terms, "p.product_name", "p.product_slug", "p.description");
+		String brandFilter = buildLikeFilter(terms, "b.name", "b.slug");
+		String unitFilter = buildLikeFilter(terms, "u.label", "u.symbol");
+		String attributeFilter = buildLikeFilter(terms, "a.name", "a.slug");
+		String valueFilter = buildLikeFilter(terms, "av.value", "u.label", "u.symbol");
+
+		String sql = """
+				SELECT text, type, score
+				FROM (
+				    SELECT
+				        c.category_name AS text,
+				        'category' AS type,
+				        100 + COUNT(p.id) AS score
+				    FROM category c
+				    LEFT JOIN product p ON p.category_id = c.id AND p.is_active = 1
+				    WHERE c.is_active = 1
+				      AND %s
+				    GROUP BY c.id, c.category_name
+
+				    UNION ALL
+
+				    SELECT
+				        p.product_name AS text,
+				        'product' AS type,
+				        80 + COALESCE(p.sold_count, 0) AS score
+				    FROM product p
+				    WHERE p.is_active = 1
+				      AND (p.status IS NULL OR p.status NOT IN ('REJECTED', 'HIDDEN'))
+				      AND %s
+
+				    UNION ALL
+
+				    SELECT
+				        b.name AS text,
+				        'brand' AS type,
+				        70 + COUNT(p.id) AS score
+				    FROM brand b
+				    LEFT JOIN product p ON p.brand_id = b.id AND p.is_active = 1
+				    WHERE b.status = 1
+				      AND %s
+				    GROUP BY b.id, b.name
+
+				    UNION ALL
+
+				    SELECT
+				        u.label AS text,
+				        'unit' AS type,
+				        50 AS score
+				    FROM unit u
+				    WHERE u.status = 1
+				      AND %s
+
+				    UNION ALL
+
+				    SELECT
+				        a.name AS text,
+				        'attribute' AS type,
+				        45 AS score
+				    FROM attribute a
+				    WHERE a.status = 1
+				      AND %s
+
+				    UNION ALL
+
+				    SELECT
+				        CONCAT(av.value, COALESCE(CONCAT(' ', u.symbol), '')) AS text,
+				        'value' AS type,
+				        40 AS score
+				    FROM attribute_value av
+				    LEFT JOIN unit u ON av.unit_id = u.id
+				    WHERE %s
+				) suggestions
+				WHERE text IS NOT NULL AND text <> ''
+				ORDER BY score DESC, CHAR_LENGTH(text) ASC, text ASC
+				LIMIT ?
+				""".formatted(categoryFilter, productFilter, brandFilter, unitFilter, attributeFilter, valueFilter);
+
+		List<Object> params = new ArrayList<>();
+		addLikeParams(params, terms, 2);
+		addLikeParams(params, terms, 3);
+		addLikeParams(params, terms, 2);
+		addLikeParams(params, terms, 2);
+		addLikeParams(params, terms, 2);
+		addLikeParams(params, terms, 3);
+		params.add(safeLimit);
+
+		return query(sql, params.toArray());
 	}
 
 	public Product GetByIdWithShopInfo(int id) {

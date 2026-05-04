@@ -101,7 +101,7 @@ public class ShopRepository implements IRepositories<Shop> {
                 is_verified = ?,
                 is_active = ?,
                 updated_at = ?
-            WHERE shop_id = ?
+            WHERE id = ?
         """;
 
         try (Connection con = dbConnection.getConn();
@@ -167,25 +167,24 @@ public class ShopRepository implements IRepositories<Shop> {
         return null;
     }
     
-    public Shop GetByUserId(int user_id) {
-    	System.out.print("Get by user id");
-    	String sql = "select * from shop where user_id = ?";
-    	try (Connection con = dbConnection.getConn();
-                PreparedStatement ps = con.prepareStatement(sql)){
-    	    ps.setLong(1, user_id);
-    	    
-    	    ResultSet rs = ps.executeQuery();
+public Shop GetByUserId(long user_id) {
+        System.out.print("Get by user id");
+        String sql = "select * from shop where user_id = ?";
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)){
+            ps.setLong(1, user_id);
+
+            ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
                 return shopMapper.RowMap(rs);
             }
 
-    	}
-    	catch (Exception ex) {
-    		
-    	}
-    	
-    	return null;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        return null;
     }
 
     /* ================= GET ALL ================= */

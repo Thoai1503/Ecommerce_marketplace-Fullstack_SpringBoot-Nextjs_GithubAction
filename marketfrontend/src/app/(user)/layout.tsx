@@ -5,13 +5,14 @@ import Script from "next/script";
 import HeaderAuth from "@/components/HeaderAuth";
 import { cookies } from "next/headers";
 import { UserAuthProvider } from "@/context/UserAuthContext";
-import { Search } from "lucide-react";
+import GoSellerButton from "@/components/GoSellerButton";
 
 import CustomProgressBar from "@/components/common/CustomProgressBar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RootPrivider } from "@/components/context/RootProvider";
 import Link from "next/link";
 import CartIconWithCount from "@/components/CartIconWithCount";
+import HeaderSearch from "@/components/client/search/HeaderSearch";
 
 export const metadata: Metadata = {
   title: "Sàn TMĐT - Trang chủ",
@@ -34,7 +35,7 @@ export default async function UserLayout({
     <>
       <RootPrivider>
         <UserAuthProvider role={role} user_id={id}>
-          <CustomProgressBar />
+          {/* <CustomProgressBar /> */}
           {/* ================= HEADER ================= */}
           <header className="sticky-top bg-white shadow-sm">
             {/* Utility Bar */}
@@ -43,7 +44,7 @@ export default async function UserLayout({
                 <div className="row">
                   <div className="col-6">
                     <div className="d-flex gap-3">
-                      <a href="/seller/createshop">Human Sales Channel</a>
+                      <GoSellerButton />
                       <a href="#">Download the application</a>
                       <span>
                         Connect{" "}
@@ -87,16 +88,7 @@ export default async function UserLayout({
 
                 {/* Search */}
                 <div className="col">
-                  <div className="search-box d-flex align-items-center">
-                    <input
-                      type="text"
-                      className="form-control border-0"
-                      placeholder="Find your favorite products, brands, and shops..."
-                    />
-                    <button className="btn btn-search m-1 px-3">
-                      <Search size={20} />
-                    </button>
-                  </div>
+                  <HeaderSearch />
                 </div>
 
                 {/* Cart */}
@@ -275,7 +267,6 @@ export default async function UserLayout({
               </div>
             </div>
           </footer>
-
         </UserAuthProvider>
       </RootPrivider>
     </>

@@ -12,7 +12,7 @@ import docker_test.com.models.OrderShipment;
 
 @Repository
 public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Long> {
-
+   
 	Optional<OrderShipment> findFirstByTrackingNumber(String trackingNumber);
 	List<OrderShipment> findByOrderIdOrderByIdDesc(Long orderId);
 	List<OrderShipment> findByShopId(Long shopId);
@@ -22,6 +22,7 @@ public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Lo
 		        os.id AS shipmentId,
 				os.order_id AS orderId,
 				os.shop_id AS shopId,
+				s.shop_name AS shopName,
 				os.shipping_fee AS shippingFee,
 				os.total_amount AS totalAmount,
 				os.carrier_name AS carrierName,
@@ -47,10 +48,15 @@ public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Lo
 			FROM order_shipment os
 			INNER JOIN orders o ON o.id = os.order_id
 			INNER JOIN address a ON a.id = o.address_id
-			WHERE os.shop_id = :shopId
+			LEFT JOIN shop s ON s.id = os.shop_id
+
+			WHERE os.shop_id = :shopId  
+			AND	(:status IS NULL  OR LOWER(:status) = 'all' OR LOWER(os.shipping_status) = LOWER(:status))
+			AND	(:paymentStatus IS NULL  OR LOWER(:paymentStatus) = 'all' OR LOWER(o.payment_status) = LOWER(:paymentStatus))
+			
 			ORDER BY os.id DESC
 			""", nativeQuery = true)
-	List<OrderShipmentWithOrderAndRecipientProjection> findShipmentDetailsByShopId(@Param("shopId") Long shopId);
+	List<OrderShipmentWithOrderAndRecipientProjection> findShipmentDetailsByShopId(@Param("shopId") Long shopId, @Param("status") String status, @Param("paymentStatus") String paymentStatus);
 	
 	// Find shipment details by shipment id (projection)
 	@Query(value = """
@@ -58,6 +64,7 @@ public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Lo
 		        os.id AS shipmentId,
 				os.order_id AS orderId,
 				os.shop_id AS shopId,
+				s.shop_name AS shopName,
 				os.shipping_fee AS shippingFee,
 				os.total_amount AS totalAmount,
 				os.carrier_name AS carrierName,
@@ -83,6 +90,7 @@ public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Lo
 			FROM order_shipment os
 			INNER JOIN orders o ON o.id = os.order_id
 			INNER JOIN address a ON a.id = o.address_id
+			LEFT JOIN shop s ON s.id = os.shop_id
 			WHERE os.id = :id
 			ORDER BY os.id DESC
 			""", nativeQuery = true)

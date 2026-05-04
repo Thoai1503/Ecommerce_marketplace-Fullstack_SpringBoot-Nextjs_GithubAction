@@ -3,7 +3,7 @@ package docker_test.com.models;
 import java.time.LocalDateTime;
 
 public final class Shop {
-	private long id;
+	private Long id;
 	private long user_id;
 	private String shop_name;
 	private String shop_description;
@@ -33,7 +33,7 @@ public final class Shop {
 		this.updated_at = LocalDateTime.now();
 	}
 
-	public Shop(long id, long user_id, String shop_name, String shop_description, String shop_logo, String shop_banner,
+	public Shop(Long id, long user_id, String shop_name, String shop_description, String shop_logo, String shop_banner,
 			String business_license, String tax_code, Double rating, int total_products, int total_orders,
 			Double response_rate, int response_time, int is_verified, int is_active, LocalDateTime created_at,
 			LocalDateTime updated_at) {
@@ -57,12 +57,12 @@ public final class Shop {
 		this.updated_at = updated_at;
 	}
 
-	public long getId() {
+	public Long getId() {
 		return id;
 	}
 
-	public void setId(long id) {
-		this.id = id;
+	public void setId(long shopId) {
+		this.id = shopId;
 	}
 
 	public long getUser_id() {

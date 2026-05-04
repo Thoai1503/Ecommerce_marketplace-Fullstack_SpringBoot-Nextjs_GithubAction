@@ -3,8 +3,7 @@
 import React, { Suspense, useState } from "react";
 
 import { API_URL } from "@/helper/api";
-import { useSearchParams } from "next/navigation";
-import { addBatchCartItems } from "@/feature/client/service";
+
 type Errors = {
   fullName?: string;
   email?: string;
@@ -14,21 +13,6 @@ type Errors = {
 };
 
 const RegisterContent: React.FC = () => {
-  const preLogggedInCart =
-    typeof window !== "undefined"
-      ? ((localStorage.getItem("preLoginCart")
-          ? JSON.parse(localStorage.getItem("preLoginCart") || "[]")
-          : []) as {
-          user_id: number;
-          product_id: number;
-          variant_id: number;
-          quantity: number;
-        }[])
-      : [];
-  const isLoggedIn =
-    typeof window !== "undefined" ? !!localStorage.getItem("user") : false;
-  const searchParams = useSearchParams();
-  const redirectPath = searchParams.get("redirect") || "/";
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -92,43 +76,18 @@ const RegisterContent: React.FC = () => {
         }
         return;
       }
-      const data = await res.json();
-      //   alert("Regis data: " + JSON.stringify(data));
+      await res.json();
+
       // SUCCESS
-      setSuccess("Registration successful! Redirecting to login...");
+      setSuccess(
+        `Registration successful! Please check ${formData.email} to verify your account before logging in.`,
+      );
       setFormData({
         fullName: "",
         email: "",
         password: "",
         confirmPassword: "",
       });
-      document.cookie = `token=${(data as any).token || "logged-in"}; path=/; max-age=${
-        60 * 60 * 24
-      }; SameSite=Lax`;
-
-      try {
-        await addBatchCartItems(
-          preLogggedInCart.map((item) => ({
-            user_id: data.id,
-            product_id: item.product_id,
-            variant_id: item.variant_id,
-            quantity: item.quantity,
-          })),
-        );
-
-        console.log("Batch cart items added successfully.");
-        window.location.href = redirectPath
-          ? `/${encodeURIComponent(redirectPath)}`
-          : "/";
-      } catch (error) {
-        alert("Failed to merge cart items: " + error);
-        console.error("Error adding batch cart items:", error);
-      }
-
-      // Auto redirect
-      // setTimeout(() => {
-      //   window.location.href = `/${encodeURIComponent(redirectPath)}`;
-      // }, 2000);
     } catch {
       setErrors({
         general: "Unable to connect to the server.",
@@ -313,6 +272,13 @@ const RegisterContent: React.FC = () => {
             >
               {loading ? "Processing..." : "Register now"}
             </button>
+
+            <p className="text-center text-sm text-gray-600">
+              Already verified?{" "}
+              <a href="/login" className="font-semibold text-blue-600 hover:underline">
+                Log in
+              </a>
+            </p>
           </form>
         </div>
       </div>

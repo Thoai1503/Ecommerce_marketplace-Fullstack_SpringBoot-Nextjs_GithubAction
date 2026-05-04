@@ -10,11 +10,11 @@ import docker_test.com.models.User;
 
 public class UserRepository implements IRepositories<User> {
 
-    private static UserRepository instance;
-    private final DBConnection dbConnection;
-    private final UserMapper mapper = new UserMapper();
+    public static UserRepository instance;
+    public final DBConnection dbConnection;
+    protected final UserMapper mapper = new UserMapper();
 
-    private UserRepository() {
+    protected UserRepository() {
         this.dbConnection = DBConnection.getInstance();
     }
 
@@ -266,6 +266,23 @@ public class UserRepository implements IRepositories<User> {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public boolean markEmailVerified(String email) {
+
+        String sql = "UPDATE user SET is_verified = 1, updated_at = ? WHERE email = ?";
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setString(2, email);
+            return ps.executeUpdate() > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     public Long findUserIdByEmail(String email) {

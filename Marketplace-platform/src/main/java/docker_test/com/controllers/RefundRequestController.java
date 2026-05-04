@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,6 +23,7 @@ import com.google.gson.reflect.TypeToken;
 
 import docker_test.com.dto.RequestItemDTO;
 import docker_test.com.dto.RefundRequestDTO;
+import docker_test.com.models.refunds.ReturnRequestStatus;
 import docker_test.com.services.RefundRequestService;
 
 @RestController
@@ -34,11 +36,21 @@ public class RefundRequestController {
 	public RefundRequestController(RefundRequestService refundRequestService) {
 		this.refundRequestService = refundRequestService;
 	}
+		@GetMapping("/shipment/{orderShipmentId}")
+	public ResponseEntity<?> getRefundRequestsByOrderShipmentId(@PathVariable Long orderShipmentId) {
+		try {
+			var refundRequests = refundRequestService.getRefundRequestsByOrderShipmentId(orderShipmentId);
+			return ResponseEntity.ok(refundRequests);
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error fetching refund requests by orderShipmentId: " + e.getMessage());
+		}
+	}
 	
 	@GetMapping("")
 	public ResponseEntity<?> getRefundRequests() {
 		try {
-			var refundRequests = refundRequestService.getRefundRequestsByCustomerId();
+			var refundRequests = refundRequestService.getAll();
 			return ResponseEntity.ok(refundRequests);
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching refund requests: " + e.getMessage());
@@ -56,6 +68,27 @@ public class RefundRequestController {
 			}
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching refund request: " + e.getMessage());
+		}
+	}
+
+	@PatchMapping("/{refundRequestId}/status")
+	public ResponseEntity<?> updateRefundRequestStatus(
+			@PathVariable Long refundRequestId,
+			@RequestParam("status") String status,
+			@RequestParam(value = "refundedAmount", required = false) Double refundedAmount) {
+		try {
+			ReturnRequestStatus nextStatus = ReturnRequestStatus.valueOf(status.toUpperCase());
+			var updated = refundRequestService.updateStatus(refundRequestId, nextStatus, refundedAmount);
+			if (updated == null) {
+				return ResponseEntity.status(HttpStatus.NOT_FOUND)
+						.body("Refund request not found with id: " + refundRequestId);
+			}
+			return ResponseEntity.ok(updated);
+		} catch (IllegalArgumentException ex) {
+			return ResponseEntity.badRequest().body("status không hợp lệ");
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error updating refund request status: " + e.getMessage());
 		}
 	}
 	
@@ -83,6 +116,7 @@ public class RefundRequestController {
 			@RequestParam("orderId") String orderId,
 			@RequestParam("shopId") String shopId,
 			@RequestParam("customerId") String customerId,
+			@RequestParam("orderShipmentId") String orderShipmentId,
 			@RequestParam("reason") String reason,
 			@RequestParam("quantity") String quantity,
 			@RequestParam("requestedAmount") String requestedAmount,
@@ -98,7 +132,8 @@ public class RefundRequestController {
 			dto.setReason(reason);
 			dto.setQuantity(parseInt(quantity, "quantity"));
 			dto.setRequestedAmount(parseDouble(requestedAmount, "requestedAmount"));
-
+            dto.setOrderShipmentId(parseLong(orderShipmentId, "orderShipmentId"));
+			
 			if (itemsJson != null && !itemsJson.isBlank()) {
 				Type listType = new TypeToken<List<RequestItemDTO>>() {}.getType();
 				dto.setItems(gson.fromJson(itemsJson, listType));

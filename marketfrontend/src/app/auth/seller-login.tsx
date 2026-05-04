@@ -142,7 +142,7 @@ export default function SellerLoginPage() {
                 <div className="space-y-2">
                     <div className="flex justify-between items-center">
                         <label className="text-sm font-bold text-slate-700 block">Mật khẩu</label>
-                        <a href="#" className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline">Quên mật khẩu?</a>
+                        <a href="/forgot-password" className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline">Quên mật khẩu?</a>
                     </div>
                     <div className="relative group">
                         <input 

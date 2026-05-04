@@ -2139,11 +2139,13 @@ CREATE TABLE `voucher_usage_history_legacy` (
   `voucher_id` bigint NOT NULL,
   `user_id` bigint NOT NULL,
   `order_id` bigint DEFAULT NULL,
+  `order_shipment_id` bigint DEFAULT NULL,
   `discount_amount` decimal(15,2) NOT NULL,
   `used_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_voucher_id` (`voucher_id`),
   KEY `idx_user_id` (`user_id`),
+  KEY `idx_voucher_usage_order_shipment` (`order_shipment_id`),
   KEY `idx_used_at` (`used_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

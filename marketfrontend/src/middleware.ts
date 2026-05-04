@@ -220,7 +220,60 @@ export async function middleware(request: NextRequest) {
   // }
 
   // Xử lý response
-  const response = NextResponse.next();
+  // ===== SELLER GUARD =====
+  if (pathname.startsWith("/seller")) {
+    const userId = request.cookies.get("user")?.value;
+
+    // chưa login
+    if (!userId) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    let hasShop = false;
+    let isComplete = false;
+
+    try {
+      const res = await fetch(
+        `${process.env.INTERNAL_API}/shops/check?user_id=${userId}`,
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        hasShop = Boolean(data?.hasShop);
+        isComplete = Boolean(data?.isComplete);
+      }
+    } catch (err) {
+      console.log("Check shop error:", err);
+    }
+
+    const isCreateShop = pathname === "/seller/createshop";
+
+    console.log("Seller check → hasShop:", hasShop);
+
+    // ❌ chưa có shop hoặc shop chưa hoàn thành thông tin → ép vào createshop
+    if ((!hasShop || !isComplete) && !isCreateShop) {
+      return NextResponse.redirect(new URL("/seller/createshop", request.url));
+    }
+
+    // ❌ đã có shop hoàn chỉnh → cấm createshop
+    if (hasShop && isComplete && isCreateShop) {
+      return NextResponse.redirect(new URL("/seller", request.url));
+    }
+  }
+
+  // ===== RESPONSE =====
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 
   // Tính thời gian xử lý
   const endTime = Date.now();
