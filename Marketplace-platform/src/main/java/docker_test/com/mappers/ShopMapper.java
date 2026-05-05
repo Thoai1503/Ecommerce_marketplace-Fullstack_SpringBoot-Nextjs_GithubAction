@@ -24,6 +24,9 @@ public class ShopMapper implements RowMapper<Shop> {
         shop.setShop_description(rs.getString("shop_description"));
         shop.setShop_logo(rs.getString("shop_logo"));
         shop.setShop_banner(rs.getString("shop_banner"));
+        shop.setOwner_name(rs.getString("owner_name"));
+        shop.setUrl_card_front(rs.getString("url_card_front"));
+        shop.setUrl_card_back(rs.getString("url_card_back"));
 
         shop.setBusiness_license(rs.getString("business_license"));
         shop.setTax_code(rs.getString("tax_code"));
@@ -71,6 +74,9 @@ public class ShopMapper implements RowMapper<Shop> {
         shop.setShop_description(rs.getString("shop_description"));
         shop.setShop_logo(rs.getString("shop_logo"));
         shop.setShop_banner(rs.getString("shop_banner"));
+        shop.setOwner_name(rs.getString("owner_name"));
+        shop.setUrl_card_front(rs.getString("url_card_front"));
+        shop.setUrl_card_back(rs.getString("url_card_back"));
 
         shop.setBusiness_license(rs.getString("business_license"));
         shop.setTax_code(rs.getString("tax_code"));

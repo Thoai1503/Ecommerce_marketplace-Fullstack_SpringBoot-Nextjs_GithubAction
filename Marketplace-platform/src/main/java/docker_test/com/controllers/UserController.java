@@ -203,6 +203,12 @@ public class UserController {
                     .body("Tài khoản bị khóa");
         }
 
+        if (user.getIsVerified() == null || user.getIsVerified() != 1) {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body("Tài khoản chưa xác minh email");
+        }
+
         // ❌ không trả password
         user.setPasswordHash(null);
         if (user.getId() == null) {

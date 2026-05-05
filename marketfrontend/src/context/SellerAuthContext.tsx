@@ -1,6 +1,7 @@
 "use client";
 import { getShopByUserId } from "@/feature/seller/service";
 import { Shop } from "@/validators/shop";
+import { useRouter } from "next/navigation";
 import {
   createContext,
   SetStateAction,
@@ -34,15 +35,34 @@ export const SellerAuthProvider = ({
   const [roles, setRoles] = useState<"buyer" | "seller" | "both" | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
   const [shop, setShop] = useState<Shop | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchShop = async () => {
       if (role && user_id) {
         setRoles(role);
         setUserId(user_id);
-        const shopData = await getShopByUserId(user_id);
-        console.log("Shop: " + JSON.stringify(shopData));
-        setShop(shopData);
+
+        try {
+          const shopData = await getShopByUserId(user_id);
+          console.log("Shop: " + JSON.stringify(shopData));
+          setShop(shopData);
+
+          const isSellerComplete =
+            !!shopData?.id &&
+            !!shopData?.owner_name &&
+            !!shopData?.business_license &&
+            !!shopData?.tax_code &&
+            !!shopData?.url_card_front &&
+            !!shopData?.url_card_back;
+
+          if (!isSellerComplete) {
+            router.push("/seller/createshop"); // đổi path đúng form đăng ký shop của bạn
+          }
+        } catch (error) {
+          setShop(null);
+          router.push("/seller/createshop");
+        }
       } else {
         setRoles(null);
         setUserId(null);
@@ -51,7 +71,7 @@ export const SellerAuthProvider = ({
     };
 
     fetchShop();
-  }, [role, user_id]);
+  }, [role, user_id, router]);
 
   return (
     <SellerAuthContext.Provider value={{ roles, setRoles, userId, shop }}>
