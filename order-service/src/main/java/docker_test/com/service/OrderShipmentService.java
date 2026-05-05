@@ -26,7 +26,7 @@ import docker_test.com.dto.OrderShipmentResponeDTO;
 import docker_test.com.dto.ShipmentStatusUpdatedEvent;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
-import docker_test.com.models.OrderShipment;
+import docker_test.com.model.OrderShipment;
 import docker_test.com.model.OrderShipmentStatusHistory;
 import docker_test.com.model.ShipmentAdjustmentItem;
 import docker_test.com.model.ShipmentAdjustmentRequest;

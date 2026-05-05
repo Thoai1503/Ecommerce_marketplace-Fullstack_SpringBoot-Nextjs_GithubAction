@@ -8,11 +8,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import docker_test.com.models.OrderShipment;
+import docker_test.com.model.OrderShipment;
 
 @Repository
 public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Long> {
    
+	
+//	Optional<OrderShipment>	findByOrderIdOrderByIdDesc(Long orderId);
 	Optional<OrderShipment> findFirstByTrackingNumber(String trackingNumber);
 	List<OrderShipment> findByOrderIdOrderByIdDesc(Long orderId);
 	List<OrderShipment> findByShopId(Long shopId);
