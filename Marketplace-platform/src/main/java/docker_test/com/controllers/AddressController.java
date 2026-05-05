@@ -69,6 +69,12 @@ public class AddressController {
 				return ResponseEntity.badRequest().body("shop_id is required");
 			}
 
+			Address existingAddress = addressService.getAddressByShopId(address.getShop_id());
+			if (existingAddress != null) {
+				LOGGER.info("Shop address already exists for shop ID: {}, returning existing address", address.getShop_id());
+				return ResponseEntity.ok(existingAddress);
+			}
+
 			Address createdAddress = addressService.createShopAddress(address);
 
 			if (createdAddress != null) {

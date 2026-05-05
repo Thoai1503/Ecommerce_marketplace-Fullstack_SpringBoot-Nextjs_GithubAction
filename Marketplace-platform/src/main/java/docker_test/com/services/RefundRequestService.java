@@ -6,11 +6,13 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import docker_test.com.configs.publisher.ReturnRequestToLogistic;
 import docker_test.com.dto.RefundRequestDTO;
 import docker_test.com.models.refunds.ReturnRequest;
 import docker_test.com.models.refunds.ReturnRequestStatus;
 import docker_test.com.repository.RefundRequestRepository;
 import docker_test.com.repository.ReturnReqestItemRepositrory;
+import jakarta.transaction.Transactional;
 
 @Service
 public class RefundRequestService {
@@ -18,21 +20,27 @@ public class RefundRequestService {
 	private final RefundRequestRepository refundRequestRepository;
 	private final ReturnReqestItemRepositrory returnReqestItemRepositrory;
 	private final ReturnRequestAttachmentService returnRequestAttachmentService;
+	private final ReturnRequestToLogistic returnRequestToLogistic;
 	
 	public RefundRequestService(
 			RefundRequestRepository refundRequestRepository,
 			ReturnReqestItemRepositrory returnReqestItemRepositrory,
-			ReturnRequestAttachmentService returnRequestAttachmentService) {
+			ReturnRequestAttachmentService returnRequestAttachmentService,
+			ReturnRequestToLogistic returnRequestToLogistic) {
 		this.refundRequestRepository = refundRequestRepository;
 		this.returnReqestItemRepositrory = returnReqestItemRepositrory;
 		this.returnRequestAttachmentService = returnRequestAttachmentService;
+        this.returnRequestToLogistic = returnRequestToLogistic;
 	}
 	
+	
+	@Transactional
 	public ReturnRequest createRefundRequest(RefundRequestDTO refundRequestDTO) {
 		ReturnRequest savedRefundRequest = persistRefundRequest(refundRequestDTO);
 
 		if (refundRequestDTO.getAttachments() != null && !refundRequestDTO.getAttachments().isEmpty()) {
 			returnRequestAttachmentService.createAttachments(savedRefundRequest.getId(), refundRequestDTO.getAttachments());
+			returnRequestToLogistic.publish(refundRequestDTO);
 		}
 
 		return savedRefundRequest;
@@ -52,10 +60,14 @@ public class RefundRequestService {
 		if (files != null && !files.isEmpty()) {
 			returnRequestAttachmentService.createAttachments(savedRefundRequest.getId(), files, descriptions);
 		}
+		
+		returnRequestToLogistic.publish(refundRequestDTO);
 
 		return savedRefundRequest;
 	}
 
+	
+	@Transactional
 	private ReturnRequest persistRefundRequest(RefundRequestDTO refundRequestDTO) {
 		ReturnRequest refundRequest = new ReturnRequest();
 		refundRequest.setOrderId(refundRequestDTO.getOrderId());

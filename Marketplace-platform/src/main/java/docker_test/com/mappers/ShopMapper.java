@@ -24,6 +24,9 @@ public class ShopMapper implements RowMapper<Shop> {
         shop.setShop_description(rs.getString("shop_description"));
         shop.setShop_logo(rs.getString("shop_logo"));
         shop.setShop_banner(rs.getString("shop_banner"));
+        shop.setOwner_name(rs.getString("owner_name"));
+        shop.setUrl_card_front(rs.getString("url_card_front"));
+        shop.setUrl_card_back(rs.getString("url_card_back"));
 
         shop.setBusiness_license(rs.getString("business_license"));
         shop.setTax_code(rs.getString("tax_code"));
@@ -44,6 +47,11 @@ public class ShopMapper implements RowMapper<Shop> {
 
         if (rs.getTimestamp("updated_at") != null) {
             shop.setUpdated_at(rs.getTimestamp("updated_at").toLocalDateTime());
+        }
+
+        Object onboardingStep = rs.getObject("onboarding_step");
+        if (onboardingStep != null) {
+            shop.setOnboarding_step(((Number) onboardingStep).intValue());
         }
 
         return shop;
@@ -71,6 +79,9 @@ public class ShopMapper implements RowMapper<Shop> {
         shop.setShop_description(rs.getString("shop_description"));
         shop.setShop_logo(rs.getString("shop_logo"));
         shop.setShop_banner(rs.getString("shop_banner"));
+        shop.setOwner_name(rs.getString("owner_name"));
+        shop.setUrl_card_front(rs.getString("url_card_front"));
+        shop.setUrl_card_back(rs.getString("url_card_back"));
 
         shop.setBusiness_license(rs.getString("business_license"));
         shop.setTax_code(rs.getString("tax_code"));
@@ -91,6 +102,11 @@ public class ShopMapper implements RowMapper<Shop> {
 
         if (rs.getTimestamp("updated_at") != null) {
             shop.setUpdated_at(rs.getTimestamp("updated_at").toLocalDateTime());
+        }
+
+        Object onboardingStep = rs.getObject("onboarding_step");
+        if (onboardingStep != null) {
+            shop.setOnboarding_step(((Number) onboardingStep).intValue());
         }
 
         return shop;
