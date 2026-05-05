@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import docker_test.com.models.OrderShipment;
+import docker_test.com.model.OrderShipment;
 import docker_test.com.repository.OrderShipmentRepository;
 
 @RestController()
