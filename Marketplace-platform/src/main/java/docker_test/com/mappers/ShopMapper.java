@@ -49,6 +49,11 @@ public class ShopMapper implements RowMapper<Shop> {
             shop.setUpdated_at(rs.getTimestamp("updated_at").toLocalDateTime());
         }
 
+        Object onboardingStep = rs.getObject("onboarding_step");
+        if (onboardingStep != null) {
+            shop.setOnboarding_step(((Number) onboardingStep).intValue());
+        }
+
         return shop;
     }
 
@@ -97,6 +102,11 @@ public class ShopMapper implements RowMapper<Shop> {
 
         if (rs.getTimestamp("updated_at") != null) {
             shop.setUpdated_at(rs.getTimestamp("updated_at").toLocalDateTime());
+        }
+
+        Object onboardingStep = rs.getObject("onboarding_step");
+        if (onboardingStep != null) {
+            shop.setOnboarding_step(((Number) onboardingStep).intValue());
         }
 
         return shop;

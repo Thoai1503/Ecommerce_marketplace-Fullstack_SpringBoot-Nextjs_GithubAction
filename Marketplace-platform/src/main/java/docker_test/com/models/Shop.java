@@ -2,6 +2,8 @@ package docker_test.com.models;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public final class Shop {
 	private Long id;
 	private long user_id;
@@ -23,6 +25,8 @@ public final class Shop {
 	private int is_active;
 	private LocalDateTime created_at;
 	private LocalDateTime updated_at;
+	@JsonProperty("onboarding_step")
+	private Integer onboarding_step;
 
 	public Shop() {
 		this.rating = 0.0;
@@ -34,12 +38,14 @@ public final class Shop {
 		this.is_active = 1;
 		this.created_at = LocalDateTime.now();
 		this.updated_at = LocalDateTime.now();
+		this.onboarding_step = 1;
 	}
 
 	public Shop(Long id, long user_id, String shop_name, String shop_description, String shop_logo, String shop_banner,
 			String owner_name, String url_card_front, String url_card_back, String business_license, String tax_code,
 			Double rating, int total_products, int total_orders, Double response_rate, int response_time,
-			int is_verified, int is_active, LocalDateTime created_at, LocalDateTime updated_at) {
+			int is_verified, int is_active, LocalDateTime created_at, LocalDateTime updated_at,
+			Integer onboarding_step) {
 		this.id = id;
 		this.user_id = user_id;
 		this.shop_name = shop_name;
@@ -60,6 +66,7 @@ public final class Shop {
 		this.is_active = is_active;
 		this.created_at = created_at;
 		this.updated_at = updated_at;
+		this.onboarding_step = onboarding_step;
 	}
 
 	public Long getId() {
@@ -220,5 +227,13 @@ public final class Shop {
 
 	public void setUpdated_at(LocalDateTime updated_at) {
 		this.updated_at = updated_at;
+	}
+
+	public Integer getOnboarding_step() {
+		return onboarding_step;
+	}
+
+	public void setOnboarding_step(Integer onboarding_step) {
+		this.onboarding_step = onboarding_step;
 	}
 }

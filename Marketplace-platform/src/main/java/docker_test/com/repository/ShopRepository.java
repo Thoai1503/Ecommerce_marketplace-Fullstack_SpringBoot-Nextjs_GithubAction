@@ -32,6 +32,14 @@ public class ShopRepository implements IRepositories<Shop> {
 		return instance;
 	}
 
+	private int normalizeOnboardingStep(Integer step) {
+		if (step == null) {
+			return 1;
+		}
+
+		return Math.max(1, Math.min(4, step));
+	}
+
 	/* ================= CREATE ================= */
 	@Override
 	public Shop Create(Shop item) throws SQLException {
@@ -45,8 +53,8 @@ public class ShopRepository implements IRepositories<Shop> {
 				     rating, total_products, total_orders,
 				     response_rate, response_time,
 				     is_verified, is_active,
-				     created_at, updated_at)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				     created_at, updated_at, onboarding_step)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				""";
 
 		try (Connection con = dbConnection.getConn();
@@ -74,6 +82,7 @@ public class ShopRepository implements IRepositories<Shop> {
 			ps.setInt(17, item.getIs_active());
 			ps.setTimestamp(18, java.sql.Timestamp.valueOf(item.getCreated_at()));
 			ps.setTimestamp(19, java.sql.Timestamp.valueOf(item.getUpdated_at()));
+			ps.setInt(20, normalizeOnboardingStep(item.getOnboarding_step()));
 
 			int rows = ps.executeUpdate();
 
@@ -109,6 +118,7 @@ public class ShopRepository implements IRepositories<Shop> {
 				        tax_code = ?,
 				        is_verified = ?,
 				        is_active = ?,
+				        onboarding_step = ?,
 				        updated_at = ?
 				    WHERE id = ?
 				""";
@@ -126,8 +136,9 @@ public class ShopRepository implements IRepositories<Shop> {
 			ps.setString(9, item.getTax_code());
 			ps.setInt(10, item.getIs_verified());
 			ps.setInt(11, item.getIs_active());
-			ps.setTimestamp(12, java.sql.Timestamp.valueOf(LocalDateTime.now()));
-			ps.setLong(13, item.getId());
+			ps.setInt(12, normalizeOnboardingStep(item.getOnboarding_step()));
+			ps.setTimestamp(13, java.sql.Timestamp.valueOf(LocalDateTime.now()));
+			ps.setLong(14, item.getId());
 
 			return ps.executeUpdate() > 0 ? item : null;
 		} catch (Exception ex) {
@@ -135,6 +146,27 @@ public class ShopRepository implements IRepositories<Shop> {
 		}
 
 		return null;
+	}
+
+	public boolean UpdateOnboardingStep(long shopId, Integer onboardingStep) {
+		String sql = """
+				    UPDATE shop
+				    SET onboarding_step = ?,
+				        updated_at = ?
+				    WHERE id = ?
+				""";
+
+		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setInt(1, normalizeOnboardingStep(onboardingStep));
+			ps.setTimestamp(2, java.sql.Timestamp.valueOf(LocalDateTime.now()));
+			ps.setLong(3, shopId);
+
+			return ps.executeUpdate() > 0;
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+
+		return false;
 	}
 
 	/* ================= DELETE ================= */
