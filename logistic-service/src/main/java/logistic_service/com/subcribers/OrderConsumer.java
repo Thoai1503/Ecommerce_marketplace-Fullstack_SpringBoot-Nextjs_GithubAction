@@ -24,7 +24,11 @@ public class OrderConsumer {
 	 
 	 
 	// @Transactional(rollbackFor = Exception.class)
-	 @KafkaListener(topics = "${spring.kafka.topic.name}",groupId = "${spring.kafka.consumer.group-id}")
+	 @KafkaListener(
+			topics = "${spring.kafka.topic.name}",
+			groupId = "${spring.kafka.consumer.group-id}",
+			containerFactory = "orderKafkaListenerContainerFactory"
+	 )
 	 public void consume(OrderCreatedEvent event) {
 		 var order = event.getOrder();
 		 LOGGER.info("Recieved order => {}",order.toString());

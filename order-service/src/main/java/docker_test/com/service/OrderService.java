@@ -28,7 +28,7 @@ import docker_test.com.exception.SimulatedRollbackException;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
 import docker_test.com.model.ReturnStatusSummary;
-import docker_test.com.models.OrderShipment;
+import docker_test.com.model.OrderShipment;
 import docker_test.com.publisher.OrderEventPublisher;
 import docker_test.com.repository.OrderItemRepository;
 import docker_test.com.repository.OrdersRepository;
