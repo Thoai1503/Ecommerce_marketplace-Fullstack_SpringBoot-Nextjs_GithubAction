@@ -4,6 +4,7 @@ import Script from "next/script";
 import StoreProvider from "./StoreProvider";
 import NextTopLoader from "nextjs-toploader";
 import { Suspense } from "react";
+import AuthRequestBridge from "@/components/AuthRequestBridge";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -114,6 +115,7 @@ export default function RootLayout({
           </style>
         </head>
         <body className={`index-page`} suppressHydrationWarning>
+          <AuthRequestBridge />
           <Suspense fallback={null}>
             <NextTopLoader
               color="#ee4d2d"

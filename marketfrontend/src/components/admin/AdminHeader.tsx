@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { logoutAction } from "@/app/actions/auth";
+import { API_URL } from "@/helper/api";
 import {
   Search,
   Menu,
@@ -48,6 +50,25 @@ const financeQuickLinks = [
     icon: Wallet,
   },
 ];
+
+const clearAuthStorage = () => {
+  [
+    "user",
+    "accessToken",
+    "refreshToken",
+    "expiresAt",
+    "expiresIn",
+    "refreshExpiresAt",
+    "idleTimeoutSeconds",
+    "lastActivityAt",
+    "rememberMe",
+    "token",
+  ].forEach((key) => localStorage.removeItem(key));
+
+  ["token", "refreshToken", "role", "user"].forEach((name) => {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+  });
+};
 
 const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
   const router = useRouter();
@@ -136,8 +157,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
     return "Dashboard";
   };
 
-  const handleLogout = () => {
-    // Simulate logout process
+  const handleLogout = async () => {
     setIsProfileOpen(false);
     setToast({
       id: Date.now().toString(),
@@ -145,14 +165,21 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
       type: "info",
     });
 
-    setTimeout(() => {
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("token"); // Mock clearing token
-        // In a real app, redirect to login page. Here we reload or go to home.
-        // navigate('/login');
-        window.location.href = "/";
-      }
-    }, 800);
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // Vẫn xóa state phía client kể cả khi backend logout lỗi/mất mạng.
+    }
+
+    await logoutAction();
+
+    if (typeof window !== "undefined") {
+      clearAuthStorage();
+      window.location.href = "/login";
+    }
   };
 
   const navigateTo = (path: string) => {

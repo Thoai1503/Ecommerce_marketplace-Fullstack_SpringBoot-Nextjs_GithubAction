@@ -35,7 +35,7 @@ export const useAuth = (requiredRole?: 'admin' | 'seller' | 'user') => {
   useEffect(() => {
     const checkAuth = async () => {
       // Lấy token từ localStorage
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
 
       if (!token) {
         setIsLoading(false);
@@ -66,11 +66,13 @@ export const useAuth = (requiredRole?: 'admin' | 'seller' | 'user') => {
           setIsAuthenticated(true);
         } else {
           // Token không hợp lệ → xóa token
+          localStorage.removeItem('accessToken');
           localStorage.removeItem('token');
           setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('Auth check failed:', error);
+        localStorage.removeItem('accessToken');
         localStorage.removeItem('token');
         setIsAuthenticated(false);
       } finally {
@@ -88,6 +90,10 @@ export const useAuth = (requiredRole?: 'admin' | 'seller' | 'user') => {
    * - Redirect về login
    */
   const logout = () => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('expiresAt');
+    localStorage.removeItem('expiresIn');
     localStorage.removeItem('token');
     setUser(null);
     setIsAuthenticated(false);

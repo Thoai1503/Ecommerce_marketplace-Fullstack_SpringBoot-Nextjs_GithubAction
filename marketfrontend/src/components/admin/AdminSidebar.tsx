@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { logoutAction } from "@/app/actions/auth";
+import { API_URL } from "@/helper/api";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -19,6 +21,25 @@ import {
   ChevronLeft,
   X,
 } from "lucide-react";
+
+const clearAuthStorage = () => {
+  [
+    "user",
+    "accessToken",
+    "refreshToken",
+    "expiresAt",
+    "expiresIn",
+    "refreshExpiresAt",
+    "idleTimeoutSeconds",
+    "lastActivityAt",
+    "rememberMe",
+    "token",
+  ].forEach((key) => localStorage.removeItem(key));
+
+  ["token", "refreshToken", "role", "user"].forEach((name) => {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+  });
+};
 
 const SidebarItem = ({
   label,
@@ -174,6 +195,21 @@ export default function AdminSidebar({
   const paymentStatus = (
     searchParams.get("paymentStatus") || "all"
   ).toUpperCase();
+
+  const handleLogout = async () => {
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // Vẫn xóa state phía client kể cả khi backend logout lỗi/mất mạng.
+    }
+
+    await logoutAction();
+    clearAuthStorage();
+    window.location.href = "/login";
+  };
 
   // Auto-expand parent menu when a child is active
   useEffect(() => {
@@ -453,6 +489,7 @@ export default function AdminSidebar({
 
           <button
             title="Đăng xuất"
+            onClick={handleLogout}
             className={`p-2 text-slate-500 hover:text-red-400 transition-all duration-300 border-0 bg-transparent shrink-0 ${isCollapsed ? "lg:opacity-0 lg:absolute" : "opacity-100"}`}
           >
             <LogOut size={18} />
@@ -460,7 +497,7 @@ export default function AdminSidebar({
 
           {isCollapsed && (
             <button
-              onClick={() => console.log("logout")}
+              onClick={handleLogout}
               className="absolute inset-0 opacity-0 cursor-pointer lg:block hidden"
               data-tooltip="Đăng xuất"
             />

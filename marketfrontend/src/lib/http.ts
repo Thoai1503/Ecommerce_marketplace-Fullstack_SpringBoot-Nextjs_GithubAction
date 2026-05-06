@@ -108,13 +108,33 @@ const refreshAccessToken = async (): Promise<string | null> => {
       refreshToken,
     });
 
-    const { accessToken, expiresIn } = response.data;
+    const {
+      accessToken,
+      refreshToken: newRefreshToken,
+      expiresIn,
+      refreshExpiresIn,
+      idleTimeoutSeconds,
+    } = response.data;
     // Store new token
     localStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, accessToken);
+    localStorage.setItem("token", accessToken);
+    if (newRefreshToken) {
+      localStorage.setItem(TOKEN_KEYS.REFRESH_TOKEN, newRefreshToken);
+    }
     if (expiresIn) {
       const expiresAt = Date.now() + expiresIn * 1000;
       localStorage.setItem(TOKEN_KEYS.EXPIRES_AT, expiresAt.toString());
     }
+    if (refreshExpiresIn) {
+      localStorage.setItem(
+        "refreshExpiresAt",
+        String(Date.now() + refreshExpiresIn * 1000),
+      );
+    }
+    if (idleTimeoutSeconds) {
+      localStorage.setItem("idleTimeoutSeconds", String(idleTimeoutSeconds));
+    }
+    localStorage.setItem("lastActivityAt", String(Date.now()));
 
     isRefreshing = false;
     processQueue(null, accessToken);
@@ -127,7 +147,7 @@ const refreshAccessToken = async (): Promise<string | null> => {
 
     // Redirect to login if we're in browser
     if (typeof window !== "undefined") {
-      window.location.href = "/auth/login";
+      window.location.href = "/login";
     }
 
     return null;
@@ -143,6 +163,11 @@ export const clearAuth = () => {
   localStorage.removeItem(TOKEN_KEYS.REFRESH_TOKEN);
   localStorage.removeItem(TOKEN_KEYS.EXPIRES_AT);
   localStorage.removeItem(TOKEN_KEYS.REMEMBER_ME);
+  localStorage.removeItem("expiresIn");
+  localStorage.removeItem("refreshExpiresAt");
+  localStorage.removeItem("idleTimeoutSeconds");
+  localStorage.removeItem("lastActivityAt");
+  localStorage.removeItem("token");
 };
 
 /**
