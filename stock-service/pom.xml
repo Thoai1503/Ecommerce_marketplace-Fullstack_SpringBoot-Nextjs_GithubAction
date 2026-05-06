@@ -49,7 +49,7 @@
 		 <groupId>group1</groupId>
 		   		<artifactId>Marketplace-platform</artifactId>
 	          		<version>0.0.1</version>
-	          		<classifier>classes</classifier>
+	          	
 		</dependency>
 
 		<dependency>
