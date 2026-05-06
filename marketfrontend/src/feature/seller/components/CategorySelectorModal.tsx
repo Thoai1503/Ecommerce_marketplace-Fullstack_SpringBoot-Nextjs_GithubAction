@@ -124,6 +124,7 @@ interface Props {
   isModalOpen: boolean;
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setProduct: React.Dispatch<React.SetStateAction<Partial<any>>>;
+  onConfirm?: (category: DbCategory, path: DbCategory[]) => void;
 }
 
 const CategorySelectorModal = ({
@@ -131,6 +132,7 @@ const CategorySelectorModal = ({
   isModalOpen,
   setIsModalOpen,
   setProduct,
+  onConfirm,
 }: Props) => {
   const [searchText, setSearchText] = useState("");
   const [selectedPath, setSelectedPath] = useState<DbCategory[]>([]);
@@ -186,8 +188,6 @@ const CategorySelectorModal = ({
     levelIndex: number,
     isOtherOption: boolean = false,
   ) => {
-    setProduct((prev: any) => ({ ...prev, category_id: category.id }));
-    //  alert(JSON.stringify(category));
     // Cập nhật active path
 
     const newActivePath = [...activePath];
@@ -351,11 +351,13 @@ const CategorySelectorModal = ({
 
   const handleOk = () => {
     if (selectedPath.length > 0) {
-      console.log("Selected category:", selectedPath[selectedPath.length - 1]);
+      const selectedCategory = selectedPath[selectedPath.length - 1];
+      console.log("Selected category:", selectedCategory);
       setProduct((prev: any) => ({
         ...prev,
-        category_id: selectedPath[selectedPath.length - 1].id,
+        category_id: selectedCategory.id,
       }));
+      onConfirm?.(selectedCategory, selectedPath);
       console.log("Full path:", selectedPath);
       setIsModalOpen(false);
     }

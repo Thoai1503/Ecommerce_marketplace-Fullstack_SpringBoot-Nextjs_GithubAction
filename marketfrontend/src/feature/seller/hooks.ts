@@ -2,17 +2,29 @@
 import { IProduct } from "@/validators/product";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
-import { categoryQuery, productImageQuery } from "./query";
+import {
+  categoryProductOptionsQuery,
+  categoryQuery,
+  productImageQuery,
+} from "./query";
 import { slugify, generateUniqueSlug, isValidSlug } from "@/helper/utils";
 import {
   addProduct,
   createProductVariant,
+  saveProductAttributes,
   updateVariantImage,
   uploadToProduct,
 } from "./service";
+import type { ProductAttributePayload } from "./service";
 import { message, UploadFile, UploadProps } from "antd";
 import { useSellerAuth } from "@/context/SellerAuthContext";
 import { IProductVariant } from "@/validators/productVariant";
+
+export interface ProductAttributeSelection {
+  attributeValueId?: number | null;
+  unitId?: number | null;
+  valueText?: string;
+}
 
 export const useAddProductSeller = (
   onSuccessCallback: (id: number) => void,
@@ -30,7 +42,8 @@ export const useAddProductSeller = (
     product_slug: "",
     shop_id: 0,
     description: "",
-    category_id: 2,
+    category_id: 0,
+    brand: null,
     weight: 0,
     length: 0,
     width: 0,
@@ -39,9 +52,30 @@ export const useAddProductSeller = (
     original_price: 0,
     price: 0,
   });
+  const [productAttributeSelections, setProductAttributeSelections] = useState<
+    Record<number, ProductAttributeSelection>
+  >({});
+
+  const selectedCategoryId = Number(product.category_id || 0);
+  const {
+    data: categoryProductOptions,
+    isFetching: isLoadingCategoryProductOptions,
+  } = useQuery({
+    ...categoryProductOptionsQuery.by_category_id(selectedCategoryId),
+    enabled: selectedCategoryId > 0,
+  });
+
   useEffect(() => {
     if (shop) setProduct((pre) => ({ ...pre, shop_id: shop.id }));
   }, [shop]);
+
+  useEffect(() => {
+    setProductAttributeSelections({});
+    setProduct((prev) => {
+      if (!prev.brand) return prev;
+      return { ...prev, brand: null };
+    });
+  }, [selectedCategoryId]);
 
   const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
     // Giới hạn tối đa 8 ảnh như yêu cầu
@@ -99,9 +133,36 @@ export const useAddProductSeller = (
 
   const { mutate: add } = useMutation({
     mutationFn: (product: Partial<IProduct>) => addProduct(product),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       //    message.success(`Lưu thành công sản phẩm thành công`);
       console.log("Added: " + JSON.stringify(data));
+      const attributePayload = Object.entries(productAttributeSelections)
+        .map(([attributeId, selection]): ProductAttributePayload => ({
+          productId: data.id,
+          attributeId: Number(attributeId),
+          attributeValueId: selection.attributeValueId ?? null,
+          valueText: selection.valueText?.trim() || null,
+          valueNumber: null,
+          valueDate: null,
+          unitId: selection.unitId ?? null,
+        }))
+        .filter(
+          (item) =>
+            Boolean(item.attributeValueId) || Boolean(item.valueText),
+        );
+
+      if (attributePayload.length > 0) {
+        try {
+          await saveProductAttributes(data.id, attributePayload);
+        } catch (error: any) {
+          console.error("Error saving product attributes:", error);
+          message.error(
+            "Sản phẩm đã tạo nhưng lưu thuộc tính thất bại: " +
+              (error?.message || "Unknown error"),
+          );
+        }
+      }
+
       onSuccessCallback(data.id);
       // Reset form sau khi thêm thành công
       setProduct({
@@ -109,7 +170,8 @@ export const useAddProductSeller = (
         product_slug: "",
         shop_id: shop?.id || 0,
         description: "",
-        category_id: 2,
+        category_id: 0,
+        brand: null,
         original_price: 0,
         weight: 0,
         length: 0,
@@ -118,6 +180,7 @@ export const useAddProductSeller = (
         price: 0,
         stock_quantity: 0,
       });
+      setProductAttributeSelections({});
       createVariant({
         id: 0,
         product_id: data.id,
@@ -233,6 +296,10 @@ export const useAddProductSeller = (
     handleChangeProduct,
     product,
     categories,
+    categoryProductOptions,
+    isLoadingCategoryProductOptions,
+    productAttributeSelections,
+    setProductAttributeSelections,
     isManualSlug,
     resetSlugMode,
     setProduct,
