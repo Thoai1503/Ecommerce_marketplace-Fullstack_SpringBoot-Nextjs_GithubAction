@@ -1,6 +1,7 @@
 package docker_test.com.controllers.seller;
 
 import java.sql.SQLException;
+import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 import docker_test.com.factory.IRepoFactory;
 import docker_test.com.factory.RepoFactoryImpl;
 import docker_test.com.models.product.Product;
+import docker_test.com.models.product.ProductAttribute;
 import docker_test.com.repository.IRepositories;
+import docker_test.com.repository.ProductAttributeRepository;
 import docker_test.com.repository.ProductRepository;
 
 @RestController("sellerProductController")
@@ -21,10 +24,12 @@ import docker_test.com.repository.ProductRepository;
 public class ProductController {
 	 private final IRepositories repositories;
 	 private final IRepoFactory iRepoFactory;
+	 private final ProductAttributeRepository productAttributeRepository;
 	 
 	 public ProductController (RepoFactoryImpl factoryImpl) {
 		 this.iRepoFactory= factoryImpl;
 		 this.repositories = iRepoFactory.createRepo("product");
+		 this.productAttributeRepository = ProductAttributeRepository.Instance();
 	 }
         
 	 
@@ -46,6 +51,26 @@ public class ProductController {
 		 
 		 return ResponseEntity.ok(en);
 	 }
+
+	 @PostMapping("{id}/attributes")
+	 public ResponseEntity saveAttributes(@PathVariable int id, @RequestBody List<ProductAttribute> attributes)
+			 throws SQLException {
+		 if (attributes != null) {
+			 attributes.forEach(attribute -> attribute.setProductId(id));
+		 }
+
+		 var saved = productAttributeRepository.ReplaceByProductId(
+				 id,
+				 attributes == null ? List.of() : attributes);
+
+		 return ResponseEntity.ok(saved);
+	 }
+
+	 @GetMapping("{id}/attributes")
+	 public ResponseEntity getAttributes(@PathVariable int id) {
+		 return ResponseEntity.ok(productAttributeRepository.GetByProductId(id));
+	 }
+
 	 @GetMapping("{id}")
 	 public ResponseEntity getById( @PathVariable int id) {
 		
