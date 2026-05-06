@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useBrands } from "@/hooks/admin/useBrands";
 import { generateSlug } from "@/service/brands";
 import { ChevronLeft, Save, UploadCloud } from "lucide-react";
@@ -10,9 +10,12 @@ import { API_URL } from "@/helper/api";
 export default function EditBrand() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
 
   const id = params?.id as string;
   const isEditMode = !!id;
+  const autoAddCategoryId = searchParams?.get("autoAddCategoryId");
+  const initialBrandName = searchParams?.get("brandName") || "";
 
   const { brands, createBrand, updateBrand } = useBrands();
 
@@ -23,7 +26,7 @@ export default function EditBrand() {
   const [previewUrl, setPreviewUrl] = useState("");
 
   const [formData, setFormData] = useState({
-    name: "",
+    name: initialBrandName,
     slug: "",
     logo: "",
     status: "ACTIVE",
@@ -31,7 +34,17 @@ export default function EditBrand() {
 
   // ================= LOAD DATA (EDIT) =================
   useEffect(() => {
-    if (!isEditMode) return;
+    if (!isEditMode) {
+      // For new brand, generate slug from initial name if provided
+      if (initialBrandName) {
+        setFormData((prev) => ({
+          ...prev,
+          name: initialBrandName,
+          slug: generateSlug(initialBrandName),
+        }));
+      }
+      return;
+    }
 
     const found = brands.find((b: any) => b.id === id);
     if (!found) return;
@@ -45,7 +58,7 @@ export default function EditBrand() {
     });
 
     setPreviewUrl(found.logo || "");
-  }, [id, brands, isEditMode]);
+  }, [id, brands, isEditMode, initialBrandName]);
 
   // ================= NAME CHANGE =================
   const handleNameChange = (value: string) => {
@@ -106,11 +119,32 @@ export default function EditBrand() {
           id,
           data: payload,
         });
+        router.push("/admin/categories/brands");
       } else {
-        await createBrand(payload);
-      }
+        // 🔥 Nếu có autoAddCategoryId, gọi API với param này
+        if (autoAddCategoryId) {
+          const response = await fetch(
+            `${API_URL}/api/brands?autoAddCategoryId=${autoAddCategoryId}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(payload),
+            }
+          );
 
-      router.push("/admin/categories/brands");
+          if (!response.ok) {
+            throw new Error("Create brand failed");
+          }
+
+          // ✅ Redirect trở lại trang Category Detail
+          router.push(`/admin/categories/industries/${autoAddCategoryId}`);
+        } else {
+          await createBrand(payload);
+          router.push("/admin/categories/brands");
+        }
+      }
     } catch (err) {
       console.error("Save failed:", err);
       alert("Save failed");

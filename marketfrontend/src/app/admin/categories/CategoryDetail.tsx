@@ -666,6 +666,7 @@ export default function CategoryDetail() {
         onClose={() => setOpenAttributeModal(false)}
         attributes={attributes}
         existingIds={categoryAttributes.map((a) => Number(a.attributeId))}
+        categoryId={category?.id}
         onSubmit={async (ids) => {
           try {
             await addAttributes(ids);
@@ -732,6 +733,8 @@ export default function CategoryDetail() {
         onClose={() => setOpenBrandModal(false)}
         brands={brands}
         existingIds={linkedBrands.map((b: any) => Number(b.id))}
+        categoryId={category?.id}
+        loading={adding}
         onSubmit={async (ids: number[]) => {
           if (ids.length === 0) return;
 

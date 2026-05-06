@@ -1,7 +1,12 @@
 "use client";
-;
+
+import { Suspense } from "react";
 import EditBrand from "../../EditBrand";
 
 export default function NewBrandPage() {
-  return <EditBrand />;
+  return (
+    <Suspense fallback={null}>
+      <EditBrand />
+    </Suspense>
+  );
 }

@@ -1,25 +1,34 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAttributeDetail } from "../../../hooks/admin/useAttributes";
 import { ChevronLeft, Save, AlertCircle, Eye } from "lucide-react";
 import ToastComponent, { ToastType } from "../../../components/ui/Toast";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
+import { API_URL } from "@/helper/api";
 
 export default function EditAttribute() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params?.id as string;
   const router = useRouter();
   const isEditMode = !!id;
+
+  // 🔥 Get params from URL
+  const autoAddCategoryId = searchParams?.get("autoAddCategoryId");
+  const autoAddCategoryIdNum = autoAddCategoryId ? parseInt(autoAddCategoryId, 10) : null;
+  const initialAttributeName = searchParams?.get("name") || "";
 
   const { attribute, isLoading, createAttribute, updateAttribute, isSaving } =
     useAttributeDetail(id || "");
 
   const [formData, setFormData] = useState({
-    name: "",
+    name: initialAttributeName,
     published: true,
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [toast, setToast] = useState<{
     message: string;
@@ -33,8 +42,14 @@ export default function EditAttribute() {
         name: attribute.name,
         published: attribute.status === "ACTIVE",
       });
+    } else if (!isEditMode && initialAttributeName) {
+      // Pre-fill name for new attribute
+      setFormData((prev) => ({
+        ...prev,
+        name: initialAttributeName,
+      }));
     }
-  }, [isEditMode, attribute]);
+  }, [isEditMode, attribute, initialAttributeName]);
 
   // ================= SUBMIT =================
   const handleSubmit = async () => {
@@ -43,23 +58,56 @@ export default function EditAttribute() {
       return;
     }
 
+    // Prevent double submit
+    if (isSubmitting) return;
+
     try {
+      setIsSubmitting(true);
+
       const payload = {
         name: formData.name,
-        published: formData.published,
+        status: formData.published ? 1 : 0,
       };
 
       if (isEditMode) {
         await updateAttribute(payload);
         setToast({ message: "Updated successfully!", type: "success" });
+        setTimeout(() => router.push("/admin/categories/attributes"), 1000);
       } else {
-        await createAttribute(payload);
-        setToast({ message: "Created successfully!", type: "success" });
-      }
+        // 🔥 If autoAddCategoryId, call API with param
+        if (autoAddCategoryIdNum) {
+          const response = await fetch(
+            `${API_URL}/api/attributes?autoAddCategoryId=${autoAddCategoryIdNum}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(payload),
+            }
+          );
 
-      setTimeout(() => router.push("/admin/categories/attributes"), 1000);
+          if (!response.ok) {
+            throw new Error("Create attribute failed");
+          }
+
+          setToast({ message: "Created successfully!", type: "success" });
+
+          // ✅ Redirect back to Category Detail
+          setTimeout(
+            () => router.push(`/admin/categories/industries/${autoAddCategoryIdNum}`),
+            1000
+          );
+        } else {
+          await createAttribute(payload);
+          setToast({ message: "Created successfully!", type: "success" });
+          setTimeout(() => router.push("/admin/categories/attributes"), 1000);
+        }
+      }
     } catch {
       setToast({ message: "Error occurred.", type: "error" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -109,11 +157,11 @@ export default function EditAttribute() {
 
         <button
           onClick={handleSubmit}
-          disabled={isSaving}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold"
+          disabled={isSubmitting || isSaving}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save size={18} />
-          {isSaving ? "Saving..." : "Save"}
+          {isSubmitting || isSaving ? "Saving..." : "Save"}
         </button>
       </div>
 
