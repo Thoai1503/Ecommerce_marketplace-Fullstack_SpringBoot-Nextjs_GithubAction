@@ -40,29 +40,40 @@ export const generateCategoryCode = (name: string): string => {
 
 /* ================= MAP BACKEND → FRONTEND ================= */
 
-const mapCategory = (c: any, productStock: number = 0): Category => ({
-  id: String(c.id),
+const mapCategory = (c: any, productStock: number = 0): Category => {
+  const parentId = Number(c.parent_id ?? c.parentId ?? 0);
+  const level = Number(c.level ?? 0);
 
-  name: c.category_name,
+  return {
+    id: String(c.id),
 
-  slug: c.category_slug,
+    name: c.category_name ?? c.name ?? "",
 
-  description: "",
+    slug: c.category_slug ?? c.slug ?? "",
 
-  thumbnailUrl: c.category_icon ? c.category_icon : "/image/no-image.png",
+    description: "",
 
-  status: c.is_active === 1 ? "ACTIVE" : "HIDDEN",
+    thumbnailUrl: c.category_icon ? c.category_icon : "/image/no-image.png",
 
-  productStock,
+    status: Number(c.is_active ?? 1) === 1 ? "ACTIVE" : "HIDDEN",
 
-  attributeIds: [],
+    parentId,
 
-  categoryCode: `CAT-${c.id}`,
+    parent_id: parentId,
 
-  createdAt: c.created_at
-    ? new Date(c.created_at).toISOString()
-    : new Date().toISOString(),
-});
+    level,
+
+    productStock,
+
+    attributeIds: [],
+
+    categoryCode: `CAT-${c.id}`,
+
+    createdAt: c.created_at
+      ? new Date(c.created_at).toISOString()
+      : new Date().toISOString(),
+  };
+};
 
 const getCategoryProductCount = async (categoryId: number): Promise<number> => {
   try {
@@ -92,7 +103,10 @@ export const getCategories = async (): Promise<Category[]> => {
   const data = await res.json();
 
   // chỉ lấy category level = 0
-  const rootCategories = data.filter((c: any) => c.level === 0);
+  const rootCategories = data.filter(
+    (c: any) =>
+      Number(c.level ?? 0) === 0 && Number(c.parent_id ?? c.parentId ?? 0) === 0,
+  );
   const productCounts = await Promise.all(
     rootCategories.map((category: any) =>
       getCategoryProductCount(Number(category.id)),
