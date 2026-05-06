@@ -185,19 +185,22 @@ const LoginForm = () => {
         role: roleCookie,
       };
       const accessToken = persistAuthTokens(loginData);
+      const accessCookieMaxAge = Number(loginData?.expiresIn ?? 0) || 60 * 30;
+      const sessionCookieMaxAge =
+        Number(loginData?.refreshExpiresIn ?? 0) || 60 * 60 * 24;
 
       // Lưu thông tin user ở client
       localStorage.setItem("user", JSON.stringify(normalizedUser));
 
       // Đặt cookie để middleware đọc được trạng thái đăng nhập.
       document.cookie = `token=${accessToken || "logged-in"}; path=/; max-age=${
-        60 * 60 * 24
+        accessCookieMaxAge
       }; SameSite=Lax`;
       document.cookie = `role=${roleCookie}; path=/; max-age=${
-        60 * 60 * 24
+        sessionCookieMaxAge
       }; SameSite=Lax`;
       document.cookie = `user=${userId}; path=/; max-age=${
-        60 * 60 * 24
+        sessionCookieMaxAge
       }; SameSite=Lax`;
 
       // Sau khi login thành công, điều hướng về trang mong muốn (nếu có ?redirect=...)

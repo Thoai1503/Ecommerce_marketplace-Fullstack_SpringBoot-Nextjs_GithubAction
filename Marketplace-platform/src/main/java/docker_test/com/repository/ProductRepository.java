@@ -47,7 +47,7 @@ public class ProductRepository implements IRepositories<Product> {
 	@Override
 	public Product Create(Product item) throws SQLException {
 		System.out.print("Body: " + item.toString());
-		String sql = "insert into product (shop_id,category_id,description,product_name,product_slug,price,original_price,weight,length,width,height,stock_quantity) values (?,?,?,?,?,?,?,?,?,?,?,?)";
+		String sql = "insert into product (shop_id,category_id,description,product_name,product_slug,price,original_price,weight,length,width,height,stock_quantity,brand_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?)";
 		try (Connection con = dbConnection.getConn();
 				PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 			ps.setLong(1, item.getShop_id());
@@ -64,6 +64,7 @@ public class ProductRepository implements IRepositories<Product> {
 			ps.setInt(10, item.getWidth());
 			ps.setInt(11, item.getHeight());
 			ps.setInt(12, item.getStock_quantity());
+			ps.setObject(13, item.getBrand());
 
 			int rows = ps.executeUpdate();
 
@@ -87,7 +88,7 @@ public class ProductRepository implements IRepositories<Product> {
 	@Override
 	public Product Update(Product item) {
 	
-		 String sql = "update product set shop_id=?,category_id=?,description=?,product_name=?,product_slug=?,price=?,original_price=?,weight=?,length=?,width=?,height=?,stock_quantity=? where id=?";
+		 String sql = "update product set shop_id=?,category_id=?,description=?,product_name=?,product_slug=?,price=?,original_price=?,weight=?,length=?,width=?,height=?,stock_quantity=?,brand_id=? where id=?";
 		 try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
 			 ps.setLong(1, item.getShop_id());
 			 ps.setLong(2, item.getCategory_id());
@@ -101,7 +102,8 @@ public class ProductRepository implements IRepositories<Product> {
 			 ps.setInt(10, item.getWidth());
 			 ps.setInt(11, item.getHeight());
 			 ps.setInt(12, item.getStock_quantity());
-			 ps.setInt(13, item.getId());
+			 ps.setObject(13, item.getBrand());
+			 ps.setInt(14, item.getId());
 
 			 int rows = ps.executeUpdate();
 
@@ -204,7 +206,10 @@ public class ProductRepository implements IRepositories<Product> {
 				product.setLength(rs.getInt("length"));
 				product.setWidth(rs.getInt("width"));
 				product.setHeight(rs.getInt("height"));
-			//    product.setBrand(rs.getInt("brand"));
+				int brandId = rs.getInt("brand_id");
+				if (!rs.wasNull()) {
+					product.setBrand(brandId);
+				}
 			     
 
 				String variantsJson = rs.getString("variants");

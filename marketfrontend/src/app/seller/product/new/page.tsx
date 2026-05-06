@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Modal, Upload, UploadFile, UploadProps, message } from "antd";
+import type { ProductAttributeSelection } from "@/feature/seller/hooks";
 import { useAddImageSeller, useAddProductSeller } from "@/feature/seller/hooks";
 import CategorySelectorModal from "@/feature/seller/components/CategorySelectorModal";
 import { useSellerSideBarContext } from "@/context/SellerSideBarContext";
@@ -68,13 +69,17 @@ const AddProductForm: React.FC = () => {
     setIsEdit(Boolean(id));
   }, [editorRef, id, setOpen]);
 
-  const { fileList, handleChange, handleSave, handleSaveImageAfterProduct } =
+  const { fileList, handleChange, handleSaveImageAfterProduct } =
     useAddImageSeller();
   const {
     product,
     handleChangeProduct,
     handleSubmitProduct,
     categories,
+    categoryProductOptions,
+    isLoadingCategoryProductOptions,
+    productAttributeSelections,
+    setProductAttributeSelections,
     setProduct,
     shop,
   } = useAddProductSeller(
@@ -91,8 +96,8 @@ const AddProductForm: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<number>(0);
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
-    category: "Watches & Accessories > Men's Watches",
-    brand: "Nordic Time",
+    category: "",
+    brand: "",
     description: "",
     price: "149.00",
     inventory: "250",
@@ -107,6 +112,12 @@ const AddProductForm: React.FC = () => {
     },
     hasVariations: true,
   });
+
+  useEffect(() => {
+    if (!product.category_id && formData.category) {
+      setFormData((prev) => ({ ...prev, category: "" }));
+    }
+  }, [formData.category, product.category_id]);
 
   // Refs for each section
   const basicInfoRef = useRef<HTMLDivElement>(null);
@@ -169,6 +180,22 @@ const AddProductForm: React.FC = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  const updateAttributeSelection = (
+    attributeId: number,
+    selection: ProductAttributeSelection,
+  ) => {
+    setProductAttributeSelections((prev) => ({
+      ...prev,
+      [attributeId]: {
+        ...prev[attributeId],
+        ...selection,
+      },
+    }));
+  };
+
+  const categoryBrands = categoryProductOptions?.brands ?? [];
+  const categoryAttributes = categoryProductOptions?.attributes ?? [];
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
@@ -470,7 +497,7 @@ const AddProductForm: React.FC = () => {
                         <label className="form-label fw-semibold">
                           Product Name <span className="text-danger">*</span>
                           <span className="float-end text-muted small">
-                            {formData.name.length}/120
+                            {product.product_name?.length ?? 0}/120
                           </span>
                         </label>
                         <input
@@ -494,6 +521,7 @@ const AddProductForm: React.FC = () => {
                             name="category_id"
                             value={formData.category}
                             onChange={handleInputChange}
+                            placeholder="Chọn danh mục sản phẩm"
                             readOnly
                           />
                           <button className="btn btn-outline-secondary">
@@ -506,13 +534,38 @@ const AddProductForm: React.FC = () => {
                         <label className="form-label fw-semibold">
                           Brand / Manufacturer
                         </label>
-                        <input
-                          type="text"
-                          className="form-control"
+                        <select
+                          className="form-select"
                           name="brand"
-                          value={formData.brand}
-                          onChange={handleInputChange}
-                        />
+                          value={product.brand ?? ""}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setProduct((prev: any) => ({
+                              ...prev,
+                              brand: value ? Number(value) : null,
+                            }));
+                          }}
+                          disabled={
+                            !product.category_id ||
+                            isLoadingCategoryProductOptions ||
+                            categoryBrands.length === 0
+                          }
+                        >
+                          <option value="">
+                            {!product.category_id
+                              ? "Chọn danh mục trước"
+                              : isLoadingCategoryProductOptions
+                                ? "Đang tải thương hiệu..."
+                                : categoryBrands.length === 0
+                                  ? "Danh mục chưa có thương hiệu"
+                                  : "Chọn thương hiệu"}
+                          </option>
+                          {categoryBrands.map((brand) => (
+                            <option key={brand.id} value={brand.id}>
+                              {brand.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       <div className="col-12">
@@ -641,61 +694,139 @@ const AddProductForm: React.FC = () => {
                     </small>
                   </div>
                   <div className="card-body">
-                    <div className="row g-3">
-                      {[
-                        {
-                          name: "material",
-                          label: "Material",
-                          options: [
-                            "Stainless Steel",
-                            "Leather",
-                            "Gold Plated",
-                          ],
-                        },
-                        {
-                          name: "origin",
-                          label: "Origin",
-                          options: ["Switzerland", "Japan", "China", "USA"],
-                        },
-                        {
-                          name: "style",
-                          label: "Style",
-                          options: ["Casual", "Formal", "Sport"],
-                        },
-                        {
-                          name: "waterResistance",
-                          label: "Water Resistance",
-                          options: ["30m", "50m", "100m"],
-                        },
-                      ].map((field) => (
-                        <div className="col-md-6" key={field.name}>
-                          <label className="form-label fw-semibold">
-                            {field.label}
-                          </label>
-                          <select
-                            className="form-select"
-                            name={field.name}
-                            value={(formData as any)[field.name]}
-                            onChange={handleInputChange}
-                          >
-                            <option value="">
-                              Select {field.label.toLowerCase()}
-                            </option>
-                            {field.options.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      ))}
-                      <div className="col-12">
-                        <button className="btn btn-link text-danger p-0">
-                          Show more attributes{" "}
-                          <i className="bi bi-chevron-down"></i>
-                        </button>
+                    {!product.category_id ? (
+                      <div className="alert alert-light border mb-0">
+                        Vui lòng chọn danh mục để tải thuộc tính, đơn vị và giá
+                        trị phù hợp.
                       </div>
-                    </div>
+                    ) : isLoadingCategoryProductOptions ? (
+                      <div className="text-muted small">
+                        Đang tải thuộc tính theo danh mục...
+                      </div>
+                    ) : categoryAttributes.length === 0 ? (
+                      <div className="alert alert-light border mb-0">
+                        Danh mục này chưa được admin gắn thuộc tính.
+                      </div>
+                    ) : (
+                      <div className="row g-3">
+                        {categoryAttributes.map((attribute) => {
+                          const attributeId = Number(attribute.id);
+                          const selection =
+                            productAttributeSelections[attributeId] ?? {};
+                          const selectedUnit = attribute.units.find(
+                            (unit) => unit.id === selection.unitId,
+                          );
+                          const selectableValues = selectedUnit
+                            ? selectedUnit.values
+                            : attribute.values;
+                          const needsUnit = attribute.units.length > 0;
+                          const canSelectValue =
+                            !needsUnit || Boolean(selectedUnit);
+
+                          return (
+                            <div className="col-12" key={attribute.id}>
+                              <div className="border rounded p-3 bg-white">
+                                <div className="fw-semibold mb-3">
+                                  {attribute.name}
+                                </div>
+                                <div className="row g-3">
+                                  {needsUnit && (
+                                    <div className="col-md-5">
+                                      <label className="form-label small text-muted">
+                                        Unit
+                                      </label>
+                                      <select
+                                        className="form-select"
+                                        value={selection.unitId ?? ""}
+                                        onChange={(event) => {
+                                          const unitId = event.target.value
+                                            ? Number(event.target.value)
+                                            : null;
+                                          updateAttributeSelection(attributeId, {
+                                            unitId,
+                                            attributeValueId: null,
+                                            valueText: "",
+                                          });
+                                        }}
+                                      >
+                                        <option value="">Chọn đơn vị</option>
+                                        {attribute.units.map((unit) => (
+                                          <option
+                                            key={unit.id}
+                                            value={unit.id}
+                                          >
+                                            {unit.label} ({unit.symbol})
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  )}
+
+                                  <div
+                                    className={needsUnit ? "col-md-7" : "col-12"}
+                                  >
+                                    <label className="form-label small text-muted">
+                                      Value
+                                    </label>
+                                    {selectableValues.length > 0 ? (
+                                      <select
+                                        className="form-select"
+                                        value={selection.attributeValueId ?? ""}
+                                        disabled={!canSelectValue}
+                                        onChange={(event) => {
+                                          const valueId = event.target.value
+                                            ? Number(event.target.value)
+                                            : null;
+                                          updateAttributeSelection(attributeId, {
+                                            attributeValueId: valueId,
+                                            valueText: "",
+                                          });
+                                        }}
+                                      >
+                                        <option value="">
+                                          {canSelectValue
+                                            ? "Chọn giá trị"
+                                            : "Chọn đơn vị trước"}
+                                        </option>
+                                        {selectableValues.map((value) => (
+                                          <option
+                                            key={value.id}
+                                            value={value.id}
+                                          >
+                                            {value.value}
+                                            {selectedUnit
+                                              ? ` ${selectedUnit.symbol}`
+                                              : ""}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <input
+                                        type="text"
+                                        className="form-control"
+                                        value={selection.valueText ?? ""}
+                                        disabled={!canSelectValue}
+                                        onChange={(event) =>
+                                          updateAttributeSelection(attributeId, {
+                                            attributeValueId: null,
+                                            valueText: event.target.value,
+                                          })
+                                        }
+                                        placeholder={
+                                          canSelectValue
+                                            ? "Nhập giá trị"
+                                            : "Chọn đơn vị trước"
+                                        }
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1232,7 +1363,7 @@ const AddProductForm: React.FC = () => {
                   </button>
                   <button
                     className="btn btn-danger btn-sm flex-fill action-save"
-                    onClick={handleSave}
+                    onClick={handleSubmitProduct}
                   >
                     <i
                       className={`bi ${isLastTab ? "bi-check2" : "bi-arrow-right"}`}
@@ -1255,6 +1386,12 @@ const AddProductForm: React.FC = () => {
         isModalOpen={isModalOpen}
         setIsModalOpen={setIsModalOpen}
         setProduct={setProduct}
+        onConfirm={(_, path) => {
+          setFormData((prev) => ({
+            ...prev,
+            category: path.map((category) => category.category_name).join(" → "),
+          }));
+        }}
       />
 
       {/* Antd Upload Styles - Red Theme */}
