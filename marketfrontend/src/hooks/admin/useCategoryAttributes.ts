@@ -11,7 +11,11 @@ export const useCategoryAttributes = (categoryId?: number | string) => {
 
   // ===== FETCH =====
   const fetchData = useCallback(async () => {
-    if (!categoryId) return;
+    if (!categoryId) {
+      setCategoryAttributes([]);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError(null);

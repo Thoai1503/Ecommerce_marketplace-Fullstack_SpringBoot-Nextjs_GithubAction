@@ -62,6 +62,12 @@ export default function CategoryDetail() {
   const [adding, setAdding] = useState(false);
   const { category, isLoading, deleteCategory } = useCategoryDetail(id);
   const { subCategories, loading: loadingSub } = useSubCategories(id);
+  const categoryParentId = Number(
+    (category as any)?.parentId ?? (category as any)?.parent_id ?? 0,
+  );
+  const categoryLevel = Number((category as any)?.level ?? 0);
+  const isChildCategory =
+    Boolean(category) && (categoryParentId > 0 || categoryLevel > 0);
   const { attributes } = useAttributes();
   const { units } = useUnits();
   const [selectedAttr, setSelectedAttr] = useState<any>(null);
@@ -84,7 +90,7 @@ export default function CategoryDetail() {
     categoryBrands,
     isLoading: loadingBrand,
     refresh: refreshBrand,
-  } = useCategoryBrands(category?.id || "");
+  } = useCategoryBrands(isChildCategory ? category?.id || "" : "");
 
   const { values, createValue, deleteValue } = useAttributeValues();
   const handleOpenUnitModal = (attr: any) => {
@@ -179,8 +185,7 @@ export default function CategoryDetail() {
     loading: loadingAttr,
     addAttributes,
     removeAttribute,
-  } = useCategoryAttributes(category?.id);
-
+  } = useCategoryAttributes(isChildCategory ? category?.id : undefined);
   const [openAttributeModal, setOpenAttributeModal] = useState(false);
 
   // 🔥 DELETE ATTRIBUTE
@@ -275,8 +280,6 @@ export default function CategoryDetail() {
       </div>
     );
   }
-
-  const isChildCategory = !loadingSub && subCategories.length === 0;
 
   return (
     <div className="p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8 pb-24">
@@ -474,33 +477,59 @@ export default function CategoryDetail() {
             </div>
 
             {/* SUBCATEGORY */}
-            {!isChildCategory &&
-              (loadingSub ? (
-                <p className="text-sm text-slate-400">Loading...</p>
-              ) : subCategories.length === 0 ? (
-                <p className="text-sm text-slate-400">No subcategories found</p>
-              ) : (
-                <div className="space-y-2">
-                  {subCategories.map((sub: any) => (
-                    <div
-                      key={sub.id}
-                      onClick={() =>
-                        router.push(`/admin/categories/industries/${sub.id}`)
-                      }
-                      className="flex items-center justify-between p-4 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition bg-white"
-                    >
-                      <span className="font-bold text-sm">
-                        {sub.category_name}
-                      </span>
+            {!isChildCategory && (
+              <div className="space-y-2">
+                {loadingSub ? (
+                  <p className="text-sm text-slate-400">Loading...</p>
+                ) : subCategories.length === 0 ? (
+                  <p className="text-sm text-slate-400">
+                    No subcategories found
+                  </p>
+                ) : (
+                  <>
+                    {subCategories.map((sub: any) => {
+                      const isActive = Number(sub.is_active ?? 1) === 1;
 
-                      <ChevronLeft
-                        size={14}
-                        className="rotate-180 text-gray-400"
-                      />
-                    </div>
-                  ))}
-                </div>
-              ))}
+                      return (
+                        <div
+                          key={sub.id}
+                          onClick={() =>
+                            router.push(
+                              `/admin/categories/industries/${sub.id}`,
+                            )
+                          }
+                          className="flex items-center justify-between p-4 rounded-xl border border-slate-100 shadow-sm hover:shadow-md cursor-pointer transition bg-white"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="min-w-0">
+                              <span className="block font-bold text-sm text-slate-800 truncate">
+                                {sub.category_name}
+                              </span>
+                              <span className="block text-[11px] text-slate-400">
+                                CAT-{sub.id}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`text-[11px] font-bold px-2 py-1 rounded-lg ${isActive ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-500"}`}
+                            >
+                              {isActive ? "Active" : "Hidden"}
+                            </span>
+
+                            <ChevronLeft
+                              size={14}
+                              className="rotate-180 text-gray-400"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* ATTRIBUTES */}
             {isChildCategory &&
