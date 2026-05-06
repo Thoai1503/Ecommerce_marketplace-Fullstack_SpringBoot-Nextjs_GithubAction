@@ -18,6 +18,8 @@ export interface LoginResponse {
     role: 'admin' | 'seller' | 'user';
   };
   expiresIn?: number; // seconds
+  refreshExpiresIn?: number; // seconds
+  idleTimeoutSeconds?: number; // seconds
 }
 
 export interface AuthError {

@@ -37,6 +37,11 @@ export default function HeaderAuth() {
   const handleLogout = async () => {
     await logoutAction();
     localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("expiresAt");
+    localStorage.removeItem("expiresIn");
+    localStorage.removeItem("token");
     router.refresh();
     router.push("/login");
   };
@@ -58,6 +63,11 @@ export default function HeaderAuth() {
 
   const logout = () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("expiresAt");
+    localStorage.removeItem("expiresIn");
+    localStorage.removeItem("token");
     //xoá cookie
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     document.cookie = "role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";

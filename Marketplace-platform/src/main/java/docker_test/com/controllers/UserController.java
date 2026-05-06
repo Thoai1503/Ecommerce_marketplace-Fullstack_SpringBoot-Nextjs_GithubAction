@@ -4,11 +4,11 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.server.ResponseStatusException;
 
 import docker_test.com.dto.LoginRequest;
 import docker_test.com.dto.LoginResponse;
@@ -18,6 +18,7 @@ import docker_test.com.dto.ResetPasswordRequest;
 import docker_test.com.models.User;
 import docker_test.com.repository.UserRepository;
 import docker_test.com.utils.PasswordUtil;
+import docker_test.com.services.AuthService;
 import docker_test.com.services.CloudinaryService;
 import docker_test.com.services.EmailVerificationService;
 import docker_test.com.services.PasswordResetService;
@@ -38,6 +39,9 @@ public class UserController {
 
     @Autowired
     private PasswordResetService passwordResetService;
+
+    @Autowired
+    private AuthService authService;
 
     public UserController() {
         this.userRepository = UserRepository.Instance();
@@ -167,80 +171,13 @@ public class UserController {
     // POST http://localhost:8000/users/login
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req,HttpServletResponse response) {
-
-    	
-    	System.out.print("Login..");
-    	
-        // ✅ validate
-        if (req.getEmail() == null || req.getPassword() == null) {
-            return ResponseEntity
-                    .badRequest()
-                    .body("Thiếu email hoặc mật khẩu");
+        try {
+            LoginResponse loginResponse = authService.login(req);
+            authService.addAuthCookies(loginResponse, response);
+            return ResponseEntity.ok(loginResponse);
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
         }
-
-        User user = userRepository.findByEmail(req.getEmail());
-
-        if (user == null) {
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body("Email không tồn tại");
-        }
-
-        boolean matched = PasswordUtil.verify(
-                req.getPassword(),
-                user.getPasswordHash()
-        );
-
-        if (!matched) {
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body("Sai mật khẩu");
-        }
-
-        if (user.getIsActive() == 0) {
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .body("Tài khoản bị khóa");
-        }
-
-        if (user.getIsVerified() == null || user.getIsVerified() != 1) {
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .body("Tài khoản chưa xác minh email");
-        }
-
-        // ❌ không trả password
-        user.setPasswordHash(null);
-        if (user.getId() == null) {
-            user.setId(userRepository.findUserIdByEmail(req.getEmail()));
-        }
-        Long resolvedUserId = user.getId();
-        
-        ResponseCookie roleCookie = ResponseCookie.from("role", user.getUserType())
-    		    .httpOnly(true)
-    		    .secure(false)          // requires HTTPS
-    		    .path("/")
-    		    .maxAge(7 * 24 * 60 * 60)
-    		    .sameSite("Lax")
-    		    .build();
-    		response.addHeader("Set-Cookie", roleCookie.toString());
-            ResponseCookie userCookie = ResponseCookie.from("user", String.valueOf(resolvedUserId))
-        		    .httpOnly(true)
-        		    .secure(false)          // requires HTTPS
-        		    .path("/")
-        		    .maxAge(7 * 24 * 60 * 60)
-        		    .sameSite("Lax")
-        		    .build();
-        		response.addHeader("Set-Cookie", userCookie.toString());
-        
-        return ResponseEntity.ok(
-            new LoginResponse(
-                resolvedUserId,
-                user.getEmail(),
-                user.getFullName(),
-                user.getUserType()
-            )
-        );
     }
 
     /* ================= FORGOT PASSWORD ================= */

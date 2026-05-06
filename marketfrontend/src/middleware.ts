@@ -74,6 +74,90 @@ function getStatusColor(status: number): string {
   return colors.white;
 }
 
+type AuthRole = "admin" | "seller" | "buyer";
+
+type VerifiedSession = {
+  id: number;
+  role: AuthRole;
+  userType?: string;
+};
+
+const AUTH_API_URL =
+  process.env.INTERNAL_API ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:8000";
+
+const buyerProtectedPaths = ["/profile", "/purchase", "/checkout", "/orders"];
+
+function normalizeAuthRole(role?: string | null): AuthRole | null {
+  const normalized = role?.trim().toLowerCase();
+
+  if (normalized === "admin") return "admin";
+  if (normalized === "seller" || normalized === "both") return "seller";
+  if (normalized === "buyer" || normalized === "user") return "buyer";
+
+  return null;
+}
+
+function isPathOrChild(pathname: string, basePath: string) {
+  return pathname === basePath || pathname.startsWith(`${basePath}/`);
+}
+
+function isBuyerProtectedPath(pathname: string) {
+  return buyerProtectedPaths.some((path) => isPathOrChild(pathname, path));
+}
+
+function redirectToLogin(request: NextRequest) {
+  const target = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("redirect", target);
+  return NextResponse.redirect(loginUrl);
+}
+
+async function getVerifiedSession(
+  request: NextRequest,
+): Promise<VerifiedSession | null> {
+  const token = request.cookies.get("token")?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const res = await fetch(`${AUTH_API_URL}/auth/verify`, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      return null;
+    }
+
+    const data = await res.json();
+    const role =
+      normalizeAuthRole(data?.userType) ??
+      normalizeAuthRole(data?.role) ??
+      normalizeAuthRole(request.cookies.get("role")?.value);
+    const id = Number(data?.id ?? request.cookies.get("user")?.value ?? 0);
+
+    if (!role || !Number.isFinite(id) || id <= 0) {
+      return null;
+    }
+
+    return {
+      id,
+      role,
+      userType: data?.userType,
+    };
+  } catch (err) {
+    console.log("Auth verify error:", err);
+    return null;
+  }
+}
+
 // Middleware function
 export async function middleware(request: NextRequest) {
   console.log("=== RUNTIME ENV ===");
@@ -219,14 +303,65 @@ export async function middleware(request: NextRequest) {
   //   return NextResponse.redirect(new URL("/", request.url));
   // }
 
+  let verifiedSession: VerifiedSession | null | undefined;
+  const resolveSession = async () => {
+    if (verifiedSession !== undefined) {
+      return verifiedSession;
+    }
+
+    verifiedSession = await getVerifiedSession(request);
+    return verifiedSession;
+  };
+
+  const sessionForAdminLock = await resolveSession();
+  if (
+    sessionForAdminLock?.role === "admin" &&
+    !pathname.startsWith("/admin") &&
+    !pathname.startsWith("/api")
+  ) {
+    return NextResponse.redirect(new URL("/admin", request.url));
+  }
+
+  if (pathname.startsWith("/admin") && pathname !== "/admin/forbidden") {
+    const session = sessionForAdminLock;
+
+    if (!session) {
+      return redirectToLogin(request);
+    }
+
+    if (session.role !== "admin") {
+      return NextResponse.redirect(new URL("/admin/forbidden", request.url));
+    }
+  }
+
+  if (isBuyerProtectedPath(pathname)) {
+    const session = await resolveSession();
+
+    if (!session) {
+      return redirectToLogin(request);
+    }
+
+    if (session.role === "admin") {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+  }
+
   // Xử lý response
   // ===== SELLER GUARD =====
   if (pathname.startsWith("/seller")) {
-    const userId = request.cookies.get("user")?.value;
+    const token = request.cookies.get("token")?.value;
+    const session = await resolveSession();
+    const userId = session?.id
+      ? String(session.id)
+      : request.cookies.get("user")?.value;
 
     // chưa login
-    if (!userId) {
-      return NextResponse.redirect(new URL("/login", request.url));
+    if (!userId || !token || !session) {
+      return redirectToLogin(request);
+    }
+
+    if (session.role === "admin") {
+      return NextResponse.redirect(new URL("/admin", request.url));
     }
 
     let hasShop = false;
@@ -238,6 +373,9 @@ export async function middleware(request: NextRequest) {
         {
           method: "GET",
           cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
       );
 
@@ -251,6 +389,10 @@ export async function middleware(request: NextRequest) {
     }
 
     const isCreateShop = pathname === "/seller/createshop";
+
+    if (!isCreateShop && session.role !== "seller") {
+      return NextResponse.redirect(new URL("/seller/createshop", request.url));
+    }
 
     console.log("Seller check → hasShop:", hasShop);
 

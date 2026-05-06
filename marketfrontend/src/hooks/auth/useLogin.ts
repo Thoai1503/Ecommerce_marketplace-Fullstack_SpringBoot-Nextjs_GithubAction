@@ -24,6 +24,7 @@ const storeTokens = (data: LoginResponse, rememberMe: boolean) => {
 
   // Store access token
   localStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, data.accessToken);
+  localStorage.setItem('token', data.accessToken);
 
   // Store refresh token if provided
   if (data.refreshToken) {
@@ -36,6 +37,19 @@ const storeTokens = (data: LoginResponse, rememberMe: boolean) => {
     localStorage.setItem(TOKEN_KEYS.EXPIRES_AT, expiresAt.toString());
   }
 
+  if (data.refreshExpiresIn) {
+    localStorage.setItem(
+      'refreshExpiresAt',
+      String(Date.now() + data.refreshExpiresIn * 1000),
+    );
+  }
+
+  if (data.idleTimeoutSeconds) {
+    localStorage.setItem('idleTimeoutSeconds', String(data.idleTimeoutSeconds));
+  }
+
+  localStorage.setItem('lastActivityAt', String(Date.now()));
+
   // Store remember me preference
   localStorage.setItem(TOKEN_KEYS.REMEMBER_ME, rememberMe.toString());
 
@@ -43,6 +57,26 @@ const storeTokens = (data: LoginResponse, rememberMe: boolean) => {
   if (!rememberMe) {
     sessionStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, data.accessToken);
   }
+};
+
+const storeUserSession = (data: LoginResponse) => {
+  if (typeof window === 'undefined') return;
+
+  const role = data.user.role === 'seller' ? 'seller' : data.user.role === 'admin' ? 'admin' : 'buyer';
+  localStorage.setItem(
+    'user',
+    JSON.stringify({
+      id: data.user.id,
+      email: data.user.email,
+      fullName: data.user.name,
+      userType: data.user.role,
+      role,
+    }),
+  );
+
+  document.cookie = `token=${data.accessToken}; path=/; max-age=${data.expiresIn ?? 86400}; SameSite=Lax`;
+  document.cookie = `role=${role}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
+  document.cookie = `user=${data.user.id}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
 };
 
 export const useLogin = () => {
@@ -55,6 +89,7 @@ export const useLogin = () => {
     onSuccess: (data, variables) => {
       // Store tokens
       storeTokens(data, variables.rememberMe ?? false);
+      storeUserSession(data);
 
       // Show success message
       success(`Xin chào, ${data.user.name}! Đang chuyển hướng...`);
@@ -88,7 +123,7 @@ const getRedirectPath = (role: string): string => {
     case 'admin':
       return '/admin';
     case 'seller':
-      return '/seller';
+      return '/';
     case 'user':
       return '/';
     default:
