@@ -25,6 +25,7 @@ import docker_test.com.models.Shop;
 import docker_test.com.models.product.Product;
 import docker_test.com.models.product.ProductImage;
 import docker_test.com.models.product.ProductVariant;
+import docker_test.com.repository.ProductAttributeRepository;
 import tools.jackson.databind.ObjectMapper;
 
 //@Repository
@@ -230,6 +231,7 @@ public class ProductRepository implements IRepositories<Product> {
 				} else {
 					product.setImages(new ArrayList<>());
 				}
+				product.setAttributes(ProductAttributeRepository.Instance().GetByProductId(id));
 
 				System.out.println("Product: " + product.toString());
 				return product;
@@ -745,6 +747,8 @@ public class ProductRepository implements IRepositories<Product> {
 				        p.id,
 				        p.product_name,
 				        p.price,
+				        p.stock_quantity,
+				        p.is_active,
 				        s.id AS shop_id,
 				        s.shop_name,
 				        (
@@ -781,6 +785,8 @@ public class ProductRepository implements IRepositories<Product> {
 				product.setId(rs.getInt("id"));
 				product.setProduct_name(rs.getString("product_name"));
 				product.setPrice(rs.getDouble("price"));
+				product.setStock_quantity(rs.getInt("stock_quantity"));
+				product.setIs_active(rs.getInt("is_active"));
 
 				// ===== SHOP_ID =====
 				int shopId = rs.getInt("shop_id");

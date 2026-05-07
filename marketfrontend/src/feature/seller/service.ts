@@ -49,6 +49,19 @@ export interface ProductAttributePayload {
   unitId?: number | null;
 }
 
+type ProductAttributeRequestBody = {
+  attributeId: number;
+  attributeValueId?: number;
+  valueText?: string;
+  valueNumber?: number;
+  valueDate?: string;
+  unitId?: number;
+};
+
+export type ProductCreatePayload = Partial<IProduct> & {
+  attributes?: ProductAttributePayload[];
+};
+
 type SellerAttributeBase = Omit<SellerAttributeOption, "units" | "values">;
 
 const asArray = (data: unknown): any[] => (Array.isArray(data) ? data : []);
@@ -78,10 +91,12 @@ const getCategoryBrandId = (item: any) =>
 const getUnitId = (item: any) => toNumber(item?.unit_id ?? item?.unitId);
 
 export const addProduct = async (
-  product: Partial<IProduct>,
+  product: ProductCreatePayload,
 ): Promise<IProduct> => {
+  const { attributes: _attributes, ...productBody } = product;
+
   return await http
-    .post("/seller/product", product)
+    .post("/seller/product", productBody)
     .then((res) => res.data)
     .catch((error) => {
       throw error;
@@ -229,8 +244,36 @@ export const saveProductAttributes = async (
   productId: number,
   attributes: ProductAttributePayload[],
 ) => {
+  const payload = attributes.map((attribute): ProductAttributeRequestBody => {
+    const item: ProductAttributeRequestBody = {
+      attributeId: attribute.attributeId,
+    };
+
+    if (attribute.attributeValueId != null) {
+      item.attributeValueId = attribute.attributeValueId;
+    }
+
+    if (attribute.valueText?.trim()) {
+      item.valueText = attribute.valueText.trim();
+    }
+
+    if (attribute.valueNumber != null) {
+      item.valueNumber = attribute.valueNumber;
+    }
+
+    if (attribute.valueDate) {
+      item.valueDate = attribute.valueDate;
+    }
+
+    if (attribute.unitId != null) {
+      item.unitId = attribute.unitId;
+    }
+
+    return item;
+  });
+
   return await http
-    .post(`/seller/product/${productId}/attributes`, attributes)
+    .post(`/seller/product/${productId}/attributes`, payload)
     .then((res) => res.data)
     .catch((error) => {
       throw error;

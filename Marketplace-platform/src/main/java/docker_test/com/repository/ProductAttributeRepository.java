@@ -31,7 +31,21 @@ public class ProductAttributeRepository {
 
 	public List<ProductAttribute> GetByProductId(int productId) {
 		List<ProductAttribute> list = new ArrayList<>();
-		String sql = "SELECT * FROM product_attribute WHERE product_id = ? ORDER BY id";
+		String sql = """
+				SELECT
+				    pa.*,
+				    a.name AS attribute_name,
+				    a.slug AS attribute_slug,
+				    av.value AS attribute_value,
+				    u.label AS unit_label,
+				    u.symbol AS unit_symbol
+				FROM product_attribute pa
+				LEFT JOIN attribute a ON pa.attribute_id = a.id
+				LEFT JOIN attribute_value av ON pa.attribute_value_id = av.id
+				LEFT JOIN unit u ON pa.unit_id = u.id
+				WHERE pa.product_id = ?
+				ORDER BY pa.id
+				""";
 
 		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
 			ps.setInt(1, productId);
@@ -57,6 +71,10 @@ public class ProductAttributeRepository {
 				""";
 
 		try (Connection con = dbConnection.getConn()) {
+			if (con == null) {
+				throw new SQLException("Unable to obtain database connection");
+			}
+
 			boolean previousAutoCommit = con.getAutoCommit();
 			con.setAutoCommit(false);
 
@@ -73,9 +91,17 @@ public class ProductAttributeRepository {
 
 					insertPs.setInt(1, productId);
 					insertPs.setInt(2, attribute.getAttributeId());
-					insertPs.setObject(3, attribute.getAttributeValueId());
+					if (attribute.getAttributeValueId() != null) {
+						insertPs.setInt(3, attribute.getAttributeValueId());
+					} else {
+						insertPs.setNull(3, Types.INTEGER);
+					}
 					insertPs.setString(4, attribute.getValueText());
-					insertPs.setObject(5, attribute.getValueNumber());
+					if (attribute.getValueNumber() != null) {
+						insertPs.setDouble(5, attribute.getValueNumber());
+					} else {
+						insertPs.setNull(5, Types.DECIMAL);
+					}
 
 					if (attribute.getValueDate() != null) {
 						insertPs.setDate(6, Date.valueOf(attribute.getValueDate()));
@@ -83,7 +109,11 @@ public class ProductAttributeRepository {
 						insertPs.setNull(6, Types.DATE);
 					}
 
-					insertPs.setObject(7, attribute.getUnitId());
+					if (attribute.getUnitId() != null) {
+						insertPs.setInt(7, attribute.getUnitId());
+					} else {
+						insertPs.setNull(7, Types.INTEGER);
+					}
 					insertPs.addBatch();
 				}
 

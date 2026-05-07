@@ -1,6 +1,22 @@
 import { ProductImage } from "./productImage";
 import { IProductVariant } from "./productVariant";
 
+export interface IProductAttribute {
+  id: number;
+  productId?: number;
+  attributeId?: number;
+  attributeValueId?: number | null;
+  valueText?: string | null;
+  valueNumber?: number | null;
+  valueDate?: string | null;
+  unitId?: number | null;
+  attributeName?: string | null;
+  attributeSlug?: string | null;
+  attributeValue?: string | null;
+  unitLabel?: string | null;
+  unitSymbol?: string | null;
+}
+
 export interface IProduct {
   id: number; // instead of int
   shop_id: number; // instead of long
