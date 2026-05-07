@@ -14,6 +14,11 @@ public final class ProductAttribute {
     private Integer unit_id;
     private LocalDateTime created_at;
     private LocalDateTime updated_at;
+    private String attribute_name;
+    private String attribute_slug;
+    private String attribute_value;
+    private String unit_label;
+    private String unit_symbol;
 
     public ProductAttribute() {
         this.created_at = LocalDateTime.now();
@@ -112,5 +117,45 @@ public final class ProductAttribute {
 
     public void setUpdatedAt(LocalDateTime updated_at) {
         this.updated_at = updated_at;
+    }
+
+    public String getAttributeName() {
+        return attribute_name;
+    }
+
+    public void setAttributeName(String attribute_name) {
+        this.attribute_name = attribute_name;
+    }
+
+    public String getAttributeSlug() {
+        return attribute_slug;
+    }
+
+    public void setAttributeSlug(String attribute_slug) {
+        this.attribute_slug = attribute_slug;
+    }
+
+    public String getAttributeValue() {
+        return attribute_value;
+    }
+
+    public void setAttributeValue(String attribute_value) {
+        this.attribute_value = attribute_value;
+    }
+
+    public String getUnitLabel() {
+        return unit_label;
+    }
+
+    public void setUnitLabel(String unit_label) {
+        this.unit_label = unit_label;
+    }
+
+    public String getUnitSymbol() {
+        return unit_symbol;
+    }
+
+    public void setUnitSymbol(String unit_symbol) {
+        this.unit_symbol = unit_symbol;
     }
 }

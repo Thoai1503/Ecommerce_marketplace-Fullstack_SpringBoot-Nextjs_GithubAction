@@ -2,7 +2,7 @@
 import styles from "./new.module.css";
 import React, { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Modal, Upload, UploadFile, UploadProps, message } from "antd";
@@ -19,7 +19,7 @@ const Editor = dynamic(
     ssr: false,
     loading: () => (
       <div className="border rounded bg-light-subtle p-3 text-muted small">
-        Đang tải trình soạn thảo...
+        Loading editor...
       </div>
     ),
   },
@@ -54,6 +54,7 @@ const AddProductForm: React.FC = () => {
   //get url param shop id
 
   const editorRef = useRef(null) as any;
+  const router = useRouter();
   const { setOpen } = useSellerSideBarContext();
   const searchParams = useSearchParams();
   const [isEdit, setIsEdit] = useState(false);
@@ -225,9 +226,8 @@ const AddProductForm: React.FC = () => {
   // Handle Cancel/Discard
   const handleDiscard = () => {
     if (confirm("Bạn có chắc muốn hủy bỏ? Các thay đổi sẽ không được lưu.")) {
-      // Reset form hoặc navigate back
       console.log("Discarding changes...");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      router.push("/seller");
     }
   };
   if (!hasMounted) {
@@ -366,7 +366,10 @@ const AddProductForm: React.FC = () => {
             <div className="row align-items-center">
               <div className="col-md-4">
                 <div className="d-flex align-items-center gap-3">
-                  <button className="btn btn-link text-secondary p-0">
+                  <button
+                    className="btn btn-link text-secondary p-0"
+                    onClick={handleDiscard}
+                  >
                     <i className="bi bi-arrow-left fs-4"></i>
                   </button>
                   <div>
@@ -521,7 +524,7 @@ const AddProductForm: React.FC = () => {
                             name="category_id"
                             value={formData.category}
                             onChange={handleInputChange}
-                            placeholder="Chọn danh mục sản phẩm"
+                            placeholder="Select product category"
                             readOnly
                           />
                           <button className="btn btn-outline-secondary">
@@ -553,12 +556,12 @@ const AddProductForm: React.FC = () => {
                         >
                           <option value="">
                             {!product.category_id
-                              ? "Chọn danh mục trước"
+                              ? "Select brand category"
                               : isLoadingCategoryProductOptions
-                                ? "Đang tải thương hiệu..."
+                                ? "Loading brands..."
                                 : categoryBrands.length === 0
-                                  ? "Danh mục chưa có thương hiệu"
-                                  : "Chọn thương hiệu"}
+                                  ? "Category has no brands"
+                                  : "Select brand"}
                           </option>
                           {categoryBrands.map((brand) => (
                             <option key={brand.id} value={brand.id}>
@@ -616,7 +619,7 @@ const AddProductForm: React.FC = () => {
                         </div> */}
                         <Editor
                           apiKey="opbl478qvvrtoorhvqc4f7zei61txljv0gkj67k1ogzky57n" // có thể để trống khi test local
-                          initialValue="<p>Soạn thảo với upload ảnh...</p>"
+                          initialValue="<p>Drafting and uploading images...</p>"
                           init={{
                             height: 300,
                             menubar: true,
@@ -664,7 +667,7 @@ const AddProductForm: React.FC = () => {
                                   `<img src="${imageUrl}" alt="${blobInfo.filename()}" />`,
                                 );
                               } catch (err: any) {
-                                failure("Upload thất bại: " + err.message);
+                                failure("Upload failed: " + err.message);
                               }
                             },
                           }}
@@ -696,16 +699,15 @@ const AddProductForm: React.FC = () => {
                   <div className="card-body">
                     {!product.category_id ? (
                       <div className="alert alert-light border mb-0">
-                        Vui lòng chọn danh mục để tải thuộc tính, đơn vị và giá
-                        trị phù hợp.
+                        Please select a category to load attributes, units and values.
                       </div>
                     ) : isLoadingCategoryProductOptions ? (
                       <div className="text-muted small">
-                        Đang tải thuộc tính theo danh mục...
+                        Loading attributes by category...
                       </div>
                     ) : categoryAttributes.length === 0 ? (
                       <div className="alert alert-light border mb-0">
-                        Danh mục này chưa được admin gắn thuộc tính.
+                        This category has no attributes assigned.
                       </div>
                     ) : (
                       <div className="row g-3">
@@ -742,19 +744,19 @@ const AddProductForm: React.FC = () => {
                                           const unitId = event.target.value
                                             ? Number(event.target.value)
                                             : null;
-                                          updateAttributeSelection(attributeId, {
-                                            unitId,
-                                            attributeValueId: null,
-                                            valueText: "",
-                                          });
+                                          updateAttributeSelection(
+                                            attributeId,
+                                            {
+                                              unitId,
+                                              attributeValueId: null,
+                                              valueText: "",
+                                            },
+                                          );
                                         }}
                                       >
                                         <option value="">Chọn đơn vị</option>
                                         {attribute.units.map((unit) => (
-                                          <option
-                                            key={unit.id}
-                                            value={unit.id}
-                                          >
+                                          <option key={unit.id} value={unit.id}>
                                             {unit.label} ({unit.symbol})
                                           </option>
                                         ))}
@@ -763,7 +765,9 @@ const AddProductForm: React.FC = () => {
                                   )}
 
                                   <div
-                                    className={needsUnit ? "col-md-7" : "col-12"}
+                                    className={
+                                      needsUnit ? "col-md-7" : "col-12"
+                                    }
                                   >
                                     <label className="form-label small text-muted">
                                       Value
@@ -777,10 +781,13 @@ const AddProductForm: React.FC = () => {
                                           const valueId = event.target.value
                                             ? Number(event.target.value)
                                             : null;
-                                          updateAttributeSelection(attributeId, {
-                                            attributeValueId: valueId,
-                                            valueText: "",
-                                          });
+                                          updateAttributeSelection(
+                                            attributeId,
+                                            {
+                                              attributeValueId: valueId,
+                                              valueText: "",
+                                            },
+                                          );
                                         }}
                                       >
                                         <option value="">
@@ -807,10 +814,13 @@ const AddProductForm: React.FC = () => {
                                         value={selection.valueText ?? ""}
                                         disabled={!canSelectValue}
                                         onChange={(event) =>
-                                          updateAttributeSelection(attributeId, {
-                                            attributeValueId: null,
-                                            valueText: event.target.value,
-                                          })
+                                          updateAttributeSelection(
+                                            attributeId,
+                                            {
+                                              attributeValueId: null,
+                                              valueText: event.target.value,
+                                            },
+                                          )
                                         }
                                         placeholder={
                                           canSelectValue
@@ -1389,7 +1399,9 @@ const AddProductForm: React.FC = () => {
         onConfirm={(_, path) => {
           setFormData((prev) => ({
             ...prev,
-            category: path.map((category) => category.category_name).join(" → "),
+            category: path
+              .map((category) => category.category_name)
+              .join(" → "),
           }));
         }}
       />

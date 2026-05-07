@@ -3,6 +3,9 @@ import { UserAuthProvider } from "@/context/UserAuthContext";
 import { INTERNAL_API } from "@/helper/api";
 import { cookies } from "next/headers";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 interface PageProps {
   params: Promise<{
     product_slug: string;
@@ -27,7 +30,9 @@ export default async function ProductDetailPage({
 
   console.log("Extracted ID:", productId);
 
-  const res = await fetch(`${INTERNAL_API}/product/${productId}`);
+  const res = await fetch(`${INTERNAL_API}/product/${productId}`, {
+    cache: "no-store",
+  });
 
   const data = await res.json();
   console.log("API Response Data:", data);

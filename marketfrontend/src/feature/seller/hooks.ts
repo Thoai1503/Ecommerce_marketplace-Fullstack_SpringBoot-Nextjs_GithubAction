@@ -15,7 +15,7 @@ import {
   updateVariantImage,
   uploadToProduct,
 } from "./service";
-import type { ProductAttributePayload } from "./service";
+import type { ProductAttributePayload, ProductCreatePayload } from "./service";
 import { message, UploadFile, UploadProps } from "antd";
 import { useSellerAuth } from "@/context/SellerAuthContext";
 import { IProductVariant } from "@/validators/productVariant";
@@ -131,34 +131,66 @@ export const useAddProductSeller = (
     },
   });
 
-  const { mutate: add } = useMutation({
-    mutationFn: (product: Partial<IProduct>) => addProduct(product),
-    onSuccess: async (data) => {
-      //    message.success(`Lưu thành công sản phẩm thành công`);
-      console.log("Added: " + JSON.stringify(data));
-      const attributePayload = Object.entries(productAttributeSelections)
-        .map(([attributeId, selection]): ProductAttributePayload => ({
-          productId: data.id,
-          attributeId: Number(attributeId),
-          attributeValueId: selection.attributeValueId ?? null,
-          valueText: selection.valueText?.trim() || null,
-          valueNumber: null,
-          valueDate: null,
-          unitId: selection.unitId ?? null,
-        }))
+  const buildProductAttributePayload = useCallback(
+    (productId: number): ProductAttributePayload[] =>
+      Object.entries(productAttributeSelections)
+        .map(([attributeId, selection]): ProductAttributePayload => {
+          const valueText = selection.valueText?.trim() || null;
+
+          return {
+            productId,
+            attributeId: Number(attributeId),
+            attributeValueId: selection.attributeValueId ?? null,
+            valueText,
+            valueNumber: null,
+            valueDate: null,
+            unitId: selection.unitId ?? null,
+          };
+        })
         .filter(
           (item) =>
-            Boolean(item.attributeValueId) || Boolean(item.valueText),
-        );
+            (item.attributeValueId != null && item.attributeValueId > 0) ||
+            Boolean(item.valueText) ||
+            item.valueNumber != null ||
+            Boolean(item.valueDate),
+        ),
+    [productAttributeSelections],
+  );
 
-      if (attributePayload.length > 0) {
+  const { mutate: add } = useMutation({
+    mutationFn: (product: ProductCreatePayload) => addProduct(product),
+    onSuccess: async (data, submittedProduct) => {
+      //    message.success(`Lưu thành công sản phẩm thành công`);
+      console.log("Added: " + JSON.stringify(data));
+      const attributePayload = (submittedProduct.attributes ?? []).map(
+        (attribute) => ({
+          ...attribute,
+          productId: data.id,
+        }),
+      );
+      const savedAttributes = (data as IProduct & {
+        attributes?: ProductAttributePayload[];
+      }).attributes;
+      const attributesAlreadySaved =
+        Array.isArray(savedAttributes) &&
+        savedAttributes.length >= attributePayload.length;
+
+      if (attributePayload.length > 0 && !attributesAlreadySaved) {
         try {
           await saveProductAttributes(data.id, attributePayload);
         } catch (error: any) {
-          console.error("Error saving product attributes:", error);
+          console.error("Error saving product attributes:", {
+            payload: attributePayload,
+            response: error?.response?.data,
+            status: error?.response?.status,
+            error,
+          });
           message.error(
             "Sản phẩm đã tạo nhưng lưu thuộc tính thất bại: " +
-              (error?.message || "Unknown error"),
+              (error?.response?.data?.message ||
+                error?.response?.data?.error ||
+                error?.message ||
+                "Unknown error"),
           );
         }
       }
@@ -277,9 +309,12 @@ export const useAddProductSeller = (
 
     // alert(JSON.stringify(product, null, 2));
     // return;
-    add(product);
+    add({
+      ...product,
+      attributes: buildProductAttributePayload(0),
+    });
     // TODO: Gọi API để tạo sản phẩm
-  }, [product, validateProduct]);
+  }, [add, buildProductAttributePayload, product, validateProduct]);
 
   // Hàm tiện ích để generate slug unique (nếu cần check với database)
   const generateUniqueProductSlug = useCallback(
