@@ -4,15 +4,51 @@ import java.util.List;
 
 
 public class RefundRequestDTO {
+    private Long returnRequestId;
     private Long orderId;
-	private Long orderItemId;
 	private Long orderShipmentId;
+	private RecipientDTO recipient;
+	private RecipientDTO pickupContact;
+	private String description;
+
+	public Long getReturnRequestId() {
+		return returnRequestId;
+	}
+
+	public void setReturnRequestId(Long returnRequestId) {
+		this.returnRequestId = returnRequestId;
+	}
+
 	public Long getOrderShipmentId() {
 		return orderShipmentId;
 	}
 
 	public void setOrderShipmentId(Long orderShipmentId) {
 		this.orderShipmentId = orderShipmentId;
+	}
+
+	public RecipientDTO getRecipient() {
+		return recipient;
+	}
+
+	public void setRecipient(RecipientDTO recipient) {
+		this.recipient = recipient;
+	}
+
+	public RecipientDTO getPickupContact() {
+		return pickupContact;
+	}
+
+	public void setPickupContact(RecipientDTO pickupContact) {
+		this.pickupContact = pickupContact;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
 	}
 
 	private Long shopId;
@@ -39,13 +75,13 @@ public class RefundRequestDTO {
 		this.orderId = orderId;
 	}
 
-	public Long getOrderItemId() {
-		return orderItemId;
-	}
+	// public Long getOrderItemId() {
+	// 	return orderItemId;
+	// }
 
-	public void setOrderItemId(Long orderItemId) {
-		this.orderItemId = orderItemId;
-	}
+	// public void setOrderItemId(Long orderItemId) {
+	// 	this.orderItemId = orderItemId;
+	// }
 
 	public Long getShopId() {
 		return shopId;
@@ -87,5 +123,19 @@ public class RefundRequestDTO {
 		this.requestedAmount = requestedAmount;
 	}
 
+	@Override
+	public String toString() {
+		return "RefundRequestDTO{" +
+				"returnRequestId=" + returnRequestId +
+				", orderId=" + orderId +
+				", orderShipmentId=" + orderShipmentId +
+				", shopId=" + shopId +
+				", customerId=" + customerId +
+				", reason='" + reason + '\'' +
+				", quantity=" + quantity +
+				", requestedAmount=" + requestedAmount +
+				", items=" + (items == null ? 0 : items.size()) +
+				'}';
+	}
 	
 }

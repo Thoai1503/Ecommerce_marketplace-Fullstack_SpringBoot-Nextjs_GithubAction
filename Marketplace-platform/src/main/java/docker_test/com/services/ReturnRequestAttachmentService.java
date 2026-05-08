@@ -12,6 +12,7 @@ import docker_test.com.dto.ReturnRequestAttachmentDTO;
 import docker_test.com.models.refunds.ReturnRequestAttachment;
 import docker_test.com.repository.RefundRequestRepository;
 import docker_test.com.repository.ReturnRequestAttachmentRepository;
+import docker_test.com.threads.FileThread;
 
 @Service
 public class ReturnRequestAttachmentService {
@@ -59,27 +60,51 @@ public class ReturnRequestAttachmentService {
 
         validateReturnRequest(returnRequestId);
 
-        List<ReturnRequestAttachment> attachments = new ArrayList<>();
-        for (int i = 0; i < files.size(); i++) {
-            MultipartFile file = files.get(i);
+        for (MultipartFile file : files) {
             validateAttachmentFile(file);
+        }
 
-            String description = null;
-            if (descriptions != null && i < descriptions.size()) {
-                description = descriptions.get(i);
-            }
+        // Tạo 1 thread cho mỗi file
+        List<FileThread> threads = new ArrayList<>();
+        for (int i = 0; i < files.size(); i++) {
+            String description = (descriptions != null && i < descriptions.size()) ? descriptions.get(i) : null;
+            threads.add(new FileThread(files.get(i), description, cloudinaryService));
+        }
 
+        // Khởi động tất cả thread song song
+        for (FileThread thread : threads) {
+            thread.start();
+        }
+
+        // Chờ tất cả thread hoàn thành
+        for (FileThread thread : threads) {
             try {
-                Map<String, Object> uploadResult = cloudinaryService.uploadReturnAttachment(file);
-                ReturnRequestAttachment attachment = new ReturnRequestAttachment();
-                attachment.setReturnRequestId(returnRequestId);
-                attachment.setFileUrl(resolveUploadedUrl(uploadResult));
-                attachment.setFileType(resolveFileType(file, uploadResult));
-                attachment.setDescription(trimToNull(description));
-                attachments.add(attachment);
-            } catch (IOException e) {
-                throw new RuntimeException("Upload attachment lên Cloudinary thất bại: " + e.getMessage(), e);
+                thread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Upload bị gián đoạn", e);
             }
+        }
+
+        // Kiểm tra lỗi từng thread
+        for (int i = 0; i < threads.size(); i++) {
+            if (threads.get(i).hasError()) {
+                Exception ex = threads.get(i).getException();
+                throw new RuntimeException(
+                        "Upload attachment lên Cloudinary thất bại (file " + (i + 1) + "): " + ex.getMessage(), ex);
+            }
+        }
+
+        // Build danh sách attachment từ kết quả upload
+        List<ReturnRequestAttachment> attachments = new ArrayList<>();
+        for (FileThread thread : threads) {
+            Map<String, Object> uploadResult = thread.getUploadResult();
+            ReturnRequestAttachment attachment = new ReturnRequestAttachment();
+            attachment.setReturnRequestId(returnRequestId);
+            attachment.setFileUrl(resolveUploadedUrl(uploadResult));
+            attachment.setFileType(resolveFileType(thread.getFile(), uploadResult));
+            attachment.setDescription(trimToNull(thread.getDescription()));
+            attachments.add(attachment);
         }
 
         return returnRequestAttachmentRepository.saveAll(attachments);
