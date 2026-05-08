@@ -2,14 +2,17 @@ package docker_test.com.services;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import docker_test.com.configs.publisher.ReturnRequestToLogistic;
+import docker_test.com.dto.RecipientDTO;
 import docker_test.com.dto.RefundRequestDTO;
 import docker_test.com.models.refunds.ReturnRequest;
 import docker_test.com.models.refunds.ReturnRequestStatus;
+import docker_test.com.models.Address;
 import docker_test.com.repository.RefundRequestRepository;
 import docker_test.com.repository.ReturnReqestItemRepositrory;
 import jakarta.transaction.Transactional;
@@ -21,6 +24,7 @@ public class RefundRequestService {
 	private final ReturnReqestItemRepositrory returnReqestItemRepositrory;
 	private final ReturnRequestAttachmentService returnRequestAttachmentService;
 	private final ReturnRequestToLogistic returnRequestToLogistic;
+	private final AddressService addressService;
 	
 	public RefundRequestService(
 			RefundRequestRepository refundRequestRepository,
@@ -31,6 +35,7 @@ public class RefundRequestService {
 		this.returnReqestItemRepositrory = returnReqestItemRepositrory;
 		this.returnRequestAttachmentService = returnRequestAttachmentService;
         this.returnRequestToLogistic = returnRequestToLogistic;
+		this.addressService = new AddressService();
 	}
 	
 	
@@ -40,8 +45,9 @@ public class RefundRequestService {
 
 		if (refundRequestDTO.getAttachments() != null && !refundRequestDTO.getAttachments().isEmpty()) {
 			returnRequestAttachmentService.createAttachments(savedRefundRequest.getId(), refundRequestDTO.getAttachments());
-			returnRequestToLogistic.publish(refundRequestDTO);
 		}
+
+		returnRequestToLogistic.publish(buildLogisticPayload(savedRefundRequest, refundRequestDTO));
 
 		return savedRefundRequest;
 	}
@@ -61,7 +67,7 @@ public class RefundRequestService {
 			returnRequestAttachmentService.createAttachments(savedRefundRequest.getId(), files, descriptions);
 		}
 		
-		returnRequestToLogistic.publish(refundRequestDTO);
+		returnRequestToLogistic.publish(buildLogisticPayload(savedRefundRequest, refundRequestDTO));
 
 		return savedRefundRequest;
 	}
@@ -98,6 +104,57 @@ public class RefundRequestService {
 		
 		
 		return savedRefundRequest;
+	}
+
+	private RefundRequestDTO buildLogisticPayload(ReturnRequest savedRefundRequest, RefundRequestDTO sourceDto) {
+		RefundRequestDTO payload = new RefundRequestDTO();
+		payload.setReturnRequestId(savedRefundRequest.getId());
+		payload.setOrderId(savedRefundRequest.getOrderId());
+		payload.setOrderShipmentId(savedRefundRequest.getOrderShipmentId());
+		payload.setOrderItemId(sourceDto.getOrderItemId());
+		payload.setShopId(savedRefundRequest.getShopId());
+		payload.setCustomerId(savedRefundRequest.getCustomerId());
+		payload.setReason(savedRefundRequest.getReason());
+		payload.setDescription(sourceDto.getDescription());
+		payload.setQuantity(savedRefundRequest.getQuantity());
+		payload.setRequestedAmount(savedRefundRequest.getRequestedAmount());
+		payload.setItems(sourceDto.getItems());
+		payload.setAttachments(sourceDto.getAttachments());
+		payload.setRecipient(resolveShopRecipient(savedRefundRequest.getShopId()));
+		payload.setPickupContact(resolveCustomerPickup(savedRefundRequest.getCustomerId()));
+		return payload;
+	}
+
+	private RecipientDTO resolveCustomerPickup(Long customerId) {
+		List<Address> addresses = addressService.getAddressesByUserId(customerId);
+		if (addresses == null || addresses.isEmpty()) {
+			return null;
+		}
+
+		Address address = addresses.stream()
+				.filter(item -> Objects.equals(item.getIsDefault(), 1))
+				.findFirst()
+				.orElse(addresses.get(0));
+		return mapRecipient(address);
+	}
+
+	private RecipientDTO resolveShopRecipient(Long shopId) {
+		Address address = addressService.getAddressByShopId(shopId);
+		if (address == null) {
+			return null;
+		}
+		return mapRecipient(address);
+	}
+
+	private RecipientDTO mapRecipient(Address address) {
+		RecipientDTO recipientDTO = new RecipientDTO();
+		recipientDTO.setName(address.getRecipientName());
+		recipientDTO.setPhone(address.getRecipientPhone());
+		recipientDTO.setAddress(address.getAddressLine());
+		recipientDTO.setProvince(address.getCity());
+		recipientDTO.setDistrict(address.getDistrict());
+		recipientDTO.setWard(address.getWard());
+		return recipientDTO;
 	}
 	 
 	public List<ReturnRequest> getAll() {
