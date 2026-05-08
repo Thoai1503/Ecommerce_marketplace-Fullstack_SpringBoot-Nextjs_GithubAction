@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep *)",
+      "Read(//c/Users/razer user/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/b829737a-b485-442f-8ed1-a84b22d72cce/16a3d0f5-6fde-469d-b4e8-4310d0d57f52/skills/docx/**)",
+      "Bash(npm list *)",
+      "Bash(npm install *)",
+      "Read(//c/Users/razer user/Desktop/Nguyen Phan Hoang Vu/**)",
+      "Bash(node create_jwt_doc.js)",
+      "Bash(npm init *)",
+      "Bash(del \"C:\\\\Users\\\\razer user\\\\Desktop\\\\Nguyen Phan Hoang Vu\\\\create_jwt_doc.js\")",
+      "Bash(del \"C:\\\\Users\\\\razer user\\\\Desktop\\\\Nguyen Phan Hoang Vu\\\\package.json\")",
+      "Bash(del \"C:\\\\Users\\\\razer user\\\\Desktop\\\\Nguyen Phan Hoang Vu\\\\package-lock.json\")",
+      "Bash(rmdir /s /q \"C:\\\\Users\\\\razer user\\\\Desktop\\\\Nguyen Phan Hoang Vu\\\\node_modules\")",
+      "Bash(rm \"C:\\\\Users\\\\razer user\\\\Desktop\\\\Nguyen Phan Hoang Vu\\\\create_jwt_doc.js\" \"C:\\\\Users\\\\razer user\\\\Desktop\\\\Nguyen Phan Hoang Vu\\\\package.json\" \"C:\\\\Users\\\\razer user\\\\Desktop\\\\Nguyen Phan Hoang Vu\\\\package-lock.json\")",
+      "Bash(rm -rf \"C:\\\\Users\\\\razer user\\\\Desktop\\\\Nguyen Phan Hoang Vu\\\\node_modules\")",
+      "Bash(node append_steps.js)",
+      "Bash(rm \"C:\\\\Users\\\\razer user\\\\Desktop\\\\Nguyen Phan Hoang Vu\\\\append_steps.js\" \"C:\\\\Users\\\\razer user\\\\Desktop\\\\Nguyen Phan Hoang Vu\\\\package.json\" \"C:\\\\Users\\\\razer user\\\\Desktop\\\\Nguyen Phan Hoang Vu\\\\package-lock.json\")",
+      "Bash(node -e \"const b=require\\('bcryptjs'\\); const h=b.hashSync\\('Hoangvu123456',12\\); console.log\\(h\\);\")"
+    ]
+  }
+}

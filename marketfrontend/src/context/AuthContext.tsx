@@ -41,15 +41,15 @@ const shortToken = (token: string) => token.substring(0, 28) + "...";
 const logTokenReceived = (token: string, user: AuthUser, label = "AccessToken") => {
   const exp = decodeExp(token);
   const secs = Math.max(0, exp - Math.floor(Date.now() / 1000));
-  // console.log(
-  //   "%c╔══════════════════════════════════════════╗\n" +
-  //   "║   🔐 JWT Auth Logger — VietCommerce Hub   ║\n" +
-  //   "╚══════════════════════════════════════════╝",
-  //   "color:#6366f1;font-weight:bold"
-  // );
-  // console.log(`%c🔑 ${label}:`, "color:#10b981;font-weight:bold", shortToken(token));
-  // console.log("%c👤 User:", "color:#10b981;font-weight:bold", `${user.email} (${user.role})`);
-  // console.log(`%c⏱️  Hết hạn sau: ${secs}s`, "color:#f59e0b;font-weight:bold"); 
+  console.log(
+    "%c╔══════════════════════════════════════════╗\n" +
+    "║   🔐 JWT Auth Logger — VietCommerce Hub   ║\n" +
+    "╚══════════════════════════════════════════╝",
+    "color:#6366f1;font-weight:bold"
+  );
+  console.log(`%c🔑 ${label}:`, "color:#10b981;font-weight:bold", shortToken(token));
+  console.log("%c👤 User:", "color:#10b981;font-weight:bold", `${user.email} (${user.role})`);
+  console.log(`%c⏱️  Hết hạn sau: ${secs}s`, "color:#f59e0b;font-weight:bold");
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -67,16 +67,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     countdownRef.current = setInterval(() => {
       const remaining = Math.max(0, exp - Math.floor(Date.now() / 1000));
       if (remaining > 0) {
-        // 🎓 BẬT KHI THUYẾT TRÌNH — comment lại khi dev
-        // console.log(
-        //   `%c⏱️  AccessToken hết hạn sau: ${remaining}s`,
-        //   remaining <= 3
-        //     ? "color:#ef4444;font-weight:bold"
-        //     : "color:#f59e0b;font-weight:bold"
-        // );
+        console.log(
+          `%c⏱️  AccessToken hết hạn sau: ${remaining}s`,
+          remaining <= 3
+            ? "color:#ef4444;font-weight:bold;font-size:13px"
+            : "color:#f59e0b;font-weight:bold"
+        );
       } else {
         clearInterval(countdownRef.current!);
-        // console.log("%c🔴 AccessToken đã hết hạn — Interceptor sẽ tự refresh!", "color:#ef4444;font-weight:bold;font-size:13px");
+        console.log("%c🔴 AccessToken đã hết hạn — Interceptor sẽ tự refresh!", "color:#ef4444;font-weight:bold;font-size:13px");
       }
     }, 1000);
   };
