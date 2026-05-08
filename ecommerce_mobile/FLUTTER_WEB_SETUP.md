@@ -96,11 +96,14 @@ All requests follow this routing:
 #### Categories
 
 ```dart
+// Initialize services
+final categoryService = CategoryService();
+
 // Fetch all categories
-List<Category> categories = await ApiService.fetchCategories();
+List<Category> categories = await categoryService.fetchAll();
 
 // Fetch category by ID
-Category category = await ApiService.fetchCategoryById(1);
+Category category = await categoryService.getById(1);
 ```
 
 **Endpoint**: `GET /api/categories`
@@ -124,14 +127,17 @@ Category category = await ApiService.fetchCategoryById(1);
 #### Products
 
 ```dart
+// Initialize services
+final productService = ProductService();
+
 // Fetch all products
-List<Product> products = await ApiService.fetchAllProducts();
+List<Product> products = await productService.fetchAll();
 
 // Fetch product by ID
-Product product = await ApiService.fetchProductById(1);
+Product product = await productService.getById(1);
 
 // Search products with filters
-List<Product> results = await ApiService.searchProducts(
+List<Product> results = await productService.search(
   keyword: 'laptop',
   categoryId: 1,
   minPrice: 10000,
@@ -141,21 +147,14 @@ List<Product> results = await ApiService.searchProducts(
   limit: 24,
 );
 
-// Get product suggestions
-List<String> suggestions = await ApiService.getProductSuggestions(
-  keyword: 'phone',
-  limit: 10,
-);
-
 // Fetch products by category
-List<Product> categoryProducts = await ApiService.fetchProductsByCategory(1);
+List<Product> categoryProducts = await productService.fetchByCategory(1);
 ```
 
 **Endpoints**:
 - `GET /product` - Get all products
 - `GET /product/{id}` - Get product by ID
 - `GET /product/search` - Search products with filters
-- `GET /product/suggestions` - Get search suggestions
 
 **Product Response Example**:
 ```json
@@ -212,20 +211,29 @@ The main page consists of:
 
 ## 🔧 Configuration
 
-### API Service Configuration
+### API Client Configuration
 
-File: `lib/services/api_service.dart`
+File: `lib/core/api_client.dart`
 
 **Key Configuration**:
 ```dart
-static const String apiGatewayBaseUrl = 'http://localhost:8000';
+static const String apiBaseUrl = 'http://localhost:8000';
 static const Duration requestTimeout = Duration(seconds: 30);
 ```
 
 To change the API Gateway URL:
-1. Open `lib/services/api_service.dart`
-2. Update `apiGatewayBaseUrl` constant
+1. Open `lib/core/api_client.dart`
+2. Update `apiBaseUrl` constant
 3. Run `flutter pub get` and restart the app
+
+### Service Configuration
+
+The app uses specific service classes that extend the base API client:
+
+- `CategoryService` - Handles category-related API calls
+- `ProductService` - Handles product-related API calls
+
+All services use the shared `BaseApiService` from `lib/core/api_client.dart`.
 
 ### Theme Configuration
 
@@ -233,7 +241,7 @@ File: `lib/main.dart`
 
 The app uses Material Design 3 with:
 - Primary color: Blue
-- Background color: Light gray (#F8F9FB)
+- Background color: Light gray (#F8F9FA)
 - Card elevation: 2
 - Border radius: 12
 
@@ -355,6 +363,7 @@ The Flutter Web app is optimized for:
 
 - `flutter`: ^3.9.2
 - `http`: ^1.1.0
+- `shared_preferences`: ^2.0.20
 - `cupertino_icons`: ^1.0.8
 
 To add more dependencies:
@@ -369,13 +378,32 @@ flutter pub add package_name
 ```
 ecommerce_mobile/
 ├── lib/
+│   ├── core/
+│   │   ├── api_client.dart          # Base API client (Axios-style)
+│   │   ├── constants.dart           # App constants
+│   │   └── ...
 │   ├── models/
 │   │   ├── category.dart
 │   │   └── product.dart
 │   ├── services/
-│   │   └── api_service.dart
-│   ├── pages/
-│   │   └── home_page.dart
+│   │   ├── category_service.dart    # Category-specific API calls
+│   │   ├── product_service.dart     # Product-specific API calls
+│   │   └── ...
+│   ├── features/
+│   │   └── home/
+│   │       ├── pages/
+│   │       │   └── home_page.dart
+│   │       └── widgets/
+│   │           ├── category_card.dart
+│   │           ├── category_grid.dart
+│   │           └── product_card.dart
+│   ├── shared/
+│   │   └── widgets/
+│   │       └── layout/
+│   │           ├── web_header.dart
+│   │           └── web_footer.dart
+│   ├── hooks/
+│   │   └── use_home_data.dart
 │   ├── filter_page.dart
 │   └── main.dart
 ├── web/
@@ -386,10 +414,12 @@ ecommerce_mobile/
 
 ### Adding New Features
 
-1. **New Page**: Create file in `lib/pages/` and add route in `main.dart`
-2. **New API Endpoint**: Add method in `lib/services/api_service.dart`
-3. **New Model**: Create file in `lib/models/` with fromJson and toJson methods
-4. **New UI Component**: Create widget in respective page or new file in `lib/widgets/`
+1. **New Feature Module**: Create `lib/features/feature_name/` with `pages/` and `widgets/` subfolders
+2. **New Page**: Create file in `lib/features/feature_name/pages/` and add route in `main.dart`
+3. **New API Endpoint**: Add method in `lib/services/` or create new service file
+4. **New Model**: Create file in `lib/models/` with fromJson and toJson methods
+5. **Shared Component**: Create widget in `lib/shared/widgets/` for reusable UI elements
+6. **Core Logic**: Add to `lib/core/` for shared business logic and API clients
 
 ## 🔗 API Gateway Routing Configuration
 

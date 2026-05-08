@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../models/category.dart';
+import '../../../../models/category.dart';
 import 'category_card.dart';
 
 class CategoryGrid extends StatelessWidget {
@@ -16,10 +16,15 @@ class CategoryGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Filter to only level 0 (parent) categories
+    final parentCategories = categories
+        .where((cat) => cat.level != null && cat.level == 0)
+        .toList();
+
     // Take first 8 categories plus "All"
     final displayCategories = [
       Category(id: -1, categoryName: 'All'),
-      ...categories.take(8),
+      ...parentCategories.take(8),
     ];
 
     return Column(

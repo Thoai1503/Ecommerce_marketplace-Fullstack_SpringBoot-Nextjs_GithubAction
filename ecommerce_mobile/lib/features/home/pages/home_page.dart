@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../widgets/category_grid.dart';
-import '../widgets/product_card.dart';
-import '../../../shared/widgets/layout/web_footer.dart';
-import '../../../shared/widgets/layout/web_header.dart';
+import '../widgets/category/category_grid.dart';
+import '../widgets/product/product_card.dart';
+import '../../../shared/widgets/layout/header/web_header.dart';
+import '../../../shared/widgets/layout/footer/web_footer.dart';
 import '../../../hooks/use_home_data.dart';
 
 class HomePage extends StatefulWidget {
