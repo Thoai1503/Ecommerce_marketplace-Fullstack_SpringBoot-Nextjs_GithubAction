@@ -1,16 +1,10 @@
-// app/page.tsx (hoặc components/HomePage.tsx)
-import React from "react";
 import Image from "next/image";
-import axios from "axios";
-import { API_URL, INTERNAL_API } from "@/helper/api";
-import { IProduct } from "@/validators/product";
+import { INTERNAL_API } from "@/helper/api";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import AllProduct from "@/components/client/home_page/AllProduct";
-import dynamic from "next/dynamic";
 import ProductFetcher from "@/components/client/home_page/ProductFetcher";
-import CategoryCarousel from "@/components/client/home_page/CategoryCarousel";
 import CategoryFetcher from "@/components/client/home_page/CategoryFetcher";
+import HomeHeroBanner from "@/components/client/home_page/HomeHeroBanner";
 import styles from "./page.module.css";
 // import { useHomePage } from "@/feature/client/hook";
 
@@ -65,16 +59,7 @@ export default async function Home() {
 
   return (
     <div className={styles.homePage}>
-      {/* Hero Banner */}
-      <div className={styles.heroBanner}>
-        <div className={styles.heroContent}>
-          <h1 className={styles.heroTitle}>Discover</h1>
-          <p className={styles.heroSubtitle}>
-            High-quality products - Best prices
-          </p>
-        </div>
-        <div className={styles.heroOverlay}></div>
-      </div>
+      <HomeHeroBanner />
 
       <div className={styles.mainContent}>
         {/* Shortcut Icons - Horizontal Scrollable */}
@@ -86,7 +71,7 @@ export default async function Home() {
               { image: "/image/mal.png", text: "Mall" },
               {
                 image: "/image/voucher.png",
-                text: "Mã giảm giá",
+                text: "Voucher",
                 href: "/voucher",
               },
             ].map((item, idx) => (
@@ -121,7 +106,7 @@ export default async function Home() {
         </section>
 
         {/* Flash Sale Section */}
-        <section className={styles.section}>
+        <section id="flash-sale" className={styles.section}>
           <div className={styles.flashSaleHeader}>
             <div className={styles.flashSaleTitleWrap}>
               <span className={styles.flashIcon}>⚡</span>
@@ -229,7 +214,7 @@ export default async function Home() {
         </section>
 
         {/* Suggested for You */}
-        <section className={styles.section}>
+        <section id="suggested-products" className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
               <span className={styles.titleIcon}>✦</span>
