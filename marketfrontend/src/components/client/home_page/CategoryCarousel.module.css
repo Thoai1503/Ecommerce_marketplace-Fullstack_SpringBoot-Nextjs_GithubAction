@@ -33,15 +33,11 @@
   padding: 18px 12px 14px;
   background: #fff;
   border: 1px solid #e8edf5;
-  border-radius: 22px;
+  border-radius: 10px;
   text-decoration: none;
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 10px 24px rgba(15, 23, 42, 0.06);
   transition:
     background-color 0.2s ease,
     transform 0.2s ease,
-    box-shadow 0.2s ease,
     border-color 0.2s ease;
 }
 
@@ -50,36 +46,25 @@
 }
 
 .categoryCard:hover {
-  background: #ffffff;
-  transform: translateY(-4px);
-  border-color: #cfdcff;
-  box-shadow:
-    0 2px 6px rgba(99, 102, 241, 0.08),
-    0 18px 32px rgba(99, 102, 241, 0.12);
+  background: #f5f7ff;
+  transform: translateY(-2px);
+  border-color: #c7d5f5;
 }
 
 .categoryIconWrap {
   width: 68px;
   height: 68px;
-  border-radius: 20px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 10px 24px rgba(15, 23, 42, 0.06);
-  transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease;
+  background: #f0f4ff !important;
+  transition: transform 0.22s ease;
 }
 
 .categoryCard:hover .categoryIconWrap {
   transform: scale(1.06);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 14px 28px rgba(99, 102, 241, 0.14);
 }
 
 .categoryIcon {
@@ -111,21 +96,18 @@
   height: 42px;
   transform: translateY(-50%);
   border: 1px solid #e5e7eb;
-  border-radius: 999px;
+  border-radius: 8px;
   background: #fff;
   color: #6b7280;
   font-size: 1.9rem;
   line-height: 1;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
   transition:
     transform 0.2s ease,
-    box-shadow 0.2s ease,
     opacity 0.2s ease;
 }
 
 .navButton:hover:not(:disabled) {
   transform: translateY(-50%) scale(1.04);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
   color: #111827;
 }
 
@@ -178,13 +160,13 @@
   .categoryCard {
     height: 144px;
     padding: 10px 8px;
-    border-radius: 18px;
+    border-radius: 8px;
   }
 
   .categoryIconWrap {
     width: 56px;
     height: 56px;
-    border-radius: 16px;
+    border-radius: 10px;
   }
 
   .categoryName {

@@ -6,11 +6,18 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 import logistic_service.com.dto.RefundRequestDTO;
+import logistic_service.com.entities.Shipment;
+import logistic_service.com.services.ReturnRequestLogisticService;
 
 
 @Service
 public class ReturnRequestConsumer {
    private static final Logger LOGGER = LoggerFactory.getLogger(ReturnRequestConsumer.class);
+   private final ReturnRequestLogisticService returnRequestLogisticService;
+
+   public ReturnRequestConsumer(ReturnRequestLogisticService returnRequestLogisticService) {
+	   this.returnRequestLogisticService = returnRequestLogisticService;
+	}
    
    @KafkaListener(
 		   topics = "return_request_to_logistic",
@@ -24,10 +31,13 @@ public class ReturnRequestConsumer {
 		   return;
 	   }
 
-	   refundRequest.getItems().forEach(item -> {
-		   LOGGER.info("Return item: productId={}, quantity={}", item.getOrderItemId(), item.getQuantity());
-	   });
-	   // Here you would typically deserialize the message and process it accordingly
+	   Shipment shipment = returnRequestLogisticService.createReturnShipment(refundRequest);
+	   LOGGER.info(
+		   "Created/loaded return shipment id={} trackingCode={} for returnRequestId={}",
+		   shipment.getId(),
+		   shipment.getTrackingCode(),
+		   refundRequest.getReturnRequestId()
+	   );
    }
    
    

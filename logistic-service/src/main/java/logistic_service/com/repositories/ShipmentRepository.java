@@ -34,6 +34,8 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long>, JpaSp
 
     Optional<Shipment> findFirstByOrderShipmentRefId(Long orderShipmentRefId);
 
+    Optional<Shipment> findFirstByOrderShipmentRefIdAndNoteContaining(Long orderShipmentRefId, String note);
+
     /**
      * Lấy tất cả vận đơn của một shop.
      */
