@@ -1,11 +1,11 @@
 package docker_test.com.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-        import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -40,6 +40,8 @@ import docker_test.com.repository.ShipmentAdjustmentRequestRepository;
 
 @Service
 public class OrderShipmentService {
+
+    private static final double PLATFORM_COMMISSION_RATE = 0.10;
 
     private final OrderShipmentRepository orderShipmentRepository;
     private final OrderItemRepository orderItemRepository;
@@ -90,7 +92,15 @@ public class OrderShipmentService {
 						item.getImage(),
 						item.getQuantity(),
 						item.getPrice(),
-						item.getTotalPrice()
+						item.getTotalPrice(),
+						item.getShopVoucherDiscountAmount(),
+						item.getPlatformVoucherDiscountAmount(),
+						item.getTotalVoucherDiscountAmount(),
+						item.getTotalAfterShopVoucher(),
+						item.getTotalAfterAllVouchers(),
+						item.getPlatformCommissionRate(),
+						item.getPlatformCommissionAmount(),
+						item.getSellerReceivableAmount()
 				))
 				.toList();
 
@@ -168,7 +178,15 @@ public class OrderShipmentService {
                                         item.getImage(),
                                         item.getQuantity(),
                                         item.getPrice(),
-                                        item.getTotalPrice()
+                                        item.getTotalPrice(),
+                                        item.getShopVoucherDiscountAmount(),
+                                        item.getPlatformVoucherDiscountAmount(),
+                                        item.getTotalVoucherDiscountAmount(),
+                                        item.getTotalAfterShopVoucher(),
+                                        item.getTotalAfterAllVouchers(),
+                                        item.getPlatformCommissionRate(),
+                                        item.getPlatformCommissionAmount(),
+                                        item.getSellerReceivableAmount()
                                 ),
                                 Collectors.toList())
                 ));
@@ -274,6 +292,7 @@ public class OrderShipmentService {
 
         shipment.setShippingStatus("COMPLETED");
         orderShipmentRepository.save(shipment);
+        calculatePlatformCommissionForShipmentItems(shipment.getId());
 
         persistShipmentHistory(
                 shipment.getId(),
@@ -292,6 +311,47 @@ public class OrderShipmentService {
                 shipment.getShippingStatus(),
                 "Shipment marked as COMPLETED"
         );
+    }
+
+    private void calculatePlatformCommissionForShipmentItems(Long shipmentId) {
+        List<OrderItem> items = orderItemRepository.findByShipmentId(shipmentId);
+        LocalDateTime calculatedAt = LocalDateTime.now();
+
+        items.forEach(item -> {
+            double commissionBase = getCommissionBase(item);
+            double commissionAmount = roundMoney(commissionBase * PLATFORM_COMMISSION_RATE);
+            double sellerReceivableAmount = roundMoney(Math.max(0.0, commissionBase - commissionAmount));
+
+            item.setPlatformCommissionRate(PLATFORM_COMMISSION_RATE);
+            item.setPlatformCommissionAmount(commissionAmount);
+            item.setSellerReceivableAmount(sellerReceivableAmount);
+            item.setCommissionCalculatedAt(calculatedAt);
+        });
+
+        orderItemRepository.saveAll(items);
+    }
+
+    private double getCommissionBase(OrderItem item) {
+        double totalAfterShopVoucher = safeMoney(item.getTotalAfterShopVoucher());
+        if (totalAfterShopVoucher > 0) {
+            return totalAfterShopVoucher;
+        }
+
+        double totalPrice = safeMoney(item.getTotalPrice());
+        double shopVoucherDiscount = safeMoney(item.getShopVoucherDiscountAmount());
+
+        return Math.max(0.0, totalPrice - shopVoucherDiscount);
+    }
+
+    private double safeMoney(Double value) {
+        if (value == null || value.isNaN() || value.isInfinite() || value < 0) {
+            return 0.0;
+        }
+        return value;
+    }
+
+    private double roundMoney(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 
     @Transactional

@@ -8,6 +8,14 @@ export interface IOrderItemInfo {
   quantity: number;
   price: number;
   totalPrice: number;
+  shopVoucherDiscountAmount?: number;
+  platformVoucherDiscountAmount?: number;
+  totalVoucherDiscountAmount?: number;
+  totalAfterShopVoucher?: number;
+  totalAfterAllVouchers?: number;
+  platformCommissionRate?: number;
+  platformCommissionAmount?: number;
+  sellerReceivableAmount?: number;
 }
 
 export interface IOrderInfo {

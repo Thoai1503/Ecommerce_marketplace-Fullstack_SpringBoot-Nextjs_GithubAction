@@ -95,6 +95,18 @@ const getProductAttributes = (product: ProductDetailPayload) => {
   return Array.isArray(source) ? source : [];
 };
 
+const readJsonResponse = async <T,>(response: Response): Promise<T | null> => {
+  const text = await response.text();
+  if (!text.trim()) return null;
+
+  try {
+    return JSON.parse(text) as T;
+  } catch (error) {
+    console.warn("API response is not valid JSON:", response.url, error);
+    return null;
+  }
+};
+
 const ProductDetail = ({ data }: { data: IProduct }) => {
   const { userId } = useUserAuth();
   const [shop, setShop] = useState<any>(null);
@@ -190,16 +202,27 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
     if (!detailData?.shop_id) return;
 
     const fetchData = async () => {
+      const shopId = detailData.shop_id;
+
+      const fallbackShop = (detailData as any)?.shop ?? null;
+
       try {
-        // shop
-        const shopRes = await fetch(`${API_URL}/shops/${detailData.shop_id}`);
-        const shopJson = await shopRes.json();
-        setShop(shopJson);
+        const shopRes = await fetch(`${API_URL}/shops/${shopId}`);
+        const shopJson = shopRes.ok
+          ? await readJsonResponse<any>(shopRes)
+          : null;
 
-        // products theo shop
-        const prodRes = await fetch(`${API_URL}/product/shop/${detailData.shop_id}`);
-        const prodJson = await prodRes.json();
+        setShop(shopJson ?? fallbackShop);
+      } catch (err) {
+        console.error("Failed to fetch shop detail:", err);
+        setShop(fallbackShop);
+      }
 
+      try {
+        const prodRes = await fetch(`${API_URL}/product/shop/${shopId}`);
+        const prodJson = prodRes.ok
+          ? await readJsonResponse<any>(prodRes)
+          : null;
         let list: any[] = [];
 
         if (Array.isArray(prodJson)) list = prodJson;
@@ -208,7 +231,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
 
         setShopProducts(list);
       } catch (err) {
-        console.error(err);
+        console.error("Failed to fetch shop products:", err);
         setShopProducts([]);
       }
     };

@@ -155,6 +155,38 @@ const normalizeShipment = (raw: any): IOrderShipment => {
       quantity: Number(item?.quantity ?? 0),
       price: Number(item?.price ?? 0),
       totalPrice: Number(item?.totalPrice ?? item?.total_price ?? 0),
+      shopVoucherDiscountAmount: Number(
+        item?.shopVoucherDiscountAmount ??
+          item?.shop_voucher_discount_amount ??
+          0,
+      ),
+      platformVoucherDiscountAmount: Number(
+        item?.platformVoucherDiscountAmount ??
+          item?.platform_voucher_discount_amount ??
+          0,
+      ),
+      totalVoucherDiscountAmount: Number(
+        item?.totalVoucherDiscountAmount ??
+          item?.total_voucher_discount_amount ??
+          0,
+      ),
+      totalAfterShopVoucher: Number(
+        item?.totalAfterShopVoucher ?? item?.total_after_shop_voucher ?? 0,
+      ),
+      totalAfterAllVouchers: Number(
+        item?.totalAfterAllVouchers ?? item?.total_after_all_vouchers ?? 0,
+      ),
+      platformCommissionRate: Number(
+        item?.platformCommissionRate ?? item?.platform_commission_rate ?? 0,
+      ),
+      platformCommissionAmount: Number(
+        item?.platformCommissionAmount ??
+          item?.platform_commission_amount ??
+          0,
+      ),
+      sellerReceivableAmount: Number(
+        item?.sellerReceivableAmount ?? item?.seller_receivable_amount ?? 0,
+      ),
     })),
     statusHistory: Array.isArray(raw?.statusHistory)
       ? raw.statusHistory
@@ -648,6 +680,8 @@ export default function ShipmentDetailPage() {
                   <th className="text-end">Đơn giá</th>
                   <th className="text-center">Số lượng</th>
                   <th className="text-end">Thành tiền</th>
+                  <th className="text-end">Phí sàn</th>
+                  <th className="text-end">Shop nhận</th>
                 </tr>
               </thead>
               <tbody>
@@ -670,6 +704,16 @@ export default function ShipmentDetailPage() {
                     </td>
                     <td className="text-end align-middle fw-semibold">
                       {formatCurrency(item.totalPrice)}
+                    </td>
+                    <td className="text-end align-middle text-danger">
+                      {item.platformCommissionAmount
+                        ? `-${formatCurrency(item.platformCommissionAmount)}`
+                        : "-"}
+                    </td>
+                    <td className="text-end align-middle text-success fw-semibold">
+                      {item.sellerReceivableAmount
+                        ? formatCurrency(item.sellerReceivableAmount)
+                        : "-"}
                     </td>
                   </tr>
                 ))}

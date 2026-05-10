@@ -65,6 +65,14 @@ public class OrderItemDTO {
 	private Long variant_id;
 	private Integer quantity;
 	private double price;
+	private Double shop_voucher_discount_amount;
+	private Double platform_voucher_discount_amount;
+	private Double total_voucher_discount_amount;
+	private Double total_after_shop_voucher;
+	private Double total_after_all_vouchers;
+	private Double platform_commission_rate;
+	private Double platform_commission_amount;
+	private Double seller_receivable_amount;
 
 	public OrderItemDTO() {
 	}
@@ -117,6 +125,70 @@ public class OrderItemDTO {
 
 	public void setPrice(double price) {
 		this.price = price;
+	}
+
+	public Double getShop_voucher_discount_amount() {
+		return shop_voucher_discount_amount;
+	}
+
+	public void setShop_voucher_discount_amount(Double shop_voucher_discount_amount) {
+		this.shop_voucher_discount_amount = shop_voucher_discount_amount;
+	}
+
+	public Double getPlatform_voucher_discount_amount() {
+		return platform_voucher_discount_amount;
+	}
+
+	public void setPlatform_voucher_discount_amount(Double platform_voucher_discount_amount) {
+		this.platform_voucher_discount_amount = platform_voucher_discount_amount;
+	}
+
+	public Double getTotal_voucher_discount_amount() {
+		return total_voucher_discount_amount;
+	}
+
+	public void setTotal_voucher_discount_amount(Double total_voucher_discount_amount) {
+		this.total_voucher_discount_amount = total_voucher_discount_amount;
+	}
+
+	public Double getTotal_after_shop_voucher() {
+		return total_after_shop_voucher;
+	}
+
+	public void setTotal_after_shop_voucher(Double total_after_shop_voucher) {
+		this.total_after_shop_voucher = total_after_shop_voucher;
+	}
+
+	public Double getTotal_after_all_vouchers() {
+		return total_after_all_vouchers;
+	}
+
+	public void setTotal_after_all_vouchers(Double total_after_all_vouchers) {
+		this.total_after_all_vouchers = total_after_all_vouchers;
+	}
+
+	public Double getPlatform_commission_rate() {
+		return platform_commission_rate;
+	}
+
+	public void setPlatform_commission_rate(Double platform_commission_rate) {
+		this.platform_commission_rate = platform_commission_rate;
+	}
+
+	public Double getPlatform_commission_amount() {
+		return platform_commission_amount;
+	}
+
+	public void setPlatform_commission_amount(Double platform_commission_amount) {
+		this.platform_commission_amount = platform_commission_amount;
+	}
+
+	public Double getSeller_receivable_amount() {
+		return seller_receivable_amount;
+	}
+
+	public void setSeller_receivable_amount(Double seller_receivable_amount) {
+		this.seller_receivable_amount = seller_receivable_amount;
 	}
 	
 	@Override

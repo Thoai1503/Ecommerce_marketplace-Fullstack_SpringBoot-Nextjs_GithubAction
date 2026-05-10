@@ -50,7 +50,15 @@ public record OrderShipmentByShopResponseDTO(
             String image,
             Integer quantity,
             Double price,
-            Double totalPrice
+            Double totalPrice,
+            Double shopVoucherDiscountAmount,
+            Double platformVoucherDiscountAmount,
+            Double totalVoucherDiscountAmount,
+            Double totalAfterShopVoucher,
+            Double totalAfterAllVouchers,
+            Double platformCommissionRate,
+            Double platformCommissionAmount,
+            Double sellerReceivableAmount
     ) {
     }
 }
