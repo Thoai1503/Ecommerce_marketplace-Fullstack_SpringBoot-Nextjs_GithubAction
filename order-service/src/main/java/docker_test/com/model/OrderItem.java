@@ -64,6 +64,33 @@ public class OrderItem {
 	@Column(name = "total_price", nullable = false)
 	private Double totalPrice;
 
+	@Column(name = "shop_voucher_discount_amount", nullable = false)
+	private Double shopVoucherDiscountAmount;
+
+	@Column(name = "platform_voucher_discount_amount", nullable = false)
+	private Double platformVoucherDiscountAmount;
+
+	@Column(name = "total_voucher_discount_amount", nullable = false)
+	private Double totalVoucherDiscountAmount;
+
+	@Column(name = "total_after_shop_voucher", nullable = false)
+	private Double totalAfterShopVoucher;
+
+	@Column(name = "total_after_all_vouchers", nullable = false)
+	private Double totalAfterAllVouchers;
+
+	@Column(name = "platform_commission_rate", nullable = false)
+	private Double platformCommissionRate;
+
+	@Column(name = "platform_commission_amount", nullable = false)
+	private Double platformCommissionAmount;
+
+	@Column(name = "seller_receivable_amount", nullable = false)
+	private Double sellerReceivableAmount;
+
+	@Column(name = "commission_calculated_at")
+	private LocalDateTime commissionCalculatedAt;
+
 	@Column(name = "final_quantity")
 	private Integer finalQuantity;
 

@@ -103,6 +103,8 @@ interface CheckoutLeftStepsProps {
   onApplyShopVoucherIds: (shopId: number, voucherIds: number[]) => void;
   onClearShopVouchers: (shopId: number) => void;
   getShopVoucherDiscount: (shopId: number) => number;
+  getItemShopVoucherDiscount: (item: CartItem) => number;
+  getItemTotalVoucherDiscount: (item: CartItem) => number;
   voucherLoading: boolean;
   onShippingOptionChange: (shopId: number, optionId: string) => void;
   onConfirmPayment: (method: PaymentMethod) => void;
@@ -131,6 +133,8 @@ export default function CheckoutLeftSteps({
   onApplyShopVoucherIds,
   onClearShopVouchers,
   getShopVoucherDiscount,
+  getItemShopVoucherDiscount,
+  getItemTotalVoucherDiscount,
   voucherLoading,
   onShippingOptionChange,
   onConfirmPayment,
@@ -363,65 +367,146 @@ export default function CheckoutLeftSteps({
                     </div>
 
                     <div style={{ padding: "16px" }}>
-                      {group.items.map((item, index) => (
-                        <div key={item.id}>
-                          <div className="d-flex gap-3 py-2">
-                            <img
-                              src={
-                                item.productVariant?.imageUrl ||
-                                "/placeholder.png"
-                              }
-                              alt={item.product?.name}
-                              style={styles.productImg}
-                            />
-                            <div className="flex-grow-1 d-flex flex-column justify-content-center">
-                              <h4
-                                style={{
-                                  fontSize: 13,
-                                  fontWeight: 700,
-                                  lineHeight: 1.4,
-                                  color: "#1e293b",
-                                }}
-                                className="mb-1"
-                              >
-                                {item.product?.name}
-                              </h4>
-                              <p
-                                className="text-muted mb-2"
-                                style={{ fontSize: 11 }}
-                              >
-                                {item.productVariant?.variantName &&
-                                  `Variant: ${item.productVariant.variantName}`}
-                                {item.productVariant?.sku &&
-                                  ` | SKU: ${item.productVariant.sku}`}
-                              </p>
-                              <div className="d-flex align-items-center justify-content-between">
-                                <span
+                      {group.items.map((item, index) => {
+                        const itemSubtotal =
+                          (item.productVariant?.price || 0) * item.quantity;
+                        const itemVoucherDiscount = Math.min(
+                          itemSubtotal,
+                          Math.max(0, getItemShopVoucherDiscount(item)),
+                        );
+                        const itemTotalVoucherDiscount = Math.min(
+                          itemSubtotal,
+                          Math.max(0, getItemTotalVoucherDiscount(item)),
+                        );
+                        const itemPlatformVoucherDiscount = Math.max(
+                          0,
+                          itemTotalVoucherDiscount - itemVoucherDiscount,
+                        );
+                        const itemAfterShopVoucher = Math.max(
+                          0,
+                          itemSubtotal - itemVoucherDiscount,
+                        );
+                        const itemAfterAllVouchers = Math.max(
+                          0,
+                          itemSubtotal - itemTotalVoucherDiscount,
+                        );
+                        const hasItemVoucherDiscount =
+                          itemVoucherDiscount > 0;
+                        const hasPlatformVoucherDiscount =
+                          itemPlatformVoucherDiscount > 0;
+
+                        return (
+                          <div key={item.id}>
+                            <div className="d-flex gap-3 py-2">
+                              <img
+                                src={
+                                  item.productVariant?.imageUrl ||
+                                  "/placeholder.png"
+                                }
+                                alt={item.product?.name}
+                                style={styles.productImg}
+                              />
+                              <div className="flex-grow-1 d-flex flex-column justify-content-center">
+                                <h4
                                   style={{
-                                    fontSize: 12,
-                                    fontWeight: 800,
-                                    color: "#137fec",
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    lineHeight: 1.4,
+                                    color: "#1e293b",
                                   }}
+                                  className="mb-1"
                                 >
-                                  {formatCurrency(
-                                    item.productVariant?.price || 0,
-                                  )}
-                                </span>
-                                <span style={styles.qtyBadge}>
-                                  Qty:{" "}
-                                  {String(item.quantity).padStart(2, "0")}
-                                </span>
+                                  {item.product?.name}
+                                </h4>
+                                <p
+                                  className="text-muted mb-2"
+                                  style={{ fontSize: 11 }}
+                                >
+                                  {item.productVariant?.variantName &&
+                                    `Variant: ${item.productVariant.variantName}`}
+                                  {item.productVariant?.sku &&
+                                    ` | SKU: ${item.productVariant.sku}`}
+                                </p>
+                                <div className="d-flex align-items-end justify-content-between gap-3">
+                                  <div
+                                    className="d-flex flex-column"
+                                    style={{ fontSize: 11, color: "#64748b" }}
+                                  >
+                                    <span>
+                                      Unit:{" "}
+                                      {formatCurrency(
+                                        item.productVariant?.price || 0,
+                                      )}
+                                    </span>
+                                    <span style={styles.qtyBadge}>
+                                      Qty:{" "}
+                                      {String(item.quantity).padStart(2, "0")}
+                                    </span>
+                                  </div>
+                                  <div className="text-end">
+                                    {hasItemVoucherDiscount && (
+                                      <div
+                                        className="text-muted text-decoration-line-through"
+                                        style={{ fontSize: 11 }}
+                                      >
+                                        {formatCurrency(itemSubtotal)}
+                                      </div>
+                                    )}
+                                    <div
+                                      style={{
+                                        fontSize: 13,
+                                        fontWeight: 800,
+                                        color: "#137fec",
+                                      }}
+                                    >
+                                      {formatCurrency(itemAfterShopVoucher)}
+                                    </div>
+                                    {hasItemVoucherDiscount && (
+                                      <div
+                                        style={{
+                                          fontSize: 11,
+                                          fontWeight: 700,
+                                          color: "#16a34a",
+                                        }}
+                                      >
+                                        Shop voucher -{" "}
+                                        {formatCurrency(itemVoucherDiscount)}
+                                      </div>
+                                    )}
+                                    {hasPlatformVoucherDiscount && (
+                                      <div
+                                        className="mt-1"
+                                        style={{
+                                          fontSize: 11,
+                                          color: "#64748b",
+                                        }}
+                                      >
+                                        Shop + platform:{" "}
+                                        <span
+                                          style={{
+                                            color: "#0f766e",
+                                            fontWeight: 800,
+                                          }}
+                                        >
+                                          {formatCurrency(
+                                            itemAfterAllVouchers,
+                                          )}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </div>
+                            {index < group.items.length - 1 && (
+                              <hr
+                                className="my-3"
+                                style={{ borderColor: "#f1f5f9" }}
+                              />
+                            )}
                           </div>
-                          {index < group.items.length - 1 && (
-                            <hr
-                              className="my-3"
-                              style={{ borderColor: "#f1f5f9" }}
-                            />
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
 
                       <div
                         style={{
