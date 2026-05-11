@@ -32,6 +32,7 @@ public final class Product {
 	private Integer is_active = 1;
 	private LocalDateTime created_at;
 	private LocalDateTime updated_at;
+	private List<ProductAttribute> attributes;
 	
 
 	public String getCategory_name() {
@@ -227,6 +228,14 @@ public final class Product {
 	}
 
 	private List<ProductVariant> variants;
+
+	public List<ProductAttribute> getAttributes() {
+		return attributes;
+	}
+
+	public void setAttributes(List<ProductAttribute> attributes) {
+		this.attributes = attributes;
+	}
 
 	public List<ProductImage> getImages() {
 		return images;

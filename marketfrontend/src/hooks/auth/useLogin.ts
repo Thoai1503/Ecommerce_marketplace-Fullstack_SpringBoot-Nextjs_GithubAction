@@ -74,9 +74,12 @@ const storeUserSession = (data: LoginResponse) => {
     }),
   );
 
-  document.cookie = `token=${data.accessToken}; path=/; max-age=${data.expiresIn ?? 86400}; SameSite=Lax`;
-  document.cookie = `role=${role}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
-  document.cookie = `user=${data.user.id}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
+  const accessCookieMaxAge = data.expiresIn ?? 60 * 30;
+  const sessionCookieMaxAge = data.refreshExpiresIn ?? 60 * 60 * 24;
+
+  document.cookie = `token=${data.accessToken}; path=/; max-age=${accessCookieMaxAge}; SameSite=Lax`;
+  document.cookie = `role=${role}; path=/; max-age=${sessionCookieMaxAge}; SameSite=Lax`;
+  document.cookie = `user=${data.user.id}; path=/; max-age=${sessionCookieMaxAge}; SameSite=Lax`;
 };
 
 export const useLogin = () => {

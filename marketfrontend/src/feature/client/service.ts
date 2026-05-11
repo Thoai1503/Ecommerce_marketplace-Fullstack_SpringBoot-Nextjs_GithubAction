@@ -33,6 +33,8 @@ const normalizeProduct = (product: any) => {
     ...product,
     id: product.id ?? product.product_id ?? 0,
     name: product.name ?? product.product_name ?? "",
+    stockQuantity: product.stockQuantity ?? product.stock_quantity,
+    isActive: product.isActive ?? product.is_active,
     shop: normalizedShop,
   };
 };

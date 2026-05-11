@@ -19,6 +19,7 @@ const normalizeVariant = (variant: any) => {
     productId: variant.productId ?? variant.product_id,
     variantName: variant.variantName ?? variant.variant_name ?? "",
     stockQuantity: variant.stockQuantity ?? variant.stock_quantity ?? 0,
+    isActive: variant.isActive ?? variant.is_active ?? variant.active,
     imageUrl: variant.imageUrl ?? variant.image_url ?? "",
   };
 };

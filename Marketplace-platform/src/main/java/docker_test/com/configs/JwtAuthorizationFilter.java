@@ -125,7 +125,8 @@ public class JwtAuthorizationFilter implements Filter {
 
         if (path.startsWith("/addresses") || path.startsWith("/api/upload")
                 || path.startsWith("/api/refunds") || path.startsWith("/api/refunds-requests-attachments")
-                || path.startsWith("/api/user-vouchers") || path.startsWith("/api/voucher-redemptions")) {
+                || path.startsWith("/api/user-vouchers") || path.startsWith("/api/voucher-redemptions")
+                || path.startsWith("/api/voucher-checkout")) {
             return RequiredRole.AUTHENTICATED;
         }
 

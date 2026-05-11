@@ -28,6 +28,12 @@ type PurchaseItem = {
   price: number;
   totalPrice: number;
   discountAmount: number;
+  shopVoucherDiscountAmount: number;
+  platformVoucherDiscountAmount: number;
+  totalAfterShopVoucher: number;
+  totalAfterAllVouchers: number;
+  platformCommissionAmount: number;
+  sellerReceivableAmount: number;
 };
 
 type PurchaseShipment = {
@@ -222,9 +228,45 @@ const normalizeItem = (
     quantity: asNumber(item?.quantity, 0),
     price: asNumber(item?.price, 0),
     totalPrice: asNumber(item?.totalPrice ?? item?.total_price, 0),
+    shopVoucherDiscountAmount: asNumber(
+      item?.shopVoucherDiscountAmount ?? item?.shop_voucher_discount_amount,
+      0,
+    ),
+    platformVoucherDiscountAmount: asNumber(
+      item?.platformVoucherDiscountAmount ??
+        item?.platform_voucher_discount_amount,
+      0,
+    ),
     discountAmount: asNumber(
-      item?.discountAmount ?? item?.discount_amount,
+      item?.totalVoucherDiscountAmount ??
+        item?.total_voucher_discount_amount ??
+        item?.discountAmount ??
+        item?.discount_amount,
       itemDiscountByOrderItemId.get(id) || 0,
+    ),
+    totalAfterShopVoucher: asNumber(
+      item?.totalAfterShopVoucher ?? item?.total_after_shop_voucher,
+      asNumber(item?.totalPrice ?? item?.total_price, 0),
+    ),
+    totalAfterAllVouchers: asNumber(
+      item?.totalAfterAllVouchers ?? item?.total_after_all_vouchers,
+      Math.max(
+        0,
+        asNumber(item?.totalPrice ?? item?.total_price, 0) -
+          asNumber(
+            item?.totalVoucherDiscountAmount ??
+              item?.total_voucher_discount_amount,
+            itemDiscountByOrderItemId.get(id) || 0,
+          ),
+      ),
+    ),
+    platformCommissionAmount: asNumber(
+      item?.platformCommissionAmount ?? item?.platform_commission_amount,
+      0,
+    ),
+    sellerReceivableAmount: asNumber(
+      item?.sellerReceivableAmount ?? item?.seller_receivable_amount,
+      0,
     ),
   };
 };

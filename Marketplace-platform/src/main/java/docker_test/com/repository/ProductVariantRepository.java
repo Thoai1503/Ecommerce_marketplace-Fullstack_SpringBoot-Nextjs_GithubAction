@@ -151,6 +151,7 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 				  productVariant.setWidth(rs.getLong("width"));
 				  productVariant.setStock_quantity(rs.getInt("stock_quantity"));
 				  productVariant.setVariant_name(rs.getString("variant_name"));
+				  productVariant.setActive(rs.getInt("is_active"));
 				 
 				  return productVariant;
 				  

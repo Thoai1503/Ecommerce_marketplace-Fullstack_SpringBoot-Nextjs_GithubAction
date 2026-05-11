@@ -1,11 +1,14 @@
 "use client";
 
 import { API_URL } from "@/helper/api";
+import {
+  clearAuth,
+  getStoredAccessToken,
+  getValidAccessToken,
+  markAuthActivity,
+} from "@/lib/authSession";
 import axios from "axios";
 import { useEffect } from "react";
-
-const getStoredToken = () =>
-  localStorage.getItem("accessToken") || localStorage.getItem("token");
 
 const normalizeRole = (role?: string | null) => {
   const value = role?.trim().toLowerCase();
@@ -33,25 +36,6 @@ const getIdleTimeoutSeconds = () => {
   return 60 * 60;
 };
 
-const clearBrowserAuth = () => {
-  [
-    "accessToken",
-    "refreshToken",
-    "expiresAt",
-    "expiresIn",
-    "refreshExpiresAt",
-    "idleTimeoutSeconds",
-    "lastActivityAt",
-    "rememberMe",
-    "token",
-    "user",
-  ].forEach((key) => localStorage.removeItem(key));
-
-  ["token", "refreshToken", "role", "user"].forEach((name) => {
-    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-  });
-};
-
 const shouldAttachAuth = (url: string) => {
   if (!url || url.includes("/auth/login") || url.includes("/auth/refresh")) {
     return false;
@@ -72,13 +56,22 @@ export default function AuthRequestBridge() {
     let isIdleLogoutRunning = false;
 
     const markActivity = () => {
-      if (!getStoredToken()) return;
+      if (!getStoredAccessToken()) return;
 
       const now = Date.now();
       if (now - lastActivityWrite < 5000) return;
 
       lastActivityWrite = now;
-      localStorage.setItem("lastActivityAt", String(now));
+      markAuthActivity();
+    };
+
+    const isIdleExpired = () => {
+      const lastActivityAt = Number(
+        localStorage.getItem("lastActivityAt") || Date.now(),
+      );
+      const idleTimeoutMs = getIdleTimeoutSeconds() * 1000;
+
+      return Date.now() - lastActivityAt >= idleTimeoutMs;
     };
 
     const logoutForIdle = async (
@@ -97,23 +90,28 @@ export default function AuthRequestBridge() {
       } catch {
         // Client state still needs to be cleared even if the logout request fails.
       } finally {
-        clearBrowserAuth();
+        clearAuth();
         if (redirectToLogin) {
           window.location.href = "/login";
         }
       }
     };
 
-    const axiosInterceptor = axios.interceptors.request.use((config) => {
+    const axiosInterceptor = axios.interceptors.request.use(async (config) => {
       markActivity();
 
-      const token = getStoredToken();
       const requestUrl = new URL(
         config.url || "",
         config.baseURL || window.location.origin,
       ).toString();
 
-      if (token && shouldAttachAuth(requestUrl)) {
+      if (!shouldAttachAuth(requestUrl)) {
+        return config;
+      }
+
+      const token = await getValidAccessToken();
+
+      if (token) {
         config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -122,14 +120,19 @@ export default function AuthRequestBridge() {
     });
 
     const originalFetch = window.fetch.bind(window);
-    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       markActivity();
 
       const requestUrl =
         typeof input === "string" || input instanceof URL ? String(input) : input.url;
-      const token = getStoredToken();
 
-      if (!token || !shouldAttachAuth(requestUrl)) {
+      if (!shouldAttachAuth(requestUrl)) {
+        return originalFetch(input, init);
+      }
+
+      const token = await getValidAccessToken();
+
+      if (!token) {
         return originalFetch(input, init);
       }
 
@@ -163,23 +166,26 @@ export default function AuthRequestBridge() {
     markActivity();
 
     const idleTimer = window.setInterval(() => {
-      const token = getStoredToken();
+      const token = getStoredAccessToken();
       if (!token) return;
 
-      const lastActivityAt = Number(
-        localStorage.getItem("lastActivityAt") || Date.now(),
-      );
-      const idleTimeoutMs = getIdleTimeoutSeconds() * 1000;
-
-      if (Date.now() - lastActivityAt >= idleTimeoutMs) {
+      if (isIdleExpired()) {
         void logoutForIdle(originalFetch);
       }
     }, 15000);
+
+    const refreshTimer = window.setInterval(() => {
+      const token = getStoredAccessToken();
+      if (!token || isIdleExpired()) return;
+
+      void getValidAccessToken();
+    }, 30000);
 
     return () => {
       axios.interceptors.request.eject(axiosInterceptor);
       window.fetch = originalFetch;
       window.clearInterval(idleTimer);
+      window.clearInterval(refreshTimer);
       activityEvents.forEach((eventName) =>
         window.removeEventListener(eventName, markActivity),
       );

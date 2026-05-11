@@ -333,6 +333,14 @@ public class OrderService {
                         .quantity(i.getQuantity())
                         .price(i.getPrice())
                         .totalPrice(i.getPrice() * i.getQuantity())
+                        .shopVoucherDiscountAmount(getShopVoucherDiscountAmount(i))
+                        .platformVoucherDiscountAmount(getPlatformVoucherDiscountAmount(i))
+                        .totalVoucherDiscountAmount(getTotalVoucherDiscountAmount(i))
+                        .totalAfterShopVoucher(getTotalAfterShopVoucher(i))
+                        .totalAfterAllVouchers(getTotalAfterAllVouchers(i))
+                        .platformCommissionRate(normalizeMoney(i.getPlatform_commission_rate()))
+                        .platformCommissionAmount(normalizeMoney(i.getPlatform_commission_amount()))
+                        .sellerReceivableAmount(normalizeMoney(i.getSeller_receivable_amount()))
                         .build())
                 .toList();
     }
@@ -349,9 +357,61 @@ public class OrderService {
                 .image(dto.getImage_url())
                 .quantity(dto.getQuantity())
                 .price(dto.getPrice())
-                .totalPrice(dto.getPrice() * dto.getQuantity())
+                .totalPrice(getItemOriginalTotal(dto))
+                .shopVoucherDiscountAmount(getShopVoucherDiscountAmount(dto))
+                .platformVoucherDiscountAmount(getPlatformVoucherDiscountAmount(dto))
+                .totalVoucherDiscountAmount(getTotalVoucherDiscountAmount(dto))
+                .totalAfterShopVoucher(getTotalAfterShopVoucher(dto))
+                .totalAfterAllVouchers(getTotalAfterAllVouchers(dto))
+                .platformCommissionRate(normalizeMoney(dto.getPlatform_commission_rate()))
+                .platformCommissionAmount(normalizeMoney(dto.getPlatform_commission_amount()))
+                .sellerReceivableAmount(normalizeMoney(dto.getSeller_receivable_amount()))
                 .isAdjusted(false)
                 .build();
+    }
+
+    private double getItemOriginalTotal(docker_test.com.dto.OrderItemDTO dto) {
+        return dto.getPrice() * Math.max(0, dto.getQuantity());
+    }
+
+    private double normalizeMoney(Double value) {
+        if (value == null || value.isNaN() || value.isInfinite() || value < 0) {
+            return 0.0;
+        }
+        return value;
+    }
+
+    private double getShopVoucherDiscountAmount(docker_test.com.dto.OrderItemDTO dto) {
+        return Math.min(getItemOriginalTotal(dto), normalizeMoney(dto.getShop_voucher_discount_amount()));
+    }
+
+    private double getPlatformVoucherDiscountAmount(docker_test.com.dto.OrderItemDTO dto) {
+        double originalTotal = getItemOriginalTotal(dto);
+        double shopDiscount = getShopVoucherDiscountAmount(dto);
+        return Math.min(originalTotal - shopDiscount, normalizeMoney(dto.getPlatform_voucher_discount_amount()));
+    }
+
+    private double getTotalVoucherDiscountAmount(docker_test.com.dto.OrderItemDTO dto) {
+        double explicitTotalDiscount = normalizeMoney(dto.getTotal_voucher_discount_amount());
+        double computedTotalDiscount = getShopVoucherDiscountAmount(dto) + getPlatformVoucherDiscountAmount(dto);
+        double totalDiscount = explicitTotalDiscount > 0 ? explicitTotalDiscount : computedTotalDiscount;
+        return Math.min(getItemOriginalTotal(dto), totalDiscount);
+    }
+
+    private double getTotalAfterShopVoucher(docker_test.com.dto.OrderItemDTO dto) {
+        Double explicitTotal = dto.getTotal_after_shop_voucher();
+        if (explicitTotal != null) {
+            return Math.max(0.0, Math.min(getItemOriginalTotal(dto), explicitTotal));
+        }
+        return Math.max(0.0, getItemOriginalTotal(dto) - getShopVoucherDiscountAmount(dto));
+    }
+
+    private double getTotalAfterAllVouchers(docker_test.com.dto.OrderItemDTO dto) {
+        Double explicitTotal = dto.getTotal_after_all_vouchers();
+        if (explicitTotal != null) {
+            return Math.max(0.0, Math.min(getItemOriginalTotal(dto), explicitTotal));
+        }
+        return Math.max(0.0, getItemOriginalTotal(dto) - getTotalVoucherDiscountAmount(dto));
     }
     
     
