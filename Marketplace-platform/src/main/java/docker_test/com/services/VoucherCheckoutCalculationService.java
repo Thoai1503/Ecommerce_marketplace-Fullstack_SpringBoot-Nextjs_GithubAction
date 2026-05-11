@@ -28,6 +28,8 @@ import docker_test.com.repository.VoucherUserSegmentRuleRepository;
 
 @Service
 public class VoucherCheckoutCalculationService {
+    private static final double PLATFORM_COMMISSION_RATE = 0.10;
+
     private final VoucherRepository voucherRepository = VoucherRepository.Instance();
     private final VoucherScopeRuleRepository scopeRuleRepository = VoucherScopeRuleRepository.Instance();
     private final VoucherUserSegmentRuleRepository segmentRuleRepository = VoucherUserSegmentRuleRepository.Instance();
@@ -318,6 +320,8 @@ public class VoucherCheckoutCalculationService {
         CheckoutVoucherCalculationResponse response = new CheckoutVoucherCalculationResponse();
         Map<String, Double> afterShopByKey = toAmountMap(afterShopAmounts);
         Map<String, Double> afterAllByKey = toAmountMap(afterAllAmounts);
+        Map<Long, Double> platformCommissionByShop = new LinkedHashMap<>();
+        Map<Long, Double> sellerReceivableByShop = new LinkedHashMap<>();
 
         for (ItemAmount original : originalAmounts) {
             CheckoutVoucherCalculationRequest.Item item = original.item();
@@ -325,6 +329,9 @@ public class VoucherCheckoutCalculationService {
             double afterAll = afterAllByKey.getOrDefault(item.getItemKey(), afterShop);
             double shopDiscount = money(original.amount() - afterShop);
             double totalDiscount = money(original.amount() - afterAll);
+            double commissionBase = getCommissionBase(original.amount(), afterShop, shopDiscount);
+            double platformCommission = money(commissionBase * PLATFORM_COMMISSION_RATE);
+            double sellerReceivable = money(Math.max(0.0, commissionBase - platformCommission));
 
             CheckoutVoucherCalculationResponse.ItemBreakdown breakdown =
                     new CheckoutVoucherCalculationResponse.ItemBreakdown();
@@ -338,10 +345,31 @@ public class VoucherCheckoutCalculationService {
             breakdown.setTotalVoucherDiscountAmount(totalDiscount);
             breakdown.setTotalAfterShopVoucher(money(afterShop));
             breakdown.setTotalAfterAllVouchers(money(afterAll));
+            breakdown.setPlatformCommissionRate(PLATFORM_COMMISSION_RATE);
+            breakdown.setPlatformCommissionAmount(platformCommission);
+            breakdown.setSellerReceivableAmount(sellerReceivable);
             response.getItems().add(breakdown);
+
+            Long shopId = item.getShopId();
+            if (shopId != null && shopId > 0) {
+                platformCommissionByShop.merge(shopId, platformCommission, Double::sum);
+                sellerReceivableByShop.merge(shopId, sellerReceivable, Double::sum);
+            }
         }
 
         response.setShopVoucherDiscountByShop(shopDiscountByShop.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> money(entry.getValue()),
+                        Double::sum,
+                        LinkedHashMap::new)));
+        response.setPlatformCommissionByShop(platformCommissionByShop.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> money(entry.getValue()),
+                        Double::sum,
+                        LinkedHashMap::new)));
+        response.setSellerReceivableByShop(sellerReceivableByShop.entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         entry -> money(entry.getValue()),
@@ -352,6 +380,12 @@ public class VoucherCheckoutCalculationService {
                 .sum()));
         response.setPlatformVoucherDiscount(money(platformDiscount));
         response.setTotalVoucherDiscount(money(response.getShopVoucherDiscount() + response.getPlatformVoucherDiscount()));
+        response.setPlatformCommissionAmount(money(response.getPlatformCommissionByShop().values().stream()
+                .mapToDouble(Double::doubleValue)
+                .sum()));
+        response.setSellerReceivableAmount(money(response.getSellerReceivableByShop().values().stream()
+                .mapToDouble(Double::doubleValue)
+                .sum()));
         response.setVoucherApplications(applications);
 
         return response;
@@ -397,6 +431,13 @@ public class VoucherCheckoutCalculationService {
 
     private double subtotal(CheckoutVoucherCalculationRequest.Item item) {
         return money(safe(item.getPrice()) * Math.max(0, item.getQuantity() == null ? 0 : item.getQuantity()));
+    }
+
+    private double getCommissionBase(double subtotal, double totalAfterShopVoucher, double shopVoucherDiscount) {
+        if (totalAfterShopVoucher > 0) {
+            return money(totalAfterShopVoucher);
+        }
+        return money(Math.max(0.0, subtotal - shopVoucherDiscount));
     }
 
     private double decimal(BigDecimal value) {

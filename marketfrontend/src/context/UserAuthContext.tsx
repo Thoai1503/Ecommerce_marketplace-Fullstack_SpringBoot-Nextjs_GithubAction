@@ -1,7 +1,6 @@
 "use client";
 import {
   createContext,
-  SetStateAction,
   useContext,
   useEffect,
   useState,
@@ -28,11 +27,12 @@ export const UserAuthProvider = ({
 }) => {
   const [roles, setRoles] = useState<"buyer" | "seller" | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
+
   useEffect(() => {
     // Validate and set role when prop changes
     if (role === "buyer" || role === "both") {
       setUserId(user_id);
-      setRoles(role.toString() as "buyer" | "seller");
+      setRoles("buyer");
     } else if (role === "seller") {
       setRoles("seller");
       setUserId(user_id);
@@ -41,7 +41,33 @@ export const UserAuthProvider = ({
 
       setRoles(null);
     }
-  }, [role]);
+  }, [role, user_id]);
+
+  useEffect(() => {
+    const switchToGuest = () => {
+      setUserId(null);
+      setRoles(null);
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (
+        event.key &&
+        ["accessToken", "token", "user"].includes(event.key) &&
+        !localStorage.getItem("accessToken") &&
+        !localStorage.getItem("token")
+      ) {
+        switchToGuest();
+      }
+    };
+
+    window.addEventListener("auth:cleared", switchToGuest);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("auth:cleared", switchToGuest);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   return (
     <UserAuthContext.Provider value={{ roles, setRoles, userId }}>

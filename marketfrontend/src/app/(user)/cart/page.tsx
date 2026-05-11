@@ -9,6 +9,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { CartItem, GroupedCartByShop } from "@/validators/cart";
 import { productVariantQuery } from "@/query/productVariant";
 import { productQuery } from "@/feature/client/query";
+import { clearAuth, getValidAccessToken } from "@/lib/authSession";
 
 type CartStateItem = CartItem & {
   selected: boolean;
@@ -65,12 +66,27 @@ const resolveVariantId = (item: any): number | null => {
   );
 };
 
+const isAuthQueryError = (error: unknown) => {
+  const err = error as any;
+  const status = Number(
+    err?.status ?? err?.response?.status ?? err?.code ?? 0,
+  );
+  const message = String(err?.message ?? err?.error ?? "").toLowerCase();
+
+  return (
+    status === 401 ||
+    status === 403 ||
+    message.includes("unauthorized") ||
+    message.includes("forbidden")
+  );
+};
 
 const ShoppingCart: React.FC = () => {
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { userId } = useUserAuth();
-  const isLoggedIn = Boolean(userId);
-  const { data, isError, status } = useQuery({
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const isLoggedIn = Boolean(userId) && !sessionExpired;
+  const { data, error, isError, status } = useQuery({
     ...Cart.getByUserId(userId || 0),
     enabled: isLoggedIn,
   });
@@ -81,6 +97,10 @@ const ShoppingCart: React.FC = () => {
   // Track items đang được update/delete để disable tương tác
   const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
   const [stockWarning, setStockWarning] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    setSessionExpired(false);
+  }, [userId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -333,13 +353,20 @@ const ShoppingCart: React.FC = () => {
 
   useEffect(() => {
     if (isError) {
+      if (isAuthQueryError(error)) {
+        clearAuth();
+        setSessionExpired(true);
+        setCartItems([]);
+        return;
+      }
+
       alert(
         "An error occurred while loading shopping cart data. Please try again later. " +
           status,
       ); //
       console.error("Error fetching cart data");
     }
-  }, [isError, status]);
+  }, [error, isError, status]);
 
   const syncGuestCartLocalStorage = (nextItems: CartStateItem[]) => {
     if (typeof window === "undefined") return;
@@ -411,6 +438,29 @@ const ShoppingCart: React.FC = () => {
   const selectedCount = enrichedCartItems.filter(
     (item) => item.selected && !item.isLocked,
   ).length;
+
+  const redirectToCheckoutLogin = () => {
+    clearAuth();
+    setSessionExpired(true);
+    window.location.href = `/login?redirect=${encodeURIComponent("/checkout")}`;
+  };
+
+  const handleCheckout = async () => {
+    if (selectedCount === 0) return;
+
+    if (!isLoggedIn) {
+      redirectToCheckoutLogin();
+      return;
+    }
+
+    const token = await getValidAccessToken(0);
+    if (!token) {
+      redirectToCheckoutLogin();
+      return;
+    }
+
+    window.location.href = "/checkout";
+  };
 
   // ===== Checkbox logic =====
   const isAllSelected =
@@ -986,13 +1036,7 @@ const ShoppingCart: React.FC = () => {
                 <button
                   className="btn btn-primary w-100 py-3 fw-bold d-flex align-items-center justify-content-center gap-2"
                   disabled={selectedCount === 0}
-                  onClick={() => {
-                    if (isLoggedIn) {
-                      window.location.href = "/checkout";
-                    } else {
-                      window.location.href = "/login?redirect=cart";
-                    }
-                  }}
+                  onClick={() => void handleCheckout()}
                 >
                   CHECKOUT ({selectedCount})
                   <i className="bi bi-arrow-right"></i>

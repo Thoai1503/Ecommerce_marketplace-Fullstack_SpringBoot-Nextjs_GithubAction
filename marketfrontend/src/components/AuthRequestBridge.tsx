@@ -3,9 +3,11 @@
 import { API_URL } from "@/helper/api";
 import {
   clearAuth,
+  getLoginRedirectUrl,
   getStoredAccessToken,
   getValidAccessToken,
   markAuthActivity,
+  shouldRedirectToLoginOnAuthFailure,
 } from "@/lib/authSession";
 import axios from "axios";
 import { useEffect } from "react";
@@ -74,10 +76,7 @@ export default function AuthRequestBridge() {
       return Date.now() - lastActivityAt >= idleTimeoutMs;
     };
 
-    const logoutForIdle = async (
-      fetchFn: typeof window.fetch,
-      redirectToLogin = true,
-    ) => {
+    const logoutForIdle = async (fetchFn: typeof window.fetch) => {
       if (isIdleLogoutRunning) return;
 
       isIdleLogoutRunning = true;
@@ -90,11 +89,24 @@ export default function AuthRequestBridge() {
       } catch {
         // Client state still needs to be cleared even if the logout request fails.
       } finally {
+        // Idle timeout only drops the buyer back to guest mode. Guarded actions
+        // like checkout will ask them to sign in again when they try to continue.
         clearAuth();
-        if (redirectToLogin) {
-          window.location.href = "/login";
-        }
       }
+    };
+
+    const handleAuthFailureResponse = (response: Response, requestUrl: string) => {
+      if (response.status !== 401 || !shouldAttachAuth(requestUrl)) {
+        return response;
+      }
+
+      clearAuth();
+
+      if (shouldRedirectToLoginOnAuthFailure()) {
+        window.location.href = getLoginRedirectUrl();
+      }
+
+      return response;
     };
 
     const axiosInterceptor = axios.interceptors.request.use(async (config) => {
@@ -133,7 +145,8 @@ export default function AuthRequestBridge() {
       const token = await getValidAccessToken();
 
       if (!token) {
-        return originalFetch(input, init);
+        const response = await originalFetch(input, init);
+        return handleAuthFailureResponse(response, requestUrl);
       }
 
       const headers = new Headers(
@@ -144,10 +157,12 @@ export default function AuthRequestBridge() {
         headers.set("Authorization", `Bearer ${token}`);
       }
 
-      return originalFetch(input, {
+      const response = await originalFetch(input, {
         ...init,
         headers,
       });
+
+      return handleAuthFailureResponse(response, requestUrl);
     };
 
     const activityEvents = [

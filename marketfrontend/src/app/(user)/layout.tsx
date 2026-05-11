@@ -25,16 +25,18 @@ export default async function UserLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
   const role = cookieStore.get("role")?.value;
   const rawUserId = cookieStore.get("user")?.value;
-  const id = rawUserId ? Number(rawUserId) : 0;
-  console.log("User role: " + role);
+  const sessionRole = token ? role : undefined;
+  const id = token && rawUserId ? Number(rawUserId) : 0;
+  console.log("User role: " + sessionRole);
   console.log("User id: " + id);
   const queryCLient = new QueryClient();
   return (
     <>
       <RootPrivider>
-        <UserAuthProvider role={role} user_id={id}>
+        <UserAuthProvider role={sessionRole} user_id={id}>
           {/* <CustomProgressBar /> */}
           {/* ================= HEADER ================= */}
           <header className="sticky-top bg-white shadow-sm">

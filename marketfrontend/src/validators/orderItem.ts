@@ -11,6 +11,14 @@ export interface IOrderItem {
   quantity: number;
   price: number;
   image_url?: string;
+  shop_voucher_discount_amount?: number;
+  platform_voucher_discount_amount?: number;
+  total_voucher_discount_amount?: number;
+  total_after_shop_voucher?: number;
+  total_after_all_vouchers?: number;
+  platform_commission_rate?: number;
+  platform_commission_amount?: number;
+  seller_receivable_amount?: number;
   // totalPrice: number;
 }
 
