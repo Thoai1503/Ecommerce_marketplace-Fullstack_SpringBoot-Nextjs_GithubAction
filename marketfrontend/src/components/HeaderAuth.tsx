@@ -3,6 +3,11 @@
 import { logoutAction } from "@/app/actions/auth";
 import { useUserAuth } from "@/context/UserAuthContext";
 import { findUserById } from "@/feature/client/service";
+import {
+  clearAuth,
+  getStoredAccessToken,
+  isAccessTokenExpiring,
+} from "@/lib/authSession";
 import { Alegreya } from "next/font/google";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -18,21 +23,29 @@ export default function HeaderAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [cartCount, setCartCount] = useState(0);
   const { roles, userId } = useUserAuth();
+  const router = useRouter();
   // alert("User data : " + JSON.stringify(user) + ", Roles: " + roles);
   //alert("User ID from context: " + userId + ", Roles: " + roles);
 
   useEffect(() => {
     if (userId && roles) {
       // alert("Fetching user data for ID: " + userId);
-      findUserById(userId).then((userData) => {
-        // alert("User data fetched: " + JSON.stringify(userData));
-        setUser(userData);
-      });
+      findUserById(userId)
+        .then((userData) => {
+          // alert("User data fetched: " + JSON.stringify(userData));
+          setUser(userData);
+        })
+        .catch((error) => {
+          console.warn("Session expired. Falling back to guest mode.", error);
+          clearAuth();
+          setUser(null);
+          router.refresh();
+        });
+    } else {
+      setUser(null);
     }
-  }, [userId, roles]);
+  }, [userId, roles, router]);
   // alert("Current user: " + JSON.stringify(user) + ", Roles: " + roles);
-
-  const router = useRouter();
 
   const handleLogout = async () => {
     await logoutAction();
@@ -48,8 +61,23 @@ export default function HeaderAuth() {
 
   // ===== LOAD USER =====
   useEffect(() => {
+    const token = getStoredAccessToken();
+    if (!token || isAccessTokenExpiring(0)) {
+      setUser(null);
+      return;
+    }
+
     const raw = localStorage.getItem("user");
     if (raw) setUser(JSON.parse(raw));
+  }, []);
+
+  useEffect(() => {
+    const handleAuthCleared = () => {
+      setUser(null);
+    };
+
+    window.addEventListener("auth:cleared", handleAuthCleared);
+    return () => window.removeEventListener("auth:cleared", handleAuthCleared);
   }, []);
 
   // ===== LOAD CART COUNT =====
