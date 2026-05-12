@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import docker_test.com.models.Shop;
+import docker_test.com.repository.ShopFollowerRepository;
 import docker_test.com.repository.ShopRepository;
 
 @RestController
@@ -16,9 +17,11 @@ import docker_test.com.repository.ShopRepository;
 public class ShopController {
 
 	private ShopRepository shopRepository;
+	private ShopFollowerRepository shopFollowerRepository;
 
 	public ShopController() {
 		this.shopRepository = ShopRepository.Instance();
+		this.shopFollowerRepository = ShopFollowerRepository.Instance();
 	}
 
 	private boolean hasText(String value) {
@@ -101,6 +104,39 @@ public class ShopController {
 		}
 	}
 
+	private Long getPayloadLong(Map<String, Object> payload, String key, Long fallback) {
+		Object value = payload.get(key);
+		if (value == null) {
+			return fallback;
+		}
+
+		if (value instanceof Number number) {
+			return number.longValue();
+		}
+
+		try {
+			return Long.parseLong(String.valueOf(value));
+		} catch (NumberFormatException ex) {
+			return fallback;
+		}
+	}
+
+	private Map<String, Object> buildFollowResponse(long shopId, Long userId) {
+		int followers = shopFollowerRepository.CountFollowers(shopId);
+		boolean isFollowing = userId != null
+				&& userId > 0
+				&& shopFollowerRepository.IsFollowing(userId, shopId);
+
+		Map<String, Object> response = new HashMap<>();
+		response.put("shopId", shopId);
+		response.put("userId", userId);
+		response.put("followers", followers);
+		response.put("follower_count", followers);
+		response.put("isFollowing", isFollowing);
+		response.put("is_following", isFollowing);
+		return response;
+	}
+
 	@GetMapping("")
 	public ResponseEntity<?> getAll() {
 		var list = shopRepository.GetAll();
@@ -160,7 +196,68 @@ public class ShopController {
 			return ResponseEntity.notFound().build();
 		}
 
+		shop.setFollowers(shopFollowerRepository.CountFollowers(id));
 		return ResponseEntity.ok(shop);
+	}
+
+	@GetMapping("/{id}/follow-status")
+	public ResponseEntity<?> getFollowStatus(
+			@PathVariable long id,
+			@RequestParam(value = "user_id", required = false) Long userId) {
+		var shop = shopRepository.GetById((int) id);
+
+		if (shop == null) {
+			return ResponseEntity.notFound().build();
+		}
+
+		return ResponseEntity.ok(buildFollowResponse(id, userId));
+	}
+
+	@PostMapping("/{id}/follow")
+	public ResponseEntity<?> followShop(@PathVariable long id, @RequestBody Map<String, Object> payload) {
+		var shop = shopRepository.GetById((int) id);
+
+		if (shop == null) {
+			return ResponseEntity.notFound().build();
+		}
+
+		Long userId = getPayloadLong(payload, "user_id", 0L);
+		if (userId == null || userId <= 0) {
+			return ResponseEntity.badRequest().body("Missing or invalid user_id");
+		}
+
+		if (shop.getUser_id() == userId) {
+			return ResponseEntity.badRequest().body("Cannot follow your own shop");
+		}
+
+		boolean success = shopFollowerRepository.FollowShop(userId, id);
+		if (!success) {
+			return ResponseEntity.status(500).body("Unable to follow shop");
+		}
+
+		return ResponseEntity.ok(buildFollowResponse(id, userId));
+	}
+
+	@DeleteMapping("/{id}/follow")
+	public ResponseEntity<?> unfollowShop(
+			@PathVariable long id,
+			@RequestParam("user_id") long userId) {
+		var shop = shopRepository.GetById((int) id);
+
+		if (shop == null) {
+			return ResponseEntity.notFound().build();
+		}
+
+		if (userId <= 0) {
+			return ResponseEntity.badRequest().body("Missing or invalid user_id");
+		}
+
+		boolean success = shopFollowerRepository.UnfollowShop(userId, id);
+		if (!success) {
+			return ResponseEntity.status(500).body("Unable to unfollow shop");
+		}
+
+		return ResponseEntity.ok(buildFollowResponse(id, userId));
 	}
 
 	@PutMapping("/{id}")

@@ -36,6 +36,16 @@ public class VoucherCheckoutCalculationService {
     private final UserVoucherRepository userVoucherRepository = UserVoucherRepository.Instance();
 
     public CheckoutVoucherCalculationResponse calculate(CheckoutVoucherCalculationRequest request) {
+        return calculateInternal(request, false);
+    }
+
+    public CheckoutVoucherCalculationResponse calculateForReturn(CheckoutVoucherCalculationRequest request) {
+        return calculateInternal(request, true);
+    }
+
+    private CheckoutVoucherCalculationResponse calculateInternal(
+            CheckoutVoucherCalculationRequest request,
+            boolean useOrderSnapshot) {
         List<CheckoutVoucherCalculationRequest.Item> items = request.getItems() == null
                 ? List.of()
                 : request.getItems();
@@ -45,7 +55,9 @@ public class VoucherCheckoutCalculationService {
         List<ItemAmount> itemAmounts = copyAmounts(originalAmounts);
         List<ItemAmount> afterShopVoucherAmounts;
         List<CheckoutVoucherCalculationResponse.VoucherApplication> applications = new ArrayList<>();
-        Set<Long> claimableVoucherIds = getClaimableVoucherIds(request.getUserId());
+        Set<Long> claimableVoucherIds = useOrderSnapshot
+                ? Set.of()
+                : getClaimableVoucherIds(request.getUserId());
 
         Map<Long, Double> shopDiscountByShop = new LinkedHashMap<>();
         Map<String, List<Long>> selectedShopVoucherIds = request.getSelectedShopVoucherIdsByShop() == null
@@ -55,12 +67,12 @@ public class VoucherCheckoutCalculationService {
         for (Map.Entry<String, List<Long>> entry : selectedShopVoucherIds.entrySet()) {
             Long shopId = parseLong(entry.getKey());
             for (Long voucherId : safeIds(entry.getValue())) {
-                Voucher voucher = loadUsableVoucher(voucherId, claimableVoucherIds);
+                Voucher voucher = loadUsableVoucher(voucherId, claimableVoucherIds, useOrderSnapshot);
                 if (voucher == null || !"SHOP".equals(normalize(voucher.getIssuerType()))) {
                     continue;
                 }
 
-                ApplyResult result = applyVoucher(voucher, itemAmounts, request);
+                ApplyResult result = applyVoucher(voucher, itemAmounts, request, useOrderSnapshot);
                 itemAmounts = result.itemAmounts();
 
                 if (result.discount() > 0) {
@@ -79,12 +91,12 @@ public class VoucherCheckoutCalculationService {
 
         double platformDiscount = 0.0;
         for (Long voucherId : safeIds(request.getSelectedPlatformVoucherIds())) {
-            Voucher voucher = loadUsableVoucher(voucherId, claimableVoucherIds);
+            Voucher voucher = loadUsableVoucher(voucherId, claimableVoucherIds, useOrderSnapshot);
             if (voucher == null || !"PLATFORM".equals(normalize(voucher.getIssuerType()))) {
                 continue;
             }
 
-            ApplyResult result = applyVoucher(voucher, itemAmounts, request);
+            ApplyResult result = applyVoucher(voucher, itemAmounts, request, useOrderSnapshot);
             itemAmounts = result.itemAmounts();
 
             if (result.discount() > 0) {
@@ -114,14 +126,20 @@ public class VoucherCheckoutCalculationService {
                 .collect(Collectors.toSet());
     }
 
-    private Voucher loadUsableVoucher(Long voucherId, Set<Long> claimableVoucherIds) {
-        if (voucherId == null || voucherId <= 0 || !claimableVoucherIds.contains(voucherId)) {
+    private Voucher loadUsableVoucher(Long voucherId, Set<Long> claimableVoucherIds, boolean useOrderSnapshot) {
+        if (voucherId == null || voucherId <= 0) {
+            return null;
+        }
+        if (!useOrderSnapshot && !claimableVoucherIds.contains(voucherId)) {
             return null;
         }
 
         Voucher voucher = voucherRepository.GetById(voucherId.intValue());
         if (voucher == null) {
             return null;
+        }
+        if (useOrderSnapshot) {
+            return voucher;
         }
 
         String status = normalize(voucher.getStatus());
@@ -143,8 +161,9 @@ public class VoucherCheckoutCalculationService {
     private ApplyResult applyVoucher(
             Voucher voucher,
             List<ItemAmount> currentAmounts,
-            CheckoutVoucherCalculationRequest request) {
-        if (!isSegmentEligible(voucher, Boolean.TRUE.equals(request.getHasPreviousOrder()))) {
+            CheckoutVoucherCalculationRequest request,
+            boolean useOrderSnapshot) {
+        if (!useOrderSnapshot && !isSegmentEligible(voucher, Boolean.TRUE.equals(request.getHasPreviousOrder()))) {
             return new ApplyResult(0.0, currentAmounts, List.of(), Map.of());
         }
 

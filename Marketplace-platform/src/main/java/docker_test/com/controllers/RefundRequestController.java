@@ -77,7 +77,7 @@ public class RefundRequestController {
 			@RequestParam("status") String status,
 			@RequestParam(value = "refundedAmount", required = false) Double refundedAmount) {
 		try {
-			ReturnRequestStatus nextStatus = ReturnRequestStatus.valueOf(status.toUpperCase());
+			ReturnRequestStatus nextStatus = ReturnRequestStatus.fromValue(status);
 			var updated = refundRequestService.updateStatus(refundRequestId, nextStatus, refundedAmount);
 			if (updated == null) {
 				return ResponseEntity.status(HttpStatus.NOT_FOUND)

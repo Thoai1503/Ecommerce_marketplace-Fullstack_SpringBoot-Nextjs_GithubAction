@@ -8,7 +8,7 @@ import Link from "next/link";
 import { API_URL } from "@/helper/api";
 import VoucherClaimButton from "@/components/client/voucher/VoucherClaimButton";
 import { useUserAuth } from "@/context/UserAuthContext";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 
 const getVoucherClaimEndTime = (voucher: any) => {
   const claimEnd = voucher.claimEndAt ?? voucher.claim_end_at;
@@ -52,6 +52,31 @@ const getVoucherRemainingCount = (voucher: any) => {
   return Math.max(total - claimed, 0).toLocaleString("en-US");
 };
 
+const getStoredLoggedInUserId = () => {
+  if (typeof window === "undefined") return 0;
+
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const storedUserId = Number(
+      storedUser?.id ?? storedUser?.userId ?? storedUser?.user_id ?? 0,
+    );
+
+    if (Number.isFinite(storedUserId) && storedUserId > 0) {
+      return storedUserId;
+    }
+  } catch {
+    // Ignore malformed localStorage user data and fall back to the cookie.
+  }
+
+  const cookieUser = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("user="))
+    ?.split("=")[1];
+  const cookieUserId = Number(cookieUser ? decodeURIComponent(cookieUser) : 0);
+
+  return Number.isFinite(cookieUserId) && cookieUserId > 0 ? cookieUserId : 0;
+};
+
 export default function ShopPage() {
   const params = useParams();
   const shopId = params?.id;
@@ -65,6 +90,9 @@ export default function ShopPage() {
   const [categories, setCategories] = useState<string[]>(["all"]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followSaving, setFollowSaving] = useState(false);
   const ownerUserId = Number(shop?.user_id ?? shop?.userId ?? 0);
   const isOwnShop =
     Boolean(userId) && ownerUserId > 0 && Number(userId) === ownerUserId;
@@ -129,6 +157,44 @@ export default function ShopPage() {
     fetchData();
   }, [shopId]);
 
+  useEffect(() => {
+    const followers = Number(
+      shop?.followers ?? shop?.follower_count ?? shop?.followersCount ?? 0,
+    );
+
+    setFollowerCount(Number.isFinite(followers) ? followers : 0);
+    setIsFollowing(Boolean(shop?.isFollowing ?? shop?.is_following ?? false));
+  }, [shop]);
+
+  useEffect(() => {
+    if (!shopId || !shop) return;
+
+    const fetchFollowStatus = async () => {
+      try {
+        const currentUserId = Number(userId || 0) || getStoredLoggedInUserId();
+        const query = currentUserId ? `?user_id=${currentUserId}` : "";
+        const res = await fetch(
+          `${API_URL}/shops/${shopId}/follow-status${query}`,
+          { cache: "no-store" },
+        );
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const followers = Number(
+          data?.followers ?? data?.follower_count ?? 0,
+        );
+
+        setFollowerCount(Number.isFinite(followers) ? followers : 0);
+        setIsFollowing(Boolean(data?.isFollowing ?? data?.is_following));
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    fetchFollowStatus();
+  }, [shopId, shop, userId]);
+
   // ===== RESET PAGE =====
   useEffect(() => {
     setCurrentPage(1);
@@ -184,6 +250,52 @@ export default function ShopPage() {
     });
   };
 
+  const handleFollowToggle = async () => {
+    const currentUserId = Number(userId || 0) || getStoredLoggedInUserId();
+
+    if (!currentUserId) {
+      window.alert("Please login to follow this shop.");
+      return;
+    }
+
+    if (!shopId || followSaving) return;
+
+    const nextIsFollowing = !isFollowing;
+    setFollowSaving(true);
+
+    try {
+      const url = nextIsFollowing
+        ? `${API_URL}/shops/${shopId}/follow`
+        : `${API_URL}/shops/${shopId}/follow?user_id=${currentUserId}`;
+      const res = await fetch(url, {
+        method: nextIsFollowing ? "POST" : "DELETE",
+        headers: nextIsFollowing
+          ? {
+              "Content-Type": "application/json",
+            }
+          : undefined,
+        body: nextIsFollowing
+          ? JSON.stringify({ user_id: currentUserId })
+          : undefined,
+      });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
+      const data = await res.json();
+      const followers = Number(data?.followers ?? data?.follower_count ?? 0);
+
+      setIsFollowing(Boolean(data?.isFollowing ?? data?.is_following));
+      setFollowerCount(Number.isFinite(followers) ? followers : 0);
+    } catch (e) {
+      console.error(e);
+      window.alert("Unable to update follow status. Please try again.");
+    } finally {
+      setFollowSaving(false);
+    }
+  };
+
   // ===== FILTER (GIỮ NGUYÊN) =====
   const filteredProducts = products.filter((p) => {
     const matchKeyword = p.product_name
@@ -219,8 +331,8 @@ export default function ShopPage() {
       {/* ===== HEADER ===== */}
       <div className="shop-header-wrapper mb-4">
         <div className="shop-banner position-relative text-white p-4 rounded-4">
-          <div className="d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center gap-4">
+          <div className="shop-banner-content d-flex justify-content-between align-items-center gap-3">
+            <div className="shop-identity d-flex align-items-center gap-4">
               <div className="shop-avatar-wrapper">
                 <img
                   src={normalizeImage(shop?.shop_logo)}
@@ -236,7 +348,7 @@ export default function ShopPage() {
                 <h4 className="mb-2 fw-bold text-white">
                   {shop?.shop_name || "Loading..."}
                 </h4>
-                <div className="d-flex align-items-center gap-2">
+                <div className="d-flex align-items-center gap-2 flex-wrap">
                   <span className="badge bg-white text-primary px-3 py-1 rounded-pill">
                     <i className="bi bi-clock me-1"></i>
                     Online recently
@@ -245,11 +357,33 @@ export default function ShopPage() {
                     <i className="bi bi-star-fill me-1"></i>
                     {shop?.rating || 0}
                   </span>
+                  <button
+                    type="button"
+                    className={`shop-follow-button ${
+                      isFollowing ? "is-following" : ""
+                    }`}
+                    aria-pressed={isFollowing}
+                    disabled={followSaving}
+                    onClick={handleFollowToggle}
+                  >
+                    {isFollowing ? (
+                      <Check size={15} strokeWidth={2.4} />
+                    ) : (
+                      <UserPlus size={15} strokeWidth={2.4} />
+                    )}
+                    <span>
+                      {followSaving
+                        ? "Saving..."
+                        : isFollowing
+                          ? "Following"
+                          : "Follow"}
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div className="d-flex gap-4 text-end">
+            <div className="shop-stats d-flex gap-4 text-end">
               <div className="shop-stat">
                 <div className="text-white-50 small">Products</div>
                 <div className="fw-bold text-white fs-5">
@@ -260,7 +394,7 @@ export default function ShopPage() {
               <div className="shop-stat">
                 <div className="text-white-50 small">Followers</div>
                 <div className="fw-bold text-white fs-5">
-                  {shop?.followers || 0}
+                  {followerCount}
                 </div>
               </div>
 
@@ -495,6 +629,38 @@ export default function ShopPage() {
           min-height: 140px;
         }
 
+        .shop-avatar-wrapper {
+          flex: 0 0 auto;
+        }
+
+        .shop-follow-button {
+          align-items: center;
+          background: rgba(255, 255, 255, 0.14);
+          border: 1px solid rgba(255, 255, 255, 0.9);
+          border-radius: 999px;
+          color: #fff;
+          display: inline-flex;
+          font-size: 13px;
+          font-weight: 700;
+          gap: 6px;
+          min-height: 26px;
+          padding: 0 12px;
+          transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+          white-space: nowrap;
+        }
+
+        .shop-follow-button:hover,
+        .shop-follow-button.is-following {
+          background: #fff;
+          border-color: #fff;
+          color: #0d6efd;
+        }
+
+        .shop-follow-button:disabled {
+          cursor: not-allowed;
+          opacity: 0.75;
+        }
+
         .product-card:hover {
           width: 110%;
           transform: translateY(-5px);
@@ -666,6 +832,18 @@ export default function ShopPage() {
         }
 
         @media (max-width: 768px) {
+          .shop-banner-content,
+          .shop-identity {
+            align-items: flex-start !important;
+            flex-direction: column;
+          }
+
+          .shop-stats {
+            justify-content: space-between;
+            text-align: left !important;
+            width: 100%;
+          }
+
           .voucher-coupon {
             flex-basis: 320px;
           }

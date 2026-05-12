@@ -561,6 +561,13 @@ export interface OrderItem {
   originalPrice?: number;
   lastReturnRequestId?: number;
   discount?: number;
+  shopVoucherDiscountAmount?: number;
+  platformVoucherDiscountAmount?: number;
+  totalVoucherDiscountAmount?: number;
+  totalAfterShopVoucher?: number;
+  totalAfterAllVouchers?: number;
+  platformCommissionAmount?: number;
+  sellerReceivableAmount?: number;
   stockStatus?: "IN_STOCK" | "OUT_OF_STOCK" | "LOW_STOCK";
   status: ItemStatus;
 }

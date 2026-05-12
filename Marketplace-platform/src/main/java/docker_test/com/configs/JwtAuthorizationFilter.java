@@ -115,6 +115,10 @@ public class JwtAuthorizationFilter implements Filter {
             return RequiredRole.AUTHENTICATED;
         }
 
+        if (path.matches("^/shops/\\d+/follow$")) {
+            return RequiredRole.NONE;
+        }
+
         if (path.matches("^/shops/\\d+/verify$")) {
             return RequiredRole.ADMIN;
         }
@@ -127,6 +131,13 @@ public class JwtAuthorizationFilter implements Filter {
                 || path.startsWith("/api/refunds") || path.startsWith("/api/refunds-requests-attachments")
                 || path.startsWith("/api/user-vouchers") || path.startsWith("/api/voucher-redemptions")
                 || path.startsWith("/api/voucher-checkout")) {
+            return RequiredRole.AUTHENTICATED;
+        }
+
+        if ((path.startsWith("/api/vouchers")
+                || path.startsWith("/api/voucher-scope-rules")
+                || path.startsWith("/api/voucher-segment-rules"))
+                && isMutation(method)) {
             return RequiredRole.AUTHENTICATED;
         }
 

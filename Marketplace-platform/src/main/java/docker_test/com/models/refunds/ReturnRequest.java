@@ -13,6 +13,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -76,6 +77,24 @@ public class ReturnRequest {
     
     @Column(name = "refunded_amount")
     private double refundedAmount;
+
+    @Transient
+    private double returnedGrossAmount;
+
+    @Transient
+    private double voucherClawbackAmount;
+
+    @Transient
+    private double remainingPayableAmount;
+
+    @Transient
+    private double remainingPlatformCommissionAmount;
+
+    @Transient
+    private double platformCommissionAdjustmentAmount;
+
+    @Transient
+    private String refundMessage;
     
     @Column(name = "created_at", updatable = false)
     @Builder.Default
