@@ -121,12 +121,9 @@ export interface Category {
   description?: string;
   thumbnailUrl: string;
   status: CategoryStatus;
-<<<<<<< HEAD
-=======
   parentId?: number;
   parent_id?: number;
   level?: number;
->>>>>>> c9d4b1976cb5b3a10edc460d55b593d2cd8808dc
   productStock: number;
   attributeIds?: string[];
   createdAt: string;

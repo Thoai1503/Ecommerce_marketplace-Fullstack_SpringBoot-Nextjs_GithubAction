@@ -7,7 +7,7 @@ class CartService {
   final Dio dio = ApiClient.dio;
 
   Future<CartModel> getCart() async {
-  final response = await dio.get('/cart/user/1');
+  final response = await dio.get('/cart/user/18');
 
   print(response.data);
 
