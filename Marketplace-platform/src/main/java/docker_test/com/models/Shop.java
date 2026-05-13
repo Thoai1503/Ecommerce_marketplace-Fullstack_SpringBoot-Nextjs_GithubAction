@@ -27,6 +27,7 @@ public final class Shop {
 	private LocalDateTime updated_at;
 	@JsonProperty("onboarding_step")
 	private Integer onboarding_step;
+	private int followers;
 
 	public Shop() {
 		this.rating = 0.0;
@@ -39,6 +40,7 @@ public final class Shop {
 		this.created_at = LocalDateTime.now();
 		this.updated_at = LocalDateTime.now();
 		this.onboarding_step = 1;
+		this.followers = 0;
 	}
 
 	public Shop(Long id, long user_id, String shop_name, String shop_description, String shop_logo, String shop_banner,
@@ -235,5 +237,13 @@ public final class Shop {
 
 	public void setOnboarding_step(Integer onboarding_step) {
 		this.onboarding_step = onboarding_step;
+	}
+
+	public int getFollowers() {
+		return followers;
+	}
+
+	public void setFollowers(int followers) {
+		this.followers = followers;
 	}
 }

@@ -20,8 +20,10 @@ import docker_test.com.factory.RepoFactoryImpl;
 import docker_test.com.models.product.Product;
 import docker_test.com.models.product.ProductAttribute;
 import docker_test.com.repository.IRepositories;
+import docker_test.com.repository.NotificationRepository;
 import docker_test.com.repository.ProductAttributeRepository;
 import docker_test.com.repository.ProductRepository;
+import docker_test.com.repository.ShopRepository;
 
 @RestController("sellerProductController")
 @RequestMapping("/seller/product")
@@ -29,11 +31,15 @@ public class ProductController {
 	 private final IRepositories repositories;
 	 private final IRepoFactory iRepoFactory;
 	 private final ProductAttributeRepository productAttributeRepository;
+	 private final NotificationRepository notificationRepository;
+	 private final ShopRepository shopRepository;
 	 
 	 public ProductController (RepoFactoryImpl factoryImpl) {
 		 this.iRepoFactory= factoryImpl;
 		 this.repositories = iRepoFactory.createRepo("product");
 		 this.productAttributeRepository = ProductAttributeRepository.Instance();
+		 this.notificationRepository = NotificationRepository.Instance();
+		 this.shopRepository = ShopRepository.Instance();
 	 }
         
 	 
@@ -61,9 +67,31 @@ public class ProductController {
 				 ex.printStackTrace();
 			 }
 		 }
+		 sendProductCreatedNotification(en);
 		 
 		 
 		 return ResponseEntity.ok(en);
+	 }
+
+	 private void sendProductCreatedNotification(Product product) {
+		 if (product == null || product.getId() == null || product.getShop_id() == null) {
+			 return;
+		 }
+
+		 var shop = shopRepository.GetById(product.getShop_id());
+		 String shopName = shop != null && hasText(shop.getShop_name()) ? shop.getShop_name() : "Shop bạn theo dõi";
+		 String productName = hasText(product.getProduct_name()) ? product.getProduct_name() : "sản phẩm mới";
+
+		 notificationRepository.CreateForShopFollowers(
+				 product.getShop_id(),
+				 "shop",
+				 shopName + " có sản phẩm mới",
+				 shopName + " vừa đăng " + productName + ". Xem ngay sản phẩm mới từ shop bạn theo dõi.",
+				 product.getShop_id().longValue());
+	 }
+
+	 private boolean hasText(String value) {
+		 return value != null && !value.isBlank();
 	 }
 
 	 @PostMapping("{id}/attributes")

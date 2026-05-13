@@ -33,6 +33,10 @@ public final class Notification {
 		return notificationId;
 	}
 
+	public long getId() {
+		return notificationId;
+	}
+
 	public void setNotificationId(long notificationId) {
 		this.notificationId = notificationId;
 	}
@@ -81,6 +85,10 @@ public final class Notification {
 		return isRead;
 	}
 
+	public int getIsRead() {
+		return isRead;
+	}
+
 	public void setRead(int read) {
 		isRead = read;
 	}
@@ -93,4 +101,3 @@ public final class Notification {
 		this.createdAt = createdAt;
 	}
 }
-	

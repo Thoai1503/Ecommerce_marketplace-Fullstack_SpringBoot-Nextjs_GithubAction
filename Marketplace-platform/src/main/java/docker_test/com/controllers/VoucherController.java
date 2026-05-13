@@ -13,18 +13,30 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import docker_test.com.models.voucher.Voucher;
+import docker_test.com.repository.NotificationRepository;
+import docker_test.com.repository.ShopRepository;
 import docker_test.com.repository.VoucherRepository;
+import docker_test.com.utils.VoucherAuthorization;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/vouchers")
 public class VoucherController {
 	private final VoucherRepository repo = VoucherRepository.Instance();
+	private final NotificationRepository notificationRepository = NotificationRepository.Instance();
+	private final ShopRepository shopRepository = ShopRepository.Instance();
 
 	// ================= CREATE =================
 	@PostMapping
-	public ResponseEntity<?> create(@RequestBody Voucher v) {
+	public ResponseEntity<?> create(@RequestBody Voucher v, HttpServletRequest request) {
 		try {
+			var authUser = VoucherAuthorization.getAuthUser(request);
+			if (!VoucherAuthorization.canManageVoucher(v, authUser)) {
+				return ResponseEntity.status(403).body("You do not have permission to create this voucher");
+			}
+
 			Voucher result = repo.Create(v);
+			sendVoucherCreatedNotification(result);
 			return ResponseEntity.ok(result);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -32,10 +44,60 @@ public class VoucherController {
 		}
 	}
 
+	private void sendVoucherCreatedNotification(Voucher voucher) {
+		if (voucher == null || voucher.getId() == null) {
+			return;
+		}
+
+		String issuerType = voucher.getIssuerType() == null ? "" : voucher.getIssuerType().trim().toUpperCase();
+		String voucherTitle = hasText(voucher.getTitle()) ? voucher.getTitle() : voucher.getCode();
+
+		if ("PLATFORM".equals(issuerType)) {
+			notificationRepository.CreateForAllActiveUsers(
+					"promotion",
+					"Nexamart Got a new voucher",
+					"Voucher " + voucherTitle + " It has just been released on the platform. Save your voucher before it runs out.",
+					voucher.getId());
+			return;
+		}
+
+		if ("SHOP".equals(issuerType) && voucher.getIssuerId() != null) {
+			var shop = shopRepository.GetById(voucher.getIssuerId().intValue());
+			String shopName = shop != null && hasText(shop.getShop_name()) ? shop.getShop_name() : "Shop you follow";
+
+			notificationRepository.CreateForShopFollowers(
+					voucher.getIssuerId(),
+					"shop",
+					shopName + " has a new voucher",
+					shopName + " just created voucher " + voucherTitle + ". Go to the shop to save the voucher now.",
+					voucher.getIssuerId());
+		}
+	}
+
+	private boolean hasText(String value) {
+		return value != null && !value.isBlank();
+	}
+
 	// ================= UPDATE =================
 	@PutMapping("/{id}")
-	public ResponseEntity<?> update(@PathVariable int id, @RequestBody Voucher v) {
+	public ResponseEntity<?> update(@PathVariable int id, @RequestBody Voucher v, HttpServletRequest request) {
 		try {
+			Voucher existing = repo.GetById(id);
+
+			if (existing == null) {
+				return ResponseEntity.notFound().build();
+			}
+
+			var authUser = VoucherAuthorization.getAuthUser(request);
+			if (!VoucherAuthorization.canManageVoucher(existing, authUser)) {
+				return ResponseEntity.status(403).body("You do not have permission to update this voucher");
+			}
+
+			if (!VoucherAuthorization.isAdmin(authUser)) {
+				v.setIssuerType(existing.getIssuerType());
+				v.setIssuerId(existing.getIssuerId());
+			}
+
 			v.setId((long) id);
 			Voucher updated = repo.Update(v);
 
@@ -51,8 +113,19 @@ public class VoucherController {
 
 	// ================= DELETE =================
 	@DeleteMapping("/{id}")
-	public ResponseEntity<?> delete(@PathVariable int id) {
+	public ResponseEntity<?> delete(@PathVariable int id, HttpServletRequest request) {
 		try {
+			Voucher existing = repo.GetById(id);
+
+			if (existing == null) {
+				return ResponseEntity.notFound().build();
+			}
+
+			var authUser = VoucherAuthorization.getAuthUser(request);
+			if (!VoucherAuthorization.canManageVoucher(existing, authUser)) {
+				return ResponseEntity.status(403).body("You do not have permission to delete this voucher");
+			}
+
 			boolean deleted = repo.Delete(id);
 
 			if (!deleted) {

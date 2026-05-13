@@ -65,6 +65,26 @@ export default function ReturnRequestModal({
     onSubmit();
   };
 
+  const getRefundEstimate = (
+    item: OrderShipment["items"][number],
+    quantity: number,
+  ) => {
+    const safeQuantity = Math.max(0, Number(quantity || 0));
+    const orderedQuantity = Math.max(1, Number(item.quantity || 1));
+    const totalAfterAllVouchers = Number(item.totalAfterAllVouchers || 0);
+
+    if (totalAfterAllVouchers > 0) {
+      return Math.max(0, (totalAfterAllVouchers / orderedQuantity) * safeQuantity);
+    }
+
+    const totalDiscount = Number(
+      item.totalVoucherDiscountAmount ?? item.discount ?? 0,
+    );
+    const unitDiscount =
+      totalDiscount > 0 ? totalDiscount / orderedQuantity : 0;
+    return Math.max(0, (Number(item.price || 0) - unitDiscount) * safeQuantity);
+  };
+
   return (
     <div style={styles.modalBackdrop} onClick={onClose}>
       <div
@@ -348,6 +368,16 @@ export default function ReturnRequestModal({
                         >
                           / {maxQty}
                         </span>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: "#64748b",
+                            marginTop: 4,
+                          }}
+                        >
+                          Tạm tính hoàn sau voucher:{" "}
+                          {formatMoney(getRefundEstimate(item, value))}
+                        </div>
                       </div>
                     )}
                   </div>
