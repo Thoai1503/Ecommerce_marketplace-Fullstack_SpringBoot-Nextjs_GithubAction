@@ -24,6 +24,7 @@ const storeTokens = (data: LoginResponse, rememberMe: boolean) => {
 
   // Store access token
   localStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, data.accessToken);
+  localStorage.setItem('token', data.accessToken);
 
   // Store refresh token if provided
   if (data.refreshToken) {
@@ -36,25 +37,40 @@ const storeTokens = (data: LoginResponse, rememberMe: boolean) => {
     localStorage.setItem(TOKEN_KEYS.EXPIRES_AT, expiresAt.toString());
   }
 
+<<<<<<< HEAD
   // Store remember me preference
   localStorage.setItem(TOKEN_KEYS.REMEMBER_ME, rememberMe.toString());
 
   // If not remember me, use sessionStorage for additional security
+=======
+  if (data.refreshExpiresIn) {
+    localStorage.setItem(
+      'refreshExpiresAt',
+      String(Date.now() + data.refreshExpiresIn * 1000),
+    );
+  }
+
+  if (data.idleTimeoutSeconds) {
+    localStorage.setItem('idleTimeoutSeconds', String(data.idleTimeoutSeconds));
+  }
+
+  localStorage.setItem('lastActivityAt', String(Date.now()));
+
+  // Store remember me preference
+  localStorage.setItem(TOKEN_KEYS.REMEMBER_ME, rememberMe.toString());
+
+  // If not remember me, use sessionStorage for additional security
+>>>>>>> c9d4b1976cb5b3a10edc460d55b593d2cd8808dc
   if (!rememberMe) {
     sessionStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, data.accessToken);
   }
 };
 
+<<<<<<< HEAD
 export const useLogin = () => {
   const router = useRouter();
   const { success, error } = useToast();
 
-  return useMutation({
-    mutationFn: (credentials: LoginRequest) => authService.login(credentials),
-    
-    onSuccess: (data, variables) => {
-      // Store tokens
-      storeTokens(data, variables.rememberMe ?? false);
 
       // Show success message
       success(`Xin chào, ${data.user.name}! Đang chuyển hướng...`);
@@ -62,6 +78,28 @@ export const useLogin = () => {
       // Determine redirect based on role
       const redirectPath = getRedirectPath(data.user.role);
       
+      // Small delay for UX (toast visibility)
+      setTimeout(() => {
+        router.push(redirectPath);
+      }, 500);
+    },
+
+    onError: (err: any) => {
+      // Extract error message
+      const errorMessage = 
+        err.response?.data?.message || 
+        'Đăng nhập thất bại. Vui lòng thử lại.';
+      
+      error(errorMessage);
+    },
+  });
+};
+
+/**
+ * Get redirect path based on user role
+ */
+const getRedirectPath = (role: string): string => {
+=======
       // Small delay for UX (toast visibility)
       setTimeout(() => {
         router.push(redirectPath);
@@ -84,11 +122,12 @@ export const useLogin = () => {
  * Get redirect path based on user role
  */
 const getRedirectPath = (role: string): string => {
+>>>>>>> c9d4b1976cb5b3a10edc460d55b593d2cd8808dc
   switch (role) {
     case 'admin':
       return '/admin';
     case 'seller':
-      return '/seller';
+      return '/';
     case 'user':
       return '/';
     default:

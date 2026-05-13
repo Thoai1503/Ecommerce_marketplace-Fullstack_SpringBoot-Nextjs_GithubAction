@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,17 +62,26 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 
 	@Override
 	public ProductVariant Create(ProductVariant item) throws SQLException {
-		String sql = "insert into product_variant (product_id, variant_name, sku, price, stock_quantity, image_url) values (?,?,?,?,?,?)";
+		String sql = "insert into product_variant (product_id, variant_name, sku, price, stock_quantity, image_url,width,weight,height) values (?,?,?,?,?,?,?,?,?)";
 		try(Connection con = dbConnection.getConn();
-				PreparedStatement ps = con.prepareStatement(sql)){
+				PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)){
 			  ps.setLong(1, item.getProduct_id());
 			  ps.setString(2, item.getVariant_name());
 			  ps.setString(3, item.getSku());
 			  ps.setDouble(4, item.getPrice());
 			  ps.setInt(5, item.getStock_quantity());
 			  ps.setString(6, item.getImage_url());
+			  ps.setLong(7, item.getWidth());
+			  ps.setLong(8, item.getWeight());
+			  ps.setLong(9, item.getHeight());
 			  int affectedRows = ps.executeUpdate();
 			  if (affectedRows > 0) {
+				  try (ResultSet keys = ps.getGeneratedKeys()) {
+					  if (keys.next()) {
+						  item.setId(keys.getInt(1));
+						  System.out.println("ID của bản ghi mới: " + item.getId());
+					  }
+				  }
 				  return item;
 			  }
 		}
@@ -83,8 +93,35 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 
 	@Override
 	public ProductVariant Update(ProductVariant item) {
-		// TODO Auto-generated method stub
+		
+		String sql = "update product_variant set price = ?, stock_quantity = ? , variant_name = ?, image_url = ?,  stock_quantity = ?,  width = ?,  weight = ?,  height = ? where id = ?";
+		try(Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)){
+			 
+			
+			  ps.setDouble(1, item.getPrice());
+			  
+			  ps.setInt(2, item.getStock_quantity());
+			  ps.setString(3, item.getVariant_name());
+			  ps.setString(4, item.getImage_url());
+			  ps.setInt(5, item.getStock_quantity());
+			  ps.setLong(6, item.getWidth());
+			  ps.setLong(7, item.getWeight());
+			  ps.setLong(8, item.getHeight());
+			  ps.setInt(9, item.getId());
+			  
+			  
+			
+			  int affectedRows = ps.executeUpdate();
+			  if (affectedRows > 0) {
+				  return GetById(item.getId());
+			  }
+		}
+		catch(Exception ex) {
+			ex.printStackTrace();
+		}
 		return null;
+		
 	}
 
 	@Override
@@ -114,6 +151,7 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 				  productVariant.setWidth(rs.getLong("width"));
 				  productVariant.setStock_quantity(rs.getInt("stock_quantity"));
 				  productVariant.setVariant_name(rs.getString("variant_name"));
+				  productVariant.setActive(rs.getInt("is_active"));
 				 
 				  return productVariant;
 				  
@@ -121,9 +159,43 @@ public class ProductVariantRepository implements IRepositories<ProductVariant> {
 		}
 		catch(Exception ex) {
 			ex.printStackTrace();
+			
 		}
 		
 		return null;
+	}
+	
+	public ProductVariant updateImage(int id, String imageUrl) {
+		String sql = "update product_variant set image_url = ? where id = ?";
+		try(Connection con = dbConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)){
+			  ps.setString(1, imageUrl);
+			  ps.setInt(2, id);
+			  int affectedRows = ps.executeUpdate();
+			  if (affectedRows > 0) {
+				  return GetById(id);
+			  }
+		}
+		catch(Exception ex) {
+			ex.printStackTrace();
+		}
+		return null;
+	}
+
+	public boolean reserveStock(Connection con, long variantId, int quantity) throws SQLException {
+		String sql = """
+				UPDATE product_variant
+				SET stock_quantity = stock_quantity - ?
+				WHERE id = ?
+				  AND stock_quantity >= ?
+				""";
+
+		try (PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setInt(1, quantity);
+			ps.setLong(2, variantId);
+			ps.setInt(3, quantity);
+			return ps.executeUpdate() > 0;
+		}
 	}
 
 }

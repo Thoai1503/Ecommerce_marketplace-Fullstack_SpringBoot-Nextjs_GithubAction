@@ -27,15 +27,24 @@ const colors = {
 // Hàm format thời gian log
 function getFormattedDateTime(): string {
   const now = new Date();
-  const day = String(now.getDate()).padStart(2, "0");
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const year = now.getFullYear();
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  const seconds = String(now.getSeconds()).padStart(2, "0");
+
+  // Format theo timezone Việt Nam
+  const vnTime = new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  const parts = Object.fromEntries(vnTime.map((p) => [p.type, p.value]));
+
   const milliseconds = String(now.getMilliseconds()).padStart(3, "0");
 
-  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+  return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}:${parts.second}.${milliseconds}`;
 }
 
 // Hàm lấy màu theo HTTP method
@@ -63,6 +72,90 @@ function getStatusColor(status: number): string {
   if (status >= 400 && status < 500) return colors.yellow;
   if (status >= 500) return colors.red;
   return colors.white;
+}
+
+type AuthRole = "admin" | "seller" | "buyer";
+
+type VerifiedSession = {
+  id: number;
+  role: AuthRole;
+  userType?: string;
+};
+
+const AUTH_API_URL =
+  process.env.INTERNAL_API ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:8000";
+
+const buyerProtectedPaths = ["/profile", "/purchase", "/checkout", "/orders"];
+
+function normalizeAuthRole(role?: string | null): AuthRole | null {
+  const normalized = role?.trim().toLowerCase();
+
+  if (normalized === "admin") return "admin";
+  if (normalized === "seller" || normalized === "both") return "seller";
+  if (normalized === "buyer" || normalized === "user") return "buyer";
+
+  return null;
+}
+
+function isPathOrChild(pathname: string, basePath: string) {
+  return pathname === basePath || pathname.startsWith(`${basePath}/`);
+}
+
+function isBuyerProtectedPath(pathname: string) {
+  return buyerProtectedPaths.some((path) => isPathOrChild(pathname, path));
+}
+
+function redirectToLogin(request: NextRequest) {
+  const target = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("redirect", target);
+  return NextResponse.redirect(loginUrl);
+}
+
+async function getVerifiedSession(
+  request: NextRequest,
+): Promise<VerifiedSession | null> {
+  const token = request.cookies.get("token")?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const res = await fetch(`${AUTH_API_URL}/auth/verify`, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      return null;
+    }
+
+    const data = await res.json();
+    const role =
+      normalizeAuthRole(data?.userType) ??
+      normalizeAuthRole(data?.role) ??
+      normalizeAuthRole(request.cookies.get("role")?.value);
+    const id = Number(data?.id ?? request.cookies.get("user")?.value ?? 0);
+
+    if (!role || !Number.isFinite(id) || id <= 0) {
+      return null;
+    }
+
+    return {
+      id,
+      role,
+      userType: data?.userType,
+    };
+  } catch (err) {
+    console.log("Auth verify error:", err);
+    return null;
+  }
 }
 
 // Middleware function
@@ -210,8 +303,119 @@ export async function middleware(request: NextRequest) {
   //   return NextResponse.redirect(new URL("/", request.url));
   // }
 
+  let verifiedSession: VerifiedSession | null | undefined;
+  const resolveSession = async () => {
+    if (verifiedSession !== undefined) {
+      return verifiedSession;
+    }
+
+    verifiedSession = await getVerifiedSession(request);
+    return verifiedSession;
+  };
+
+  const sessionForAdminLock = await resolveSession();
+  if (
+    sessionForAdminLock?.role === "admin" &&
+    !pathname.startsWith("/admin") &&
+    !pathname.startsWith("/api")
+  ) {
+    return NextResponse.redirect(new URL("/admin", request.url));
+  }
+
+  if (pathname.startsWith("/admin") && pathname !== "/admin/forbidden") {
+    const session = sessionForAdminLock;
+
+    if (!session) {
+      return redirectToLogin(request);
+    }
+
+    if (session.role !== "admin") {
+      return NextResponse.redirect(new URL("/admin/forbidden", request.url));
+    }
+  }
+
+  if (isBuyerProtectedPath(pathname)) {
+    const session = await resolveSession();
+
+    if (!session) {
+      return redirectToLogin(request);
+    }
+
+    if (session.role === "admin") {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+  }
+
   // Xử lý response
-  const response = NextResponse.next();
+  // ===== SELLER GUARD =====
+  if (pathname.startsWith("/seller")) {
+    const token = request.cookies.get("token")?.value;
+    const session = await resolveSession();
+    const userId = session?.id
+      ? String(session.id)
+      : request.cookies.get("user")?.value;
+
+    // chưa login
+    if (!userId || !token || !session) {
+      return redirectToLogin(request);
+    }
+
+    if (session.role === "admin") {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+
+    let hasShop = false;
+    let isComplete = false;
+
+    try {
+      const res = await fetch(
+        `${process.env.INTERNAL_API}/shops/check?user_id=${userId}`,
+        {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        hasShop = Boolean(data?.hasShop);
+        isComplete = Boolean(data?.isComplete);
+      }
+    } catch (err) {
+      console.log("Check shop error:", err);
+    }
+
+    const isCreateShop = pathname === "/seller/createshop";
+
+    if (!isCreateShop && session.role !== "seller") {
+      return NextResponse.redirect(new URL("/seller/createshop", request.url));
+    }
+
+    console.log("Seller check → hasShop:", hasShop);
+
+    // ❌ chưa có shop hoặc shop chưa hoàn thành thông tin → ép vào createshop
+    if ((!hasShop || !isComplete) && !isCreateShop) {
+      return NextResponse.redirect(new URL("/seller/createshop", request.url));
+    }
+
+    // ❌ đã có shop hoàn chỉnh → cấm createshop
+    if (hasShop && isComplete && isCreateShop) {
+      return NextResponse.redirect(new URL("/seller", request.url));
+    }
+  }
+
+  // ===== RESPONSE =====
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", pathname);
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 
   // Tính thời gian xử lý
   const endTime = Date.now();

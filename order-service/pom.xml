@@ -40,41 +40,48 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+    
+    
 
     <dependencies>
+
+ <!--   <dependency>
+    <groupId>group1</groupId>
+    <artifactId>Marketplace-platform</artifactId>
+    <version>0.0.1</version>
+    <classifier>classes</classifier>
+    </dependency>-->
+    
          <dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-kafka</artifactId>
-			     <scope>runtime</scope>
-		</dependency>
-			<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-kafka</artifactId>
 		</dependency>
 		<!-- Source: https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-webclient -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-webclient</artifactId>
-    <version>4.0.4</version>
-    <scope>compile</scope>
-</dependency>
-
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-redis</artifactId>
-</dependency>
 		<dependency>
-    <groupId>com.fasterxml.jackson.core</groupId>
-    <artifactId>jackson-databind</artifactId>
-</dependency>
-<dependency>
-    <groupId>org.projectlombok</groupId>
-    <artifactId>lombok</artifactId>
-    <version>1.18.30</version>
-    <scope>provided</scope>
-</dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-webclient</artifactId>
+		    <version>4.0.4</version>
+		    <scope>compile</scope>
+		</dependency>
+		
+		<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+		
+		<dependency>
+		    <groupId>com.fasterxml.jackson.core</groupId>
+		    <artifactId>jackson-databind</artifactId>
+		</dependency>
+		
+		<dependency>
+		    <groupId>org.projectlombok</groupId>
+		    <artifactId>lombok</artifactId>
+		    <version>1.18.38</version>
+		    <scope>provided</scope>
+		</dependency>
 
-<!--		<dependency>
+		<!--		<dependency>
 		   	<groupId>group1</groupId>
 		   		<artifactId>base-domains</artifactId>
 		   		<version>0.0.1</version>
@@ -89,7 +96,7 @@
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-validation</artifactId>
 </dependency>
-        <!-- Web Starter -->
+		<!-- Web Starter -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -100,13 +107,13 @@
     <scope>runtime</scope>
 </dependency>
 
-       <!-- 	 Eureka Client -->
-       <!-- <dependency>
+		<!-- 	 Eureka Client -->
+		<!-- <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>-->
 
-        <!-- DevTools (optional) -->
+		<!-- DevTools (optional) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -114,7 +121,7 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Test -->
+		<!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -126,8 +133,40 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.1</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.38</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <compilerArgs>
+                        <arg>-J-Duser.country=US</arg>
+                        <arg>-J-Duser.language=en</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.shared</groupId>
+                        <artifactId>maven-common-artifact-filters</artifactId>
+                        <version>3.4.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-loader-tools</artifactId>
+                        <version>4.0.2</version>
+                    </dependency>
+                </dependencies>
             </plugin>
         </plugins>
     </build>

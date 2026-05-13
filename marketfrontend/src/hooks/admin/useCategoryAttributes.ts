@@ -1,4 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
+import { API_URL } from "@/helper/api";
+
+const CATEGORY_ATTRIBUTE_API_URL = `${API_URL}/api/category-attribute`;
 
 export const useCategoryAttributes = (categoryId?: number | string) => {
   const [categoryAttributes, setCategoryAttributes] = useState<any[]>([]);
@@ -8,14 +11,18 @@ export const useCategoryAttributes = (categoryId?: number | string) => {
 
   // ===== FETCH =====
   const fetchData = useCallback(async () => {
-    if (!categoryId) return;
+    if (!categoryId) {
+      setCategoryAttributes([]);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
       const res = await fetch(
-        `http://localhost:8000/api/category-attribute/category/${categoryId}`,
+        `${CATEGORY_ATTRIBUTE_API_URL}/category/${categoryId}`,
       );
 
       if (!res.ok) throw new Error("Fetch failed");
@@ -49,19 +56,16 @@ export const useCategoryAttributes = (categoryId?: number | string) => {
 
       if (newIds.length === 0) return;
 
-      const res = await fetch(
-        "http://localhost:8000/api/category-attribute/bulk",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            categoryId: Number(categoryId),
-            attributeIds: newIds,
-          }),
+      const res = await fetch(`${CATEGORY_ATTRIBUTE_API_URL}/bulk`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          categoryId: Number(categoryId),
+          attributeIds: newIds,
+        }),
+      });
 
       const text = await res.text();
       console.log("STATUS:", res.status);
@@ -79,27 +83,22 @@ export const useCategoryAttributes = (categoryId?: number | string) => {
   };
 
   // ===== REMOVE (optional - nên có) =====
-const removeAttribute = async (id: number) => {
-  try {
-    const res = await fetch(
-      `http://localhost:8000/api/category-attribute/${id}`,
-      {
+  const removeAttribute = async (id: number) => {
+    try {
+      const res = await fetch(`${CATEGORY_ATTRIBUTE_API_URL}/${id}`, {
         method: "DELETE",
-      }
-    );
+      });
 
-    if (!res.ok) throw new Error("Delete failed");
+      if (!res.ok) throw new Error("Delete failed");
 
-    setCategoryAttributes((prev) =>
-      prev.filter((item) => item.id !== id)
-    );
+      setCategoryAttributes((prev) => prev.filter((item) => item.id !== id));
 
-    // 🔥 optional (sync lại server)
-    await fetchData();
-  } catch (err) {
-    console.error(err);
-  }
-};
+      // 🔥 optional (sync lại server)
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // ===== INIT =====
   useEffect(() => {

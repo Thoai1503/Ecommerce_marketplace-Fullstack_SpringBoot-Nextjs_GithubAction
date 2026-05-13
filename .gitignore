@@ -2,3 +2,6 @@ Marketplace-platform/src/main/resources/application-local.properties
 cart-service/src/main/resources/application-local.properties
 logistic-service/src/main/resources/application-local.properties
 order-service/src/main/resources/application-local.properties
+
+payment-service/src/main/resources/application-local.yml
+stock-service/src/main/resources/application-local.properties

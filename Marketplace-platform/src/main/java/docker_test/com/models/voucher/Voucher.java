@@ -1,82 +1,310 @@
 package docker_test.com.models.voucher;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public final class Voucher {
-    private long voucherId;
-    private Long shopId;
-    private String voucherCode;
-    private String voucherName;
-    private String description;
-    private String discountType;
-    private Double discountValue;
-    private Double minOrderValue;
-    private Double maxDiscount;
-    private Integer usageLimit;
-    private int usedCount;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
-    private int isActive;
-    private LocalDateTime createdAt;
+public class Voucher {
 
-    public Voucher() {
-        this.minOrderValue = 0.0;
-        this.usedCount = 0;
-        this.isActive = 1;
-        this.createdAt = LocalDateTime.now();
-    }
+	private Long id;
+	private Long campaignId;
 
-    public Voucher(long voucherId, Long shopId, String voucherCode, String voucherName,
-                   String description, String discountType, Double discountValue,
-                   Double minOrderValue, Double maxDiscount, Integer usageLimit,
-                   int usedCount, LocalDateTime startDate, LocalDateTime endDate, int isActive,
-                   LocalDateTime createdAt) {
-        this.voucherId = voucherId;
-        this.shopId = shopId;
-        this.voucherCode = voucherCode;
-        this.voucherName = voucherName;
-        this.description = description;
-        this.discountType = discountType;
-        this.discountValue = discountValue;
-        this.minOrderValue = minOrderValue;
-        this.maxDiscount = maxDiscount;
-        this.usageLimit = usageLimit;
-        this.usedCount = usedCount;
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.isActive = isActive;
-        this.createdAt = createdAt;
-    }
+	private String code;
+	private String title;
+	private String description;
 
-    // Getters and Setters
-    public long getVoucherId() { return voucherId; }
-    public void setVoucherId(long voucherId) { this.voucherId = voucherId; }
-    public Long getShopId() { return shopId; }
-    public void setShopId(Long shopId) { this.shopId = shopId; }
-    public String getVoucherCode() { return voucherCode; }
-    public void setVoucherCode(String voucherCode) { this.voucherCode = voucherCode; }
-    public String getVoucherName() { return voucherName; }
-    public void setVoucherName(String voucherName) { this.voucherName = voucherName; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public String getDiscountType() { return discountType; }
-    public void setDiscountType(String discountType) { this.discountType = discountType; }
-    public Double getDiscountValue() { return discountValue; }
-    public void setDiscountValue(Double discountValue) { this.discountValue = discountValue; }
-    public Double getMinOrderValue() { return minOrderValue; }
-    public void setMinOrderValue(Double minOrderValue) { this.minOrderValue = minOrderValue; }
-    public Double getMaxDiscount() { return maxDiscount; }
-    public void setMaxDiscount(Double maxDiscount) { this.maxDiscount = maxDiscount; }
-    public Integer getUsageLimit() { return usageLimit; }
-    public void setUsageLimit(Integer usageLimit) { this.usageLimit = usageLimit; }
-    public int getUsedCount() { return usedCount; }
-    public void setUsedCount(int usedCount) { this.usedCount = usedCount; }
-    public LocalDateTime getStartDate() { return startDate; }
-    public void setStartDate(LocalDateTime startDate) { this.startDate = startDate; }
-    public LocalDateTime getEndDate() { return endDate; }
-    public void setEndDate(LocalDateTime endDate) { this.endDate = endDate; }
-    public int isActive() { return isActive; }
-    public void setActive(int active) { isActive = active; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+	private String issuerType;
+	private Long issuerId;
+
+	private String discountType;
+
+	private BigDecimal discountPercent;
+	private BigDecimal discountAmount;
+	private BigDecimal maxDiscountAmount;
+
+	private BigDecimal minOrderValue;
+	private BigDecimal maxOrderValue;
+
+	private Integer totalQuota;
+	private Integer claimedCount;
+	private Integer redeemedCount;
+
+	private Integer perUserQuota;
+
+	private Boolean stackable;
+
+	private LocalDateTime claimStartAt;
+	private LocalDateTime claimEndAt;
+
+	private LocalDateTime validFrom;
+	private LocalDateTime validTo;
+
+	private String status; // DRAFT, ACTIVE, PAUSED...
+
+	private Integer priority;
+
+	private Long createdBy;
+	private LocalDateTime createdAt;
+	private LocalDateTime updatedAt;
+
+	// ===== Constructor =====
+	public Voucher() {
+		this.minOrderValue = BigDecimal.ZERO;
+		this.claimedCount = 0;
+		this.redeemedCount = 0;
+		this.stackable = false;
+		this.priority = 0;
+	}
+
+	public Voucher(Long id, Long campaignId, String code, String title, String description, String issuerType,
+			Long issuerId, String discountType, BigDecimal discountPercent, BigDecimal discountAmount,
+			BigDecimal maxDiscountAmount, BigDecimal minOrderValue, BigDecimal maxOrderValue, Integer totalQuota,
+			Integer claimedCount, Integer redeemedCount, Integer perUserQuota, Boolean stackable,
+			LocalDateTime claimStartAt, LocalDateTime claimEndAt, LocalDateTime validFrom, LocalDateTime validTo,
+			String status, Integer priority, Long createdBy, LocalDateTime createdAt, LocalDateTime updatedAt) {
+		this.id = id;
+		this.campaignId = campaignId;
+		this.code = code;
+		this.title = title;
+		this.description = description;
+		this.issuerType = issuerType;
+		this.issuerId = issuerId;
+		this.discountType = discountType;
+		this.discountPercent = discountPercent;
+		this.discountAmount = discountAmount;
+		this.maxDiscountAmount = maxDiscountAmount;
+		this.minOrderValue = minOrderValue;
+		this.maxOrderValue = maxOrderValue;
+		this.totalQuota = totalQuota;
+		this.claimedCount = claimedCount;
+		this.redeemedCount = redeemedCount;
+		this.perUserQuota = perUserQuota;
+		this.stackable = stackable;
+		this.claimStartAt = claimStartAt;
+		this.claimEndAt = claimEndAt;
+		this.validFrom = validFrom;
+		this.validTo = validTo;
+		this.status = status;
+		this.priority = priority;
+		this.createdBy = createdBy;
+		this.createdAt = createdAt;
+		this.updatedAt = updatedAt;
+	}
+
+	// ===== Getters & Setters =====
+
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public Long getCampaignId() {
+		return campaignId;
+	}
+
+	public void setCampaignId(Long campaignId) {
+		this.campaignId = campaignId;
+	}
+
+	public String getCode() {
+		return code;
+	}
+
+	public void setCode(String code) {
+		this.code = code;
+	}
+
+	public String getTitle() {
+		return title;
+	}
+
+	public void setTitle(String title) {
+		this.title = title;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public String getIssuerType() {
+		return issuerType;
+	}
+
+	public void setIssuerType(String issuerType) {
+		this.issuerType = issuerType;
+	}
+
+	public Long getIssuerId() {
+		return issuerId;
+	}
+
+	public void setIssuerId(Long issuerId) {
+		this.issuerId = issuerId;
+	}
+
+	public String getDiscountType() {
+		return discountType;
+	}
+
+	public void setDiscountType(String discountType) {
+		this.discountType = discountType;
+	}
+
+	public BigDecimal getDiscountPercent() {
+		return discountPercent;
+	}
+
+	public void setDiscountPercent(BigDecimal discountPercent) {
+		this.discountPercent = discountPercent;
+	}
+
+	public BigDecimal getDiscountAmount() {
+		return discountAmount;
+	}
+
+	public void setDiscountAmount(BigDecimal discountAmount) {
+		this.discountAmount = discountAmount;
+	}
+
+	public BigDecimal getMaxDiscountAmount() {
+		return maxDiscountAmount;
+	}
+
+	public void setMaxDiscountAmount(BigDecimal maxDiscountAmount) {
+		this.maxDiscountAmount = maxDiscountAmount;
+	}
+
+	public BigDecimal getMinOrderValue() {
+		return minOrderValue;
+	}
+
+	public void setMinOrderValue(BigDecimal minOrderValue) {
+		this.minOrderValue = minOrderValue;
+	}
+
+	public BigDecimal getMaxOrderValue() {
+		return maxOrderValue;
+	}
+
+	public void setMaxOrderValue(BigDecimal maxOrderValue) {
+		this.maxOrderValue = maxOrderValue;
+	}
+
+	public Integer getTotalQuota() {
+		return totalQuota;
+	}
+
+	public void setTotalQuota(Integer totalQuota) {
+		this.totalQuota = totalQuota;
+	}
+
+	public Integer getClaimedCount() {
+		return claimedCount;
+	}
+
+	public void setClaimedCount(Integer claimedCount) {
+		this.claimedCount = claimedCount;
+	}
+
+	public Integer getRedeemedCount() {
+		return redeemedCount;
+	}
+
+	public void setRedeemedCount(Integer redeemedCount) {
+		this.redeemedCount = redeemedCount;
+	}
+
+	public Integer getPerUserQuota() {
+		return perUserQuota;
+	}
+
+	public void setPerUserQuota(Integer perUserQuota) {
+		this.perUserQuota = perUserQuota;
+	}
+
+	public Boolean getStackable() {
+		return stackable;
+	}
+
+	public void setStackable(Boolean stackable) {
+		this.stackable = stackable;
+	}
+
+	public LocalDateTime getClaimStartAt() {
+		return claimStartAt;
+	}
+
+	public void setClaimStartAt(LocalDateTime claimStartAt) {
+		this.claimStartAt = claimStartAt;
+	}
+
+	public LocalDateTime getClaimEndAt() {
+		return claimEndAt;
+	}
+
+	public void setClaimEndAt(LocalDateTime claimEndAt) {
+		this.claimEndAt = claimEndAt;
+	}
+
+	public LocalDateTime getValidFrom() {
+		return validFrom;
+	}
+
+	public void setValidFrom(LocalDateTime validFrom) {
+		this.validFrom = validFrom;
+	}
+
+	public LocalDateTime getValidTo() {
+		return validTo;
+	}
+
+	public void setValidTo(LocalDateTime validTo) {
+		this.validTo = validTo;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public Integer getPriority() {
+		return priority;
+	}
+
+	public void setPriority(Integer priority) {
+		this.priority = priority;
+	}
+
+	public Long getCreatedBy() {
+		return createdBy;
+	}
+
+	public void setCreatedBy(Long createdBy) {
+		this.createdBy = createdBy;
+	}
+
+	public LocalDateTime getCreatedAt() {
+		return createdAt;
+	}
+
+	public void setCreatedAt(LocalDateTime createdAt) {
+		this.createdAt = createdAt;
+	}
+
+	public LocalDateTime getUpdatedAt() {
+		return updatedAt;
+	}
+
+	public void setUpdatedAt(LocalDateTime updatedAt) {
+		this.updatedAt = updatedAt;
+	}
 }

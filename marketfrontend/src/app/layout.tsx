@@ -1,18 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import StoreProvider from "./StoreProvider";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import NextTopLoader from "nextjs-toploader";
+import { Suspense } from "react";
+import AuthRequestBridge from "@/components/AuthRequestBridge";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -28,6 +20,10 @@ export default function RootLayout({
     <StoreProvider>
       <html lang="en" className="mdl-js">
         <head>
+          <link
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+            rel="stylesheet"
+          />
           <style>
             {`     :root {
                 --primary: #2b8cee;
@@ -119,6 +115,20 @@ export default function RootLayout({
           </style>
         </head>
         <body className={`index-page`} suppressHydrationWarning>
+          <AuthRequestBridge />
+          <Suspense fallback={null}>
+            <NextTopLoader
+              color="#ee4d2d"
+              initialPosition={0.08}
+              crawlSpeed={200}
+              height={3}
+              crawl={true}
+              showSpinner={false}
+              easing="ease"
+              speed={200}
+              zIndex={9999}
+            />
+          </Suspense>
           <main className="main">{children}</main>
 
           {/* <Script src="/assets/js/main.js" strategy="afterInteractive" /> */}

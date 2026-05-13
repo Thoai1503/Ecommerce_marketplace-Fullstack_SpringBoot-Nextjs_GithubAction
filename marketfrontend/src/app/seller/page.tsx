@@ -1,19 +1,25 @@
+"use client";
+
 import React from "react";
+import { useSellerAuth } from "@/context/SellerAuthContext";
 
 const DashboardPage: React.FC = () => {
+  const { shop } = useSellerAuth();
+  const shopName = shop?.shop_name || "linhkiendientudy123";
+  const shopInitial = shopName.charAt(0).toUpperCase();
   const todoStats = [
-    { value: 0, label: "Chờ Lấy Hàng" },
-    { value: 0, label: "Đã Xử Lý" },
-    { value: 0, label: "Đơn Trả hàng/Hoàn tiền/Hủy" },
-    { value: 7, label: "Sản Phẩm Bị Tạm Khóa", highlight: true },
-    { value: 0, label: "Tham gia Đấu Giá Rẻ Vô Dịch" },
+    { value: 0, label: "Waiting for Delivery" },
+    { value: 0, label: "Processed" },
+    { value: 0, label: "Returns/Refunds/Cancellations" },
+    { value: 7, label: "Temporarily Blocked Products", highlight: true },
+    { value: 0, label: "Participating in Cheap Auctions" },
   ];
 
   const salesStats = [
-    { label: "Doanh số", value: "đ0", change: "0,00%", icon: "?" },
-    { label: "Lượt truy cập", value: "0", change: "0,00%", icon: "?" },
+    { label: "Sales", value: "đ0", change: "0,00%", icon: "?" },
+    { label: "Hits", value: "0", change: "0,00%", icon: "?" },
     { label: "Product Clicks", value: "0", change: "0,00%", icon: "?" },
-    { label: "Đơn hàng", value: "0", change: "0,00%", icon: "?" },
+    { label: "Orders", value: "0", change: "0,00%", icon: "?" },
     {
       label: "Order Conversion Rate",
       value: "0,00%",
@@ -66,9 +72,9 @@ const DashboardPage: React.FC = () => {
                 className="bg-primary rounded-circle text-white d-flex align-items-center justify-content-center me-2"
                 style={{ width: "32px", height: "32px" }}
               >
-                <span className="small">L</span>
+                <span className="small">{shopInitial}</span>
               </div>
-              <span className="small">linhkiendientudy123</span>
+              <span className="small">{shopName}</span>
             </div>
           </div>
         </div>
@@ -230,16 +236,12 @@ const DashboardPage: React.FC = () => {
                 <div
                   className="position-relative rounded overflow-hidden mb-3"
                   style={{
+                    minHeight: "200px",
                     background:
                       "linear-gradient(135deg, #FF6B35 0%, #FFD93D 50%, #6BCF7F 100%)",
                   }}
                 >
-                  <img
-                    src="https://via.placeholder.com/400x200/FF6B35/FFFFFF?text=NHAN+NGAY+QUA+CHAT"
-                    alt="Promotion"
-                    className="w-100"
-                    style={{ objectFit: "cover", height: "200px" }}
-                  />
+                  <div className="position-absolute top-0 start-0 w-100 h-100" />
                   <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center text-white">
                     <div
                       className="bg-dark px-3 py-1 mb-2"

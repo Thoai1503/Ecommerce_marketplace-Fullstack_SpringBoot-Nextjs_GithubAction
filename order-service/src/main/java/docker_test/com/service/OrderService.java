@@ -1,52 +1,65 @@
 package docker_test.com.service;
 
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import docker_test.com.dto.OrderDTO;
 import docker_test.com.dto.OrderItemDTO;
+import docker_test.com.dto.OrderResponeDTO;
 import docker_test.com.dto.OrderShipmentDTO;
+import docker_test.com.dto.PaymentStatusUpdatedEvent;
 import docker_test.com.exception.SimulatedRollbackException;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
+import docker_test.com.model.ReturnStatusSummary;
 import docker_test.com.model.OrderShipment;
 import docker_test.com.publisher.OrderEventPublisher;
 import docker_test.com.repository.OrderItemRepository;
-import docker_test.com.repository.OrderRepository;
+import docker_test.com.repository.OrdersRepository;
 import docker_test.com.repository.OrderShipmentRepository;
-
+import docker_test.com.dto.*;
 
 @Service
 public class OrderService {
-	private final RedisTemplate redisTemplate;
+    private final RedisTemplate<Object, Object> redisTemplate;
 
     private static final String ROLLBACK_TEST_FLAG = "SIMULATE_ROLLBACK";
-    private final int STOCK = 10;
+    private final int STOCK = 10;// Giả sử chỉ có 10 sản phẩm trong kho để bán
+    private final WebClient webClient;
+    private final String paymentServiceUrl;
 	
 
 	
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
-    private final OrderRepository orderRepository;
+    private final OrdersRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderEventPublisher eventPublisher;
     private final OrderShipmentRepository orderShipmentRepository;
 
-    public OrderService(OrderRepository orderRepository,
+    public OrderService(OrdersRepository orderRepository,
                         OrderItemRepository orderItemRepository,
                         OrderEventPublisher eventPublisher,
                         OrderShipmentRepository orderShipmentRepository     ,
-                        RedisTemplate redisTemplate
+                        @Qualifier("redisTemplate") RedisTemplate<Object, Object> redisTemplate,
+						WebClient webClient,
+						@Value("${payment.service.url}") String paymentServiceUrl
     		) {
         this.orderRepository   = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -54,66 +67,166 @@ public class OrderService {
         this.orderShipmentRepository = orderShipmentRepository;
         
         this.redisTemplate = redisTemplate;
+        this.webClient = webClient;
+                this.paymentServiceUrl = paymentServiceUrl;
     }
 
     // All DB writes + event publish happen in one transaction.
     // If any save fails, the whole operation rolls back.
-        @Transactional
-    public Order placeOrder(OrderDTO dto) {
+    @Transactional
+    public OrderResponeDTO placeOrder(OrderDTO dto) {
         log.info("Placing order for user_id={}", dto.getUser_id());
         var itemsByShopIdMap = groupByShopId(dto.getOrders_items());
         
         Order order = buildOrder(dto);
         Order saved = orderRepository.save(order);
-        log.info("Order persisted id={} number={}", saved.getId(), saved.getOrderNumber());
-
+        
         maybeThrowSimulatedRollback(dto, saved.getId());
-
+        
      
-        itemsByShopIdMap.entrySet().forEach(entry -> {
-        	Long shopId = entry.getKey();
-        	System.out.println("Shop ID: " + shopId);
-        	
+        List<OrderShipmentDTO> orderShipments = dto.getOrder_shipment();
+        orderShipments.forEach(os -> {
         	var orderShipmetDto= new OrderShipment();
         	orderShipmetDto.setOrderId(saved.getId());
         	orderShipmetDto.setCarrierName("LOG");
         	orderShipmetDto.setShippingStatus("PENDING");
-        	orderShipmetDto.setShopId(shopId);
+        	orderShipmetDto.setShopId(os.getShop_id());
         	orderShipmetDto.setTrackingNumber(null);
-        	
-        	
-        	
-        	var orderShipment = orderShipmentRepository.save(orderShipmetDto);
-        	
-	     	dto.getOrders_items().stream().filter(item->item.getShop_id()==shopId).forEach(item->{
-	     		item.setShipment_id(orderShipment.getId());
-	     	});
-        	
-            log.info("Saved order shipmment -> {}", orderShipment.toString());
-        	
-            entry.getValue().forEach(item -> {
-            	item.setShipmentId(orderShipment.getId());
-            	item.setOrderId(saved.getId());
-        		System.out.println("  Product ID: " + item.getProductId() +  ", Quantity: " + item.getQuantity() + ", Price: " + item.getPrice() + ", Product Name: " + item.getProductName() + ", Variant Name: " + item.getVariantName());
-        		orderItemRepository.save(item);
-        	});
-        });
+        	orderShipmetDto.setAdjustmentRequired(false);
+        	orderShipmetDto.setBusinessStatus("NORMAL");
+        	orderShipmetDto.setReturnStatusSummary("NONE");
+			
+			orderShipmetDto.setShippingFee(Double.valueOf(os.getShipping_fee()));
+		    orderShipmetDto.setTotalAmount(os.getTotal_amount());
+						var orderShipment =
+			orderShipmentRepository.save(orderShipmetDto);
+		    dto.getOrders_items().stream().filter(item -> Objects.equals(item.getShop_id(), os.getShop_id())).forEach(item->{
+		    	System.out.println("Shipment id = {}"+ orderShipment.getId());
+		    		     		item.setShipment_id(orderShipment.getId());
+		    		     		
+		    	orderItemRepository.save(buildItem(item, saved.getId()));
+		    });
+						
+        	System.out.println("Order shipment = {}"+ os.toString());
+		});
         
-        
+        log.info("Order persisted id={} number={}", saved.getId(), saved.getOrderNumber());
+
 
         
         dto.getOrders_items().stream().forEach(item ->{
         	item.setOrder_id(saved.getId());
         });
-
         dto.setId(saved.getId());
-        
         dto.setRecipient(dto.getRecipient());
         dto.setOrder_number(saved.getOrderNumber());
         
-        eventPublisher.publish(dto);
+        
+              
+        
+        String paymentCreateUrl = resolvePaymentCreateUrl();
+        log.info("Calling payment service URL: {}", paymentCreateUrl);
 
-        return saved;
+        String paymentUrl = null;
+        if(
+        		//saved.getPaymentMethod().trim().toUpperCase()!="COD"
+        		 !"COD".equalsIgnoreCase(saved.getPaymentMethod())
+        		) {
+        	log.info("Order {} has payment method {}. Proceeding to generate payment URL.", saved.getId(), saved.getPaymentMethod());
+			log.info("Order {} requires online payment. Initiating payment URL generation.", saved.getId());
+			 paymentUrl = webClient.post()
+					.uri(paymentCreateUrl)
+					.bodyValue(Map.of(
+							"orderId", saved.getId(),
+							"amount", saved.getFinalAmount(),
+							"paymentProvider", saved.getPaymentMethod(),
+							"orderInfo", "Payment for order " + saved.getOrderNumber(),
+							"ipAddress", "10.0.0.0.1",
+							"orderType", "ecommerce"))
+					.retrieve()
+					.bodyToMono(String.class)
+					.block();
+			System.out.println("Payment url response: " + paymentUrl);
+		} else {
+			log.info("Order {} is Cash on Delivery. Skipping payment URL generation.", saved.getId());
+		}
+
+        try {
+            eventPublisher.publish(dto);
+         dto.getOrders_items().forEach(item -> {
+          	 eventPublisher.publishStockUpdate(item);
+         });
+            log.info("Order event published successfully for orderId={}", saved.getId());
+        } catch (Exception e) {
+            log.error("Failed to publish order event for orderId={}. Transaction will be rolled back. Error: {}", 
+                    saved.getId(), e.getMessage(), e);
+            // Throwing exception will trigger @Transactional rollback
+            throw new RuntimeException("Failed to publish order event: " + e.getMessage(), e);
+        }
+        OrderResponeDTO responseDTO = new OrderResponeDTO();
+        responseDTO.setId(saved.getId().intValue());
+        
+        if (!"COD".equalsIgnoreCase(order.getPaymentMethod())) {
+		
+            if (paymentUrl != null && !paymentUrl.isBlank()) {
+                log.info("Payment URL generated for orderId={}", saved.getId());
+                responseDTO.setPaymentUrl(paymentUrl);
+                return responseDTO;
+            } else {
+            //	Arrays.sort(paymentUrl == null ? new String[]{} : new String[]{paymentUrl});
+                log.warn("Payment URL generation failed for orderId={}. Response: {}", saved.getId(), paymentUrl);
+                saved.setPaymentStatus("FAILED");
+                orderRepository.save(saved);
+                responseDTO.setPaymentUrl("http:103.90.225.130:4000/orders/" + saved.getId());
+                // Depending on business rules, you might want to throw an exception here to rollback the order creation
+                // throw new RuntimeException("Payment failed for orderId=" + saved.getId());
+            }
+        }
+
+        return responseDTO;
+    }
+
+    private String resolvePaymentCreateUrl() {
+   
+        if (paymentServiceUrl.endsWith("/")) {
+        	log.info("payment.service.url ends with '/'. Constructing payment URL accordingly.");
+            return paymentServiceUrl + "api/payments/create-url";
+        }
+            log.info("Constructing payment URL using payment.service.url: {}", paymentServiceUrl);
+        return paymentServiceUrl.trim() + "/api/payments/create-url";
+    }
+
+    @Transactional
+    public void applyPaymentStatusEvent(PaymentStatusUpdatedEvent event) {
+        if (event == null || event.getOrderId() == null) {
+            throw new IllegalArgumentException("orderId is required");
+        }
+
+        boolean paymentSuccess = isPaymentSuccess(event);
+        String normalizedPaymentStatus = paymentSuccess ? "PAID" : "FAILED";
+
+        Order order = orderRepository.findById(event.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Order not found: " + event.getOrderId()));
+
+        order.setPaymentStatus(normalizedPaymentStatus);
+        if (!paymentSuccess) {
+            order.setOrderStatus("CANCELED");
+        }
+        orderRepository.save(order);					
+
+        log.info("Payment status updated for orderId={}, paymentStatus={}, txnRef={}, provider={}, responseCode={}",
+                event.getOrderId(),
+                normalizedPaymentStatus,
+                event.getTxnRef(),
+                event.getProvider(),
+                event.getResponseCode());
+    }							
+
+    private boolean isPaymentSuccess(PaymentStatusUpdatedEvent event) {
+        boolean isSuccess = Boolean.TRUE.equals(event.getSuccess());
+        String responseCode = event.getResponseCode() == null ? "" : event.getResponseCode().trim().toUpperCase(Locale.ROOT);
+
+        return isSuccess && "00".equals(responseCode);
     }
 
         
@@ -135,7 +248,7 @@ public class OrderService {
                 System.out.println("Sau khi incrby thì số lượng bán ra: " + slBanRa);
 
                 if (slBanRa > STOCK) {
-                    // Rollback
+                    // Rollb	ack
                     redisTemplate.opsForValue().decrement(keyName, slMua);
                     System.out.println("Hết hàng tại thời điểm " + System.currentTimeMillis() + " - Đã rollback");
 
@@ -184,23 +297,29 @@ public class OrderService {
                 .addressId(dto.getAddress_id())
                 .orderNumber(dto.getOrder_number() + UUID.randomUUID().toString().toUpperCase().substring(0, 8))
                 .totalAmount(dto.getTotal_price())
-                .shippingFee(dto.getShipping_fee())
+                .shippingFee(Long.valueOf(dto.getShipping_fee().toString()))
                 .discountAmount(dto.getDiscount_amount())
                 .finalAmount(dto.getFinal_amount())
                 .paymentMethod(dto.getPayment_method())
                 .paymentStatus("PENDING")
                 .orderStatus("PENDING")
+                .voucherId(normalizeVoucherId(dto.getVoucher_id()))
+                .returnStatusSummary(ReturnStatusSummary.NONE)
                 .build();
     }
+
+    private Long normalizeVoucherId(Long voucherId) {
+        return voucherId != null && voucherId > 0 ? voucherId : null;
+    }
     private OrderShipment buildOrderShipment (OrderShipmentDTO dto) {
-    	return OrderShipment.builder()
-    			.shopId(dto.getShop_id())
-    			.orderId(dto.getOrder_id())
-    		    .trackingNumber(dto.getTracking_number())
-    		    .shippingStatus(dto.getShipping_status())
-    		    .carrierName("LOG")
-    		   
-    			.build();
+        OrderShipment shipment = new OrderShipment();
+        shipment.setShopId(dto.getShop_id());
+        shipment.setOrderId(dto.getOrder_id());
+        shipment.setTrackingNumber(dto.getTracking_number());
+        shipment.setShippingStatus(dto.getShipping_status());
+        shipment.setCarrierName("LOG");
+        shipment.setReturnStatusSummary("NONE"); // Ensure not null
+        return shipment;
     }
 
     private List<OrderItem> buildItems(OrderDTO dto, Long orderId) {
@@ -214,37 +333,100 @@ public class OrderService {
                         .quantity(i.getQuantity())
                         .price(i.getPrice())
                         .totalPrice(i.getPrice() * i.getQuantity())
+                        .shopVoucherDiscountAmount(getShopVoucherDiscountAmount(i))
+                        .platformVoucherDiscountAmount(getPlatformVoucherDiscountAmount(i))
+                        .totalVoucherDiscountAmount(getTotalVoucherDiscountAmount(i))
+                        .totalAfterShopVoucher(getTotalAfterShopVoucher(i))
+                        .totalAfterAllVouchers(getTotalAfterAllVouchers(i))
+                        .platformCommissionRate(normalizeMoney(i.getPlatform_commission_rate()))
+                        .platformCommissionAmount(normalizeMoney(i.getPlatform_commission_amount()))
+                        .sellerReceivableAmount(normalizeMoney(i.getSeller_receivable_amount()))
                         .build())
                 .toList();
     }
     
-    private OrderItem buildItem (OrderItemDTO dto, Long orderId) {
+    private OrderItem buildItem (docker_test.com.dto.OrderItem dto, Long orderId) {
     	return OrderItem.builder()
                 .orderId(orderId)
                 .productId(dto.getProduct_id())
                 .shopId(dto.getShop_id())
                 .variantId(dto.getVariant_id())
+                .shipmentId(dto.getShipment_id())
                 .productName(dto.getProduct_name())
                 .variantName(dto.getVariant_name())
+                .image(dto.getImage_url())
                 .quantity(dto.getQuantity())
                 .price(dto.getPrice())
-                .totalPrice(dto.getPrice() * dto.getQuantity())
+                .totalPrice(getItemOriginalTotal(dto))
+                .shopVoucherDiscountAmount(getShopVoucherDiscountAmount(dto))
+                .platformVoucherDiscountAmount(getPlatformVoucherDiscountAmount(dto))
+                .totalVoucherDiscountAmount(getTotalVoucherDiscountAmount(dto))
+                .totalAfterShopVoucher(getTotalAfterShopVoucher(dto))
+                .totalAfterAllVouchers(getTotalAfterAllVouchers(dto))
+                .platformCommissionRate(normalizeMoney(dto.getPlatform_commission_rate()))
+                .platformCommissionAmount(normalizeMoney(dto.getPlatform_commission_amount()))
+                .sellerReceivableAmount(normalizeMoney(dto.getSeller_receivable_amount()))
+                .isAdjusted(false)
                 .build();
     }
-    
-    
-    private Map<Long,List<OrderItem>> groupByShopId(List<OrderItemDTO> itemDTOs){
-    	var list = itemDTOs.stream().map(item->{
-    		return buildItem(item, null);
-    	});
-    	return list.collect(Collectors.groupingBy(OrderItem::getShopId));
+
+    private double getItemOriginalTotal(docker_test.com.dto.OrderItemDTO dto) {
+        return dto.getPrice() * Math.max(0, dto.getQuantity());
+    }
+
+    private double normalizeMoney(Double value) {
+        if (value == null || value.isNaN() || value.isInfinite() || value < 0) {
+            return 0.0;
+        }
+        return value;
+    }
+
+    private double getShopVoucherDiscountAmount(docker_test.com.dto.OrderItemDTO dto) {
+        return Math.min(getItemOriginalTotal(dto), normalizeMoney(dto.getShop_voucher_discount_amount()));
+    }
+
+    private double getPlatformVoucherDiscountAmount(docker_test.com.dto.OrderItemDTO dto) {
+        double originalTotal = getItemOriginalTotal(dto);
+        double shopDiscount = getShopVoucherDiscountAmount(dto);
+        return Math.min(originalTotal - shopDiscount, normalizeMoney(dto.getPlatform_voucher_discount_amount()));
+    }
+
+    private double getTotalVoucherDiscountAmount(docker_test.com.dto.OrderItemDTO dto) {
+        double explicitTotalDiscount = normalizeMoney(dto.getTotal_voucher_discount_amount());
+        double computedTotalDiscount = getShopVoucherDiscountAmount(dto) + getPlatformVoucherDiscountAmount(dto);
+        double totalDiscount = explicitTotalDiscount > 0 ? explicitTotalDiscount : computedTotalDiscount;
+        return Math.min(getItemOriginalTotal(dto), totalDiscount);
+    }
+
+    private double getTotalAfterShopVoucher(docker_test.com.dto.OrderItemDTO dto) {
+        Double explicitTotal = dto.getTotal_after_shop_voucher();
+        if (explicitTotal != null) {
+            return Math.max(0.0, Math.min(getItemOriginalTotal(dto), explicitTotal));
+        }
+        return Math.max(0.0, getItemOriginalTotal(dto) - getShopVoucherDiscountAmount(dto));
+    }
+
+    private double getTotalAfterAllVouchers(docker_test.com.dto.OrderItemDTO dto) {
+        Double explicitTotal = dto.getTotal_after_all_vouchers();
+        if (explicitTotal != null) {
+            return Math.max(0.0, Math.min(getItemOriginalTotal(dto), explicitTotal));
+        }
+        return Math.max(0.0, getItemOriginalTotal(dto) - getTotalVoucherDiscountAmount(dto));
     }
     
     
-    private Map<Long, List<OrderItemDTO>> groupByShopId1 (OrderDTO order){
-    	var list = order.getOrders_items();
-    	 
-    	list.stream().collect(Collectors.groupingBy(OrderItemDTO::getShop_id)).entrySet().forEach(entry -> {
+    private Map<Long,List<OrderItem>> groupByShopId(List<docker_test.com.dto.OrderItem> itemDTOs){
+        var list = itemDTOs.stream().map(item->{
+            return buildItem(item, null);
+        });
+        return list.collect(Collectors.groupingBy(OrderItem::getShopId));
+    }
+    
+    
+    private Map<Long, List<OrderItem>> groupByShopId1 (OrderDTO order){
+        var list = order.getOrders_items();
+         
+        list.stream().collect(Collectors.groupingBy(docker_test.com.dto.OrderItem::getShop_id)).entrySet().forEach(entry -> {
         Long shopId = entry.getKey();
         System.out.println("Shop ID: " + shopId);
         entry.getValue().forEach(item -> {
@@ -252,8 +434,8 @@ public class OrderService {
         });
  });
 
-    	
-    	return  list.stream().collect(Collectors.groupingBy(OrderItemDTO::getShop_id));
+        
+        return  list.stream().map(item -> buildItem(item, null)).collect(Collectors.groupingBy(OrderItem::getShopId));
     }
     
 	

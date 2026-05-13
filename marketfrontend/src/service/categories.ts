@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Category } from "@/types/index";
 
 //const API_URL = "http://localhost:8000/api/categories";
@@ -150,4 +151,196 @@ export const deleteCategory = async (id: string): Promise<boolean> => {
   }
 
   return true;
+=======
+import { Category } from "@/types/index";
+
+// Legacy hardcoded API URL removed; use API_URL from helper.
+
+import { API_URL } from "@/helper/api";
+/* ================= HELPERS ================= */
+
+export const generateSlug = (name: string): string => {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+};
+
+export const generateCategoryCode = (name: string): string => {
+  const words = name.trim().split(/\s+/);
+
+  const firstWord = words[0].replace(/[^a-zA-Z]/g, "");
+  const secondWord = words[1] ? words[1].replace(/[^a-zA-Z]/g, "") : "";
+
+  let prefix = "";
+
+  if (firstWord.length >= 2) {
+    prefix = firstWord.substring(0, 2).toUpperCase();
+  } else if (firstWord.length === 1 && secondWord.length >= 1) {
+    prefix = (firstWord + secondWord.substring(0, 1)).toUpperCase();
+  } else {
+    prefix = firstWord.toUpperCase().padEnd(2, "X");
+  }
+
+  const randomNum = Math.floor(10000 + Math.random() * 90000);
+
+  return `${prefix}${randomNum}`;
+};
+
+/* ================= MAP BACKEND → FRONTEND ================= */
+
+const mapCategory = (c: any, productStock: number = 0): Category => {
+  const parentId = Number(c.parent_id ?? c.parentId ?? 0);
+  const level = Number(c.level ?? 0);
+
+  return {
+    id: String(c.id),
+
+    name: c.category_name ?? c.name ?? "",
+
+    slug: c.category_slug ?? c.slug ?? "",
+
+    description: "",
+
+    thumbnailUrl: c.category_icon ? c.category_icon : "/image/no-image.png",
+
+    status: Number(c.is_active ?? 1) === 1 ? "ACTIVE" : "HIDDEN",
+
+    parentId,
+
+    parent_id: parentId,
+
+    level,
+
+    productStock,
+
+    attributeIds: [],
+
+    categoryCode: `CAT-${c.id}`,
+
+    createdAt: c.created_at
+      ? new Date(c.created_at).toISOString()
+      : new Date().toISOString(),
+  };
+};
+
+const getCategoryProductCount = async (categoryId: number): Promise<number> => {
+  try {
+    const res = await fetch(`${API_URL}/api/categories/${categoryId}/products`);
+
+    if (!res.ok) {
+      return 0;
+    }
+
+    const data = await res.json();
+    return Array.isArray(data) ? data.length : 0;
+  } catch (error) {
+    console.error(`Failed to load product count for category ${categoryId}:`, error);
+    return 0;
+  }
+};
+
+/* ================= GET ALL (LEVEL = 0) ================= */
+
+export const getCategories = async (): Promise<Category[]> => {
+  const res = await fetch(`${API_URL}/api/categories`);
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch categories");
+  }
+
+  const data = await res.json();
+
+  // chỉ lấy category level = 0
+  const rootCategories = data.filter(
+    (c: any) =>
+      Number(c.level ?? 0) === 0 && Number(c.parent_id ?? c.parentId ?? 0) === 0,
+  );
+  const productCounts = await Promise.all(
+    rootCategories.map((category: any) =>
+      getCategoryProductCount(Number(category.id)),
+    ),
+  );
+
+  return rootCategories.map((category: any, index: number) =>
+    mapCategory(category, productCounts[index] ?? 0),
+  );
+};
+
+/* ================= GET BY ID ================= */
+
+export const getCategoryById = async (id: string): Promise<Category> => {
+  const res = await fetch(`${API_URL}/api/categories/${id}`);
+
+  if (!res.ok) {
+    throw new Error("Category not found");
+  }
+
+  const data = await res.json();
+  const productStock = await getCategoryProductCount(Number(id));
+
+  return mapCategory(data, productStock);
+};
+
+/* ================= CREATE ================= */
+
+export const createCategory = async (data: any): Promise<Category> => {
+  const res = await fetch(`${API_URL}/api/categories`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error("Create category failed");
+  }
+
+  const result = await res.json();
+  return mapCategory(result, 0);
+};
+
+/* ================= UPDATE ================= */
+
+export const updateCategory = async (
+  id: string,
+  data: any,
+): Promise<Category> => {
+  const res = await fetch(`${API_URL}/api/categories/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error("Update category failed");
+  }
+
+  const result = await res.json();
+  const productStock = await getCategoryProductCount(Number(id));
+
+  return mapCategory(result, productStock);
+};
+
+/* ================= DELETE ================= */
+
+export const deleteCategory = async (id: string): Promise<boolean> => {
+  const res = await fetch(`${API_URL}/api/categories/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) {
+    throw new Error("Delete category failed");
+  }
+
+  return true;
+>>>>>>> c9d4b1976cb5b3a10edc460d55b593d2cd8808dc
 };

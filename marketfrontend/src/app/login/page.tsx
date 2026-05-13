@@ -6,12 +6,105 @@ import { useSearchParams } from "next/navigation";
 import { API_URL } from "@/helper/api";
 
 const LoginForm = () => {
+  const normalizeRoleForCookie = (user: any) => {
+    const rawRole = String(
+      user?.role ?? user?.userType ?? user?.type ?? "buyer",
+    ).toLowerCase();
+
+    if (rawRole === "seller") return "seller";
+    if (rawRole === "both") return "both";
+    if (rawRole === "admin") return "admin";
+    return "buyer";
+  };
+
+  const getUserId = (user: any) => {
+    const value = Number(user?.id ?? user?.userId ?? user?.user_id ?? 0);
+    return Number.isFinite(value) ? value : 0;
+  };
+
+  const getFullName = (user: any) =>
+    user?.fullName ?? user?.name ?? user?.email ?? "User";
+
+  const getRedirectTarget = (redirect: string | null) => {
+    if (!redirect) return null;
+
+    const value = redirect.trim();
+
+    if (
+      !value ||
+      value.startsWith("http://") ||
+      value.startsWith("https://") ||
+      value.startsWith("//")
+    ) {
+      return null;
+    }
+
+    return value.startsWith("/") ? value : `/${value}`;
+  };
+
+  const getDefaultRedirectByRole = (role: string) => {
+    if (role === "admin") return "/admin";
+    return "/";
+  };
+
+  const getAccessToken = (payload: any) =>
+    payload?.accessToken ?? payload?.token ?? "";
+
+  const getRefreshToken = (payload: any) => payload?.refreshToken ?? "";
+
+  const persistAuthTokens = (payload: any) => {
+    const accessToken = getAccessToken(payload);
+    const refreshToken = getRefreshToken(payload);
+    const expiresIn = Number(payload?.expiresIn ?? 0);
+    const refreshExpiresIn = Number(payload?.refreshExpiresIn ?? 0);
+    const idleTimeoutSeconds = Number(payload?.idleTimeoutSeconds ?? 0);
+
+    if (accessToken) {
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("token", accessToken);
+    }
+
+    if (refreshToken) {
+      localStorage.setItem("refreshToken", refreshToken);
+    }
+
+    if (expiresIn > 0) {
+      localStorage.setItem(
+        "expiresAt",
+        String(Date.now() + expiresIn * 1000),
+      );
+      localStorage.setItem(
+        "expiresIn",
+        JSON.stringify({
+          value: expiresIn,
+          expiresAt: Date.now() + expiresIn * 1000,
+        }),
+      );
+    }
+
+    if (refreshExpiresIn > 0) {
+      localStorage.setItem(
+        "refreshExpiresAt",
+        String(Date.now() + refreshExpiresIn * 1000),
+      );
+    }
+
+    if (idleTimeoutSeconds > 0) {
+      localStorage.setItem("idleTimeoutSeconds", String(idleTimeoutSeconds));
+    }
+
+    localStorage.setItem("lastActivityAt", String(Date.now()));
+
+    return accessToken;
+  };
+
   useEffect(() => {
     //Debug api
     console.log("API_URL:", API_URL);
   }, []);
   const searchParams = useSearchParams();
-  const redirectPath = searchParams.get("redirect") || "/";
+  const redirectPath = searchParams.get("redirect");
+  const redirectTarget = getRedirectTarget(redirectPath);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -79,20 +172,39 @@ const LoginForm = () => {
         return;
       }
 
-      const user = JSON.parse(text);
+      const loginData = JSON.parse(text);
+      const authUser = loginData?.user ?? {};
+      const mergedUser = { ...loginData, ...authUser };
+      const roleCookie = normalizeRoleForCookie(mergedUser);
+      const userId = getUserId(mergedUser);
+      const normalizedUser = {
+        id: userId,
+        email: mergedUser.email,
+        fullName: getFullName(mergedUser),
+        userType: loginData?.userType ?? authUser?.userType ?? roleCookie,
+        role: roleCookie,
+      };
+      const accessToken = persistAuthTokens(loginData);
+      const accessCookieMaxAge = Number(loginData?.expiresIn ?? 0) || 60 * 30;
+      const sessionCookieMaxAge =
+        Number(loginData?.refreshExpiresIn ?? 0) || 60 * 60 * 24;
 
       // Lưu thông tin user ở client
-      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
 
-      // Đặt cookie token để middleware có thể đọc và cho phép truy cập /admin, /seller,...
-      // Hiện tại middleware chỉ kiểm tra có token hay không, chưa verify nội dung
-      // Nên chỉ cần giá trị bất kỳ (có thể thay bằng user.token nếu backend trả về)
-      document.cookie = `token=${(user as any).token || "logged-in"}; path=/; max-age=${
-        60 * 60 * 24
+      // Đặt cookie để middleware đọc được trạng thái đăng nhập.
+      document.cookie = `token=${accessToken || "logged-in"}; path=/; max-age=${
+        accessCookieMaxAge
+      }; SameSite=Lax`;
+      document.cookie = `role=${roleCookie}; path=/; max-age=${
+        sessionCookieMaxAge
+      }; SameSite=Lax`;
+      document.cookie = `user=${userId}; path=/; max-age=${
+        sessionCookieMaxAge
       }; SameSite=Lax`;
 
       // Sau khi login thành công, điều hướng về trang mong muốn (nếu có ?redirect=...)
-      window.location.href = redirectPath;
+      window.location.href = redirectTarget ?? getDefaultRedirectByRole(roleCookie);
     } catch (err) {
       setErrors({ general: "Không kết nối được server" });
     } finally {
@@ -180,7 +292,7 @@ const LoginForm = () => {
           )}
 
           <div className="flex justify-end mt-2">
-            <a href="#" className="text-sm text-blue-600 hover:underline">
+            <a href="/forgot-password" className="text-sm text-blue-600 hover:underline">
               Forgot password?
             </a>
           </div>
@@ -207,7 +319,12 @@ const LoginForm = () => {
           <p className="text-sm text-gray-600">
             Don’t have an account?
             <a
-              href="/register"
+              href={
+                `/register` +
+                (redirectPath
+                  ? `${redirectPath ? "?redirect=" + encodeURIComponent(redirectPath) : ""}`
+                  : "")
+              }
               className="ml-1 text-blue-600 font-semibold hover:underline"
             >
               Register

@@ -2,6 +2,9 @@ package docker_test.com.dto;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class OrderDTO {
   public String getOrder_number() {
 		return order_number;
@@ -89,6 +92,14 @@ public class OrderDTO {
 		return order_status;
 	}
 
+	public Long getVoucher_id() {
+		return voucher_id;
+	}
+
+	public void setVoucher_id(Long voucher_id) {
+		this.voucher_id = voucher_id;
+	}
+
 	public void setOrder_status(String order_status) {
 		this.order_status = order_status;
 	}
@@ -135,9 +146,20 @@ public class OrderDTO {
 	private Long discount_amount;
 	private String payment_method;
 	private Long final_amount;
+	public List<OrderShipmentDTO> getOrder_shipment() {
+		return order_shipment;
+	}
+
+	public void setOrder_shipment(List<OrderShipmentDTO> order_shipment) {
+		this.order_shipment = order_shipment;
+	}
+
+	private List<OrderShipmentDTO> order_shipment;
+
 	private String order_status;
 	private String tracking_number;
 	private String cancel_reason;
+	private Long voucher_id;
 
 	public double getTotal_price() {
 		return total_price;
@@ -148,15 +170,15 @@ public class OrderDTO {
 	}
 
 	private double total_price;
-    public List<OrderItemDTO> getOrders_items() {
+    public List<OrderItem> getOrders_items() {
 		return orders_items;
 	}
 
-	public void setOrders_items(List<OrderItemDTO> orders_items) {
+	public void setOrders_items(List<OrderItem> orders_items) {
 		this.orders_items = orders_items;
 	}
 
-	private List<OrderItemDTO> orders_items;
+	private List<OrderItem> orders_items;
 	
 	public OrderDTO() {
 	}

@@ -24,6 +24,8 @@ import lombok.ToString;
 @Builder
 @ToString
 public class OrderItem {
+	
+	
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,6 +52,9 @@ public class OrderItem {
 	@Column(name = "variant_name", nullable = false)
 	private String variantName;
 	
+	@Column(name ="image")
+	private String image;
+	
 	@Column(name = "quantity", nullable = false)
 	private Integer quantity;
 	
@@ -58,6 +63,43 @@ public class OrderItem {
 	
 	@Column(name = "total_price", nullable = false)
 	private Double totalPrice;
+
+	@Column(name = "shop_voucher_discount_amount", nullable = false)
+	private Double shopVoucherDiscountAmount;
+
+	@Column(name = "platform_voucher_discount_amount", nullable = false)
+	private Double platformVoucherDiscountAmount;
+
+	@Column(name = "total_voucher_discount_amount", nullable = false)
+	private Double totalVoucherDiscountAmount;
+
+	@Column(name = "total_after_shop_voucher", nullable = false)
+	private Double totalAfterShopVoucher;
+
+	@Column(name = "total_after_all_vouchers", nullable = false)
+	private Double totalAfterAllVouchers;
+
+	@Column(name = "platform_commission_rate", nullable = false)
+	private Double platformCommissionRate;
+
+	@Column(name = "platform_commission_amount", nullable = false)
+	private Double platformCommissionAmount;
+
+	@Column(name = "seller_receivable_amount", nullable = false)
+	private Double sellerReceivableAmount;
+
+	@Column(name = "commission_calculated_at")
+	private LocalDateTime commissionCalculatedAt;
+
+	@Column(name = "final_quantity")
+	private Integer finalQuantity;
+
+	@Column(name = "is_adjusted", nullable = false)
+	private Boolean isAdjusted;
+	
+	
+	@Column(name = "last_return_request_id")
+	private Long lastReturnRequestId;
 	
 //	@Column(name = "created_at", nullable = false)
 //	private LocalDateTime createdAt;

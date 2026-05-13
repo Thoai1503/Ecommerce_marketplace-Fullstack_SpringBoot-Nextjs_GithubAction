@@ -42,10 +42,24 @@ public final class ProductAttributeMapper implements IMapper<ProductAttribute> {
             Timestamp updatedAt = rs.getTimestamp(StringValue.PROD_ATTR_UPDATED_AT_COL);
             if (updatedAt != null) prodAttr.setUpdatedAt(updatedAt.toLocalDateTime());
 
+            prodAttr.setAttributeName(readString(rs, "attribute_name"));
+            prodAttr.setAttributeSlug(readString(rs, "attribute_slug"));
+            prodAttr.setAttributeValue(readString(rs, "attribute_value"));
+            prodAttr.setUnitLabel(readString(rs, "unit_label"));
+            prodAttr.setUnitSymbol(readString(rs, "unit_symbol"));
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return prodAttr;
+    }
+
+    private String readString(ResultSet rs, String columnName) throws SQLException {
+        try {
+            return rs.getString(columnName);
+        } catch (SQLException ignored) {
+            return null;
+        }
     }
 
     @Override

@@ -23,7 +23,7 @@ public final class User {
     public User() {
         this.userType = "buyer";
         this.isActive = 1;
-        this.isVerified = 1;
+        this.isVerified = 0;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -140,5 +140,22 @@ public final class User {
 
     public void setLastLogin(LocalDateTime lastLogin) {
         this.lastLogin = lastLogin;
+    }
+    @Override
+    public String toString() {
+		return "User{" +
+				"id=" + id +
+				", email='" + email + '\'' +
+				", phone='" + phone + '\'' +
+				", fullName='" + fullName + '\'' +
+				", avatarUrl='" + avatarUrl + '\'' +
+				", dateOfBirth=" + dateOfBirth +
+				", role='" + userType + '\'' +
+				", isVerified=" + isVerified +
+				", isActive=" + isActive +
+				", createdAt=" + createdAt +
+				", updatedAt=" + updatedAt +
+				", lastLogin=" + lastLogin +
+				'}';
     }
 }

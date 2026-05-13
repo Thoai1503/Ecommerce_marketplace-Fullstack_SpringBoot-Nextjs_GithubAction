@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 
 import { API_URL } from "@/helper/api";
+
 type Errors = {
   fullName?: string;
   email?: string;
@@ -11,11 +12,10 @@ type Errors = {
   general?: string;
 };
 
-const Page: React.FC = () => {
+const RegisterContent: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const [success, setSuccess] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -55,6 +55,7 @@ const Page: React.FC = () => {
     try {
       const res = await fetch(`${API_URL}/users/register`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName: formData.fullName,
@@ -75,20 +76,18 @@ const Page: React.FC = () => {
         }
         return;
       }
+      await res.json();
 
       // SUCCESS
-      setSuccess("Registration successful! Redirecting to login...");
+      setSuccess(
+        `Registration successful! Please check ${formData.email} to verify your account before logging in.`,
+      );
       setFormData({
         fullName: "",
         email: "",
         password: "",
         confirmPassword: "",
       });
-
-      // Auto redirect
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 2000);
     } catch {
       setErrors({
         general: "Unable to connect to the server.",
@@ -121,7 +120,6 @@ const Page: React.FC = () => {
 
       {/* Content */}
       <div className="relative z-10 w-full max-w-6xl bg-white rounded-3xl shadow-lg overflow-hidden grid grid-cols-1 lg:grid-cols-2">
-
         {/* LEFT */}
         <div className="hidden lg:flex flex-col justify-between p-12 bg-[#f4f8ff]">
           <div>
@@ -152,7 +150,9 @@ const Page: React.FC = () => {
                 sell
               </span>
               <div>
-                <p className="font-semibold text-black">Good prices every day</p>
+                <p className="font-semibold text-black">
+                  Good prices every day
+                </p>
                 <p className="text-sm text-gray-500">
                   Guaranteed lowest prices.
                 </p>
@@ -205,9 +205,7 @@ const Page: React.FC = () => {
                 required
               />
               {errors.fullName && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.fullName}
-                </p>
+                <p className="text-sm text-red-500 mt-1">{errors.fullName}</p>
               )}
             </div>
 
@@ -259,9 +257,7 @@ const Page: React.FC = () => {
               />
               <button
                 type="button"
-                onClick={() =>
-                  setShowConfirmPassword((v) => !v)
-                }
+                onClick={() => setShowConfirmPassword((v) => !v)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 {showConfirmPassword ? "🙈" : "👁"}
@@ -272,14 +268,29 @@ const Page: React.FC = () => {
               type="submit"
               disabled={loading}
               className="w-full h-12 rounded-lg bg-blue-600 text-white font-semibold
-                         hover:bg-blue-700 transition disabled:opacity-60"
+                           hover:bg-blue-700 transition disabled:opacity-60"
             >
               {loading ? "Processing..." : "Register now"}
             </button>
+
+            <p className="text-center text-sm text-gray-600">
+              Already verified?{" "}
+              <a href="/login" className="font-semibold text-blue-600 hover:underline">
+                Log in
+              </a>
+            </p>
           </form>
         </div>
       </div>
     </div>
+  );
+};
+
+const Page: React.FC = () => {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <RegisterContent />
+    </Suspense>
   );
 };
 

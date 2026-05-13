@@ -12,21 +12,28 @@ import docker_test.com.model.OrderShipment;
 
 @Repository
 public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Long> {
-
+   
+	
+//	Optional<OrderShipment>	findByOrderIdOrderByIdDesc(Long orderId);
 	Optional<OrderShipment> findFirstByTrackingNumber(String trackingNumber);
+	List<OrderShipment> findByOrderIdOrderByIdDesc(Long orderId);
+	List<OrderShipment> findByShopId(Long shopId);
 
 	@Query(value = """
 			SELECT
-				os.id AS shipmentId,
+		        os.id AS shipmentId,
 				os.order_id AS orderId,
 				os.shop_id AS shopId,
+				s.shop_name AS shopName,
+				os.shipping_fee AS shippingFee,
+				os.total_amount AS totalAmount,
 				os.carrier_name AS carrierName,
 				os.tracking_number AS trackingNumber,
 				os.shipping_status AS shippingStatus,
 				o.order_number AS orderNumber,
 				o.user_id AS userId,
 				o.address_id AS addressId,
-				o.total_amount AS totalAmount,
+			
 				o.shipping_fee AS shippingFee,
 				o.discount_amount AS discountAmount,
 				o.final_amount AS finalAmount,
@@ -43,8 +50,59 @@ public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Lo
 			FROM order_shipment os
 			INNER JOIN orders o ON o.id = os.order_id
 			INNER JOIN address a ON a.id = o.address_id
-			WHERE os.shop_id = :shopId
+			LEFT JOIN shop s ON s.id = os.shop_id
+
+			WHERE os.shop_id = :shopId  
+			AND	(:status IS NULL  OR LOWER(:status) = 'all' OR LOWER(os.shipping_status) = LOWER(:status))
+			AND	(:paymentStatus IS NULL  OR LOWER(:paymentStatus) = 'all' OR LOWER(o.payment_status) = LOWER(:paymentStatus))
+			
 			ORDER BY os.id DESC
 			""", nativeQuery = true)
-	List<OrderShipmentWithOrderAndRecipientProjection> findShipmentDetailsByShopId(@Param("shopId") Long shopId);
+	List<OrderShipmentWithOrderAndRecipientProjection> findShipmentDetailsByShopId(@Param("shopId") Long shopId, @Param("status") String status, @Param("paymentStatus") String paymentStatus);
+	
+	// Find shipment details by shipment id (projection)
+	@Query(value = """
+			SELECT
+		        os.id AS shipmentId,
+				os.order_id AS orderId,
+				os.shop_id AS shopId,
+				s.shop_name AS shopName,
+				os.shipping_fee AS shippingFee,
+				os.total_amount AS totalAmount,
+				os.carrier_name AS carrierName,
+				os.tracking_number AS trackingNumber,
+				os.shipping_status AS shippingStatus,
+				o.order_number AS orderNumber,
+				o.user_id AS userId,
+				o.address_id AS addressId,
+			
+				o.shipping_fee AS shippingFee,
+				o.discount_amount AS discountAmount,
+				o.final_amount AS finalAmount,
+				o.payment_method AS paymentMethod,
+				o.payment_status AS paymentStatus,
+				o.order_status AS orderStatus,
+				a.recipient_name AS recipientName,
+				a.recipient_phone AS recipientPhone,
+				a.address_line AS addressLine,
+				a.ward AS ward,
+				a.district AS district,
+				a.city AS city,
+				a.postal_code AS postalCode
+			FROM order_shipment os
+			INNER JOIN orders o ON o.id = os.order_id
+			INNER JOIN address a ON a.id = o.address_id
+			LEFT JOIN shop s ON s.id = os.shop_id
+			WHERE os.id = :id
+			ORDER BY os.id DESC
+			""", nativeQuery = true)
+	
+	Optional<OrderShipmentWithOrderAndRecipientProjection> findShipmentDetailsById(@Param("id") Long id);
+//List<	Object> findStatusHistoryByShipmentId(Long shipmentId);
+	
+	
+	
+ 
+//	findStatusHistoryByShipmentId(Long shipmentId);
+	    
 }

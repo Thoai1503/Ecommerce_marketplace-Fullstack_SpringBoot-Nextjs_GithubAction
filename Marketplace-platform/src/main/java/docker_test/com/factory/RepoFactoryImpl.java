@@ -1,10 +1,14 @@
 package docker_test.com.factory;
 
-//import org.springframework.jdbc.core.JdbcTemplate;
+
 import org.springframework.stereotype.Component;
 
 import docker_test.com.models.product.ProductVariant;
+import docker_test.com.repository.AdminRepository;
+import docker_test.com.repository.AttributeRepository;
+import docker_test.com.repository.AttributeValueRepository;
 import docker_test.com.repository.BrandRepository;
+import docker_test.com.repository.BuyerRepository;
 import docker_test.com.repository.CategoryAttributeRepository;
 import docker_test.com.repository.CategoryBrandRepository;
 import docker_test.com.repository.CategoryRepository;
@@ -13,6 +17,7 @@ import docker_test.com.repository.OrderRepository;
 import docker_test.com.repository.ProductImageRepository;
 import docker_test.com.repository.ProductRepository;
 import docker_test.com.repository.ProductVariantRepository;
+import docker_test.com.repository.SellerRepository;
 import docker_test.com.repository.ShopRepository;
 import docker_test.com.repository.UnitRepository;
 import docker_test.com.repository.UserRepository;
@@ -20,9 +25,8 @@ import docker_test.com.repository.UserRepository;
 @Component
 public class RepoFactoryImpl implements IRepoFactory  {
 	private static RepoFactoryImpl instance = null;
-    //private  JdbcTemplate jdbcTemplate;
+
     
-    //ae thêm các Repository do ae tạo ở đây
 	private final CategoryRepository categoryRepository;
 	private final UnitRepository unitRepository;
 	private final CategoryAttributeRepository categoryAttributeRepository;
@@ -33,20 +37,22 @@ public class RepoFactoryImpl implements IRepoFactory  {
 	private final ProductVariantRepository productVariantRepository;
 	private final BrandRepository brandRepository;
 	private final CategoryBrandRepository categoryBrandRepisitory;
-	private final OrderRepository orderRepository;
-
-	public static RepoFactoryImpl Instance() {
+	//private final OrderRepository orderRepository;
+//	private final ProductRepository productRepository;
+	private final AttributeRepository attributeRepository;
+	private final AttributeValueRepository attributeValueRepository;
 	
-		if (instance==null) {
-			instance=new RepoFactoryImpl();
-		}
-		return instance;
+	public static synchronized RepoFactoryImpl Instance() {
+	    if (instance == null) {
+	        instance = new RepoFactoryImpl();
+	    }
+	    return instance;
 	}
 	
 	
 	
 	public RepoFactoryImpl() {
-		//Khởi tạo các Repository do ae tạo ở đây
+
 		this.categoryRepository =CategoryRepository.Instance();
 		this.unitRepository =UnitRepository.Instance();
 		this.categoryAttributeRepository = CategoryAttributeRepository.Instance();
@@ -57,7 +63,9 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		this.productVariantRepository = ProductVariantRepository.Instance();
 		this.brandRepository = BrandRepository.Instance();
 		this.categoryBrandRepisitory = CategoryBrandRepository.Instance();
-		this.orderRepository = OrderRepository.Instance();
+//		this.orderRepository = OrderRepository.Instance();
+		this.attributeRepository = AttributeRepository.Instance();
+		this.attributeValueRepository = AttributeValueRepository.Instance();
 	}
 
 	@Override
@@ -74,11 +82,12 @@ public class RepoFactoryImpl implements IRepoFactory  {
 		case "product_variant" -> (IRepositories<ProductVariant>) productVariantRepository;
 		case "brand" -> (IRepositories) brandRepository;
 		case "category_brand" -> (IRepositories) categoryBrandRepisitory; 
-		case "order" -> (IRepositories) orderRepository;
+	//	case "order" -> (IRepositories) orderRepository;
+		case "attribute" -> (IRepositories) attributeRepository;
+		case "attribute_value" -> (IRepositories) attributeValueRepository;
+	
 		default -> throw new IllegalArgumentException("Unknown entity type: " + entityType);
 		};
 	}
 
 }
-
-

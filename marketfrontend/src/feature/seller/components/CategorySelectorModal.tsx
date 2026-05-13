@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef } from "react";
 import { Modal, Input } from "antd";
+import { Check, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 interface DbCategory {
   id: number;
@@ -123,6 +124,7 @@ interface Props {
   isModalOpen: boolean;
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setProduct: React.Dispatch<React.SetStateAction<Partial<any>>>;
+  onConfirm?: (category: DbCategory, path: DbCategory[]) => void;
 }
 
 const CategorySelectorModal = ({
@@ -130,6 +132,7 @@ const CategorySelectorModal = ({
   isModalOpen,
   setIsModalOpen,
   setProduct,
+  onConfirm,
 }: Props) => {
   const [searchText, setSearchText] = useState("");
   const [selectedPath, setSelectedPath] = useState<DbCategory[]>([]);
@@ -185,8 +188,6 @@ const CategorySelectorModal = ({
     levelIndex: number,
     isOtherOption: boolean = false,
   ) => {
-    setProduct((prev: any) => ({ ...prev, category_id: category.id }));
-    //  alert(JSON.stringify(category));
     // Cập nhật active path
 
     const newActivePath = [...activePath];
@@ -262,13 +263,12 @@ const CategorySelectorModal = ({
               >
                 <span className="truncate">{category.category_name}</span>
                 {isSelected ? (
-                  <span className="text-red-500 text-sm flex-shrink-0">✓</span>
+                  <Check size={14} className="text-red-500 flex-shrink-0" />
                 ) : hasChild ? (
-                  <span
-                    className={`material-symbols-outlined text-sm flex-shrink-0 ${isActive ? "text-red-500" : "text-gray-400 group-hover:text-gray-600"}`}
-                  >
-                    chevron_right
-                  </span>
+                  <ChevronRight
+                    size={14}
+                    className={`flex-shrink-0 ${isActive ? "text-red-500" : "text-gray-400 group-hover:text-gray-600"}`}
+                  />
                 ) : null}
               </button>
             );
@@ -296,7 +296,7 @@ const CategorySelectorModal = ({
               {selectedPath[selectedPath.length - 1]?.id ===
                 parentCategory.id &&
                 selectedPath.length === levelIndex && (
-                  <span className="text-red-500 text-sm flex-shrink-0">✓</span>
+                  <Check size={14} className="text-red-500 flex-shrink-0" />
                 )}
             </button>
           )}
@@ -351,11 +351,13 @@ const CategorySelectorModal = ({
 
   const handleOk = () => {
     if (selectedPath.length > 0) {
-      console.log("Selected category:", selectedPath[selectedPath.length - 1]);
+      const selectedCategory = selectedPath[selectedPath.length - 1];
+      console.log("Selected category:", selectedCategory);
       setProduct((prev: any) => ({
         ...prev,
-        category_id: selectedPath[selectedPath.length - 1].id,
+        category_id: selectedCategory.id,
       }));
+      onConfirm?.(selectedCategory, selectedPath);
       console.log("Full path:", selectedPath);
       setIsModalOpen(false);
     }
@@ -393,8 +395,8 @@ const CategorySelectorModal = ({
           <div className="flex flex-col gap-3">
             {/* Search bar */}
             <div className="relative">
-              <span className="absolute left-3 top-2.5 text-gray-400 text-xl">
-                🔍
+              <span className="absolute left-3 top-2.5 text-gray-400 pointer-events-none">
+                <Search size={16} />
               </span>
               <Input
                 className="pl-10"
@@ -455,17 +457,19 @@ const CategorySelectorModal = ({
                   onClick={() => handleScroll("left")}
                   className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white border rounded-l-md p-2 shadow-lg"
                 >
-                  <span className="text-gray-500 hover:text-red-500 transition-colors">
-                    ←
-                  </span>
+                  <ChevronLeft
+                    size={16}
+                    className="text-gray-500 hover:text-red-500 transition-colors"
+                  />
                 </button>
                 <button
                   onClick={() => handleScroll("right")}
                   className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white border rounded-r-md p-2 shadow-lg"
                 >
-                  <span className="text-gray-500 hover:text-red-500 transition-colors">
-                    →
-                  </span>
+                  <ChevronRight
+                    size={16}
+                    className="text-gray-500 hover:text-red-500 transition-colors"
+                  />
                 </button>
 
                 {/* Scrollable container */}

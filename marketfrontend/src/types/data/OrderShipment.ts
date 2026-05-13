@@ -19,15 +19,64 @@ export class OrderShipments extends Model {
     this.queryKeys,
   );
 
-  static getByShopId(shopId: number) {
+  static getByShopId(
+    shopId: number,
+    filters?: {
+      status?: string;
+      search?: string;
+      startDate?: string;
+      endDate?: string;
+      sortBy?: string;
+      sortOrder?: string;
+      page?: number;
+      pageSize?: number;
+      paymentStatus?: string;
+    },
+  ) {
+    const params = new URLSearchParams();
+
+    // Add non-empty filters to query params
+    if (filters?.status && filters.status !== "ALL")
+      params.set("status", filters.status);
+    if (filters?.paymentStatus && filters.paymentStatus !== "ALL")
+      params.set("paymentStatus", filters.paymentStatus);
+    if (filters?.search) params.set("search", filters.search);
+
+    if (filters?.startDate) params.set("startDate", filters.startDate);
+    if (filters?.endDate) params.set("endDate", filters.endDate);
+
+    if (filters?.sortBy) params.set("sortBy", filters.sortBy);
+    if (filters?.sortOrder) params.set("sortOrder", filters.sortOrder);
+    if (filters?.page) params.set("page", filters?.page.toString());
+    if (filters?.pageSize) params.set("size", filters?.pageSize.toString());
+
+    console.log("Fetching order shipments with params:", params.toString());
     return {
-      queryKey: [this.queryKeys.findByShopId, shopId],
+      queryKey: [
+        this.queryKeys.findByShopId,
+        shopId,
+        JSON.stringify(filters ?? {}),
+      ],
       queryFn: (): Promise<IOrderShipment[]> =>
         this.api
           .get<IOrderShipment[]>({
-            url: `${API_URL}/api/orders/shipments/shop/${shopId}`,
+            url: `${API_URL}/api/orders/shipments/shop/${shopId}${params.toString() ? `?${params.toString()}` : ""}`,
+            //params: filterParams,
           })
           .then((r) => r.data),
+    };
+  }
+
+  static getById(shipmentId: number) {
+    return {
+      queryKey: [this.queryKeys.findOne, shipmentId],
+      queryFn: (): Promise<IOrderShipment> =>
+        this.api
+          .get<IOrderShipment>({
+            url: `${API_URL}/api/orders/shipments/${shipmentId}`,
+          })
+          .then((r) => r.data),
+      enabled: !!shipmentId,
     };
   }
 
@@ -40,6 +89,34 @@ export class OrderShipments extends Model {
       message: string;
     }>({
       url: `${API_URL}/api/orders/shipments/${shipmentId}/confirm-packaged`,
+    });
+  }
+
+  static createAdjustmentRequest(
+    shipmentId: number,
+    payload: {
+      shopReason: string;
+      items: Array<{
+        orderItemId: number;
+        newQuantity: number;
+      }>;
+    },
+  ) {
+    return this.api.post({
+      url: `${API_URL}/api/orders/shipments/${shipmentId}/adjustment-request`,
+      data: payload,
+    });
+  }
+
+  static cancelByOutOfStock(
+    shipmentId: number,
+    payload: {
+      reason: string;
+    },
+  ) {
+    return this.api.post({
+      url: `${API_URL}/api/orders/shipments/${shipmentId}/cancel-by-oos`,
+      data: payload,
     });
   }
 }

@@ -7,6 +7,7 @@ export const calculateFeeOfLOGS = async (
   // const { from_district_id, to_district_id, weight, length, width, height } =
   params;
   try {
+    //   alert("Calculating fee with params: " + JSON.stringify(params));
     const response = await fetch(LOGISTICS_FEE_API, {
       method: "POST",
       headers: {

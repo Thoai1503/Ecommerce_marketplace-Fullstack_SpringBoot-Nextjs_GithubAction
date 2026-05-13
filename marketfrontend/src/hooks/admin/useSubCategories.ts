@@ -1,34 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { API_URL } from "@/helper/api";
+
+const CATEGORY_API_URL = `${API_URL}/api/categories`;
 
 export function useSubCategories(parentId: string) {
   const [subCategories, setSubCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!parentId) return;
+  const fetchData = useCallback(async () => {
+    if (!parentId) {
+      setSubCategories([]);
+      setLoading(false);
+      return;
+    }
 
-    const fetchData = async () => {
-      try {
-        const res = await fetch(
-          `http://localhost:8000/api/categories/children/${parentId}`,
-        );
+    setLoading(true);
 
-        if (!res.ok) throw new Error("Fetch failed");
+    try {
+      const res = await fetch(`${CATEGORY_API_URL}/children/${parentId}`);
 
-        const data = await res.json();
+      if (!res.ok) throw new Error("Fetch failed");
 
-        setSubCategories(data);
-      } catch (err) {
-        console.error("Load subcategories error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+      const data = await res.json();
 
-    fetchData();
+      setSubCategories(data);
+    } catch (err) {
+      console.error("Load subcategories error:", err);
+      setSubCategories([]);
+    } finally {
+      setLoading(false);
+    }
   }, [parentId]);
 
-  return { subCategories, loading };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { subCategories, loading, refresh: fetchData };
 }

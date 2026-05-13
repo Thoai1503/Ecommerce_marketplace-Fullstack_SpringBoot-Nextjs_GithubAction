@@ -8,9 +8,13 @@ import { API_URL } from "@/helper/api";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { CartItem, GroupedCartByShop } from "@/validators/cart";
 import { productVariantQuery } from "@/query/productVariant";
+import { productQuery } from "@/feature/client/query";
 
 type CartStateItem = CartItem & {
   selected: boolean;
+  isGuest?: boolean;
+  guestProductId?: number;
+  guestVariantId?: number;
 };
 
 type EnrichedCartItem = CartStateItem & {
@@ -18,35 +22,196 @@ type EnrichedCartItem = CartStateItem & {
   height?: number;
   weight?: number;
   stockQuantity?: number;
+  isVariantActive?: boolean;
+  isLocked?: boolean;
+  lockedReason?: string;
 };
+
+type PreLoginCartItem = {
+  user_id: null;
+  product_id: number;
+  variant_id: number;
+  quantity: number;
+};
+
+const toOptionalNumber = (value: any): number | undefined => {
+  if (value === undefined || value === null || value === "") return undefined;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+};
+
+const isInactiveValue = (value: any) =>
+  value === 0 || value === "0" || value === false || value === "false";
+
+const resolveProductId = (item: any): number | null => {
+  return (
+    item?.guestProductId ??
+    item?.product?.id ??
+    item?.product?.product_id ??
+    item?.productId ??
+    item?.product_id ??
+    null
+  );
+};
+
+const resolveVariantId = (item: any): number | null => {
+  return (
+    item?.guestVariantId ??
+    item?.productVariant?.id ??
+    item?.productVariant?.variant_id ??
+    item?.variantId ??
+    item?.variant_id ??
+    null
+  );
+};
+
 
 const ShoppingCart: React.FC = () => {
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { userId } = useUserAuth();
-  const { data, isError, status } = useQuery(Cart.getByUserId(userId || 0));
+  const isLoggedIn = Boolean(userId);
+  const { data, isError, status } = useQuery({
+    ...Cart.getByUserId(userId || 0),
+    enabled: isLoggedIn,
+  });
 
+  const [preLoginCart, setPreLoginCart] = useState<PreLoginCartItem[]>([]);
   // State lưu danh sách cartItems từ API + selected flag
   const [cartItems, setCartItems] = useState<CartStateItem[]>([]);
   // Track items đang được update/delete để disable tương tác
   const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
   const [stockWarning, setStockWarning] = useState<Record<number, string>>({});
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem("preLoginCart");
+      setPreLoginCart(raw ? JSON.parse(raw) : []);
+    } catch {
+      setPreLoginCart([]);
+    }
+  }, []);
+
   // Sync dữ liệu từ API vào state khi data thay đổi
   useEffect(() => {
+    if (!isLoggedIn) return;
     if (data) {
       setCartItems((prev) =>
         data.map((item) => ({
           ...item,
+          guestProductId: resolveProductId(item) ?? undefined,
+          guestVariantId: resolveVariantId(item) ?? undefined,
           selected:
             prev.find((prevItem) => prevItem.id === item.id)?.selected ?? false,
         })),
       );
     }
-  }, [data]);
+  }, [data, isLoggedIn]);
+
+  const productQueries = useQueries({
+    queries: preLoginCart.map((item) => {
+      const productId = item.product_id;
+      return {
+        ...productQuery.detail_with_shop(productId),
+        enabled: !isLoggedIn && Boolean(productId),
+      };
+    }),
+  });
+  const guestVariantQueries = useQueries({
+    queries: preLoginCart.map((item) => {
+      const variantId = item.variant_id;
+      return {
+        ...productVariantQuery.detail(variantId ?? 0),
+        enabled: !isLoggedIn && Boolean(variantId),
+      };
+    }),
+  });
+
+  useEffect(() => {
+    if (isLoggedIn) return;
+
+    if (preLoginCart.length === 0) {
+      setCartItems([]);
+      return;
+    }
+
+    const hasPendingQueries =
+      productQueries.some((q) => q.isLoading) ||
+      guestVariantQueries.some((q) => q.isLoading);
+
+    if (hasPendingQueries) return;
+
+    setCartItems((prev) => {
+      const nextItems = preLoginCart.map((item, index) => {
+        const productData = productQueries[index]?.data;
+        const variantData = guestVariantQueries[index]?.data;
+        const syntheticId = Number(
+          `9${item.product_id}${item.variant_id}${index}`,
+        );
+        const existingItem = prev.find(
+          (prevItem) => prevItem.id === syntheticId,
+        );
+
+        return {
+          id: syntheticId,
+          userId: 0,
+          quantity: item.quantity,
+          addedAt: existingItem?.addedAt ?? new Date().toISOString(),
+          updatedAt: existingItem?.updatedAt ?? new Date().toISOString(),
+          selected:
+            prev.find((prevItem) => prevItem.id === syntheticId)?.selected ??
+            false,
+          isGuest: true,
+          guestProductId: item.product_id,
+          guestVariantId: item.variant_id,
+          product: {
+            id: productData?.id ?? item.product_id,
+            name: productData?.name ?? "",
+            shop: {
+              id: productData?.shop?.id ?? 0,
+              userId: productData?.shop?.userId ?? 0,
+              shopName: productData?.shop?.shopName ?? "",
+            },
+          },
+          productVariant: variantData
+            ? {
+                id: variantData.id,
+                variantName: variantData.variantName ?? "",
+                sku: variantData.sku,
+                price: variantData.price,
+                stockQuantity: variantData.stockQuantity,
+                imageUrl: variantData.imageUrl,
+              }
+            : null,
+        } as CartStateItem;
+      });
+
+      const unchanged =
+        prev.length === nextItems.length &&
+        prev.every((prevItem, index) => {
+          const nextItem = nextItems[index];
+          if (!nextItem) return false;
+
+          return (
+            prevItem.id === nextItem.id &&
+            prevItem.quantity === nextItem.quantity &&
+            prevItem.selected === nextItem.selected &&
+            prevItem.guestProductId === nextItem.guestProductId &&
+            prevItem.guestVariantId === nextItem.guestVariantId &&
+            prevItem.product?.name === nextItem.product?.name &&
+            prevItem.productVariant?.price === nextItem.productVariant?.price &&
+            prevItem.productVariant?.stockQuantity ===
+              nextItem.productVariant?.stockQuantity
+          );
+        });
+
+      return unchanged ? prev : nextItems;
+    });
+  }, [guestVariantQueries, isLoggedIn, preLoginCart, productQueries]);
 
   const variantQueries = useQueries({
     queries: cartItems.map((item) => {
-      const variantId = item.productVariant?.id;
+      const variantId = resolveVariantId(item);
 
       return {
         ...productVariantQuery.detail(variantId ?? 0),
@@ -54,43 +219,150 @@ const ShoppingCart: React.FC = () => {
       };
     }),
   });
-  console.log("Variant Queries:", variantQueries);
+
+  const cartProductQueries = useQueries({
+    queries: cartItems.map((item) => {
+      const productId = resolveProductId(item);
+
+      return {
+        ...productQuery.detail_with_shop(productId ?? 0),
+        enabled: Boolean(productId),
+      };
+    }),
+  });
 
   const enrichedCartItems = useMemo<EnrichedCartItem[]>(() => {
     return cartItems.map((item, index) => {
+      const productData = cartProductQueries[index]?.data;
       const variantData = variantQueries[index]?.data;
+      const currentVariant = item.productVariant;
+      const variantStockQuantity = toOptionalNumber(
+        variantData?.stockQuantity ??
+          variantData?.stock_quantity ??
+          currentVariant?.stockQuantity ??
+          (currentVariant as any)?.stock_quantity,
+      );
+      const variantActiveRaw =
+        variantData?.isActive ??
+        variantData?.is_active ??
+        variantData?.active ??
+        (currentVariant as any)?.isActive ??
+        (currentVariant as any)?.is_active ??
+        (currentVariant as any)?.active;
+      const isVariantActive =
+        variantActiveRaw === undefined || variantActiveRaw === null
+          ? true
+          : !isInactiveValue(variantActiveRaw);
+      const lockedReason = !isVariantActive
+        ? "This product category has been discontinued."
+        : variantStockQuantity !== undefined && variantStockQuantity <= 0
+          ? "The item is out of stock."
+          : "";
 
       return {
         ...item,
+        product: {
+          id: productData?.id ?? item.product?.id ?? item.guestProductId ?? 0,
+          name:
+            productData?.name ??
+            (item.product as any)?.name ??
+            (item.product as any)?.product_name ??
+            "",
+          shop: {
+            id: productData?.shop?.id ?? item.product?.shop?.id ?? 0,
+            userId:
+              productData?.shop?.userId ?? item.product?.shop?.userId ?? 0,
+            shopName:
+              productData?.shop?.shopName ??
+              (item.product as any)?.shop?.shopName ??
+              (item.product as any)?.shop?.shop_name ??
+              "",
+          },
+        },
+        productVariant:
+          variantData || currentVariant
+            ? {
+                id: variantData?.id ?? currentVariant?.id ?? 0,
+                variantName:
+                  variantData?.variantName ??
+                  (currentVariant as any)?.variantName ??
+                  (currentVariant as any)?.variant_name ??
+                  "",
+                sku: variantData?.sku ?? currentVariant?.sku ?? "",
+                price: variantData?.price ?? currentVariant?.price ?? 0,
+                stockQuantity: variantStockQuantity ?? 0,
+                imageUrl:
+                  variantData?.imageUrl ?? currentVariant?.imageUrl ?? "",
+              }
+            : null,
         width: variantData?.width ?? 0,
         height: variantData?.height ?? 0,
         weight: variantData?.weight ?? 0,
         // Ưu tiên data fresh từ variantQuery, fallback về data gốc trong cartItem
-        stockQuantity:
-          variantData?.stockQuantity ?? item.productVariant?.stockQuantity ?? 0,
+        stockQuantity: variantStockQuantity,
+        isVariantActive,
+        isLocked: Boolean(lockedReason),
+        lockedReason,
       };
     });
-  }, [cartItems, variantQueries]);
+  }, [cartItems, cartProductQueries, variantQueries]);
 
   // Lưu các item được chọn vào localStorage
   useEffect(() => {
-    const selectedItems = enrichedCartItems.filter((item) => item.selected);
+    const selectedItems = enrichedCartItems.filter(
+      (item) => item.selected && !item.isLocked,
+    );
     localStorage.setItem("selectedCartItems", JSON.stringify(selectedItems));
+  }, [enrichedCartItems]);
+
+  useEffect(() => {
+    const lockedSelectedIds = new Set(
+      enrichedCartItems
+        .filter((item) => item.isLocked && item.selected)
+        .map((item) => item.id),
+    );
+
+    if (lockedSelectedIds.size === 0) return;
+
+    setCartItems((prev) =>
+      prev.map((item) =>
+        lockedSelectedIds.has(item.id) ? { ...item, selected: false } : item,
+      ),
+    );
   }, [enrichedCartItems]);
 
   useEffect(() => {
     if (isError) {
       alert(
-        "Đã xảy ra lỗi khi tải dữ liệu giỏ hàng. Vui lòng thử lại sau. " +
+        "An error occurred while loading shopping cart data. Please try again later. " +
           status,
       ); //
       console.error("Error fetching cart data");
     }
   }, [isError, status]);
 
-  const [voucher, setVoucher] = useState("");
-  const discount = 50000;
-  const shippingFee = 35000;
+  const syncGuestCartLocalStorage = (nextItems: CartStateItem[]) => {
+    if (typeof window === "undefined") return;
+
+    const rawPayload = nextItems
+      .filter((item) => item.isGuest)
+      .map((item) => ({
+        user_id: null,
+        product_id: item.guestProductId ?? item.product?.id,
+        variant_id: item.guestVariantId ?? item.productVariant?.id,
+        quantity: item.quantity,
+      }));
+
+    const payload = rawPayload.filter(
+      (item): item is PreLoginCartItem =>
+        typeof item.product_id === "number" &&
+        typeof item.variant_id === "number",
+    );
+
+    localStorage.setItem("preLoginCart", JSON.stringify(payload));
+    setPreLoginCart(payload);
+    window.dispatchEvent(new Event("cart-updated"));
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -103,16 +375,19 @@ const ShoppingCart: React.FC = () => {
   const groupedByShop: Record<number, GroupedCartByShop> = useMemo(() => {
     return enrichedCartItems.reduce(
       (acc, item) => {
-        const shopId = item?.product?.shop?.id;
+        const shopId = item?.product?.shop?.id ?? 0;
         if (!acc[shopId]) {
-          acc[shopId] = { shop: item?.product?.shop, items: [] };
+          acc[shopId] = {
+            shop: item?.product?.shop,
+            items: [],
+          };
         }
         acc[shopId].items.push(item);
         return acc;
       },
       {} as Record<
         number,
-        GroupedCartByShop & { items: (CartItem & { selected: boolean })[] }
+        GroupedCartByShop & { items: EnrichedCartItem[] }
       >,
     );
   }, [enrichedCartItems]);
@@ -120,7 +395,7 @@ const ShoppingCart: React.FC = () => {
   // ===== Tính toán =====
   const calculateSubtotal = () => {
     return enrichedCartItems
-      .filter((item) => item.selected)
+      .filter((item) => item.selected && !item.isLocked)
       .reduce(
         (sum, item) => sum + (item.productVariant?.price ?? 0) * item.quantity,
         0,
@@ -128,27 +403,39 @@ const ShoppingCart: React.FC = () => {
   };
 
   const calculateTotal = () => {
-    return calculateSubtotal() - discount + shippingFee;
+    return Math.max(0, calculateSubtotal());
   };
 
+  const selectableItems = enrichedCartItems.filter((item) => !item.isLocked);
+
   const selectedCount = enrichedCartItems.filter(
-    (item) => item.selected,
+    (item) => item.selected && !item.isLocked,
   ).length;
 
   // ===== Checkbox logic =====
   const isAllSelected =
-    enrichedCartItems.length > 0 &&
-    enrichedCartItems.every((item) => item.selected);
+    selectableItems.length > 0 && selectableItems.every((item) => item.selected);
   const isIndeterminate =
-    enrichedCartItems.some((item) => item.selected) && !isAllSelected;
+    selectableItems.some((item) => item.selected) && !isAllSelected;
 
   const toggleSelectAll = () => {
+    if (selectableItems.length === 0) return;
+
     setCartItems((prev) =>
-      prev.map((item) => ({ ...item, selected: !isAllSelected })),
+      prev.map((item) => {
+        const isSelectable = selectableItems.some(
+          (selectableItem) => selectableItem.id === item.id,
+        );
+        return isSelectable ? { ...item, selected: !isAllSelected } : item;
+      }),
     );
   };
 
   const toggleItemSelection = (itemId: number) => {
+    const currentItem = enrichedCartItems.find((item) => item.id === itemId);
+    if (!currentItem) return;
+    if (currentItem.isLocked) return;
+
     setCartItems((prev) =>
       prev.map((item) =>
         item.id === itemId ? { ...item, selected: !item.selected } : item,
@@ -157,25 +444,38 @@ const ShoppingCart: React.FC = () => {
   };
 
   const isShopAllSelected = (shopId: number) => {
-    const shopItems = groupedByShop[shopId]?.items as (CartItem & {
-      selected: boolean;
-    })[];
-    return shopItems?.length > 0 && shopItems.every((item) => item.selected);
+    const shopItems = (groupedByShop[shopId]?.items ??
+      []) as EnrichedCartItem[];
+    const selectableShopItems = shopItems.filter((item) => !item.isLocked);
+
+    return (
+      selectableShopItems.length > 0 &&
+      selectableShopItems.every((item) => item.selected)
+    );
   };
 
   const isShopIndeterminate = (shopId: number) => {
-    const shopItems = groupedByShop[shopId]?.items as (CartItem & {
-      selected: boolean;
-    })[];
-    const selectedCount = shopItems?.filter((i) => i.selected).length ?? 0;
-    return selectedCount > 0 && selectedCount < (shopItems?.length ?? 0);
+    const shopItems = (groupedByShop[shopId]?.items ??
+      []) as EnrichedCartItem[];
+    const selectableShopItems = shopItems.filter((item) => !item.isLocked);
+    const selectedCount =
+      selectableShopItems.filter((item) => item.selected).length ?? 0;
+
+    return selectedCount > 0 && selectedCount < selectableShopItems.length;
   };
 
   const toggleShopSelection = (shopId: number) => {
     const allSelected = isShopAllSelected(shopId);
+    const shopItems = (groupedByShop[shopId]?.items ??
+      []) as EnrichedCartItem[];
+    const selectableShopItems = shopItems.filter((item) => !item.isLocked);
+
+    if (selectableShopItems.length === 0) return;
+
     setCartItems((prev) =>
       prev.map((item) =>
-        item.product.shop.id === shopId
+        item.product?.shop?.id === shopId &&
+        selectableShopItems.some((selectableItem) => selectableItem.id === item.id)
           ? { ...item, selected: !allSelected }
           : item,
       ),
@@ -187,25 +487,28 @@ const ShoppingCart: React.FC = () => {
     const currentItem = enrichedCartItems.find((i) => i.id === itemId);
     if (!currentItem) return;
     if (updatingItems.has(itemId)) return;
-
-    const stock = currentItem.stockQuantity ?? Infinity;
-    const rawQty = Math.max(1, currentItem.quantity + delta);
-    const newQty = delta > 0 ? Math.min(rawQty, stock) : rawQty;
-
-    if (delta > 0 && rawQty > stock) {
+    if (currentItem.isLocked) {
       setStockWarning((prev) => ({
         ...prev,
-        [itemId]: `Chi con ${stock} san pham trong kho`,
+        [itemId]: currentItem.lockedReason || "Sản phẩm không thể mua",
       }));
-    } else {
-      setStockWarning((prev) => {
-        const next = { ...prev };
-        delete next[itemId];
-        return next;
-      });
+      return;
     }
 
+    const newQty = Math.max(1, currentItem.quantity + delta);
+
     if (newQty === currentItem.quantity) return;
+
+    if (currentItem.isGuest) {
+      setCartItems((prev) => {
+        const nextItems = prev.map((item) =>
+          item.id === itemId ? { ...item, quantity: newQty } : item,
+        );
+        syncGuestCartLocalStorage(nextItems);
+        return nextItems;
+      });
+      return;
+    }
 
     // Optimistic update
     setCartItems((prev) =>
@@ -216,6 +519,7 @@ const ShoppingCart: React.FC = () => {
     setUpdatingItems((prev) => new Set(prev).add(itemId));
     try {
       await Cart.updateCartItem(itemId, newQty);
+      window.dispatchEvent(new Event("cart-updated"));
     } catch {
       // Rollback on error
       setCartItems((prev) =>
@@ -235,6 +539,23 @@ const ShoppingCart: React.FC = () => {
   };
 
   const removeItem = async (itemId: number) => {
+    const currentItem = cartItems.find((i) => i.id === itemId);
+    if (!currentItem) return;
+
+    if (currentItem.isGuest) {
+      setCartItems((prev) => {
+        const nextItems = prev.filter((item) => item.id !== itemId);
+        syncGuestCartLocalStorage(nextItems);
+        return nextItems;
+      });
+      setStockWarning((prev) => {
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
+      });
+      return;
+    }
+
     if (updatingItems.has(itemId)) return;
     setUpdatingItems((prev) => new Set(prev).add(itemId));
     // Optimistic remove
@@ -247,6 +568,7 @@ const ShoppingCart: React.FC = () => {
     });
     try {
       await Cart.deleteCartItem(itemId);
+      window.dispatchEvent(new Event("cart-updated"));
     } catch {
       // Restore item on error
       if (snapshot) {
@@ -325,13 +647,20 @@ const ShoppingCart: React.FC = () => {
     },
   ];
 
-  if (!data && !isError) {
+  const isGuestLoading =
+    !isLoggedIn &&
+    preLoginCart.length > 0 &&
+    (productQueries.some((q) => q.isLoading) ||
+      guestVariantQueries.some((q) => q.isLoading)) &&
+    cartItems.length === 0;
+
+  if ((isLoggedIn && status === "pending") || isGuestLoading) {
     return (
       <div className="container py-5 text-center">
         <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Đang tải...</span>
+          <span className="visually-hidden">Loading...</span>
         </div>
-        <p className="mt-3 text-muted">Đang tải giỏ hàng...</p>
+        <p className="mt-3 text-muted">Loading shopping cart...</p>
       </div>
     );
   }
@@ -343,9 +672,9 @@ const ShoppingCart: React.FC = () => {
         <div className="col-lg-8">
           <div className="d-flex align-items-center justify-content-between mb-4">
             <h2 className="h3 fw-bold d-flex align-items-center gap-3 mb-0">
-              Giỏ Hàng
+              Shopping Cart
               <span className="badge bg-light text-dark fs-6 fw-normal">
-                ({cartItems.length} sản phẩm)
+                ({selectableItems.length} items)
               </span>
             </h2>
           </div>
@@ -363,6 +692,7 @@ const ShoppingCart: React.FC = () => {
                     className="form-check-input"
                     style={{ width: "20px", height: "20px" }}
                     checked={isAllSelected}
+                    disabled={selectableItems.length === 0}
                     ref={(el) => {
                       if (el) el.indeterminate = isIndeterminate;
                     }}
@@ -371,15 +701,15 @@ const ShoppingCart: React.FC = () => {
                 </div>
                 <div className="col">
                   <span className="fw-semibold">
-                    Chọn tất cả ({cartItems.length})
+                    Select all ({selectableItems.length})
                   </span>
                 </div>
                 <div className="col-md-7 d-none d-md-block">
                   <div className="row text-center text-muted small fw-medium">
-                    <div className="col-3">Đơn giá</div>
-                    <div className="col-3">Số lượng</div>
-                    <div className="col-3">Thành tiền</div>
-                    <div className="col-3">Thao tác</div>
+                    <div className="col-3">Unit price</div>
+                    <div className="col-3">Quantity</div>
+                    <div className="col-3">Total</div>
+                    <div className="col-3">Actions</div>
                   </div>
                 </div>
               </div>
@@ -391,7 +721,7 @@ const ShoppingCart: React.FC = () => {
             <div className="card shadow-sm">
               <div className="card-body text-center py-5">
                 <i className="bi bi-cart-x fs-1 text-muted"></i>
-                <p className="mt-3 text-muted">Giỏ hàng của bạn đang trống.</p>
+                <p className="mt-3 text-muted">Your shopping cart is empty.</p>
               </div>
             </div>
           )}
@@ -400,6 +730,14 @@ const ShoppingCart: React.FC = () => {
           {Object.entries(groupedByShop)?.map(([shopIdStr, group]) => {
             const shopId = Number(shopIdStr);
             const typedItems = group.items as EnrichedCartItem[];
+            const displayItems = typedItems
+              .map((item, originalIndex) => ({ item, originalIndex }))
+              .sort(
+                (a, b) =>
+                  Number(a.item.isLocked) - Number(b.item.isLocked) ||
+                  a.originalIndex - b.originalIndex,
+              )
+              .map(({ item }) => item);
 
             return (
               <div key={shopId} className="card shadow-sm mb-3">
@@ -410,6 +748,7 @@ const ShoppingCart: React.FC = () => {
                     className="form-check-input"
                     style={{ width: "20px", height: "20px" }}
                     checked={isShopAllSelected(shopId)}
+                    disabled={typedItems.every((item) => item.isLocked)}
                     ref={(el) => {
                       if (el) el.indeterminate = isShopIndeterminate(shopId);
                     }}
@@ -417,16 +756,18 @@ const ShoppingCart: React.FC = () => {
                   />
                   <i className="bi bi-shop text-primary"></i>
                   <span className="fw-bold text-uppercase small">
-                    {group?.shop?.shopName}
+                    {group?.shop?.shopName || "Loading shop name..."}
                   </span>
                   <i className="bi bi-chevron-right text-muted"></i>
                 </div>
 
                 {/* Products */}
-                {typedItems.map((item, index) => (
+                {displayItems.map((item, index) => (
                   <div
                     key={item.id}
-                    className={`card-body ${index < typedItems.length - 1 ? "border-bottom" : ""}`}
+                    className={`card-body ${
+                      index < displayItems.length - 1 ? "border-bottom" : ""
+                    } ${item.isLocked ? "bg-light" : ""}`}
                   >
                     <div className="row align-items-center g-3">
                       {/* Product Info */}
@@ -435,7 +776,8 @@ const ShoppingCart: React.FC = () => {
                           <input
                             type="checkbox"
                             className="form-check-input"
-                            checked={item.selected}
+                            checked={item.selected && !item.isLocked}
+                            disabled={item.isLocked}
                             onChange={() => toggleItemSelection(item.id)}
                             style={{ width: "20px", height: "20px" }}
                           />
@@ -454,15 +796,30 @@ const ShoppingCart: React.FC = () => {
                           </div>
                           <div className="flex-grow-1 min-w-0">
                             <h6 className="fw-bold mb-1 text-truncate">
-                              {item?.product?.name}
+                              {item?.product?.name ||
+                                "Uploading product..."}
                             </h6>
-                            {item?.productVariant && (
+                            <div className="small text-muted mb-1">
+                              Shop:{" "}
+                              {item?.product?.shop?.shopName ||
+                                "Uploading shop name..."}
+                            </div>
+                            {(item?.productVariant ||
+                              item.productVariant?.id) && (
                               <div className="small text-muted d-flex align-items-center gap-1">
-                                Phân loại:{" "}
+                                Classify:{" "}
                                 <span className="text-dark fw-medium">
-                                  {item?.productVariant?.variantName}
+                                  {item?.productVariant?.variantName ||
+                                    "Uploading variant name..."}
                                 </span>
                                 <i className="bi bi-chevron-down"></i>
+                              </div>
+                            )}
+                            {item.isLocked && (
+                              <div className="mt-2">
+                                <span className="badge bg-secondary">
+                                  {item.lockedReason || "Uploading locked reason..."}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -475,7 +832,7 @@ const ShoppingCart: React.FC = () => {
                           {/* Price */}
                           <div className="col-6 col-md-3">
                             <div className="d-md-none small text-muted mb-1">
-                              Đơn giá
+                              Unit price
                             </div>
                             <div className="fw-bold">
                               {formatCurrency(item.productVariant?.price ?? 0)}
@@ -485,19 +842,24 @@ const ShoppingCart: React.FC = () => {
                           {/* Quantity */}
                           <div className="col-6 col-md-3">
                             <div className="d-md-none small text-muted mb-1">
-                              Số lượng
+                             Quantity
                             </div>
                             <div
                               className="btn-group"
                               role="group"
                               style={{
-                                opacity: updatingItems.has(item.id) ? 0.6 : 1,
+                                opacity:
+                                  updatingItems.has(item.id) || item.isLocked
+                                    ? 0.6
+                                    : 1,
+                                pointerEvents: item.isLocked ? "none" : "auto",
                               }}
                             >
                               <button
                                 className="btn btn-outline-secondary btn-sm"
                                 onClick={() => updateQuantity(item.id, -1)}
                                 disabled={
+                                  item.isLocked ||
                                   updatingItems.has(item.id) ||
                                   item.quantity <= 1
                                 }
@@ -519,9 +881,8 @@ const ShoppingCart: React.FC = () => {
                                 className="btn btn-outline-secondary btn-sm"
                                 onClick={() => updateQuantity(item.id, 1)}
                                 disabled={
-                                  updatingItems.has(item.id) ||
-                                  item.quantity >=
-                                    (item.stockQuantity ?? Infinity)
+                                  item.isLocked ||
+                                  updatingItems.has(item.id)
                                 }
                               >
                                 <i className="bi bi-plus"></i>
@@ -537,13 +898,14 @@ const ShoppingCart: React.FC = () => {
                               </div>
                             )}
                             {(item.stockQuantity ?? 0) > 0 &&
+                              !item.isLocked &&
                               (item.stockQuantity ?? 0) <= 5 && (
                                 <div
                                   className="text-warning mt-1"
                                   style={{ fontSize: "11px" }}
                                 >
                                   <i className="bi bi-clock-history me-1"></i>
-                                  Con {item.stockQuantity} san pham
+                                  Còn {item.stockQuantity} sản phẩm
                                 </div>
                               )}
                           </div>
@@ -553,7 +915,11 @@ const ShoppingCart: React.FC = () => {
                             <div className="d-md-none small text-muted mb-1">
                               Thành tiền
                             </div>
-                            <div className="fw-bold text-primary">
+                            <div
+                              className={`fw-bold ${
+                                item.isLocked ? "text-muted" : "text-primary"
+                              }`}
+                            >
                               {formatCurrency(
                                 (item.productVariant?.price ?? 0) *
                                   item.quantity,
@@ -592,99 +958,43 @@ const ShoppingCart: React.FC = () => {
         {/* Right Column: Summary */}
         <div className="col-lg-4">
           <div style={{ top: "88px" }}>
-            {/* Address Card */}
-            <div className="card shadow-sm mb-3">
-              <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h6 className="text-uppercase text-muted small fw-bold mb-0">
-                    Địa chỉ nhận hàng
-                  </h6>
-                  <button className="btn btn-link btn-sm text-primary p-0">
-                    Thay đổi
-                  </button>
-                </div>
-                <div className="d-flex gap-2">
-                  <i className="bi bi-geo-alt-fill text-primary"></i>
-                  <div className="small">
-                    <p className="fw-bold mb-1">Nguyễn Văn A | 090 123 4567</p>
-                    <p className="text-muted mb-0">
-                      123 Đường Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí
-                      Minh
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Voucher Card */}
-            <div className="card shadow-sm mb-3">
-              <div className="card-body">
-                <h6 className="text-uppercase text-muted small fw-bold mb-3 d-flex align-items-center gap-2">
-                  <i className="bi bi-tag"></i>
-                  Voucher khuyến mãi
-                </h6>
-                <div className="input-group">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Nhập mã giảm giá..."
-                    value={voucher}
-                    onChange={(e) => setVoucher(e.target.value)}
-                  />
-                  <button className="btn btn-primary">Áp dụng</button>
-                </div>
-              </div>
-            </div>
 
             {/* Payment Summary */}
             <div className="card shadow-sm mb-3">
               <div className="card-body">
                 <div className="d-flex justify-content-between mb-3">
                   <span className="text-muted small">
-                    Tạm tính ({selectedCount} sản phẩm đã chọn)
+                    Temporarily calculated ({selectedCount} items selected)
                   </span>
                   <span className="fw-semibold">
                     {formatCurrency(calculateSubtotal())}
                   </span>
                 </div>
-                <div className="d-flex justify-content-between mb-3">
-                  <span className="text-muted small">Giảm giá voucher</span>
-                  <span className="fw-semibold text-success">
-                    - {formatCurrency(discount)}
-                  </span>
-                </div>
-                <div className="d-flex justify-content-between mb-3">
-                  <span className="text-muted small">Phí vận chuyển</span>
-                  <div className="text-end">
-                    <div className="fw-semibold">
-                      {formatCurrency(shippingFee)}
-                    </div>
-                    <span
-                      className="badge bg-success"
-                      style={{ fontSize: "9px" }}
-                    >
-                      MIỄN PHÍ VẬN CHUYỂN
-                    </span>
-                  </div>
-                </div>
                 <hr className="border-dashed" />
                 <div className="d-flex justify-content-between align-items-end mb-4">
-                  <span className="fw-bold">Tổng cộng</span>
+                  <span className="fw-bold">Total</span>
                   <div className="text-end">
                     <div className="h4 fw-bold text-primary mb-0">
                       {formatCurrency(calculateTotal())}
                     </div>
                     <small className="text-muted" style={{ fontSize: "10px" }}>
-                      (Đã bao gồm VAT nếu có)
+                      (Already includes VAT if applicable)
                     </small>
                   </div>
                 </div>
                 <button
                   className="btn btn-primary w-100 py-3 fw-bold d-flex align-items-center justify-content-center gap-2"
                   disabled={selectedCount === 0}
-                  onClick={() => (window.location.href = "/checkout")}
+                  onClick={() => {
+                    if (isLoggedIn) {
+                      window.location.href = "/checkout";
+                    } else {
+                      window.location.href = "/login?redirect=cart";
+                    }
+                  }}
                 >
-                  MUA HÀNG ({selectedCount})
+                  CHECKOUT ({selectedCount})
                   <i className="bi bi-arrow-right"></i>
                 </button>
                 <div className="d-flex justify-content-center gap-4 mt-3 opacity-50">
@@ -697,15 +1007,15 @@ const ShoppingCart: React.FC = () => {
 
             {/* Terms */}
             <div className="alert alert-light text-center small">
-              Bằng việc nhấn "Mua Hàng", bạn đồng ý với{" "}
+              By clicking "Checkout", you agree to our{" "}
               <a href="#" className="text-primary">
-                Điều khoản dịch vụ
+                Terms of Service
               </a>{" "}
-              và{" "}
+              and{" "}
               <a href="#" className="text-primary">
-                Chính sách bảo mật
+                Privacy Policy
               </a>{" "}
-              của E-Shop.
+              of Naxe.
             </div>
           </div>
         </div>

@@ -1,4 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 
 type Props = {
   open: boolean;
@@ -6,6 +8,7 @@ type Props = {
   attributes: any[];
   existingIds: number[];
   onSubmit: (selectedIds: number[]) => Promise<void>;
+  categoryId?: string | number;
 };
 
 export default function SelectAttributesModal({
@@ -14,7 +17,9 @@ export default function SelectAttributesModal({
   attributes,
   existingIds,
   onSubmit,
+  categoryId,
 }: Props) {
+  const router = useRouter();
   const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -42,6 +47,15 @@ export default function SelectAttributesModal({
       attr.name.toLowerCase().includes(search.toLowerCase())
     );
   }, [attributes, search]);
+
+  // ➕ handle create new attribute
+  const handleCreateNewAttribute = () => {
+    if (!search.trim()) return;
+    
+    const createUrl = `/admin/categories/attributes/new?name=${encodeURIComponent(search)}&autoAddCategoryId=${categoryId}`;
+    router.push(createUrl);
+    onClose();
+  };
 
   if (!open) return null;
 
@@ -105,9 +119,21 @@ export default function SelectAttributesModal({
 
           {/* 🔥 empty state */}
           {filteredAttributes.length === 0 && (
-            <p className="text-sm text-gray-400 text-center">
-              No attributes found
-            </p>
+            <div className="space-y-3 py-6">
+              <p className="text-sm text-gray-400 text-center">
+                No attributes found
+              </p>
+
+              {search.trim() && categoryId && (
+                <button
+                  onClick={handleCreateNewAttribute}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-50 border border-blue-300 text-blue-700 hover:bg-blue-100 transition font-medium text-sm"
+                >
+                  <Plus size={16} />
+                  Create new attribute "{search}" & add to category
+                </button>
+              )}
+            </div>
           )}
         </div>
 

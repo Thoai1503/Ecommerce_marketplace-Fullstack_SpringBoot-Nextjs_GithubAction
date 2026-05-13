@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { API_URL } from "@/helper/api";
 
-const API_URL = "http://localhost:8000/api/attribute-unit";
+const ATTRIBUTE_UNIT_API_URL = `${API_URL}/api/attribute-unit`;
 
 export function useAttributeUnits() {
   const [data, setData] = useState<any[]>([]);
@@ -11,7 +12,7 @@ export function useAttributeUnits() {
   // ================= GET ALL =================
   const fetchAll = async () => {
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(ATTRIBUTE_UNIT_API_URL);
       const json = await res.json();
       setData(Array.isArray(json) ? json : []);
     } catch (err) {
@@ -29,7 +30,7 @@ export function useAttributeUnits() {
   // ================= CREATE =================
   const createAttributeUnit = async (attributeId: number, unitId: number) => {
     try {
-      const res = await fetch(API_URL, {
+      const res = await fetch(ATTRIBUTE_UNIT_API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -56,7 +57,7 @@ export function useAttributeUnits() {
   // ================= DELETE =================
   const deleteAttributeUnit = async (id: number) => {
     try {
-      const res = await fetch(`${API_URL}/${id}`, {
+      const res = await fetch(`${ATTRIBUTE_UNIT_API_URL}/${id}`, {
         method: "DELETE",
       });
 

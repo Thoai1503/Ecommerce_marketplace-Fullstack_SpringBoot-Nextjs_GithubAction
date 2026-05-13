@@ -466,7 +466,10 @@ const AddressModal = ({
                     ? styles.addressItemSelected
                     : styles.addressItem
                 }
-                onClick={() => setSelectedAddressId(addr.id)}
+                onClick={() => {
+                  //  alert("Selected address id: " + addr.id);
+                  setSelectedAddressId(addr.id);
+                }}
               >
                 <div className="d-flex align-items-start gap-3">
                   {/* Radio circle */}
@@ -699,7 +702,7 @@ const AddressModal = ({
                       Chọn tỉnh / thành phố
                     </option>
                     {provinces.map((p: Province) => (
-                      <option key={p.Code} value={p.ProvinceID}>
+                      <option key={p.ProvinceID} value={p.ProvinceID}>
                         {p.ProvinceName}
                       </option>
                     ))}

@@ -4,6 +4,7 @@ public interface OrderShipmentWithOrderAndRecipientProjection {
     Long getShipmentId();
     Long getOrderId();
     Long getShopId();
+    String getShopName();
     
     String getCarrierName();
     String getTrackingNumber();

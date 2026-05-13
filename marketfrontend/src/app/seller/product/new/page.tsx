@@ -1,14 +1,29 @@
 "use client";
 import styles from "./new.module.css";
-import React, { useState, useRef, useEffect, use } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { useRouter, useSearchParams } from "next/navigation";
 import { InboxOutlined, DeleteOutlined } from "@ant-design/icons";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Modal, Upload, UploadFile, UploadProps, message } from "antd";
-import { Editor } from "@tinymce/tinymce-react";
+import type { ProductAttributeSelection } from "@/feature/seller/hooks";
 import { useAddImageSeller, useAddProductSeller } from "@/feature/seller/hooks";
 import CategorySelectorModal from "@/feature/seller/components/CategorySelectorModal";
 import { useSellerSideBarContext } from "@/context/SellerSideBarContext";
 import EditProductForm from "@/components/seller/add_product_page/EditProductForm";
+import { UPLOAD_API_URL } from "@/helper/api";
+
+const Editor = dynamic(
+  () => import("@tinymce/tinymce-react").then((mod) => mod.Editor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="border rounded bg-light-subtle p-3 text-muted small">
+        Loading editor...
+      </div>
+    ),
+  },
+);
 
 interface ProductFormData {
   name: string;
@@ -39,37 +54,42 @@ const AddProductForm: React.FC = () => {
   //get url param shop id
 
   const editorRef = useRef(null) as any;
+  const router = useRouter();
   const { setOpen } = useSellerSideBarContext();
+  const searchParams = useSearchParams();
   const [isEdit, setIsEdit] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Check if window is defined
-  const isBrowser = typeof window !== "undefined";
-
-  const params = isBrowser
-    ? new URLSearchParams(window.location.search)
-    : new URLSearchParams();
-  const id = params.get("id");
+  const id = searchParams.get("id");
   console.log("Shop ID from URL:", id);
 
   useEffect(() => {
+    setHasMounted(true);
     setOpen(false);
     console.log("Editor ref:", editorRef.current);
-    if (id) setIsEdit(true);
-  }, [editorRef, id]);
+    setIsEdit(Boolean(id));
+  }, [editorRef, id, setOpen]);
 
-  const { fileList, handleChange, handleSave, handleSaveImageAfterProduct } =
+  const { fileList, handleChange, handleSaveImageAfterProduct } =
     useAddImageSeller();
   const {
     product,
     handleChangeProduct,
     handleSubmitProduct,
     categories,
+    categoryProductOptions,
+    isLoadingCategoryProductOptions,
+    productAttributeSelections,
+    setProductAttributeSelections,
     setProduct,
     shop,
-  } = useAddProductSeller((id: number) => {
-    handleSaveImageAfterProduct(id);
-  });
+  } = useAddProductSeller(
+    (id: number) => {
+      handleSaveImageAfterProduct(id);
+    },
+    undefined,
+    fileList[0],
+  );
   const showModal = () => {
     setIsModalOpen(true);
   };
@@ -77,8 +97,8 @@ const AddProductForm: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<number>(0);
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
-    category: "Watches & Accessories > Men's Watches",
-    brand: "Nordic Time",
+    category: "",
+    brand: "",
     description: "",
     price: "149.00",
     inventory: "250",
@@ -93,6 +113,12 @@ const AddProductForm: React.FC = () => {
     },
     hasVariations: true,
   });
+
+  useEffect(() => {
+    if (!product.category_id && formData.category) {
+      setFormData((prev) => ({ ...prev, category: "" }));
+    }
+  }, [formData.category, product.category_id]);
 
   // Refs for each section
   const basicInfoRef = useRef<HTMLDivElement>(null);
@@ -156,6 +182,22 @@ const AddProductForm: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const updateAttributeSelection = (
+    attributeId: number,
+    selection: ProductAttributeSelection,
+  ) => {
+    setProductAttributeSelections((prev) => ({
+      ...prev,
+      [attributeId]: {
+        ...prev[attributeId],
+        ...selection,
+      },
+    }));
+  };
+
+  const categoryBrands = categoryProductOptions?.brands ?? [];
+  const categoryAttributes = categoryProductOptions?.attributes ?? [];
+
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
     if (name.startsWith("channel-")) {
@@ -184,14 +226,14 @@ const AddProductForm: React.FC = () => {
   // Handle Cancel/Discard
   const handleDiscard = () => {
     if (confirm("Bạn có chắc muốn hủy bỏ? Các thay đổi sẽ không được lưu.")) {
-      // Reset form hoặc navigate back
       console.log("Discarding changes...");
-      if (isBrowser) {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      router.push("/seller");
     }
   };
-  if (isEdit) {
+  if (!hasMounted) {
+    return null;
+  }
+  if (isEdit && id) {
     return (
       <>
         <EditProductForm id={Number(id)} />
@@ -324,7 +366,10 @@ const AddProductForm: React.FC = () => {
             <div className="row align-items-center">
               <div className="col-md-4">
                 <div className="d-flex align-items-center gap-3">
-                  <button className="btn btn-link text-secondary p-0">
+                  <button
+                    className="btn btn-link text-secondary p-0"
+                    onClick={handleDiscard}
+                  >
                     <i className="bi bi-arrow-left fs-4"></i>
                   </button>
                   <div>
@@ -455,7 +500,7 @@ const AddProductForm: React.FC = () => {
                         <label className="form-label fw-semibold">
                           Product Name <span className="text-danger">*</span>
                           <span className="float-end text-muted small">
-                            {formData.name.length}/120
+                            {product.product_name?.length ?? 0}/120
                           </span>
                         </label>
                         <input
@@ -479,6 +524,7 @@ const AddProductForm: React.FC = () => {
                             name="category_id"
                             value={formData.category}
                             onChange={handleInputChange}
+                            placeholder="Select product category"
                             readOnly
                           />
                           <button className="btn btn-outline-secondary">
@@ -491,13 +537,38 @@ const AddProductForm: React.FC = () => {
                         <label className="form-label fw-semibold">
                           Brand / Manufacturer
                         </label>
-                        <input
-                          type="text"
-                          className="form-control"
+                        <select
+                          className="form-select"
                           name="brand"
-                          value={formData.brand}
-                          onChange={handleInputChange}
-                        />
+                          value={product.brand ?? ""}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setProduct((prev: any) => ({
+                              ...prev,
+                              brand: value ? Number(value) : null,
+                            }));
+                          }}
+                          disabled={
+                            !product.category_id ||
+                            isLoadingCategoryProductOptions ||
+                            categoryBrands.length === 0
+                          }
+                        >
+                          <option value="">
+                            {!product.category_id
+                              ? "Select brand category"
+                              : isLoadingCategoryProductOptions
+                                ? "Loading brands..."
+                                : categoryBrands.length === 0
+                                  ? "Category has no brands"
+                                  : "Select brand"}
+                          </option>
+                          {categoryBrands.map((brand) => (
+                            <option key={brand.id} value={brand.id}>
+                              {brand.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       <div className="col-12">
@@ -548,7 +619,7 @@ const AddProductForm: React.FC = () => {
                         </div> */}
                         <Editor
                           apiKey="opbl478qvvrtoorhvqc4f7zei61txljv0gkj67k1ogzky57n" // có thể để trống khi test local
-                          initialValue="<p>Soạn thảo với upload ảnh...</p>"
+                          initialValue="<p>Drafting and uploading images...</p>"
                           init={{
                             height: 300,
                             menubar: true,
@@ -557,7 +628,7 @@ const AddProductForm: React.FC = () => {
                               "undo redo | bold italic | alignleft aligncenter alignright | image media link code",
 
                             // URL API backend để nhận file upload
-                            images_upload_url: "http://localhost:5000/upload",
+                            images_upload_url: `${UPLOAD_API_URL}/upload`,
 
                             // Custom handler nếu muốn tự điều khiển upload
                             images_upload_handler: async (
@@ -577,7 +648,7 @@ const AddProductForm: React.FC = () => {
                                   "form data: " + JSON.stringify(formData),
                                 );
                                 const response = await fetch(
-                                  "http://localhost:5000/upload",
+                                  `${UPLOAD_API_URL}/upload`,
                                   {
                                     method: "POST",
                                     body: formData,
@@ -585,7 +656,7 @@ const AddProductForm: React.FC = () => {
                                 );
 
                                 const json = await response.json();
-                                // giả sử backend trả về { url: "http://localhost:5000/uploads/abc.png" }
+                                // giả sử backend trả về { url: "https://files.example.com/uploads/abc.png" }
                                 const imageUrl = json.url;
 
                                 // TinyMCE yêu cầu success(URL string)
@@ -596,7 +667,7 @@ const AddProductForm: React.FC = () => {
                                   `<img src="${imageUrl}" alt="${blobInfo.filename()}" />`,
                                 );
                               } catch (err: any) {
-                                failure("Upload thất bại: " + err.message);
+                                failure("Upload failed: " + err.message);
                               }
                             },
                           }}
@@ -607,6 +678,9 @@ const AddProductForm: React.FC = () => {
                               description: newContent,
                             }));
                             console.log(newContent);
+                          }}
+                          onInit={(_, editor) => {
+                            editorRef.current = editor;
                           }}
                         />
                       </div>
@@ -623,61 +697,146 @@ const AddProductForm: React.FC = () => {
                     </small>
                   </div>
                   <div className="card-body">
-                    <div className="row g-3">
-                      {[
-                        {
-                          name: "material",
-                          label: "Material",
-                          options: [
-                            "Stainless Steel",
-                            "Leather",
-                            "Gold Plated",
-                          ],
-                        },
-                        {
-                          name: "origin",
-                          label: "Origin",
-                          options: ["Switzerland", "Japan", "China", "USA"],
-                        },
-                        {
-                          name: "style",
-                          label: "Style",
-                          options: ["Casual", "Formal", "Sport"],
-                        },
-                        {
-                          name: "waterResistance",
-                          label: "Water Resistance",
-                          options: ["30m", "50m", "100m"],
-                        },
-                      ].map((field) => (
-                        <div className="col-md-6" key={field.name}>
-                          <label className="form-label fw-semibold">
-                            {field.label}
-                          </label>
-                          <select
-                            className="form-select"
-                            name={field.name}
-                            value={(formData as any)[field.name]}
-                            onChange={handleInputChange}
-                          >
-                            <option value="">
-                              Select {field.label.toLowerCase()}
-                            </option>
-                            {field.options.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      ))}
-                      <div className="col-12">
-                        <button className="btn btn-link text-danger p-0">
-                          Show more attributes{" "}
-                          <i className="bi bi-chevron-down"></i>
-                        </button>
+                    {!product.category_id ? (
+                      <div className="alert alert-light border mb-0">
+                        Please select a category to load attributes, units and values.
                       </div>
-                    </div>
+                    ) : isLoadingCategoryProductOptions ? (
+                      <div className="text-muted small">
+                        Loading attributes by category...
+                      </div>
+                    ) : categoryAttributes.length === 0 ? (
+                      <div className="alert alert-light border mb-0">
+                        This category has no attributes assigned.
+                      </div>
+                    ) : (
+                      <div className="row g-3">
+                        {categoryAttributes.map((attribute) => {
+                          const attributeId = Number(attribute.id);
+                          const selection =
+                            productAttributeSelections[attributeId] ?? {};
+                          const selectedUnit = attribute.units.find(
+                            (unit) => unit.id === selection.unitId,
+                          );
+                          const selectableValues = selectedUnit
+                            ? selectedUnit.values
+                            : attribute.values;
+                          const needsUnit = attribute.units.length > 0;
+                          const canSelectValue =
+                            !needsUnit || Boolean(selectedUnit);
+
+                          return (
+                            <div className="col-12" key={attribute.id}>
+                              <div className="border rounded p-3 bg-white">
+                                <div className="fw-semibold mb-3">
+                                  {attribute.name}
+                                </div>
+                                <div className="row g-3">
+                                  {needsUnit && (
+                                    <div className="col-md-5">
+                                      <label className="form-label small text-muted">
+                                        Unit
+                                      </label>
+                                      <select
+                                        className="form-select"
+                                        value={selection.unitId ?? ""}
+                                        onChange={(event) => {
+                                          const unitId = event.target.value
+                                            ? Number(event.target.value)
+                                            : null;
+                                          updateAttributeSelection(
+                                            attributeId,
+                                            {
+                                              unitId,
+                                              attributeValueId: null,
+                                              valueText: "",
+                                            },
+                                          );
+                                        }}
+                                      >
+                                        <option value="">Chọn đơn vị</option>
+                                        {attribute.units.map((unit) => (
+                                          <option key={unit.id} value={unit.id}>
+                                            {unit.label} ({unit.symbol})
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  )}
+
+                                  <div
+                                    className={
+                                      needsUnit ? "col-md-7" : "col-12"
+                                    }
+                                  >
+                                    <label className="form-label small text-muted">
+                                      Value
+                                    </label>
+                                    {selectableValues.length > 0 ? (
+                                      <select
+                                        className="form-select"
+                                        value={selection.attributeValueId ?? ""}
+                                        disabled={!canSelectValue}
+                                        onChange={(event) => {
+                                          const valueId = event.target.value
+                                            ? Number(event.target.value)
+                                            : null;
+                                          updateAttributeSelection(
+                                            attributeId,
+                                            {
+                                              attributeValueId: valueId,
+                                              valueText: "",
+                                            },
+                                          );
+                                        }}
+                                      >
+                                        <option value="">
+                                          {canSelectValue
+                                            ? "Chọn giá trị"
+                                            : "Chọn đơn vị trước"}
+                                        </option>
+                                        {selectableValues.map((value) => (
+                                          <option
+                                            key={value.id}
+                                            value={value.id}
+                                          >
+                                            {value.value}
+                                            {selectedUnit
+                                              ? ` ${selectedUnit.symbol}`
+                                              : ""}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <input
+                                        type="text"
+                                        className="form-control"
+                                        value={selection.valueText ?? ""}
+                                        disabled={!canSelectValue}
+                                        onChange={(event) =>
+                                          updateAttributeSelection(
+                                            attributeId,
+                                            {
+                                              attributeValueId: null,
+                                              valueText: event.target.value,
+                                            },
+                                          )
+                                        }
+                                        placeholder={
+                                          canSelectValue
+                                            ? "Nhập giá trị"
+                                            : "Chọn đơn vị trước"
+                                        }
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -702,7 +861,7 @@ const AddProductForm: React.FC = () => {
                   <div className="card-body">
                     <h3 className="h5 fw-bold mb-4">Pricing Configuration</h3>
                     <div className="row g-3">
-                      <div className="col-md-4">
+                      <div className="col-md-3">
                         <label className="form-label fw-semibold">
                           Base Price
                         </label>
@@ -724,7 +883,30 @@ const AddProductForm: React.FC = () => {
                           />
                         </div>
                       </div>
-                      <div className="col-md-4">
+                      <div className="col-md-3">
+                        <label className="form-label fw-semibold">
+                          Inventory
+                        </label>
+                        <div className="input-group">
+                          <input
+                            type="number"
+                            min="0"
+                            className="form-control"
+                            name="stock_quantity"
+                            value={product.stock_quantity ?? ""}
+                            onChange={(event) => {
+                              const { value, name } = event.target;
+                              setProduct((prev: any) => ({
+                                ...prev,
+                                [name]: value === "" ? 0 : Number(value),
+                              }));
+                            }}
+                            placeholder="0"
+                          />
+                          <span className="input-group-text">pcs</span>
+                        </div>
+                      </div>
+                      <div className="col-md-3">
                         <label className="form-label fw-semibold">
                           Compare at Price
                         </label>
@@ -737,7 +919,7 @@ const AddProductForm: React.FC = () => {
                           />
                         </div>
                       </div>
-                      <div className="col-md-4">
+                      <div className="col-md-3">
                         <label className="form-label fw-semibold">
                           Cost per Item
                         </label>
@@ -784,35 +966,78 @@ const AddProductForm: React.FC = () => {
                   <div className="card-body">
                     <h3 className="h5 fw-bold mb-4">Shipping Information</h3>
                     <div className="row g-3">
-                      <div className="col-md-4">
+                      <div className="col-md-6 col-lg-3">
                         <label className="form-label fw-semibold">Weight</label>
                         <div className="input-group">
                           <input
                             type="text"
                             className="form-control"
                             placeholder="0.0"
+                            name="weight"
+                            onChange={(e) => {
+                              const { name, value } = e.target;
+                              setProduct((prev: any) => ({
+                                ...prev,
+                                [name]: value,
+                              }));
+                            }}
                           />
-                          <span className="input-group-text">kg</span>
+                          <span className="input-group-text">g</span>
                         </div>
                       </div>
-                      <div className="col-md-4">
+                      <div className="col-md-6 col-lg-3">
                         <label className="form-label fw-semibold">Length</label>
                         <div className="input-group">
                           <input
                             type="text"
                             className="form-control"
                             placeholder="0"
+                            name="length"
+                            onChange={(e) => {
+                              const { name, value } = e.target;
+                              setProduct((prev: any) => ({
+                                ...prev,
+                                [name]: value,
+                              }));
+                            }}
                           />
                           <span className="input-group-text">cm</span>
                         </div>
                       </div>
-                      <div className="col-md-4">
+                      <div className="col-md-6 col-lg-3">
                         <label className="form-label fw-semibold">Width</label>
                         <div className="input-group">
                           <input
                             type="text"
                             className="form-control"
                             placeholder="0"
+                            name="width"
+                            onChange={(e) => {
+                              const { name, value } = e.target;
+                              setProduct((prev: any) => ({
+                                ...prev,
+                                [name]: value,
+                              }));
+                            }}
+                          />
+                          <span className="input-group-text">cm</span>
+                        </div>
+                      </div>
+                      <div className="col-md-6 col-lg-3">
+                        <label className="form-label fw-semibold">Height</label>
+                        <div className="input-group">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="0"
+                            name="height"
+                            onChange={(e) => {
+                              const { name, value } = e.target;
+                              setProduct((prev: any) => ({
+                                ...prev,
+                                [name]: value,
+                              }));
+                            }}
                           />
                           <span className="input-group-text">cm</span>
                         </div>
@@ -1148,7 +1373,7 @@ const AddProductForm: React.FC = () => {
                   </button>
                   <button
                     className="btn btn-danger btn-sm flex-fill action-save"
-                    onClick={handleSave}
+                    onClick={handleSubmitProduct}
                   >
                     <i
                       className={`bi ${isLastTab ? "bi-check2" : "bi-arrow-right"}`}
@@ -1171,6 +1396,14 @@ const AddProductForm: React.FC = () => {
         isModalOpen={isModalOpen}
         setIsModalOpen={setIsModalOpen}
         setProduct={setProduct}
+        onConfirm={(_, path) => {
+          setFormData((prev) => ({
+            ...prev,
+            category: path
+              .map((category) => category.category_name)
+              .join(" → "),
+          }));
+        }}
       />
 
       {/* Antd Upload Styles - Red Theme */}

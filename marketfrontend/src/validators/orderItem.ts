@@ -4,6 +4,7 @@ export interface IOrderItem {
   variant_id: number;
   product_name: string;
   shop?: any;
+
   shop_owner_id?: number; // Shop owner user ID
   shop_owner_info?: ShopOwnerInfo; // Shop owner info (name, email, phone)
   variant_name: string;

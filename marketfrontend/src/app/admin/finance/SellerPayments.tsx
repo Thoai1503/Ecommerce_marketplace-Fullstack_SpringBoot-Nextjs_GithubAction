@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 "use client";
 
@@ -368,3 +369,12 @@ export default function SellerPayments() {
     </div>
   );
 }
+=======
+"use client";
+
+import SettlementsList from "./SettlementsList";
+
+export default function SellerPayments() {
+  return <SettlementsList />;
+}
+>>>>>>> c9d4b1976cb5b3a10edc460d55b593d2cd8808dc

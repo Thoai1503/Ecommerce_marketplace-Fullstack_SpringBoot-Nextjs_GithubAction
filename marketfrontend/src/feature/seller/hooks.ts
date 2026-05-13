@@ -2,16 +2,34 @@
 import { IProduct } from "@/validators/product";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
-import { categoryQuery, productImageQuery } from "./query";
+import {
+  categoryProductOptionsQuery,
+  categoryQuery,
+  productImageQuery,
+} from "./query";
 import { slugify, generateUniqueSlug, isValidSlug } from "@/helper/utils";
-import { addProduct, createProductVariant, uploadToProduct } from "./service";
+import {
+  addProduct,
+  createProductVariant,
+  saveProductAttributes,
+  updateVariantImage,
+  uploadToProduct,
+} from "./service";
+import type { ProductAttributePayload, ProductCreatePayload } from "./service";
 import { message, UploadFile, UploadProps } from "antd";
 import { useSellerAuth } from "@/context/SellerAuthContext";
-import { ProductVariant } from "@/validators/productVariant";
+import { IProductVariant } from "@/validators/productVariant";
+
+export interface ProductAttributeSelection {
+  attributeValueId?: number | null;
+  unitId?: number | null;
+  valueText?: string;
+}
 
 export const useAddProductSeller = (
   onSuccessCallback: (id: number) => void,
   id?: number,
+  variantImageFile?: UploadFile,
 ) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const { roles, userId, shop } = useSellerAuth();
@@ -24,13 +42,40 @@ export const useAddProductSeller = (
     product_slug: "",
     shop_id: 0,
     description: "",
-    category_id: 2,
+    category_id: 0,
+    brand: null,
+    weight: 0,
+    length: 0,
+    width: 0,
+    height: 0,
+    stock_quantity: 0,
     original_price: 0,
     price: 0,
   });
+  const [productAttributeSelections, setProductAttributeSelections] = useState<
+    Record<number, ProductAttributeSelection>
+  >({});
+
+  const selectedCategoryId = Number(product.category_id || 0);
+  const {
+    data: categoryProductOptions,
+    isFetching: isLoadingCategoryProductOptions,
+  } = useQuery({
+    ...categoryProductOptionsQuery.by_category_id(selectedCategoryId),
+    enabled: selectedCategoryId > 0,
+  });
+
   useEffect(() => {
     if (shop) setProduct((pre) => ({ ...pre, shop_id: shop.id }));
   }, [shop]);
+
+  useEffect(() => {
+    setProductAttributeSelections({});
+    setProduct((prev) => {
+      if (!prev.brand) return prev;
+      return { ...prev, brand: null };
+    });
+  }, [selectedCategoryId]);
 
   const handleChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
     // Giới hạn tối đa 8 ảnh như yêu cầu
@@ -56,10 +101,16 @@ export const useAddProductSeller = (
   // });
 
   const { mutate: createVariant } = useMutation({
-    mutationFn: (en: ProductVariant) => createProductVariant(en),
+    mutationFn: (en: IProductVariant) => createProductVariant(en),
     onSuccess: (data) => {
       console.log("Variant created:", data);
       message.success(`Tạo biến thể sản phẩm thành công`);
+      if (variantImageFile?.originFileObj) {
+        const formData = new FormData();
+
+        formData.append("image", variantImageFile.originFileObj as Blob); // Upload ảnh được chọn cho biến thể
+        updateVariantImageMutate({ id: data.id, formData });
+      }
     },
     onError: (error) => {
       console.error("Error creating variant:", error);
@@ -67,11 +118,83 @@ export const useAddProductSeller = (
     },
   });
 
-  const { mutate: add } = useMutation({
-    mutationFn: (product: Partial<IProduct>) => addProduct(product),
+  const { mutate: updateVariantImageMutate } = useMutation({
+    mutationFn: ({ id, formData }: { id: number; formData: FormData }) =>
+      updateVariantImage(id, formData),
     onSuccess: (data) => {
+      console.log("Variant image updated:", data);
+      message.success(`Cập nhật ảnh biến thể sản phẩm thành công`);
+    },
+    onError: (error) => {
+      console.error("Error updating variant image:", error);
+      message.error(`Lỗi khi cập nhật ảnh biến thể sản phẩm: ${error.message}`);
+    },
+  });
+
+  const buildProductAttributePayload = useCallback(
+    (productId: number): ProductAttributePayload[] =>
+      Object.entries(productAttributeSelections)
+        .map(([attributeId, selection]): ProductAttributePayload => {
+          const valueText = selection.valueText?.trim() || null;
+
+          return {
+            productId,
+            attributeId: Number(attributeId),
+            attributeValueId: selection.attributeValueId ?? null,
+            valueText,
+            valueNumber: null,
+            valueDate: null,
+            unitId: selection.unitId ?? null,
+          };
+        })
+        .filter(
+          (item) =>
+            (item.attributeValueId != null && item.attributeValueId > 0) ||
+            Boolean(item.valueText) ||
+            item.valueNumber != null ||
+            Boolean(item.valueDate),
+        ),
+    [productAttributeSelections],
+  );
+
+  const { mutate: add } = useMutation({
+    mutationFn: (product: ProductCreatePayload) => addProduct(product),
+    onSuccess: async (data, submittedProduct) => {
       //    message.success(`Lưu thành công sản phẩm thành công`);
       console.log("Added: " + JSON.stringify(data));
+      const attributePayload = (submittedProduct.attributes ?? []).map(
+        (attribute) => ({
+          ...attribute,
+          productId: data.id,
+        }),
+      );
+      const savedAttributes = (data as IProduct & {
+        attributes?: ProductAttributePayload[];
+      }).attributes;
+      const attributesAlreadySaved =
+        Array.isArray(savedAttributes) &&
+        savedAttributes.length >= attributePayload.length;
+
+      if (attributePayload.length > 0 && !attributesAlreadySaved) {
+        try {
+          await saveProductAttributes(data.id, attributePayload);
+        } catch (error: any) {
+          console.error("Error saving product attributes:", {
+            payload: attributePayload,
+            response: error?.response?.data,
+            status: error?.response?.status,
+            error,
+          });
+          message.error(
+            "Sản phẩm đã tạo nhưng lưu thuộc tính thất bại: " +
+              (error?.response?.data?.message ||
+                error?.response?.data?.error ||
+                error?.message ||
+                "Unknown error"),
+          );
+        }
+      }
+
       onSuccessCallback(data.id);
       // Reset form sau khi thêm thành công
       setProduct({
@@ -79,10 +202,17 @@ export const useAddProductSeller = (
         product_slug: "",
         shop_id: shop?.id || 0,
         description: "",
-        category_id: 2,
+        category_id: 0,
+        brand: null,
         original_price: 0,
+        weight: 0,
+        length: 0,
+        width: 0,
+        height: 0,
         price: 0,
+        stock_quantity: 0,
       });
+      setProductAttributeSelections({});
       createVariant({
         id: 0,
         product_id: data.id,
@@ -90,6 +220,10 @@ export const useAddProductSeller = (
         sku: `SKU-${data.id}`,
         price: data.original_price || 0,
         stock_quantity: data.stock_quantity || 0,
+        weight: data.weight || 0,
+        height: data.height || 0,
+        length: data.length || 0,
+        width: data.width || 0,
         image_url: data.image_url || "",
       });
     },
@@ -173,11 +307,14 @@ export const useAddProductSeller = (
       return;
     }
 
-    alert(JSON.stringify(product, null, 2));
+    // alert(JSON.stringify(product, null, 2));
     // return;
-    add(product);
+    add({
+      ...product,
+      attributes: buildProductAttributePayload(0),
+    });
     // TODO: Gọi API để tạo sản phẩm
-  }, [product, validateProduct]);
+  }, [add, buildProductAttributePayload, product, validateProduct]);
 
   // Hàm tiện ích để generate slug unique (nếu cần check với database)
   const generateUniqueProductSlug = useCallback(
@@ -194,6 +331,10 @@ export const useAddProductSeller = (
     handleChangeProduct,
     product,
     categories,
+    categoryProductOptions,
+    isLoadingCategoryProductOptions,
+    productAttributeSelections,
+    setProductAttributeSelections,
     isManualSlug,
     resetSlugMode,
     setProduct,
@@ -241,6 +382,7 @@ export const useAddImageSeller = (id?: number) => {
     const uploadImage = updatedList.filter((item) =>
       item.thumbUrl?.startsWith("data:image"),
     );
+    //  alert("uploadImage: " + JSON.stringify(updatedList));
     console.log("uploadImage: " + uploadImage.length);
   };
 
@@ -319,4 +461,8 @@ export const useAddImageSeller = (id?: number) => {
   }, [data, isLoading, isError]);
 
   return { fileList, handleChange, handleSave, handleSaveImageAfterProduct };
+};
+
+export const useEditProductDetails = (id: number) => {
+  return {};
 };

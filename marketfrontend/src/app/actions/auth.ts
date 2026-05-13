@@ -8,6 +8,7 @@ export async function logoutAction() {
 
   (await cookieStore).delete("role");
   (await cookieStore).delete("token"); // nếu có
+  (await cookieStore).delete("refreshToken");
   (await cookieStore).delete("user");
   return { success: true };
 }

@@ -15,7 +15,7 @@ import docker_test.com.dto.OrderCreatedEvent;
 import docker_test.com.model.Order;
 import docker_test.com.model.OrderItem;
 import docker_test.com.repository.OrderItemRepository;
-import docker_test.com.repository.OrderRepository;
+import docker_test.com.repository.OrdersRepository;
 import docker_test.com.service.OrderService;
 
 @Service
@@ -24,16 +24,16 @@ public class OrderProducer {
 	
     private NewTopic newTopic;
     
-    private final OrderRepository orderRepository;
+    private final OrdersRepository orderRepository;
     
     private final OrderItemRepository orderItemRepository;
     
     private final OrderService  orderService;
     
-    private KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate;
+	private KafkaTemplate<Object, Object> kafkaTemplate;
 
 
-	 public OrderProducer(NewTopic newTopic, KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate,OrderRepository orderRepository,OrderItemRepository orderItemRepository,OrderService orderService) {
+	 public OrderProducer(NewTopic newTopic, KafkaTemplate<Object, Object> kafkaTemplate,OrdersRepository orderRepository,OrderItemRepository orderItemRepository,OrderService orderService) {
 
 		super();
 		this.newTopic = newTopic;

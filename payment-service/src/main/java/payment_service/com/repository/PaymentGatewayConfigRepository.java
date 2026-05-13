@@ -1,0 +1,13 @@
+package payment_service.com.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import payment_service.com.entity.PaymentGatewayConfig;
+import java.util.Optional;
+import java.util.List;
+
+@Repository
+public interface PaymentGatewayConfigRepository extends JpaRepository<PaymentGatewayConfig, Integer> {
+    Optional<PaymentGatewayConfig> findByCode(String code);
+    List<PaymentGatewayConfig> findByIsActiveTrueOrderBySortOrder();
+}

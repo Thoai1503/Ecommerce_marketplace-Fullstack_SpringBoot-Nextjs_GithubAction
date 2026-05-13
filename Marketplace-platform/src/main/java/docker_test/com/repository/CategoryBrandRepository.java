@@ -2,9 +2,12 @@ package docker_test.com.repository;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import docker_test.com.configs.DBConnection;
+import docker_test.com.models.Brand;
 import docker_test.com.models.CategoryBrand;
 
 public class CategoryBrandRepository implements IRepositories<CategoryBrand> {
@@ -162,6 +165,72 @@ public class CategoryBrandRepository implements IRepositories<CategoryBrand> {
 			ResultSet rs = ps.executeQuery();
 			while (rs.next()) {
 				list.add(map(rs));
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return list;
+	}
+
+	public List<Map<String, Object>> query(String sql, Object... params) {
+
+		List<Map<String, Object>> list = new ArrayList<>();
+
+		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+
+			// set params
+			for (int i = 0; i < params.length; i++) {
+				ps.setObject(i + 1, params[i]);
+			}
+
+			ResultSet rs = ps.executeQuery();
+			ResultSetMetaData meta = rs.getMetaData();
+
+			while (rs.next()) {
+
+				Map<String, Object> row = new HashMap<>();
+
+				for (int i = 1; i <= meta.getColumnCount(); i++) {
+					row.put(meta.getColumnName(i), rs.getObject(i));
+				}
+
+				list.add(row);
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return list;
+	}
+
+	public List<Brand> getBrandsByCategoryId(int categoryId) {
+
+		String sql = """
+				    SELECT b.*
+				    FROM brand b
+				    JOIN category_brand cb ON b.id = cb.brand_id
+				    WHERE cb.category_id = ?
+				""";
+
+		List<Brand> list = new ArrayList<>();
+
+		try (Connection conn = DBConnection.getConn(); PreparedStatement ps = conn.prepareStatement(sql)) {
+
+			ps.setInt(1, categoryId);
+
+			ResultSet rs = ps.executeQuery();
+
+			while (rs.next()) {
+				Brand b = new Brand();
+				b.setId(rs.getInt("id"));
+				b.setName(rs.getString("name"));
+				b.setSlug(rs.getString("slug"));
+				b.setLogo(rs.getString("logo"));
+				b.setStatus(rs.getInt("status"));
+				list.add(b);
 			}
 
 		} catch (Exception e) {

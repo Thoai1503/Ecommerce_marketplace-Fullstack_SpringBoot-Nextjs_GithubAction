@@ -6,6 +6,9 @@ public record OrderShipmentByShopResponseDTO(
         Long shipmentId,
         Long orderId,
         Long shopId,
+        String shopName,
+        Long shippingFee,
+        Long totalAmount,
         String carrierName,
         String trackingNumber,
         String shippingStatus,
@@ -44,9 +47,18 @@ public record OrderShipmentByShopResponseDTO(
             Long variantId,
             String productName,
             String variantName,
+            String image,
             Integer quantity,
             Double price,
-            Double totalPrice
+            Double totalPrice,
+            Double shopVoucherDiscountAmount,
+            Double platformVoucherDiscountAmount,
+            Double totalVoucherDiscountAmount,
+            Double totalAfterShopVoucher,
+            Double totalAfterAllVouchers,
+            Double platformCommissionRate,
+            Double platformCommissionAmount,
+            Double sellerReceivableAmount
     ) {
     }
 }

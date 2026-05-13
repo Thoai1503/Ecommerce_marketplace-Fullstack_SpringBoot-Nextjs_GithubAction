@@ -17,19 +17,31 @@ public class CloudinaryService {
     
     // Upload file
     public String uploadFile(MultipartFile file) throws IOException {
-        Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
+        Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
         return uploadResult.get("url").toString();
     }
     
     // Upload với options
-    public Map uploadFileWithOptions(MultipartFile file, String folder) throws IOException {
-        Map uploadResult = cloudinary.uploader().upload(file.getBytes(), 
+    public Map<String, Object> uploadFileWithOptions(MultipartFile file, String folder) throws IOException {
+        Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), 
             ObjectUtils.asMap(
                 "folder", folder,
                 "resource_type", "auto"
             )
         );
         return uploadResult;
+    }
+
+    public Map<String, Object> uploadReturnAttachment(MultipartFile file) throws IOException {
+        return cloudinary.uploader().upload(
+                file.getBytes(),
+                ObjectUtils.asMap(
+                        "folder", "return-request-attachments",
+                        "resource_type", "auto",
+                        "use_filename", true,
+                        "unique_filename", true
+                )
+        );
     }
     
     // Xóa file

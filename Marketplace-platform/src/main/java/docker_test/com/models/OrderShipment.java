@@ -25,20 +25,39 @@ import lombok.ToString;
 @Builder
 @ToString
 public class OrderShipment {
-    @Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	 	private Long id;
-    
-    @Column(name = "order_id", nullable = false)
-	private Long orderId;
-    
-    @Column(name = "shop_id", nullable = false)
-	private String shopId;
-    @Column(name = "tracking_number", nullable = false)
-	private String trackingNumber;
-     @Column(name = "carrier_name", nullable = false)
-	private String carrierName;
-     @Column(name = "shipping_status", nullable = false)	
-	private String shippingStatus;
-	
+	 @Id
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
+		 	private Long id;
+	    
+	    @Column(name = "order_id", nullable = false)
+		private Long orderId;
+	    
+	    @Column(name = "shop_id", nullable = false)
+		private Long shopId;
+	    @Column(name = "tracking_number")
+		private String trackingNumber;
+	    @Column(name = "shipping_fee", nullable = false)
+	    	private Double shippingFee;
+	     @Column(name = "total_amount", nullable = false)
+	     		private Double totalAmount;
+	     @Column(name = "carrier_name", nullable = false)
+		private String carrierName;
+	     @Column(name = "shipping_status", nullable = false)	
+		private String shippingStatus;
+
+	    @Column(name = "business_status")
+	    private String businessStatus;
+
+	    @Column(name = "latest_adjustment_request_id")
+	    private Long latestAdjustmentRequestId;
+
+	    @Column(name = "adjusted_total_amount")
+	    private Double adjustedTotalAmount;
+
+	    @Column(name = "adjustment_required", nullable = false)
+	    private Boolean adjustmentRequired;
+	    
+	    @Column(name ="return_status_summary")
+ 	    private String returnStatusSummary;
+
 }

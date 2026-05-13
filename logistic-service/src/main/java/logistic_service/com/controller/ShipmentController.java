@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import logistic_service.com.dto.PageResponse;
+import logistic_service.com.dto.CalculateFeeRequest;
+import logistic_service.com.dto.CalculateFeeResponse;
 import logistic_service.com.dto.ShipmentSummaryResponse;
 import logistic_service.com.dto.ShipmentTrackingDetailResponse;
 import logistic_service.com.dto.ShipmentTimelineResponse;
@@ -20,6 +22,7 @@ import logistic_service.com.dto.ShipmentStatusUpdateResponse;
 import logistic_service.com.dto.ShipmentStatusUpdateRequest;
 import logistic_service.com.entities.Shipment;
 import logistic_service.com.enums.ShipmentStatus;
+import logistic_service.com.services.ShippingFeeService;
 import logistic_service.com.services.ShipmentService;
 
 
@@ -29,16 +32,23 @@ public class ShipmentController {
 	
 
 	private final ShipmentService shipmentService;
+	private final ShippingFeeService shippingFeeService;
 
 
-	public ShipmentController(ShipmentService shipmentService) {
+	public ShipmentController(ShipmentService shipmentService, ShippingFeeService shippingFeeService) {
 		this.shipmentService = shipmentService;
+		this.shippingFeeService = shippingFeeService;
 	}
 
     @GetMapping
     public String greating() {
     	return "Logistic service is running...";
     }
+
+	@PostMapping("/calculate-fee")
+	public ResponseEntity<CalculateFeeResponse> calculateShippingFee(@RequestBody CalculateFeeRequest request) {
+		return ResponseEntity.ok(shippingFeeService.calculateFee(request));
+	}
 
     @PostMapping("/shipments")
     public ResponseEntity<?> updateShipmentStatus(@RequestBody ShipmentStatusUpdateRequest request) {

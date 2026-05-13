@@ -1,4 +1,5 @@
 import { IOrderItem } from "./orderItem";
+import { IOrderShipment } from "./orderShipment";
 
 export interface IOrder {
   id: number;
@@ -9,6 +10,7 @@ export interface IOrder {
   shop_id: number;
   shipping_fee: number;
   discount_amount: number;
+  voucher_id?: number;
   payment_method: string;
   total_price: number;
   final_amount: number;
@@ -18,7 +20,9 @@ export interface IOrder {
   created_at?: Date;
   updated_at?: Date;
   orders_items: IOrderItem[];
+  order_shipment?: IOrderShipment[];
   note?: string;
+  // Deprecated: use orders_shipment[].tracking_number instead.
   tracking_number?: string;
 }
 
