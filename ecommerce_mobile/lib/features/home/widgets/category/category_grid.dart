@@ -24,7 +24,7 @@ class CategoryGrid extends StatelessWidget {
     // Take first 8 categories plus "All"
     final displayCategories = [
       Category(id: -1, categoryName: 'All'),
-      ...parentCategories.take(8),
+      ...parentCategories.take(15),
     ];
 
     return Column(
