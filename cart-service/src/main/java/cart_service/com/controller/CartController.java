@@ -33,7 +33,7 @@ public class CartController {
 		return "Cart Service is running";
 	} 
 	@GetMapping("user/{id}")
-	public ResponseEntity<List<Cart>> getByUserId(@PathVariable int id){
+	public ResponseEntity<List<Cart>> getByUserId(@PathVariable("id") int id){
 		if(id==0) {
 			return ResponseEntity.status(500).body(null);
 		}
@@ -44,7 +44,7 @@ public class CartController {
 	}
 	
 	@GetMapping("variant/{id}")
-	public ResponseEntity< Cart> getByVariantId(@PathVariable int id){
+	public ResponseEntity< Cart> getByVariantId(@PathVariable("id") int id){
 		return ResponseEntity.ok( cartService.getCartByVariantId(id));
 	}
 	
@@ -77,13 +77,13 @@ public class CartController {
 	}
 
 	@PutMapping("/{id}")
-	public ResponseEntity<Void> updateQuantity(@PathVariable Long id, @RequestBody CartDTO cartDto) {
+	public ResponseEntity<Void> updateQuantity(@PathVariable("id") Long id, @RequestBody CartDTO cartDto) {
 		cartService.updateQuantity(id, cartDto.getQuantity());
 		return ResponseEntity.ok().build();
 	}
 
 	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> deleteById(@PathVariable Long id) {
+	public ResponseEntity<Void> deleteById(@PathVariable("id") Long id) {
 		cartService.deleteById(id);
 		return ResponseEntity.noContent().build();
 	}

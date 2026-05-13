@@ -2,7 +2,7 @@
 
 import { API_URL } from "@/helper/api";
 
-// Legacy hardcoded API URL removed; use API_URL from helper.
+// const BASE_URL = "http://localhost:8000/api/attribute";
 
 // ================= MAP =================
 const mapAttribute = (item: any) => ({

@@ -1,10 +1,21 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
+
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'constants.dart';
 
+class ApiClient {
+  static final Dio dio = Dio(
+    BaseOptions(
+      baseUrl: 'http://localhost:8000/api',
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
+}
 class HttpError implements Exception {
   final int? status;
   final String message;

@@ -14,6 +14,9 @@ RUN mvn -B -DskipTests package
 # Run stage: Tomcat server to run WAR
 FROM tomcat:10.1-jdk21
 
+ENV TZ=Asia/Ho_Chi_Minh
+ENV JAVA_TOOL_OPTIONS="-Duser.timezone=Asia/Ho_Chi_Minh"
+
 # Remove default ROOT app
 RUN rm -rf /usr/local/tomcat/webapps/*
 

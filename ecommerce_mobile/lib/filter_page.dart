@@ -20,7 +20,7 @@ class _FilterPageState extends State<FilterPage> {
     "Electronic Devices",
     "Computers & Laptops",
     "Bookstore",
-    "Health",
+    "Drugs & Health",
     "Women's Shoes",
     "Women's Purse",
     "Women's Accessories & Jewelry",
@@ -31,7 +31,7 @@ class _FilterPageState extends State<FilterPage> {
   final List<Map<String, dynamic>> allProducts = [
     {
       'name': 'T-shirt Men',
-      'price': 120,
+      'price': 1500,
       'category': "Men's Fashion",
       'freeship': true,
       'flashSale': false,
