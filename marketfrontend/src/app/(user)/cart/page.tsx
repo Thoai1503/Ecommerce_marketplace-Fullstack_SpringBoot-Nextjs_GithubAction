@@ -10,6 +10,7 @@ import { CartItem, GroupedCartByShop } from "@/validators/cart";
 import { productVariantQuery } from "@/query/productVariant";
 import { productQuery } from "@/feature/client/query";
 import { clearAuth, getValidAccessToken } from "@/lib/authSession";
+import Link from "next/link";
 
 type CartStateItem = CartItem & {
   selected: boolean;
@@ -65,6 +66,9 @@ const resolveVariantId = (item: any): number | null => {
     null
   );
 };
+
+const getShopDisplayName = (shop: any, fallback = "Loading shop name...") =>
+  shop?.shopName || shop?.shop_name || fallback;
 
 const isAuthQueryError = (error: unknown) => {
   const err = error as any;
@@ -779,6 +783,7 @@ const ShoppingCart: React.FC = () => {
           {/* Shop Groups */}
           {Object.entries(groupedByShop)?.map(([shopIdStr, group]) => {
             const shopId = Number(shopIdStr);
+            const shopName = getShopDisplayName(group?.shop);
             const typedItems = group.items as EnrichedCartItem[];
             const displayItems = typedItems
               .map((item, originalIndex) => ({ item, originalIndex }))
@@ -805,9 +810,18 @@ const ShoppingCart: React.FC = () => {
                     onChange={() => toggleShopSelection(shopId)}
                   />
                   <i className="bi bi-shop text-primary"></i>
-                  <span className="fw-bold text-uppercase small">
-                    {group?.shop?.shopName || "Loading shop name..."}
-                  </span>
+                  {shopId > 0 ? (
+                    <Link
+                      href={`/shop/${shopId}`}
+                      className="fw-bold text-uppercase small text-dark text-decoration-none shop-name-link"
+                    >
+                      {shopName}
+                    </Link>
+                  ) : (
+                    <span className="fw-bold text-uppercase small">
+                      {shopName}
+                    </span>
+                  )}
                   <i className="bi bi-chevron-right text-muted"></i>
                 </div>
 
@@ -851,8 +865,19 @@ const ShoppingCart: React.FC = () => {
                             </h6>
                             <div className="small text-muted mb-1">
                               Shop:{" "}
-                              {item?.product?.shop?.shopName ||
-                                "Uploading shop name..."}
+                              {item?.product?.shop?.id ? (
+                                <Link
+                                  href={`/shop/${item.product.shop.id}`}
+                                  className="text-muted text-decoration-none shop-name-inline"
+                                >
+                                  {getShopDisplayName(item.product.shop)}
+                                </Link>
+                              ) : (
+                                getShopDisplayName(
+                                  item?.product?.shop,
+                                  "Uploading shop name...",
+                                )
+                              )}
                             </div>
                             {(item?.productVariant ||
                               item.productVariant?.id) && (

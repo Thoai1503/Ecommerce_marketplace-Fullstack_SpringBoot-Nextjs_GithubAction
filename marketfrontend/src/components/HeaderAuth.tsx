@@ -352,6 +352,9 @@ export default function HeaderAuth() {
             <a href="/profile" className="dropdown-item">
               Profile
             </a>
+            <a href="/wishlist" className="dropdown-item">
+              Wishlist
+            </a>
             <a href="/purchase" className="dropdown-item">
               Purchase order
             </a>

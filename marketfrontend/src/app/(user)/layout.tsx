@@ -1,4 +1,5 @@
 import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap-icons/font/bootstrap-icons.css";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Script from "next/script";
@@ -13,6 +14,7 @@ import { RootPrivider } from "@/components/context/RootProvider";
 import Link from "next/link";
 import CartIconWithCount from "@/components/CartIconWithCount";
 import HeaderSearch from "@/components/client/search/HeaderSearch";
+import WishlistIconWithCount from "@/components/WishlistIconWithCount";
 
 export const metadata: Metadata = {
   title: "Sàn TMĐT - Trang chủ",
@@ -92,6 +94,9 @@ export default async function UserLayout({
                 <div className="col">
                   <HeaderSearch />
                 </div>
+
+                {/* Wishlist */}
+                <WishlistIconWithCount />
 
                 {/* Cart */}
                 <CartIconWithCount />
