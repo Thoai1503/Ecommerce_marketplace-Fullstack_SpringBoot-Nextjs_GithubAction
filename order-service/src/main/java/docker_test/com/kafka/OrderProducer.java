@@ -21,6 +21,7 @@ import docker_test.com.service.OrderService;
 @Service
 public class OrderProducer {
 	private static final Logger LOGGER = LoggerFactory.getLogger(OrderProducer.class);
+	private static final double PLATFORM_COMMISSION_RATE = 0.10;
 	
     private NewTopic newTopic;
     
@@ -86,8 +87,33 @@ public class OrderProducer {
 			 orderItem.setVariantName(item.getVariant_name());
 			 orderItem.setTotalPrice(item.getPrice() * item.getQuantity());
 			 orderItem.setProductId(item.getProduct_id());
+			 orderItem.setShopId(item.getShop_id());
+			 orderItem.setShipmentId(item.getShipment_id());
 			 orderItem.setVariantId(item.getVariant_id());
 			 orderItem.setQuantity(item.getQuantity());
+			 orderItem.setImage(item.getImage_url());
+			 double originalTotal = getItemOriginalTotal(item);
+			 double shopVoucherDiscount = normalizeMoney(item.getShop_voucher_discount_amount());
+			 double platformVoucherDiscount = normalizeMoney(item.getPlatform_voucher_discount_amount());
+			 double totalVoucherDiscount = normalizeMoney(item.getTotal_voucher_discount_amount());
+			 double totalAfterShopVoucher = getTotalAfterShopVoucher(item, originalTotal, shopVoucherDiscount);
+			 double totalAfterAllVouchers = getTotalAfterAllVouchers(
+					 item,
+					 originalTotal,
+					 shopVoucherDiscount,
+					 platformVoucherDiscount,
+					 totalVoucherDiscount);
+			 double platformCommissionAmount = roundMoney(totalAfterShopVoucher * PLATFORM_COMMISSION_RATE);
+
+			 orderItem.setShopVoucherDiscountAmount(Math.min(originalTotal, shopVoucherDiscount));
+			 orderItem.setPlatformVoucherDiscountAmount(Math.min(originalTotal - shopVoucherDiscount, platformVoucherDiscount));
+			 orderItem.setTotalVoucherDiscountAmount(Math.min(originalTotal, totalVoucherDiscount));
+			 orderItem.setTotalAfterShopVoucher(totalAfterShopVoucher);
+			 orderItem.setTotalAfterAllVouchers(totalAfterAllVouchers);
+			 orderItem.setPlatformCommissionRate(PLATFORM_COMMISSION_RATE);
+			 orderItem.setPlatformCommissionAmount(platformCommissionAmount);
+			 orderItem.setSellerReceivableAmount(roundMoney(Math.max(0.0, totalAfterShopVoucher - platformCommissionAmount)));
+			 orderItem.setIsAdjusted(false);
 			 var savedOrderItem=  orderItemRepository.save(orderItem);
 			 System.out.println("Order item saved to database with ID: " + savedOrderItem.toString());
 			 item.setId(savedOrderItem.getId());
@@ -106,6 +132,48 @@ public class OrderProducer {
 		        }
 		 });
 	 }
+
+	private double getItemOriginalTotal(docker_test.com.dto.OrderItemDTO item) {
+		return item.getPrice() * Math.max(0, item.getQuantity());
+	}
+
+	private double normalizeMoney(Double value) {
+		if (value == null || value.isNaN() || value.isInfinite() || value < 0) {
+			return 0.0;
+		}
+		return value;
+	}
+
+	private double getTotalAfterShopVoucher(
+			docker_test.com.dto.OrderItemDTO item,
+			double originalTotal,
+			double shopVoucherDiscount) {
+		Double explicitTotal = item.getTotal_after_shop_voucher();
+		if (explicitTotal != null) {
+			return Math.max(0.0, Math.min(originalTotal, explicitTotal));
+		}
+		return Math.max(0.0, originalTotal - shopVoucherDiscount);
+	}
+
+	private double getTotalAfterAllVouchers(
+			docker_test.com.dto.OrderItemDTO item,
+			double originalTotal,
+			double shopVoucherDiscount,
+			double platformVoucherDiscount,
+			double totalVoucherDiscount) {
+		Double explicitTotal = item.getTotal_after_all_vouchers();
+		if (explicitTotal != null) {
+			return Math.max(0.0, Math.min(originalTotal, explicitTotal));
+		}
+		double computedDiscount = totalVoucherDiscount > 0
+				? totalVoucherDiscount
+				: shopVoucherDiscount + platformVoucherDiscount;
+		return Math.max(0.0, originalTotal - computedDiscount);
+	}
+
+	private double roundMoney(double value) {
+		return Math.round(Math.max(0.0, value) * 100.0) / 100.0;
+	}
 }	
 
 

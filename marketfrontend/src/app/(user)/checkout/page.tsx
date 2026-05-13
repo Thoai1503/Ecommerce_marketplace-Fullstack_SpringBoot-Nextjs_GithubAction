@@ -151,6 +151,9 @@ type BackendVoucherItemBreakdown = {
   totalVoucherDiscountAmount: number;
   totalAfterShopVoucher: number;
   totalAfterAllVouchers: number;
+  platformCommissionRate: number;
+  platformCommissionAmount: number;
+  sellerReceivableAmount: number;
 };
 
 type BackendVoucherApplication = {
@@ -198,6 +201,7 @@ const normalizeVoucherNumber = (value: unknown) => {
 };
 
 const toMoneyAmount = (value: number) => Number(Math.max(0, value).toFixed(2));
+const PLATFORM_COMMISSION_RATE = 0.1;
 
 const normalizeVoucherBoolean = (value: unknown) => {
   if (typeof value === "boolean") return value;
@@ -260,6 +264,9 @@ const createEmptyBackendVoucherCalculation = (
 ): BackendVoucherCalculation => ({
   items: cartItems.map((item) => {
     const subtotal = toMoneyAmount(getCartItemSubtotal(item));
+    const platformCommissionAmount = toMoneyAmount(
+      subtotal * PLATFORM_COMMISSION_RATE,
+    );
 
     return {
       itemKey: getCartItemOrderKey(item),
@@ -272,6 +279,11 @@ const createEmptyBackendVoucherCalculation = (
       totalVoucherDiscountAmount: 0,
       totalAfterShopVoucher: subtotal,
       totalAfterAllVouchers: subtotal,
+      platformCommissionRate: PLATFORM_COMMISSION_RATE,
+      platformCommissionAmount,
+      sellerReceivableAmount: toMoneyAmount(
+        Math.max(0, subtotal - platformCommissionAmount),
+      ),
     };
   }),
   shopVoucherDiscountByShop: {},
@@ -289,41 +301,80 @@ const normalizeBackendVoucherCalculation = (
   if (!value || typeof value !== "object") return fallback;
 
   const items = Array.isArray(value.items)
-    ? value.items.map((item: any): BackendVoucherItemBreakdown => ({
-        itemKey: String(item.itemKey ?? item.item_key ?? ""),
-        shopId: Number(item.shopId ?? item.shop_id ?? 0),
-        productId: Number(item.productId ?? item.product_id ?? 0),
-        variantId: Number(item.variantId ?? item.variant_id ?? 0),
-        subtotal: toMoneyAmount(normalizeVoucherNumber(item.subtotal)),
-        shopVoucherDiscountAmount: toMoneyAmount(
+    ? value.items.map((item: any): BackendVoucherItemBreakdown => {
+        const subtotal = toMoneyAmount(normalizeVoucherNumber(item.subtotal));
+        const shopVoucherDiscountAmount = toMoneyAmount(
           normalizeVoucherNumber(
             item.shopVoucherDiscountAmount ??
               item.shop_voucher_discount_amount,
           ),
-        ),
-        platformVoucherDiscountAmount: toMoneyAmount(
+        );
+        const platformVoucherDiscountAmount = toMoneyAmount(
           normalizeVoucherNumber(
             item.platformVoucherDiscountAmount ??
               item.platform_voucher_discount_amount,
           ),
-        ),
-        totalVoucherDiscountAmount: toMoneyAmount(
+        );
+        const totalVoucherDiscountAmount = toMoneyAmount(
           normalizeVoucherNumber(
             item.totalVoucherDiscountAmount ??
               item.total_voucher_discount_amount,
           ),
-        ),
-        totalAfterShopVoucher: toMoneyAmount(
+        );
+        const totalAfterShopVoucher = toMoneyAmount(
           normalizeVoucherNumber(
-            item.totalAfterShopVoucher ?? item.total_after_shop_voucher,
+            item.totalAfterShopVoucher ??
+              item.total_after_shop_voucher ??
+              Math.max(0, subtotal - shopVoucherDiscountAmount),
           ),
-        ),
-        totalAfterAllVouchers: toMoneyAmount(
+        );
+        const totalAfterAllVouchers = toMoneyAmount(
           normalizeVoucherNumber(
-            item.totalAfterAllVouchers ?? item.total_after_all_vouchers,
+            item.totalAfterAllVouchers ??
+              item.total_after_all_vouchers ??
+              Math.max(0, subtotal - totalVoucherDiscountAmount),
           ),
-        ),
-      }))
+        );
+        const normalizedCommissionRate = normalizeVoucherNumber(
+          item.platformCommissionRate ??
+            item.platform_commission_rate ??
+            PLATFORM_COMMISSION_RATE,
+        );
+        const platformCommissionRate =
+          normalizedCommissionRate > 0
+            ? normalizedCommissionRate
+            : PLATFORM_COMMISSION_RATE;
+        const platformCommissionAmount = toMoneyAmount(
+          normalizeVoucherNumber(
+            item.platformCommissionAmount ??
+              item.platform_commission_amount ??
+              totalAfterShopVoucher * platformCommissionRate,
+          ),
+        );
+        const sellerReceivableAmount = toMoneyAmount(
+          normalizeVoucherNumber(
+            item.sellerReceivableAmount ??
+              item.seller_receivable_amount ??
+              Math.max(0, totalAfterShopVoucher - platformCommissionAmount),
+          ),
+        );
+
+        return {
+          itemKey: String(item.itemKey ?? item.item_key ?? ""),
+          shopId: Number(item.shopId ?? item.shop_id ?? 0),
+          productId: Number(item.productId ?? item.product_id ?? 0),
+          variantId: Number(item.variantId ?? item.variant_id ?? 0),
+          subtotal,
+          shopVoucherDiscountAmount,
+          platformVoucherDiscountAmount,
+          totalVoucherDiscountAmount,
+          totalAfterShopVoucher,
+          totalAfterAllVouchers,
+          platformCommissionRate,
+          platformCommissionAmount,
+          sellerReceivableAmount,
+        };
+      })
     : fallback.items;
 
   const voucherApplications = Array.isArray(
@@ -2412,6 +2463,36 @@ export default function CheckoutPage() {
         0,
         totalVoucherItemDiscount - shopVoucherItemDiscount,
       );
+      const totalAfterShopVoucher = toMoneyAmount(
+        Math.min(
+          itemSubtotal,
+          Math.max(
+            0,
+            voucherBreakdown?.totalAfterShopVoucher ??
+              itemSubtotal - shopVoucherItemDiscount,
+          ),
+        ),
+      );
+      const totalAfterAllVouchers = toMoneyAmount(
+        Math.min(
+          itemSubtotal,
+          Math.max(
+            0,
+            voucherBreakdown?.totalAfterAllVouchers ??
+              itemSubtotal - totalVoucherItemDiscount,
+          ),
+        ),
+      );
+      const platformCommissionRate =
+        voucherBreakdown?.platformCommissionRate || PLATFORM_COMMISSION_RATE;
+      const platformCommissionAmount = toMoneyAmount(
+        voucherBreakdown?.platformCommissionAmount ??
+          totalAfterShopVoucher * platformCommissionRate,
+      );
+      const sellerReceivableAmount = toMoneyAmount(
+        voucherBreakdown?.sellerReceivableAmount ??
+          Math.max(0, totalAfterShopVoucher - platformCommissionAmount),
+      );
 
       return {
         id: Number(item.id || 0),
@@ -2427,14 +2508,11 @@ export default function CheckoutPage() {
         shop_voucher_discount_amount: shopVoucherItemDiscount,
         platform_voucher_discount_amount: platformVoucherItemDiscount,
         total_voucher_discount_amount: totalVoucherItemDiscount,
-        total_after_shop_voucher: Math.max(
-          0,
-          itemSubtotal - shopVoucherItemDiscount,
-        ),
-        total_after_all_vouchers: Math.max(
-          0,
-          itemSubtotal - totalVoucherItemDiscount,
-        ),
+        total_after_shop_voucher: totalAfterShopVoucher,
+        total_after_all_vouchers: totalAfterAllVouchers,
+        platform_commission_rate: platformCommissionRate,
+        platform_commission_amount: platformCommissionAmount,
+        seller_receivable_amount: sellerReceivableAmount,
       };
     });
 

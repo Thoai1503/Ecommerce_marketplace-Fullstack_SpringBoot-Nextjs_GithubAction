@@ -259,6 +259,35 @@ const toOrderItem = (raw: any): OrderItem => ({
   lastReturnRequestId: raw?.lastReturnRequestId,
   price: asNumber(raw?.price, 0),
   discount: asNumber(raw?.discountAmount ?? raw?.discount_amount, 0),
+  shopVoucherDiscountAmount: asNumber(
+    raw?.shopVoucherDiscountAmount ?? raw?.shop_voucher_discount_amount,
+    0,
+  ),
+  platformVoucherDiscountAmount: asNumber(
+    raw?.platformVoucherDiscountAmount ??
+      raw?.platform_voucher_discount_amount,
+    0,
+  ),
+  totalVoucherDiscountAmount: asNumber(
+    raw?.totalVoucherDiscountAmount ?? raw?.total_voucher_discount_amount,
+    0,
+  ),
+  totalAfterShopVoucher: asNumber(
+    raw?.totalAfterShopVoucher ?? raw?.total_after_shop_voucher,
+    0,
+  ),
+  totalAfterAllVouchers: asNumber(
+    raw?.totalAfterAllVouchers ?? raw?.total_after_all_vouchers,
+    0,
+  ),
+  platformCommissionAmount: asNumber(
+    raw?.platformCommissionAmount ?? raw?.platform_commission_amount,
+    0,
+  ),
+  sellerReceivableAmount: asNumber(
+    raw?.sellerReceivableAmount ?? raw?.seller_receivable_amount,
+    0,
+  ),
   status: "Ready" as const,
 });
 
@@ -329,6 +358,25 @@ const getFirstSuccess = async <T,>(paths: string[]): Promise<T | null> => {
 };
 
 const formatMoney = (amount: number) => `${amount.toLocaleString("vi-VN")}d`;
+
+const getReturnItemPaidAmount = (item: OrderItem, quantity: number) => {
+  const safeQuantity = Math.max(0, Number(quantity || 0));
+  const orderedQuantity = Math.max(
+    1,
+    Number((item as any).originalQuantity ?? item.quantity ?? 1),
+  );
+  const totalAfterAllVouchers = Number(item.totalAfterAllVouchers || 0);
+
+  if (totalAfterAllVouchers > 0) {
+    return Math.max(0, (totalAfterAllVouchers / orderedQuantity) * safeQuantity);
+  }
+
+  const totalDiscount = Number(
+    item.totalVoucherDiscountAmount ?? item.discount ?? 0,
+  );
+  const unitDiscount = totalDiscount > 0 ? totalDiscount / orderedQuantity : 0;
+  return Math.max(0, (Number(item.price || 0) - unitDiscount) * safeQuantity);
+};
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleString("vi-VN", {
@@ -989,6 +1037,7 @@ export default function UserOrderDetailPage() {
       .filter((item) => !!draft?.selectedItemIds?.[item.id])
       .map((item) => ({
         ...item,
+        originalQuantity: item.quantity,
         // Use the quantity from draft.returnQuantities if present, otherwise fallback to 1
         quantity: draft?.returnQuantities?.[item.id] ?? 1,
       }));
@@ -1039,7 +1088,7 @@ export default function UserOrderDetailPage() {
     );
 
     const totalRequestedAmount = selectedItems.reduce(
-      (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
+      (sum, item) => sum + getReturnItemPaidAmount(item, item.quantity),
       0,
     );
     // alert(
@@ -1063,7 +1112,7 @@ export default function UserOrderDetailPage() {
           orderItemId: item.id,
           quantity: item.quantity,
           orderShipmentId: shipmentId,
-          requestedAmount: Number(item.price || 0) * Number(item.quantity || 0),
+          requestedAmount: getReturnItemPaidAmount(item, item.quantity),
         })),
       ),
     );
@@ -1088,28 +1137,52 @@ export default function UserOrderDetailPage() {
         body: formData,
       });
 
+      const responseText = await response.text();
+      const responsePayload = responseText
+        ? (() => {
+            try {
+              return JSON.parse(responseText);
+            } catch {
+              return { message: responseText };
+            }
+          })()
+        : {};
+
       submittedByApi = response.ok;
       console.log("API response for return request submission:", {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
+        body: responsePayload,
       });
       let errorMessage = "Gui yeu cau that bai. Vui long thu lai.";
       if (!submittedByApi) {
-        try {
-          const errorBody = await response.text();
-          if (errorBody?.trim()) {
-            errorMessage = errorBody;
-          }
-        } catch {
-          // keep default message
+        const errorBody =
+          typeof responsePayload === "string"
+            ? responsePayload
+            : responsePayload?.message || JSON.stringify(responsePayload);
+        if (errorBody?.trim()) {
+          errorMessage = errorBody;
         }
       }
+
+      const confirmedRefundAmount = asNumber(
+        responsePayload?.requestedAmount ?? responsePayload?.requested_amount,
+        totalRequestedAmount,
+      );
+      const refundMessage = String(
+        responsePayload?.refundMessage ?? responsePayload?.refund_message ?? "",
+      );
 
       setReturnActionMessage((prev) => ({
         ...prev,
         [shipmentId]: submittedByApi
-          ? "Yeu cau tra hang hoan tien da duoc gui. Shop se phan hoi som."
+          ? confirmedRefundAmount <= 0
+            ? refundMessage ||
+              "Bạn sẽ không được hoàn tiền cho yêu cầu này vì voucher không còn đủ điều kiện sau khi trả hàng."
+            : `Yeu cau tra hang hoan tien da duoc gui. So tien du kien hoan: ${formatMoney(
+                confirmedRefundAmount,
+              )}.`
           : errorMessage,
       }));
     } catch (error) {

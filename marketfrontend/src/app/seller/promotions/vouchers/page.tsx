@@ -298,41 +298,59 @@ const metricCards = [
   { label: "Buyers", value: "0", subtext: "compared to last 7 days 0.00%" },
 ];
 
-const initialShopVoucherForm: ShopVoucherFormState = {
-  campaignId: null,
-  title: "",
-  description: "",
-  codePrefix: "S",
-  codeSuffix: "",
-  claimStartDate: "2026-04-27",
-  claimStartTime: "10:00",
-  claimEndDate: "2026-04-27",
-  claimEndTime: "11:00",
-  validFromDate: "2026-04-27",
-  validFromTime: "10:00",
-  validToDate: "2026-04-30",
-  validToTime: "23:59",
-  discountKind: "FIXED",
-  discountValue: "",
-  maxDiscountAmount: "",
-  minOrderValue: "",
-  maxOrderValue: "",
-  maxUses: "",
-  perUserLimit: "1",
-  stackable: false,
-  status: "DRAFT",
-  priority: "100",
+const toDateTimeFields = (date: Date) => {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  const iso = local.toISOString();
+  return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
 };
 
-const initialProductVoucherForm: ProductVoucherFormState = {
-  ...initialShopVoucherForm,
+const createInitialShopVoucherForm = (): ShopVoucherFormState => {
+  const now = new Date();
+  now.setSeconds(0, 0);
+
+  const claimStart = toDateTimeFields(now);
+  const claimEnd = toDateTimeFields(new Date(now.getTime() + 60 * 60 * 1000));
+  const validToDate = new Date(now);
+  validToDate.setDate(validToDate.getDate() + 3);
+  validToDate.setHours(23, 59, 0, 0);
+  const validTo = toDateTimeFields(validToDate);
+
+  return {
+    campaignId: null,
+    title: "",
+    description: "",
+    codePrefix: "S",
+    codeSuffix: "",
+    claimStartDate: claimStart.date,
+    claimStartTime: claimStart.time,
+    claimEndDate: claimEnd.date,
+    claimEndTime: claimEnd.time,
+    validFromDate: claimStart.date,
+    validFromTime: claimStart.time,
+    validToDate: validTo.date,
+    validToTime: validTo.time,
+    discountKind: "FIXED",
+    discountValue: "",
+    maxDiscountAmount: "",
+    minOrderValue: "",
+    maxOrderValue: "",
+    maxUses: "",
+    perUserLimit: "1",
+    stackable: false,
+    status: "DRAFT",
+    priority: "100",
+  };
+};
+
+const createInitialProductVoucherForm = (): ProductVoucherFormState => ({
+  ...createInitialShopVoucherForm(),
   selectedProductIds: [],
-};
+});
 
-const initialCategoryVoucherForm: CategoryVoucherFormState = {
-  ...initialShopVoucherForm,
+const createInitialCategoryVoucherForm = (): CategoryVoucherFormState => ({
+  ...createInitialShopVoucherForm(),
   selectedCategoryIds: [],
-};
+});
 
 const buildDateTimeString = (date: string, time: string) =>
   date && time ? `${date}T${time}:00` : "";
@@ -345,9 +363,7 @@ const parseDateTimeToFields = (value?: string) => {
     const [datePart = "", timePart = ""] = normalized.split("T");
     return { date: datePart, time: timePart.slice(0, 5) };
   }
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  const iso = local.toISOString();
-  return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
+  return toDateTimeFields(date);
 };
 
 const parseVoucherCode = (code: string) => {
@@ -2321,12 +2337,12 @@ const Page = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [shopVoucherForm, setShopVoucherForm] = useState<ShopVoucherFormState>(
-    initialShopVoucherForm,
+    () => createInitialShopVoucherForm(),
   );
   const [productVoucherForm, setProductVoucherForm] =
-    useState<ProductVoucherFormState>(initialProductVoucherForm);
+    useState<ProductVoucherFormState>(() => createInitialProductVoucherForm());
   const [categoryVoucherForm, setCategoryVoucherForm] =
-    useState<CategoryVoucherFormState>(initialCategoryVoucherForm);
+    useState<CategoryVoucherFormState>(() => createInitialCategoryVoucherForm());
   const campaignsQuery = useQuery(vouchersQuery.campaigns());
   const vouchersQueryResult = useQuery(vouchersQuery.all());
   const productsQuery = useQuery({
@@ -2568,7 +2584,7 @@ const Page = () => {
   };
 
   const openShopVoucherModal = () => {
-    setShopVoucherForm(initialShopVoucherForm);
+    setShopVoucherForm(createInitialShopVoucherForm());
     setEditingVoucherId(null);
     setEditingVoucherType(null);
     setSaveError(null);
@@ -2576,7 +2592,7 @@ const Page = () => {
   };
 
   const openProductVoucherModal = () => {
-    setProductVoucherForm(initialProductVoucherForm);
+    setProductVoucherForm(createInitialProductVoucherForm());
     setEditingVoucherId(null);
     setEditingVoucherType(null);
     setSaveError(null);
@@ -2584,7 +2600,7 @@ const Page = () => {
   };
 
   const openCategoryVoucherModal = () => {
-    setCategoryVoucherForm(initialCategoryVoucherForm);
+    setCategoryVoucherForm(createInitialCategoryVoucherForm());
     setEditingVoucherId(null);
     setEditingVoucherType(null);
     setSaveError(null);
@@ -2700,7 +2716,7 @@ const Page = () => {
         window.alert("Voucher was saved successfully.");
       }
       setIsShopVoucherModalOpen(false);
-      setShopVoucherForm(initialShopVoucherForm);
+      setShopVoucherForm(createInitialShopVoucherForm());
       setEditingVoucherId(null);
       setEditingVoucherType(null);
     } catch (error: any) {
@@ -2760,7 +2776,7 @@ const Page = () => {
       setSaveSuccess(successMessage);
       window.alert(successMessage);
       setIsProductVoucherModalOpen(false);
-      setProductVoucherForm(initialProductVoucherForm);
+      setProductVoucherForm(createInitialProductVoucherForm());
       setEditingVoucherId(null);
       setEditingVoucherType(null);
     } catch (error: any) {
@@ -2820,7 +2836,7 @@ const Page = () => {
       setSaveSuccess(successMessage);
       window.alert(successMessage);
       setIsCategoryVoucherModalOpen(false);
-      setCategoryVoucherForm(initialCategoryVoucherForm);
+      setCategoryVoucherForm(createInitialCategoryVoucherForm());
       setEditingVoucherId(null);
       setEditingVoucherType(null);
     } catch (error: any) {

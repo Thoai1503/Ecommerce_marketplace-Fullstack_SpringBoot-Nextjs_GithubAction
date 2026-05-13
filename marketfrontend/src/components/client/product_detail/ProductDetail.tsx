@@ -1,16 +1,14 @@
 "use client";
 
 import { useUserAuth } from "@/context/UserAuthContext";
-import { modelConfig, Product } from "@/data/product/product";
 import { API_URL } from "@/helper/api";
 import { Cart, useAddToCartMutation } from "@/types/data/Cart";
 import { ICart } from "@/validators/cart";
-import { IProduct, IProductAttribute, Variant } from "@/validators/product";
+import { IProduct, IProductAttribute } from "@/validators/product";
 import { IProductVariant } from "@/validators/productVariant";
 import { message } from "antd";
 import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 const sanitizeProductDescription = (html?: string | null) => {
   if (!html) return "";
@@ -114,13 +112,11 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { mutate: addToCart } = useAddToCartMutation();
   const [shopProducts, setShopProducts] = useState<any[]>([]);
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const fullUrl = pathname + "?" + searchParams.toString();
   const [selectedVariant, setSelectedVariant] = useState<number | null>(null);
   const [variant, setVariant] = useState<IProductVariant | null>(null);
   const [clientProduct, setClientProduct] = useState<IProduct | null>(null);
   const detailData = (clientProduct ?? data) as ProductDetailPayload;
+  const productId = Number(detailData?.id ?? data?.id ?? 0);
   const productImages = Array.isArray(detailData.images)
     ? detailData.images
     : [];
@@ -147,6 +143,8 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
     productImages[0]?.image_url || "/assets/images/ecommerce/product-1.jpg",
   );
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistSaving, setWishlistSaving] = useState(false);
   const sellerOwnerUserId = Number(shop?.user_id ?? shop?.userId ?? 0);
   const isOwnShopProduct =
     Boolean(userId) &&
@@ -159,7 +157,39 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
   };
 
   useEffect(() => {
-    const productId = detailData?.id ?? data?.id;
+    if (!userId || !productId) {
+      setIsWishlisted(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchWishlistStatus = async () => {
+      try {
+        const res = await fetch(
+          `${API_URL}/api/wishlist/status?user_id=${userId}&product_id=${productId}`,
+          { cache: "no-store" },
+        );
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!cancelled) {
+          setIsWishlisted(Boolean(data?.isWishlisted ?? data?.is_wishlisted));
+        }
+      } catch (error) {
+        console.error("Failed to fetch wishlist status:", error);
+      }
+    };
+
+    fetchWishlistStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [productId, userId]);
+
+  useEffect(() => {
     if (!productId) return;
 
     let cancelled = false;
@@ -187,7 +217,7 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
     return () => {
       cancelled = true;
     };
-  }, [data?.id, detailData?.id]);
+  }, [productId]);
 
   useEffect(() => {
     if (
@@ -323,6 +353,68 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
         message.error(error.message);
       },
     });
+  };
+
+  const handleWishlistToggle = async () => {
+    if (isOwnShopProduct) {
+      message.warning("Bạn không thể lưu sản phẩm của chính shop mình.");
+      return;
+    }
+
+    if (!userId) {
+      message.warning("Vui lòng đăng nhập để thêm sản phẩm vào wishlist.");
+      return;
+    }
+
+    if (!productId || wishlistSaving) return;
+
+    const nextIsWishlisted = !isWishlisted;
+    setWishlistSaving(true);
+    setIsWishlisted(nextIsWishlisted);
+
+    try {
+      const res = await fetch(
+        nextIsWishlisted
+          ? `${API_URL}/api/wishlist`
+          : `${API_URL}/api/wishlist?user_id=${userId}&product_id=${productId}`,
+        {
+          method: nextIsWishlisted ? "POST" : "DELETE",
+          headers: nextIsWishlisted
+            ? {
+                "Content-Type": "application/json",
+              }
+            : undefined,
+          body: nextIsWishlisted
+            ? JSON.stringify({
+                user_id: userId,
+                product_id: productId,
+              })
+            : undefined,
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error((await res.text()) || "Unable to update wishlist");
+      }
+
+      const payload = await res.json();
+      setIsWishlisted(
+        Boolean(
+          payload?.isWishlisted ?? payload?.is_wishlisted ?? nextIsWishlisted,
+        ),
+      );
+      window.dispatchEvent(new Event("wishlist-updated"));
+      message.success(
+        nextIsWishlisted
+          ? "Đã thêm sản phẩm vào wishlist"
+          : "Đã xóa sản phẩm khỏi wishlist",
+      );
+    } catch (error: any) {
+      setIsWishlisted(!nextIsWishlisted);
+      message.error(error?.message || "Không thể cập nhật wishlist");
+    } finally {
+      setWishlistSaving(false);
+    }
   };
 
   useEffect(() => {
@@ -545,8 +637,26 @@ const ProductDetail = ({ data }: { data: IProduct }) => {
                               </button>
                             </div>
                             <div className="col-md-6">
-                              <button className="btn btn-outline-secondary w-100">
-                                <i className="bi bi-heart me-2"></i>Wishlist
+                              <button
+                                className={`btn w-100 ${
+                                  isWishlisted
+                                    ? "btn-outline-danger"
+                                    : "btn-outline-secondary"
+                                }`}
+                                disabled={wishlistSaving || isOwnShopProduct}
+                                onClick={handleWishlistToggle}
+                                aria-pressed={isWishlisted}
+                              >
+                                <i
+                                  className={`bi ${
+                                    isWishlisted ? "bi-heart-fill" : "bi-heart"
+                                  } me-2`}
+                                ></i>
+                                {wishlistSaving
+                                  ? "Saving..."
+                                  : isWishlisted
+                                    ? "Wishlisted"
+                                    : "Wishlist"}
                               </button>
                             </div>
                           </div>

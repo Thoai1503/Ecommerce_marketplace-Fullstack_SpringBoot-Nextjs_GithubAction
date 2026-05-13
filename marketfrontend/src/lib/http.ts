@@ -14,6 +14,7 @@ import {
   clearAuth,
   getValidAccessToken,
   refreshAccessToken,
+  shouldRedirectToLoginOnAuthFailure,
 } from "@/lib/authSession";
 
 // Create axios instance
@@ -83,9 +84,10 @@ http.interceptors.response.use(
       originalRequest._retry = true;
 
       // Try to refresh token
+      const redirectOnAuthFailure = shouldRedirectToLoginOnAuthFailure();
       const newToken = await refreshAccessToken({
         clearOnFailure: true,
-        redirectOnFailure: true,
+        redirectOnFailure: redirectOnAuthFailure,
       });
 
       if (newToken) {
