@@ -19,6 +19,12 @@ export interface ReturnRequestItemAdmin {
   quantity: number;
   requestedAmount: number;
   refundedAmount: number;
+  productName?: string | null;
+  variantName?: string | null;
+  productImage?: string | null;
+  price?: number | null;
+  totalPrice?: number | null;
+  orderQuantity?: number | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -43,6 +49,17 @@ export interface ReturnRequestAdmin {
   quantity: number;
   requestedAmount: number;
   refundedAmount: number;
+  orderNumber?: string | null;
+  orderTrackingNumber?: string | null;
+  shipmentTrackingNumber?: string | null;
+  carrierName?: string | null;
+  shippingStatus?: string | null;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  customerAvatarUrl?: string | null;
+  shopName?: string | null;
+  shopLogo?: string | null;
   createdAt: string;
   updatedAt?: string | null;
   items: ReturnRequestItemAdmin[];

@@ -24,6 +24,7 @@ import docker_test.com.dto.RequestItemDTO;
 import docker_test.com.dto.voucher.CheckoutVoucherCalculationRequest;
 import docker_test.com.dto.voucher.CheckoutVoucherCalculationResponse;
 import docker_test.com.models.refunds.ReturnRequest;
+import docker_test.com.models.refunds.ReturnRequestItem;
 import docker_test.com.models.refunds.ReturnRequestStatus;
 import docker_test.com.models.Address;
 import docker_test.com.repository.RefundRequestRepository;
@@ -72,7 +73,7 @@ public class RefundRequestService {
 	@Transactional
 	public ReturnRequest getRefundRequestsByOrderShipmentId(Long orderShipmentId) {
 		ReturnRequest request = refundRequestRepository.findByOrderShipmentId(orderShipmentId);
-		initializeReturnRequestDetails(request);
+		enrichReturnRequest(request);
 		return request;
 	}
 
@@ -754,22 +755,17 @@ public class RefundRequestService {
 		return recipientDTO;
 	}
 	 
+	@Transactional
 	public List<ReturnRequest> getAll() {
-		refundRequestRepository.findAll().forEach(request -> {
-			request.getItems().forEach(item -> {
-				System.out.println("OrderItemId: " + item.getOrderItemId() + " Quantity: " + item.getQuantity() + " RequestedAmount: " + item.getRequestedAmount());
-			});
-		});
-		
-		return refundRequestRepository.findAll().stream()
-				.filter(request -> request.getAttachments().size()>0) // Replace 1L with the actual customer ID you want to filter by
-				.toList();
+		List<ReturnRequest> requests = refundRequestRepository.findAll();
+		enrichReturnRequests(requests);
+		return requests;
 	}
 	
 	@Transactional
 	public ReturnRequest getRefundRequestById(Long id) {
 		ReturnRequest request = refundRequestRepository.findById(id).orElse(null);
-		initializeReturnRequestDetails(request);
+		enrichReturnRequest(request);
 		return request;
 	}
 
@@ -777,10 +773,161 @@ public class RefundRequestService {
 		if (request == null) {
 			return;
 		}
-		request.getItems().size();
-		request.getAttachments().size();
+		if (request.getItems() != null) {
+			request.getItems().size();
+		}
+		if (request.getAttachments() != null) {
+			request.getAttachments().size();
+		}
 	}
 
+	private void enrichReturnRequest(ReturnRequest request) {
+		if (request == null) {
+			return;
+		}
+		enrichReturnRequests(List.of(request));
+	}
+
+	private void enrichReturnRequests(List<ReturnRequest> requests) {
+		if (requests == null || requests.isEmpty()) {
+			return;
+		}
+
+		requests.forEach(this::initializeReturnRequestDetails);
+		Map<Long, ReturnRequest> requestById = requests.stream()
+				.filter(request -> request.getId() != null)
+				.collect(Collectors.toMap(
+						ReturnRequest::getId,
+						request -> request,
+						(first, ignored) -> first,
+						LinkedHashMap::new));
+		if (requestById.isEmpty()) {
+			return;
+		}
+
+		List<Long> requestIds = new ArrayList<>(requestById.keySet());
+		String sql = """
+				SELECT
+					rr.id AS return_request_id,
+					o.order_number,
+					o.tracking_number AS order_tracking_number,
+					os.tracking_number AS shipment_tracking_number,
+					os.carrier_name,
+					os.shipping_status,
+					u.full_name AS customer_name,
+					u.email AS customer_email,
+					u.phone AS customer_phone,
+					u.avatar_url AS customer_avatar_url,
+					s.shop_name,
+					s.shop_logo
+				FROM return_request rr
+				LEFT JOIN orders o ON o.id = rr.order_id
+				LEFT JOIN order_shipment os ON os.id = rr.order_shipment_id
+				LEFT JOIN `user` u ON u.id = rr.customer_id
+				LEFT JOIN shop s ON s.id = rr.shop_id
+				WHERE rr.id IN (%s)
+				""".formatted(placeholders(requestIds.size()));
+
+		try (Connection con = DBConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)) {
+			int parameterIndex = 1;
+			for (Long requestId : requestIds) {
+				ps.setLong(parameterIndex++, requestId);
+			}
+
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				ReturnRequest request = requestById.get(rs.getLong("return_request_id"));
+				if (request == null) {
+					continue;
+				}
+				request.setOrderNumber(rs.getString("order_number"));
+				request.setOrderTrackingNumber(rs.getString("order_tracking_number"));
+				request.setShipmentTrackingNumber(rs.getString("shipment_tracking_number"));
+				request.setCarrierName(rs.getString("carrier_name"));
+				request.setShippingStatus(rs.getString("shipping_status"));
+				request.setCustomerName(rs.getString("customer_name"));
+				request.setCustomerEmail(rs.getString("customer_email"));
+				request.setCustomerPhone(rs.getString("customer_phone"));
+				request.setCustomerAvatarUrl(rs.getString("customer_avatar_url"));
+				request.setShopName(rs.getString("shop_name"));
+				request.setShopLogo(rs.getString("shop_logo"));
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Unable to enrich return requests.", e);
+		}
+
+		enrichReturnRequestItems(requests);
+	}
+
+	private void enrichReturnRequestItems(List<ReturnRequest> requests) {
+		Map<Long, ReturnRequestItem> itemById = new LinkedHashMap<>();
+		for (ReturnRequest request : requests) {
+			if (request.getItems() == null) {
+				continue;
+			}
+			for (ReturnRequestItem item : request.getItems()) {
+				if (item.getId() != null) {
+					itemById.put(item.getId(), item);
+				}
+			}
+		}
+		if (itemById.isEmpty()) {
+			return;
+		}
+
+		List<Long> itemIds = new ArrayList<>(itemById.keySet());
+		String sql = """
+				SELECT
+					rri.id AS return_request_item_id,
+					oi.product_name,
+					oi.variant_name,
+					oi.image AS product_image,
+					oi.price,
+					oi.total_price,
+					oi.quantity AS order_quantity
+				FROM return_request_item rri
+				LEFT JOIN order_item oi ON oi.id = rri.order_item_id
+				WHERE rri.id IN (%s)
+				""".formatted(placeholders(itemIds.size()));
+
+		try (Connection con = DBConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)) {
+			int parameterIndex = 1;
+			for (Long itemId : itemIds) {
+				ps.setLong(parameterIndex++, itemId);
+			}
+
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				ReturnRequestItem item = itemById.get(rs.getLong("return_request_item_id"));
+				if (item == null) {
+					continue;
+				}
+				item.setProductName(rs.getString("product_name"));
+				item.setVariantName(rs.getString("variant_name"));
+				item.setProductImage(rs.getString("product_image"));
+				item.setPrice(money(rs.getDouble("price")));
+				item.setTotalPrice(money(rs.getDouble("total_price")));
+				item.setOrderQuantity(Math.max(0, rs.getInt("order_quantity")));
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Unable to enrich return request items.", e);
+		}
+	}
+
+	private String placeholders(int count) {
+		StringBuilder builder = new StringBuilder();
+		for (int index = 0; index < count; index++) {
+			if (index > 0) {
+				builder.append(",");
+			}
+			builder.append("?");
+		}
+		return builder.toString();
+	}
+
+	@Transactional
 	public ReturnRequest updateStatus(Long id, ReturnRequestStatus status, Double refundedAmount) {
 		ReturnRequest request = refundRequestRepository.findById(id).orElse(null);
 		if (request == null) {
@@ -794,7 +941,9 @@ public class RefundRequestService {
 			request.setRefundedAmount(refundedAmount);
 		}
 		request.setUpdatedAt(LocalDateTime.now());
-		return refundRequestRepository.save(request);
+		ReturnRequest savedRequest = refundRequestRepository.save(request);
+		enrichReturnRequest(savedRequest);
+		return savedRequest;
 	}
 
 	private record OrderItemSnapshot(

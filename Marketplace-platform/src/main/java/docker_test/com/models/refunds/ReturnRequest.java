@@ -95,6 +95,39 @@ public class ReturnRequest {
 
     @Transient
     private String refundMessage;
+
+    @Transient
+    private String orderNumber;
+
+    @Transient
+    private String orderTrackingNumber;
+
+    @Transient
+    private String shipmentTrackingNumber;
+
+    @Transient
+    private String carrierName;
+
+    @Transient
+    private String shippingStatus;
+
+    @Transient
+    private String customerName;
+
+    @Transient
+    private String customerEmail;
+
+    @Transient
+    private String customerPhone;
+
+    @Transient
+    private String customerAvatarUrl;
+
+    @Transient
+    private String shopName;
+
+    @Transient
+    private String shopLogo;
     
     @Column(name = "created_at", updatable = false)
     @Builder.Default
