@@ -36,14 +36,20 @@ public class AttributeValueController {
     @PostMapping
     public ResponseEntity<?> create(@RequestBody AttributeValue item) {
         try {
-            if (item.getAttribute_id() <= 0 || item.getValue() == null) {
+            if (item.getAttribute_id() <= 0 || item.getValue() == null || item.getValue().trim().isEmpty()) {
                 return ResponseEntity.badRequest().body("Invalid data");
             }
+
+            item.setValue(item.getValue().trim());
 
             AttributeValue saved = repository.Create(item);
             return ResponseEntity.status(HttpStatus.CREATED).body(saved);
 
         } catch (SQLException e) {
+            if ("Duplicate value".equalsIgnoreCase(e.getMessage())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+            }
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(e.getMessage());
         }

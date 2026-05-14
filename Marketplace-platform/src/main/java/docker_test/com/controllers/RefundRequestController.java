@@ -111,6 +111,18 @@ public class RefundRequestController {
 		}
 	}
 
+	@PostMapping("/preview")
+	public ResponseEntity<?> previewRefundRequest(@RequestBody RefundRequestDTO refundRequestDTO) {
+		try {
+			return ResponseEntity.ok(refundRequestService.previewRefundRequest(refundRequestDTO));
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.badRequest().body(e.getMessage());
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error previewing refund request: " + e.getMessage());
+		}
+	}
+
 	@PostMapping(value = "/multipart", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<?> createRefundRequestMultipart(
 			@RequestParam("orderId") String orderId,
