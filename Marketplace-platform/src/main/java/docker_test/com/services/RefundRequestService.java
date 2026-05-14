@@ -69,8 +69,23 @@ public class RefundRequestService {
 	}
 
 	
+	@Transactional
 	public ReturnRequest getRefundRequestsByOrderShipmentId(Long orderShipmentId) {
-		return refundRequestRepository.findByOrderShipmentId(orderShipmentId);
+		ReturnRequest request = refundRequestRepository.findByOrderShipmentId(orderShipmentId);
+		initializeReturnRequestDetails(request);
+		return request;
+	}
+
+	public Map<String, Object> previewRefundRequest(RefundRequestDTO refundRequestDTO) {
+		RefundCalculation calculation = calculateRefund(refundRequestDTO);
+		return Map.of(
+				"requestedAmount", calculation.refundAmount(),
+				"returnedGrossAmount", calculation.returnedGrossAmount(),
+				"voucherClawbackAmount", calculation.voucherClawbackAmount(),
+				"remainingPayableAmount", calculation.remainingPayableAmount(),
+				"remainingPlatformCommissionAmount", calculation.remainingPlatformCommissionAmount(),
+				"platformCommissionAdjustmentAmount", calculation.platformCommissionAdjustmentAmount(),
+				"refundMessage", calculation.message() == null ? "" : calculation.message());
 	}
 	
 	@Transactional
@@ -151,7 +166,7 @@ public class RefundRequestService {
 
 		List<OrderItemSnapshot> orderItems = findOrderItems(refundRequestDTO.getOrderId());
 		if (orderItems.isEmpty()) {
-			throw new IllegalArgumentException("Không tìm thấy item của đơn hàng để tính hoàn tiền");
+			throw new IllegalArgumentException("No items from the order could be found to process the refund.");
 		}
 
 		Map<Long, OrderItemSnapshot> itemById = orderItems.stream()
@@ -175,7 +190,7 @@ public class RefundRequestService {
 		}
 
 		if (acceptedQty.isEmpty()) {
-			throw new IllegalArgumentException("Không còn số lượng hợp lệ để tạo yêu cầu trả hàng");
+			throw new IllegalArgumentException("There are no longer valid quantities to create a return request.");
 		}
 
 		double previousRefundAmount = findPreviousRefundAmount(refundRequestDTO.getOrderId());
@@ -191,42 +206,77 @@ public class RefundRequestService {
 					return item == null ? 0.0 : item.price() * entry.getValue();
 				})
 				.sum();
+		double returnedAfterShopVoucherAmount = acceptedQty.entrySet().stream()
+				.mapToDouble(entry -> amountAfterShopVoucher(itemById.get(entry.getKey()), entry.getValue()))
+				.sum();
+		double returnedPaidAmount = acceptedQty.entrySet().stream()
+				.mapToDouble(entry -> amountAfterAllVouchers(itemById.get(entry.getKey()), entry.getValue()))
+				.sum();
 
 		VoucherSelection voucherSelection = findVoucherSelection(refundRequestDTO.getOrderId());
-		CheckoutVoucherCalculationRequest request = new CheckoutVoucherCalculationRequest();
-		request.setUserId(refundRequestDTO.getCustomerId());
-		request.setHasPreviousOrder(false);
-		request.setSelectedShopVoucherIdsByShop(voucherSelection.shopVoucherIdsByShop());
-		request.setSelectedPlatformVoucherIds(voucherSelection.platformVoucherIds());
-		request.setItems(orderItems.stream()
-				.map(item -> toRemainingVoucherItem(
+		List<RemainingItem> remainingItems = orderItems.stream()
+				.map(item -> toRemainingItem(
 						item,
 						previousReturnQty.getOrDefault(item.orderItemId(), 0)
 								+ acceptedQty.getOrDefault(item.orderItemId(), 0)))
 				.filter(Objects::nonNull)
-				.toList());
+				.toList();
 
-		CheckoutVoucherCalculationResponse recalculated =
-				voucherCheckoutCalculationService.calculateForReturn(request);
-		double remainingPayable = recalculated.getItems().stream()
+		// Return refunds are evaluated by voucher layers: platform first on the
+		// remaining amount after original shop voucher, then shop clawback.
+		CheckoutVoucherCalculationResponse platformRecalculated =
+				voucherCheckoutCalculationService.calculateForReturn(buildPlatformReturnRequest(
+						refundRequestDTO,
+						voucherSelection,
+						remainingItems));
+		double remainingAfterPlatformLayer = platformRecalculated.getItems().stream()
 				.mapToDouble(CheckoutVoucherCalculationResponse.ItemBreakdown::getTotalAfterAllVouchers)
 				.sum();
-		double remainingPlatformCommission = recalculated.getPlatformCommissionAmount();
-		double refundAmount = money(Math.max(0.0,
-				originalProductPayable - remainingPayable - previousRefundAmount));
-		double voucherClawback = money(Math.max(0.0, returnedGrossAmount - refundAmount));
+
+		CheckoutVoucherCalculationResponse shopRecalculated =
+				voucherCheckoutCalculationService.calculateForReturn(buildShopReturnRequest(
+						refundRequestDTO,
+						voucherSelection,
+						remainingItems));
+		double remainingShopVoucherDiscount = remainingItems.stream()
+				.mapToDouble(RemainingItem::shopVoucherDiscountAmount)
+				.sum();
+		double remainingPlatformVoucherBase = remainingItems.stream()
+				.mapToDouble(RemainingItem::amountAfterShopVoucher)
+				.sum();
+		double shopVoucherClawback = money(Math.max(0.0,
+				remainingShopVoucherDiscount - safe(shopRecalculated.getShopVoucherDiscount())));
+		double remainingPayable = money(remainingAfterPlatformLayer + shopVoucherClawback);
+		double remainingPlatformCommission = shopRecalculated.getPlatformCommissionAmount();
+		boolean platformVoucherInvalidated = remainingPlatformVoucherBase > 0.0
+				&& hasMissingAppliedVoucher(voucherSelection.platformVoucherIds(), platformRecalculated);
+		boolean shopVoucherInvalidated = remainingShopVoucherDiscount > 0.0
+				&& hasMissingAppliedVoucher(shopVoucherIds(voucherSelection), shopRecalculated);
+		boolean voucherInvalidated = platformVoucherInvalidated || shopVoucherInvalidated;
+		double refundAmount = voucherInvalidated
+				? signedMoney(originalProductPayable - remainingPayable - previousRefundAmount)
+				: money(returnedPaidAmount);
+		double voucherClawback = voucherInvalidated
+				? money(Math.max(0.0, returnedAfterShopVoucherAmount - refundAmount))
+				: 0.0;
+		double finalRemainingPayable = voucherInvalidated
+				? remainingPayable
+				: money(Math.max(0.0, originalProductPayable - previousRefundAmount - refundAmount));
 		double platformCommissionAdjustment = money(Math.max(0.0,
 				originalPlatformCommission - remainingPlatformCommission));
-		Map<Long, Double> refundByOrderItemId = distributeRefund(acceptedQty, itemById, refundAmount);
-		String message = refundAmount <= 0.0 && returnedGrossAmount > 0.0
-				? "Bạn sẽ không được hoàn tiền cho yêu cầu này vì sau khi trả sản phẩm, đơn hàng không còn đủ điều kiện áp dụng voucher. Giá trị voucher bị thu hồi đã lớn hơn hoặc bằng giá trị sản phẩm trả."
-				: null;
+		Map<Long, Double> refundByOrderItemId = voucherInvalidated
+				? distributeRefund(acceptedQty, itemById, refundAmount)
+				: distributePaidRefund(acceptedQty, itemById);
+		String message = buildRefundMessage(
+				refundAmount,
+				platformVoucherInvalidated,
+				shopVoucherInvalidated);
 
 		return new RefundCalculation(
 				refundAmount,
 				money(returnedGrossAmount),
 				voucherClawback,
-				money(remainingPayable),
+				money(finalRemainingPayable),
 				money(remainingPlatformCommission),
 				platformCommissionAdjustment,
 				acceptedQty,
@@ -254,6 +304,43 @@ public class RefundRequestService {
 		request.setRefundMessage(calculation.message());
 	}
 
+	private String buildRefundMessage(
+			double refundAmount,
+			boolean platformVoucherInvalidated,
+			boolean shopVoucherInvalidated) {
+		if (!platformVoucherInvalidated && !shopVoucherInvalidated) {
+			return null;
+		}
+		String invalidatedVoucherLabel = invalidatedVoucherLabel(
+				platformVoucherInvalidated,
+				shopVoucherInvalidated);
+		if (refundAmount < 0.0) {
+			return "You will have to pay extra for this item. "
+					+ formatVnd(Math.abs(refundAmount))
+					+ " because " + invalidatedVoucherLabel + " is no longer valid";
+		}
+		if (refundAmount > 0.0) {
+			return "The amount you will receive is "
+					+ formatVnd(refundAmount)
+					+ " because " + invalidatedVoucherLabel + " is no longer valid";
+		}
+		return "You will not receive a refund for this request because "
+				+ invalidatedVoucherLabel
+				+ " is no longer valid";
+	}
+
+	private String invalidatedVoucherLabel(
+			boolean platformVoucherInvalidated,
+			boolean shopVoucherInvalidated) {
+		if (platformVoucherInvalidated && shopVoucherInvalidated) {
+			return "voucher sàn và voucher shop";
+		}
+		if (platformVoucherInvalidated) {
+			return "voucher sàn";
+		}
+		return "voucher shop";
+	}
+
 	private Map<Long, Integer> normalizeRequestedQuantities(List<RequestItemDTO> items) {
 		Map<Long, Integer> quantities = new LinkedHashMap<>();
 		for (RequestItemDTO item : items) {
@@ -265,7 +352,7 @@ public class RefundRequestService {
 		return quantities;
 	}
 
-	private CheckoutVoucherCalculationRequest.Item toRemainingVoucherItem(
+	private RemainingItem toRemainingItem(
 			OrderItemSnapshot item,
 			int returnedQuantity) {
 		int remainingQuantity = Math.max(0, item.quantity() - returnedQuantity);
@@ -273,6 +360,48 @@ public class RefundRequestService {
 			return null;
 		}
 
+		return new RemainingItem(
+				item,
+				remainingQuantity,
+				lineSubtotal(item, remainingQuantity),
+				amountAfterShopVoucher(item, remainingQuantity),
+				proratedAmount(item.shopVoucherDiscountAmount(), item.quantity(), remainingQuantity));
+	}
+
+	private CheckoutVoucherCalculationRequest buildPlatformReturnRequest(
+			RefundRequestDTO refundRequestDTO,
+			VoucherSelection voucherSelection,
+			List<RemainingItem> remainingItems) {
+		CheckoutVoucherCalculationRequest request = baseReturnVoucherRequest(refundRequestDTO);
+		request.setSelectedPlatformVoucherIds(voucherSelection.platformVoucherIds());
+		request.setItems(remainingItems.stream()
+				.map(item -> toVoucherItem(item.orderItem(), item.amountAfterShopVoucher()))
+				.toList());
+		return request;
+	}
+
+	private CheckoutVoucherCalculationRequest buildShopReturnRequest(
+			RefundRequestDTO refundRequestDTO,
+			VoucherSelection voucherSelection,
+			List<RemainingItem> remainingItems) {
+		CheckoutVoucherCalculationRequest request = baseReturnVoucherRequest(refundRequestDTO);
+		request.setSelectedShopVoucherIdsByShop(voucherSelection.shopVoucherIdsByShop());
+		request.setItems(remainingItems.stream()
+				.map(item -> toVoucherItem(item.orderItem(), item.grossAmount()))
+				.toList());
+		return request;
+	}
+
+	private CheckoutVoucherCalculationRequest baseReturnVoucherRequest(RefundRequestDTO refundRequestDTO) {
+		CheckoutVoucherCalculationRequest request = new CheckoutVoucherCalculationRequest();
+		request.setUserId(refundRequestDTO.getCustomerId());
+		request.setHasPreviousOrder(false);
+		return request;
+	}
+
+	private CheckoutVoucherCalculationRequest.Item toVoucherItem(
+			OrderItemSnapshot item,
+			double amount) {
 		CheckoutVoucherCalculationRequest.Item voucherItem = new CheckoutVoucherCalculationRequest.Item();
 		voucherItem.setItemKey(String.valueOf(item.orderItemId()));
 		voucherItem.setShopId(item.shopId());
@@ -280,9 +409,32 @@ public class RefundRequestService {
 		voucherItem.setVariantId(item.variantId());
 		voucherItem.setCategoryId(item.categoryId());
 		voucherItem.setBrandId(item.brandId());
-		voucherItem.setQuantity(remainingQuantity);
-		voucherItem.setPrice(item.price());
+		voucherItem.setQuantity(1);
+		voucherItem.setPrice(money(amount));
 		return voucherItem;
+	}
+
+	private List<Long> shopVoucherIds(VoucherSelection voucherSelection) {
+		return voucherSelection.shopVoucherIdsByShop().values().stream()
+				.flatMap(List::stream)
+				.distinct()
+				.toList();
+	}
+
+	private boolean hasMissingAppliedVoucher(
+			List<Long> selectedVoucherIds,
+			CheckoutVoucherCalculationResponse response) {
+		if (selectedVoucherIds == null || selectedVoucherIds.isEmpty()) {
+			return false;
+		}
+		List<Long> appliedVoucherIds = response.getVoucherApplications().stream()
+				.map(CheckoutVoucherCalculationResponse.VoucherApplication::getVoucherId)
+				.filter(Objects::nonNull)
+				.distinct()
+				.toList();
+		return selectedVoucherIds.stream()
+				.filter(Objects::nonNull)
+				.anyMatch(voucherId -> !appliedVoucherIds.contains(voucherId));
 	}
 
 	private Map<Long, Double> distributeRefund(
@@ -290,14 +442,14 @@ public class RefundRequestService {
 			Map<Long, OrderItemSnapshot> itemById,
 			double refundAmount) {
 		Map<Long, Double> result = new LinkedHashMap<>();
-		double totalGross = acceptedQty.entrySet().stream()
+		double totalReturnedAfterShop = acceptedQty.entrySet().stream()
 				.mapToDouble(entry -> {
 					OrderItemSnapshot item = itemById.get(entry.getKey());
-					return item == null ? 0.0 : item.price() * entry.getValue();
+					return amountAfterShopVoucher(item, entry.getValue());
 				})
 				.sum();
 
-		if (refundAmount <= 0.0 || totalGross <= 0.0) {
+		if (refundAmount == 0.0 || totalReturnedAfterShop <= 0.0) {
 			acceptedQty.keySet().forEach(itemId -> result.put(itemId, 0.0));
 			return result;
 		}
@@ -308,13 +460,60 @@ public class RefundRequestService {
 		for (Map.Entry<Long, Integer> entry : acceptedQty.entrySet()) {
 			index++;
 			OrderItemSnapshot item = itemById.get(entry.getKey());
-			double gross = item == null ? 0.0 : item.price() * entry.getValue();
-			double amount = index == size ? remaining : money(refundAmount * gross / totalGross);
-			remaining = money(remaining - amount);
+			double returnedAfterShop = amountAfterShopVoucher(item, entry.getValue());
+			double amount = index == size
+					? remaining
+					: signedMoney(refundAmount * returnedAfterShop / totalReturnedAfterShop);
+			remaining = signedMoney(remaining - amount);
 			result.put(entry.getKey(), amount);
 		}
 
 		return result;
+	}
+
+	private Map<Long, Double> distributePaidRefund(
+			Map<Long, Integer> acceptedQty,
+			Map<Long, OrderItemSnapshot> itemById) {
+		Map<Long, Double> result = new LinkedHashMap<>();
+		for (Map.Entry<Long, Integer> entry : acceptedQty.entrySet()) {
+			result.put(
+					entry.getKey(),
+					amountAfterAllVouchers(itemById.get(entry.getKey()), entry.getValue()));
+		}
+		return result;
+	}
+
+	private double amountAfterShopVoucher(OrderItemSnapshot item, int quantity) {
+		if (item == null || quantity <= 0) {
+			return 0.0;
+		}
+		return money(lineSubtotal(item, quantity)
+				- proratedAmount(item.shopVoucherDiscountAmount(), item.quantity(), quantity));
+	}
+
+	private double amountAfterAllVouchers(OrderItemSnapshot item, int quantity) {
+		if (item == null || quantity <= 0) {
+			return 0.0;
+		}
+		return proratedAmount(netAfterAllVouchers(item), item.quantity(), quantity);
+	}
+
+	private double lineSubtotal(OrderItemSnapshot item, int quantity) {
+		if (item == null || quantity <= 0) {
+			return 0.0;
+		}
+		double itemSubtotal = item.totalPrice() > 0.0 ? item.totalPrice() : item.price() * item.quantity();
+		if (item.quantity() <= 0) {
+			return money(itemSubtotal);
+		}
+		return money(itemSubtotal * quantity / item.quantity());
+	}
+
+	private double proratedAmount(double amount, int originalQuantity, int targetQuantity) {
+		if (amount <= 0.0 || originalQuantity <= 0 || targetQuantity <= 0) {
+			return 0.0;
+		}
+		return money(amount * targetQuantity / originalQuantity);
 	}
 
 	private List<OrderItemSnapshot> findOrderItems(Long orderId) {
@@ -364,7 +563,7 @@ public class RefundRequestService {
 						money(rs.getDouble("platform_commission_amount"))));
 			}
 		} catch (Exception e) {
-			throw new RuntimeException("Không thể đọc order_item để tính hoàn tiền", e);
+			throw new RuntimeException("Unable to read order_item to calculate refund.", e);
 		}
 
 		return items;
@@ -389,7 +588,7 @@ public class RefundRequestService {
 				result.put(rs.getLong("order_item_id"), Math.max(0, rs.getInt("returned_quantity")));
 			}
 		} catch (Exception e) {
-			throw new RuntimeException("Không thể đọc số lượng trả hàng trước đó", e);
+			throw new RuntimeException("Unable to read previous return quantities.", e);
 		}
 		return result;
 	}
@@ -406,9 +605,9 @@ public class RefundRequestService {
 				PreparedStatement ps = con.prepareStatement(sql)) {
 			ps.setLong(1, orderId);
 			ResultSet rs = ps.executeQuery();
-			return rs.next() ? money(rs.getDouble("refunded_amount")) : 0.0;
+			return rs.next() ? signedMoney(rs.getDouble("refunded_amount")) : 0.0;
 		} catch (Exception e) {
-			throw new RuntimeException("Không thể đọc số tiền đã yêu cầu hoàn trước đó", e);
+			throw new RuntimeException("Unable to read previously requested refund amount.", e);
 		}
 	}
 
@@ -457,7 +656,7 @@ public class RefundRequestService {
 				}
 			}
 		} catch (Exception e) {
-			throw new RuntimeException("Không thể đọc voucher đã áp dụng cho đơn hàng", e);
+			throw new RuntimeException("Unable to read applied vouchers for the order.", e);
 		}
 
 		shopVoucherIdsByShop.replaceAll((shopId, voucherIds) -> voucherIds.stream().distinct().toList());
@@ -482,6 +681,22 @@ public class RefundRequestService {
 			return 0.0;
 		}
 		return Math.round(Math.max(0.0, value) * 100.0) / 100.0;
+	}
+
+	private double signedMoney(double value) {
+		if (Double.isNaN(value) || Double.isInfinite(value)) {
+			return 0.0;
+		}
+		double rounded = Math.round(value * 100.0) / 100.0;
+		return rounded == -0.0 ? 0.0 : rounded;
+	}
+
+	private double safe(Double value) {
+		return value == null || value.isNaN() || value.isInfinite() ? 0.0 : value;
+	}
+
+	private String formatVnd(double value) {
+		return String.format(Locale.ROOT, "%.0f đ", money(value));
 	}
 
 	private String normalize(String value) {
@@ -551,8 +766,19 @@ public class RefundRequestService {
 				.toList();
 	}
 	
+	@Transactional
 	public ReturnRequest getRefundRequestById(Long id) {
-		return refundRequestRepository.findById(id).orElse(null);
+		ReturnRequest request = refundRequestRepository.findById(id).orElse(null);
+		initializeReturnRequestDetails(request);
+		return request;
+	}
+
+	private void initializeReturnRequestDetails(ReturnRequest request) {
+		if (request == null) {
+			return;
+		}
+		request.getItems().size();
+		request.getAttachments().size();
 	}
 
 	public ReturnRequest updateStatus(Long id, ReturnRequestStatus status, Double refundedAmount) {
@@ -587,6 +813,14 @@ public class RefundRequestService {
 			double totalAfterShopVoucher,
 			double totalAfterAllVouchers,
 			double platformCommissionAmount) {
+	}
+
+	private record RemainingItem(
+			OrderItemSnapshot orderItem,
+			int remainingQuantity,
+			double grossAmount,
+			double amountAfterShopVoucher,
+			double shopVoucherDiscountAmount) {
 	}
 
 	private record VoucherSelection(

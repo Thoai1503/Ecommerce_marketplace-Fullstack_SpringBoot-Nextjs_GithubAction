@@ -19,7 +19,7 @@ const TXN_TYPES: PaymentTxnType[] = [
   "PLATFORM_FEE",
   "ADJUSTMENT",
 ];
-
+ 
 const TXN_STATUSES: PaymentTxnStatus[] = [
   "PENDING",
   "PROCESSING",

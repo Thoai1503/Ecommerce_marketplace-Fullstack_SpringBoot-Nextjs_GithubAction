@@ -3,7 +3,6 @@ package docker_test.com.services;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,13 +52,48 @@ public class VoucherCheckoutCalculationService {
                 .map(item -> new ItemAmount(item, subtotal(item)))
                 .toList();
         List<ItemAmount> itemAmounts = copyAmounts(originalAmounts);
-        List<ItemAmount> afterShopVoucherAmounts;
         List<CheckoutVoucherCalculationResponse.VoucherApplication> applications = new ArrayList<>();
         Set<Long> claimableVoucherIds = useOrderSnapshot
                 ? Set.of()
                 : getClaimableVoucherIds(request.getUserId());
 
         Map<Long, Double> shopDiscountByShop = new LinkedHashMap<>();
+        Map<String, Double> shopDiscountByItem = new LinkedHashMap<>();
+        Map<String, Double> platformDiscountByItem = new LinkedHashMap<>();
+
+        itemAmounts = applyShopVouchers(
+                request,
+                claimableVoucherIds,
+                useOrderSnapshot,
+                itemAmounts,
+                applications,
+                shopDiscountByShop,
+                shopDiscountByItem);
+        itemAmounts = applyPlatformVouchers(
+                request,
+                claimableVoucherIds,
+                useOrderSnapshot,
+                itemAmounts,
+                applications,
+                platformDiscountByItem);
+
+        return buildResponse(
+                originalAmounts,
+                shopDiscountByItem,
+                platformDiscountByItem,
+                shopDiscountByShop,
+                applications);
+    }
+
+    private List<ItemAmount> applyShopVouchers(
+            CheckoutVoucherCalculationRequest request,
+            Set<Long> claimableVoucherIds,
+            boolean useOrderSnapshot,
+            List<ItemAmount> currentAmounts,
+            List<CheckoutVoucherCalculationResponse.VoucherApplication> applications,
+            Map<Long, Double> shopDiscountByShop,
+            Map<String, Double> shopDiscountByItem) {
+        List<ItemAmount> itemAmounts = currentAmounts;
         Map<String, List<Long>> selectedShopVoucherIds = request.getSelectedShopVoucherIdsByShop() == null
                 ? Map.of()
                 : request.getSelectedShopVoucherIdsByShop();
@@ -83,13 +117,22 @@ public class VoucherCheckoutCalculationService {
                     if (targetShopId != null) {
                         shopDiscountByShop.merge(targetShopId, result.discount(), Double::sum);
                     }
+                    mergeItemDiscounts(shopDiscountByItem, result.itemDiscounts());
                 }
             }
         }
 
-        afterShopVoucherAmounts = copyAmounts(itemAmounts);
+        return itemAmounts;
+    }
 
-        double platformDiscount = 0.0;
+    private List<ItemAmount> applyPlatformVouchers(
+            CheckoutVoucherCalculationRequest request,
+            Set<Long> claimableVoucherIds,
+            boolean useOrderSnapshot,
+            List<ItemAmount> currentAmounts,
+            List<CheckoutVoucherCalculationResponse.VoucherApplication> applications,
+            Map<String, Double> platformDiscountByItem) {
+        List<ItemAmount> itemAmounts = currentAmounts;
         for (Long voucherId : safeIds(request.getSelectedPlatformVoucherIds())) {
             Voucher voucher = loadUsableVoucher(voucherId, claimableVoucherIds, useOrderSnapshot);
             if (voucher == null || !"PLATFORM".equals(normalize(voucher.getIssuerType()))) {
@@ -100,18 +143,12 @@ public class VoucherCheckoutCalculationService {
             itemAmounts = result.itemAmounts();
 
             if (result.discount() > 0) {
-                platformDiscount += result.discount();
                 applications.add(toApplication(voucher.getId(), result));
+                mergeItemDiscounts(platformDiscountByItem, result.itemDiscounts());
             }
         }
 
-        return buildResponse(
-                originalAmounts,
-                afterShopVoucherAmounts,
-                itemAmounts,
-                shopDiscountByShop,
-                platformDiscount,
-                applications);
+        return itemAmounts;
     }
 
     private Set<Long> getClaimableVoucherIds(Long userId) {
@@ -331,23 +368,25 @@ public class VoucherCheckoutCalculationService {
 
     private CheckoutVoucherCalculationResponse buildResponse(
             List<ItemAmount> originalAmounts,
-            List<ItemAmount> afterShopAmounts,
-            List<ItemAmount> afterAllAmounts,
+            Map<String, Double> shopDiscountByItem,
+            Map<String, Double> platformDiscountByItem,
             Map<Long, Double> shopDiscountByShop,
-            double platformDiscount,
             List<CheckoutVoucherCalculationResponse.VoucherApplication> applications) {
         CheckoutVoucherCalculationResponse response = new CheckoutVoucherCalculationResponse();
-        Map<String, Double> afterShopByKey = toAmountMap(afterShopAmounts);
-        Map<String, Double> afterAllByKey = toAmountMap(afterAllAmounts);
         Map<Long, Double> platformCommissionByShop = new LinkedHashMap<>();
         Map<Long, Double> sellerReceivableByShop = new LinkedHashMap<>();
 
         for (ItemAmount original : originalAmounts) {
             CheckoutVoucherCalculationRequest.Item item = original.item();
-            double afterShop = afterShopByKey.getOrDefault(item.getItemKey(), original.amount());
-            double afterAll = afterAllByKey.getOrDefault(item.getItemKey(), afterShop);
-            double shopDiscount = money(original.amount() - afterShop);
-            double totalDiscount = money(original.amount() - afterAll);
+            double shopDiscount = money(Math.min(
+                    original.amount(),
+                    shopDiscountByItem.getOrDefault(item.getItemKey(), 0.0)));
+            double platformDiscount = money(Math.min(
+                    Math.max(0.0, original.amount() - shopDiscount),
+                    platformDiscountByItem.getOrDefault(item.getItemKey(), 0.0)));
+            double totalDiscount = money(Math.min(original.amount(), shopDiscount + platformDiscount));
+            double afterShop = money(Math.max(0.0, original.amount() - shopDiscount));
+            double afterAll = money(Math.max(0.0, original.amount() - totalDiscount));
             double commissionBase = getCommissionBase(original.amount(), afterShop, shopDiscount);
             double platformCommission = money(commissionBase * PLATFORM_COMMISSION_RATE);
             double sellerReceivable = money(Math.max(0.0, commissionBase - platformCommission));
@@ -397,7 +436,9 @@ public class VoucherCheckoutCalculationService {
         response.setShopVoucherDiscount(money(response.getShopVoucherDiscountByShop().values().stream()
                 .mapToDouble(Double::doubleValue)
                 .sum()));
-        response.setPlatformVoucherDiscount(money(platformDiscount));
+        response.setPlatformVoucherDiscount(money(response.getItems().stream()
+                .mapToDouble(CheckoutVoucherCalculationResponse.ItemBreakdown::getPlatformVoucherDiscountAmount)
+                .sum()));
         response.setTotalVoucherDiscount(money(response.getShopVoucherDiscount() + response.getPlatformVoucherDiscount()));
         response.setPlatformCommissionAmount(money(response.getPlatformCommissionByShop().values().stream()
                 .mapToDouble(Double::doubleValue)
@@ -420,6 +461,20 @@ public class VoucherCheckoutCalculationService {
         return application;
     }
 
+    private void mergeItemDiscounts(
+            Map<String, Double> discountsByItem,
+            List<CheckoutVoucherCalculationResponse.ItemDiscount> itemDiscounts) {
+        for (CheckoutVoucherCalculationResponse.ItemDiscount itemDiscount : itemDiscounts) {
+            double discountAmount = safe(itemDiscount.getDiscountAmount());
+            if (discountAmount > 0) {
+                discountsByItem.merge(
+                        itemDiscount.getItemKey(),
+                        discountAmount,
+                        (current, added) -> money(current + added));
+            }
+        }
+    }
+
     private List<Long> safeIds(List<Long> ids) {
         return ids == null ? List.of() : ids.stream().filter(Objects::nonNull).toList();
     }
@@ -428,12 +483,6 @@ public class VoucherCheckoutCalculationService {
         return itemAmounts.stream()
                 .map(itemAmount -> new ItemAmount(itemAmount.item(), itemAmount.amount()))
                 .toList();
-    }
-
-    private Map<String, Double> toAmountMap(List<ItemAmount> amounts) {
-        Map<String, Double> map = new HashMap<>();
-        amounts.forEach(itemAmount -> map.put(itemAmount.item().getItemKey(), itemAmount.amount()));
-        return map;
     }
 
     private Long firstShopId(Map<Long, Double> discountByShop) {
