@@ -3,17 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/home/pages/home_page.dart';
 import 'filter_page.dart';
 import 'features/cart/pages/cart_page.dart';
+import 'features/product/pages/product_detail_page.dart';
+import 'features/auth/pages/login_page.dart';
+import 'features/auth/pages/profile_page.dart';
+import 'core/api_client.dart';
 
-// void main() {
-//   runApp(const MyApp());
-// }
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-void main() {
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  // Initialize API clients with interceptors
+  ApiClient.initialize();
+
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -41,11 +42,14 @@ class MyApp extends StatelessWidget {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      initialRoute: '/',
+      initialRoute: '/login',
       routes: {
         '/': (context) => const HomePage(),
         '/filter': (context) => const FilterPage(),
         '/cart': (context) => const CartPage(),
+        '/product-detail': (context) => const ProductDetailPage(),
+        '/login': (context) => const LoginPage(),
+        '/profile': (context) => const ProfilePage(),
       },
     );
   }

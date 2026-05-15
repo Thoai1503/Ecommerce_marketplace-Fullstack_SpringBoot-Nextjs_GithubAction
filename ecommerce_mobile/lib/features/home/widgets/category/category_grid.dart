@@ -16,11 +16,6 @@ class CategoryGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Filter to only level 0 (parent) categories
-    final parentCategories = categories
-        .where((cat) => cat.level != null && cat.level == 0)
-        .toList();
-
     // Take first 8 categories plus "All"
     final displayCategories = [
       Category(id: -1, categoryName: 'All'),

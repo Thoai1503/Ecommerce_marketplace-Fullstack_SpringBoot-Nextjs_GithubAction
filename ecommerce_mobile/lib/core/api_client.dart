@@ -1,21 +1,157 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
-
-
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'constants.dart';
 
+/// Main API client with configurable base URL
+/// Default uses API Gateway, but can be overridden for specific microservices
 class ApiClient {
   static final Dio dio = Dio(
     BaseOptions(
-      baseUrl: 'http://localhost:8000/api',
+      baseUrl: apiGatewayUrl,
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
+      headers: {...defaultHeaders},
     ),
   );
+
+  /// Dedicated Auth Service client (points to Marketplace-platform)
+  static final Dio authDio = Dio(
+    BaseOptions(
+      baseUrl: authServiceUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+      headers: {...defaultHeaders},
+    ),
+  );
+
+  /// Dedicated Cart Service client (points to cart-service)
+  static final Dio cartDio = Dio(
+    BaseOptions(
+      baseUrl: cartServiceUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+      headers: {...defaultHeaders},
+    ),
+  );
+
+  /// Dedicated Stock Service client (points to stock-service)
+  static final Dio stockDio = Dio(
+    BaseOptions(
+      baseUrl: stockServiceUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+      headers: {...defaultHeaders},
+    ),
+  );
+
+  /// Initialize API interceptors and auth headers
+  static void initialize() {
+    debugPrint('[ApiClient] Initializing API client with base URLs:');
+    debugPrint('  Gateway: $apiGatewayUrl');
+    debugPrint('  Auth: $authServiceUrl');
+    debugPrint('  Cart: $cartServiceUrl');
+
+    // Add interceptor to include auth token in all requests
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          _addAuthHeaders(options);
+          debugPrint(
+            '[ApiClient.dio] Request: ${options.method} ${options.path}',
+          );
+          return handler.next(options);
+        },
+        onError: (error, handler) {
+          debugPrint('[ApiClient.dio] Error: ${error.message}');
+          return handler.next(error);
+        },
+      ),
+    );
+
+    // Same for auth dio
+    authDio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          _addAuthHeaders(options);
+          debugPrint(
+            '[ApiClient.authDio] Request: ${options.method} ${options.path}',
+          );
+          return handler.next(options);
+        },
+        onError: (error, handler) {
+          debugPrint('[ApiClient.authDio] Error: ${error.message}');
+          return handler.next(error);
+        },
+      ),
+    );
+
+    // Same for cart dio
+    cartDio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          _addAuthHeaders(options);
+          debugPrint(
+            '[ApiClient.cartDio] Request: ${options.method} ${options.path}',
+          );
+          return handler.next(options);
+        },
+        onError: (error, handler) {
+          debugPrint('[ApiClient.cartDio] Error: ${error.message}');
+          return handler.next(error);
+        },
+      ),
+    );
+
+    // Stock service Dio client
+    stockDio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          _addAuthHeaders(options);
+          debugPrint(
+            '[ApiClient.stockDio] Request: ${options.method} ${options.path}',
+          );
+          return handler.next(options);
+        },
+        onError: (error, handler) {
+          debugPrint('[ApiClient.stockDio] Error: ${error.message}');
+          return handler.next(error);
+        },
+      ),
+    );
+  }
+
+  /// Add authorization header to request
+  static Future<void> _addAuthHeaders(RequestOptions options) async {
+    final token = await _getStoredToken();
+    if (token != null) {
+      options.headers['Authorization'] = 'Bearer $token';
+      debugPrint('[ApiClient] Bearer token added to request');
+    } else {
+      debugPrint('[ApiClient] No token found - request sent without auth');
+    }
+  }
+
+  /// Get stored authentication token
+  static Future<String?> _getStoredToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      if (token != null) {
+        debugPrint(
+          '[ApiClient] Token retrieved from storage (length: ${token.length})',
+        );
+      }
+      return token;
+    } catch (e) {
+      debugPrint('[ApiClient] Error retrieving token: $e');
+      return null;
+    }
+  }
 }
+
 class HttpError implements Exception {
   final int? status;
   final String message;

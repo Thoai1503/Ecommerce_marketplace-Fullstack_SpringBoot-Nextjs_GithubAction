@@ -72,7 +72,9 @@ class WebHeader extends StatelessWidget {
                 tooltip: 'Notifications',
               ),
               IconButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, '/profile');
+                },
                 icon: const Icon(Icons.person_outline),
                 tooltip: 'Profile',
               ),
