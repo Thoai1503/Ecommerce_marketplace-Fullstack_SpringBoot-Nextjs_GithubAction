@@ -35,6 +35,18 @@ import { useBrands } from "@/hooks/admin/useBrands";
 import { useCategoryBrands } from "@/hooks/admin/userCategoryBrands";
 import { API_URL } from "@/helper/api";
 
+const VALUE_EXISTS_MESSAGE = "This value already exists for this attribute.";
+
+const getErrorMessage = (err: unknown, fallback: string) => {
+  return err instanceof Error && err.message ? err.message : fallback;
+};
+
+const normalizeAttributeValue = (value: unknown) => {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
+};
+
 const StatusConfig: Record<
   CategoryStatus,
   { label: string; color: string; bgColor: string; icon: any }
@@ -58,7 +70,7 @@ export default function CategoryDetail() {
   const id = params?.id || "";
 
   const router = useRouter();
-  const { info } = useToast();
+  const { info, error: showError } = useToast();
   const [adding, setAdding] = useState(false);
   const { category, isLoading, deleteCategory } = useCategoryDetail(id);
   const { subCategories, loading: loadingSub } = useSubCategories(id);
@@ -737,23 +749,37 @@ export default function CategoryDetail() {
         onSubmit={async (value) => {
           if (!selectedAttr) return;
 
+          const trimmedValue = value.trim();
+          const alreadyExists = values.some(
+            (item: any) =>
+              Number(item.attribute_id) === Number(selectedAttr.id) &&
+              normalizeAttributeValue(item.value) ===
+                normalizeAttributeValue(trimmedValue),
+          );
+
+          if (alreadyExists) {
+            showError(VALUE_EXISTS_MESSAGE);
+            throw new Error(VALUE_EXISTS_MESSAGE);
+          }
+
           try {
             await createValue({
               attribute_id: selectedAttr.id,
               unit_id: selectedUnit?.id ?? null,
-              value,
+              value: trimmedValue,
             });
 
             const label = selectedUnit
-              ? `${value} ${selectedUnit.symbol}`
-              : value;
+              ? `${trimmedValue} ${selectedUnit.symbol}`
+              : trimmedValue;
 
             info(`Added: ${label}`);
 
             setOpenValueModal(false);
           } catch (err) {
-            console.error(err);
-            info("Add value failed");
+            const message = getErrorMessage(err, "Add value failed");
+            showError(message);
+            throw new Error(message);
           }
         }}
       />

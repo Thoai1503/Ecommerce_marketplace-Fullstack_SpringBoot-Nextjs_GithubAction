@@ -20,10 +20,14 @@ export default function CreateValueModal({
 }: Props) {
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false); // 👈 dùng toast
+  const [error, setError] = useState("");
 
   // 🔥 reset khi mở modal
   useEffect(() => {
-    if (open) setValue("");
+    if (open) {
+      setValue("");
+      setError("");
+    }
   }, [open]);
 
   if (!open) return null;
@@ -34,15 +38,14 @@ export default function CreateValueModal({
 
     try {
       setLoading(true);
+      setError("");
 
       await onSubmit(v);
-
 
       setValue("");
       onClose(); // 🔥 đóng modal sau khi save
     } catch (err) {
-      console.error(err);
-
+      setError(err instanceof Error ? err.message : "Save failed");
     } finally {
       setLoading(false);
     }
@@ -67,13 +70,27 @@ export default function CreateValueModal({
         {/* INPUT */}
         <input
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            setValue(e.target.value);
+            if (error) setError("");
+          }}
           placeholder="Enter value..."
-          className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-invalid={Boolean(error)}
+          className={`w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 ${
+            error
+              ? "border-red-300 focus:ring-red-500"
+              : "focus:ring-blue-500"
+          }`}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSubmit();
           }}
         />
+
+        {error && (
+          <p role="alert" className="text-xs font-medium text-red-600">
+            {error}
+          </p>
+        )}
 
         {/* ACTION */}
         <div className="flex justify-end gap-2">

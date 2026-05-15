@@ -26,7 +26,6 @@ type ReturnRequestModalProps = {
   attachments?: ReturnRequestAttachment[];
   onClose: () => void;
   onToggleItem: (itemId: number, checked: boolean) => void;
-  onQuantityChange: (itemId: number, quantity: number) => void;
   onReasonChange: (reason: string) => void;
   onFilesChange: (files: FileList | null) => void;
   onRemoveFile: (fileIndex: number) => void;
@@ -50,7 +49,6 @@ export default function ReturnRequestModal({
   attachments = [],
   onClose,
   onToggleItem,
-  onQuantityChange,
   onReasonChange,
   onFilesChange,
   onRemoveFile,
@@ -270,8 +268,7 @@ export default function ReturnRequestModal({
           <div className="d-flex flex-column gap-2 mb-4">
             {shipment.items.map((item) => {
               const checked = !!draft?.selectedItemIds?.[item.id];
-              const maxQty = item.quantity || 1;
-              const value = draft?.returnQuantities?.[item.id] ?? 0;
+              const returnQuantity = Number(item.quantity || 1);
               return (
                 <label
                   key={`${shipment.id}-return-${item.id}`}
@@ -332,42 +329,18 @@ export default function ReturnRequestModal({
                     >
                       {formatMoney(item.price)}
                     </p>
-                    <span style={styles.qtyBadge}>SL: {item.quantity}</span>
+                    <span style={styles.qtyBadge}>SL mua: {item.quantity}</span>
                     {checked && (
                       <div style={{ marginTop: 6 }}>
-                        <input
-                          type="number"
-                          min={1}
-                          max={maxQty}
-                          value={value}
-                          onChange={(e) => {
-                            let v = Math.max(
-                              1,
-                              Math.min(Number(e.target.value) || 1, maxQty),
-                            );
-                            // Nếu bỏ chọn thì không cho nhập
-                            if (!checked) v = 0;
-                            onQuantityChange(Number(item.id), v);
-                          }}
-                          disabled={status === "pending"}
-                          style={{
-                            width: 60,
-                            padding: 2,
-                            borderRadius: 4,
-                            border: "1px solid #cbd5e1",
-                            marginLeft: 8,
-                            fontSize: 12,
-                          }}
-                        />
-                        <span
+                        <div
                           style={{
                             fontSize: 11,
                             color: "#64748b",
-                            marginLeft: 4,
+                            fontWeight: 700,
                           }}
                         >
-                          / {maxQty}
-                        </span>
+                          So luong tra: {returnQuantity}
+                        </div>
                         <div
                           style={{
                             fontSize: 11,
@@ -376,7 +349,7 @@ export default function ReturnRequestModal({
                           }}
                         >
                           Tạm tính hoàn sau voucher:{" "}
-                          {formatMoney(getRefundEstimate(item, value))}
+                          {formatMoney(getRefundEstimate(item, returnQuantity))}
                         </div>
                       </div>
                     )}

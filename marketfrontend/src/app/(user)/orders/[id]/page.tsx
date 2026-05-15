@@ -28,9 +28,6 @@ import {
 import { API_URL } from "@/helper/api";
 import ReturnRequestModal, { ReturnRequestDraft } from "./ReturnRequestModal";
 import { useUserAuth } from "@/context/UserAuthContext";
-import { useQuery } from "@tanstack/react-query";
-import { ReturnRequestAttachment } from "@/types/data/refund/ReuturnRequestAttachment";
-import ReturnAttachmentModal from "./ReturnAttachmentModal";
 
 const orderStatusLabel: Record<Order["status"], string> = {
   PENDING: "Cho xac nhan",
@@ -607,9 +604,6 @@ export default function UserOrderDetailPage() {
   const { userId } = useUserAuth();
 
   const [order, setOrder] = useState<Order | null>(null);
-  const [requestIdShipmentMap, setRequestIdShipmentMap] = useState<
-    Record<number, number>
-  >({});
   const [loading, setLoading] = useState(true);
   const [adjustmentActionStatus, setAdjustmentActionStatus] = useState<
     Record<string, "idle" | "pending" | "accepted" | "rejected">
@@ -648,11 +642,6 @@ export default function UserOrderDetailPage() {
   const [returnActionMessage, setReturnActionMessage] = useState<
     Record<number, string>
   >({});
-
-  // State for viewing return request media modal
-  const [viewReturnMediaShipmentId, setViewReturnMediaShipmentId] = useState<
-    number | null
-  >(null);
 
   const activeReviewShipment = useMemo(
     () =>
@@ -701,13 +690,34 @@ export default function UserOrderDetailPage() {
   const openReturnModal = (shipmentId: number) => {
     const shipment = order?.shipments?.find((item) => item.id === shipmentId);
     if (!shipment) return;
+    const hasExistingReturn =
+      !!shipment.returnStatusSummary && shipment.returnStatusSummary !== "NONE";
+    const returnRequestItemIds = new Set(
+      shipment.items
+        .filter((item) => !!item.lastReturnRequestId)
+        .map((item) => Number(item.id)),
+    );
 
     setReturnRequestDrafts((prev) => {
       const existing = prev[shipmentId];
       const selectedItemIds = shipment.items.reduce<Record<number, boolean>>(
         (acc, item) => {
           acc[Number(item.id)] =
-            existing?.selectedItemIds?.[Number(item.id)] || false;
+            existing?.selectedItemIds?.[Number(item.id)] ||
+            (hasExistingReturn && returnRequestItemIds.has(Number(item.id))) ||
+            false;
+          return acc;
+        },
+        {},
+      );
+      const returnQuantities = shipment.items.reduce<Record<number, number>>(
+        (acc, item) => {
+          const itemId = Number(item.id);
+          const selected =
+            existing?.selectedItemIds?.[itemId] ||
+            (hasExistingReturn && returnRequestItemIds.has(itemId)) ||
+            false;
+          acc[itemId] = selected ? Number(item.quantity || 1) : 0;
           return acc;
         },
         {},
@@ -718,7 +728,7 @@ export default function UserOrderDetailPage() {
           selectedItemIds,
           reason: existing?.reason || "",
           files: existing?.files || [],
-          returnQuantities: existing?.returnQuantities || {},
+          returnQuantities,
         },
       };
     });
@@ -753,30 +763,24 @@ export default function UserOrderDetailPage() {
     });
   };
 
-  const onQuantityChange = (
-    shipmentId: number,
-    itemId: number,
-    quantity: number,
-  ) => {
-    const currentDraft = returnRequestDrafts[shipmentId];
-    updateReturnDraft(shipmentId, {
-      returnQuantities: {
-        ...(currentDraft?.returnQuantities || {}),
-        [itemId]: quantity,
-      },
-    });
-  };
-
   const toggleReturnItem = (
     shipmentId: number,
     itemId: number,
     checked: boolean,
   ) => {
+    const shipment = order?.shipments?.find((item) => item.id === shipmentId);
+    const orderItem = shipment?.items?.find(
+      (item) => Number(item.id) === Number(itemId),
+    );
     const currentDraft = returnRequestDrafts[shipmentId];
     updateReturnDraft(shipmentId, {
       selectedItemIds: {
         ...(currentDraft?.selectedItemIds || {}),
         [itemId]: checked,
+      },
+      returnQuantities: {
+        ...(currentDraft?.returnQuantities || {}),
+        [itemId]: checked ? Number(orderItem?.quantity || 1) : 0,
       },
     });
   };
@@ -1038,8 +1042,7 @@ export default function UserOrderDetailPage() {
       .map((item) => ({
         ...item,
         originalQuantity: item.quantity,
-        // Use the quantity from draft.returnQuantities if present, otherwise fallback to 1
-        quantity: draft?.returnQuantities?.[item.id] ?? 1,
+        quantity: Number(item.quantity || 1),
       }));
     console.log("Selected items for return:", selectedItems);
     const reason = String(draft?.reason || "").trim();
@@ -1095,42 +1098,96 @@ export default function UserOrderDetailPage() {
     //   `Total quantity: ${totalQuantity}, Total requested amount: ${totalRequestedAmount}`,
     // );
     // alert("selectedItems data: " + JSON.stringify(selectedItems, null, 2));
-    alert("shipmentId: " + shipmentId);
-
-    const formData = new FormData();
-    formData.append("orderId", id);
-    formData.append("shopId", String(activeReturnShipment.shop_id));
-    formData.append("customerId", String(userId));
-    formData.append("reason", reason);
-    formData.append("orderShipmentId", String(shipmentId));
-    formData.append("quantity", String(totalQuantity));
-    formData.append("requestedAmount", String(totalRequestedAmount));
-    formData.append(
-      "items",
-      JSON.stringify(
-        selectedItems.map((item) => ({
-          orderItemId: item.id,
-          quantity: item.quantity,
-          orderShipmentId: shipmentId,
-          requestedAmount: getReturnItemPaidAmount(item, item.quantity),
-        })),
-      ),
-    );
-
-    (draft?.files || []).forEach((file) => {
-      formData.append("files", file);
-      formData.append(
-        "descriptions",
-        `Evidence for order item issue - ${file.name}`,
-      );
-    });
+    const requestItems = selectedItems.map((item) => ({
+      orderItemId: item.id,
+      quantity: item.quantity,
+      orderShipmentId: shipmentId,
+      requestedAmount: getReturnItemPaidAmount(item, item.quantity),
+    }));
 
     let submittedByApi = false;
-    console.log("Submitting return request to API with formData:", formData);
     try {
-      alert(
-        "Vui long dien day du thong tin de gui yeu cau tra hang hoan tien den shop. Neu backend chua ho tro endpoint, noi dung yeu cau tra hang cua ban van duoc luu tam thoi tren giao dien va se duoc gui den shop khi backend san sang.",
+      const previewResponse = await fetch(`${API_URL}/api/refunds/preview`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: Number(id),
+          shopId: activeReturnShipment.shop_id,
+          customerId: userId,
+          reason,
+          orderShipmentId: shipmentId,
+          quantity: totalQuantity,
+          requestedAmount: totalRequestedAmount,
+          items: requestItems,
+        }),
+      });
+      const previewText = await previewResponse.text();
+      const previewPayload = previewText
+        ? (() => {
+            try {
+              return JSON.parse(previewText);
+            } catch {
+              return { message: previewText };
+            }
+          })()
+        : {};
+
+      if (!previewResponse.ok) {
+        const previewError =
+          previewPayload?.message ||
+          (typeof previewPayload === "string"
+            ? previewPayload
+            : JSON.stringify(previewPayload));
+        throw new Error(previewError || "Khong the tinh truoc yeu cau tra hang.");
+      }
+
+      const previewRefundAmount = asNumber(
+        previewPayload?.requestedAmount ?? previewPayload?.requested_amount,
+        totalRequestedAmount,
       );
+      const previewMessage = String(
+        previewPayload?.refundMessage ?? previewPayload?.refund_message ?? "",
+      );
+      const confirmMessage =
+        previewMessage ||
+        (previewRefundAmount <= 0
+          ? "Bạn sẽ không được hoàn tiền cho yêu cầu này. Bạn có muốn gửi yêu cầu trả hàng không?"
+          : `Số tiền dự kiến hoàn là ${formatMoney(
+              previewRefundAmount,
+            )}. Bạn có muốn gửi yêu cầu trả hàng không?`);
+
+      if (!window.confirm(`${confirmMessage}\n\nChọn OK để gửi, Cancel để hủy.`)) {
+        setReturnActionStatus((prev) => ({
+          ...prev,
+          [shipmentId]: "idle",
+        }));
+        setReturnActionMessage((prev) => ({
+          ...prev,
+          [shipmentId]: "Đã hủy gửi yêu cầu trả hàng.",
+        }));
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("orderId", id);
+      formData.append("shopId", String(activeReturnShipment.shop_id));
+      formData.append("customerId", String(userId));
+      formData.append("reason", reason);
+      formData.append("orderShipmentId", String(shipmentId));
+      formData.append("quantity", String(totalQuantity));
+      formData.append("requestedAmount", String(totalRequestedAmount));
+      formData.append("items", JSON.stringify(requestItems));
+
+      (draft?.files || []).forEach((file) => {
+        formData.append("files", file);
+        formData.append(
+          "descriptions",
+          `Evidence for order item issue - ${file.name}`,
+        );
+      });
+
+      console.log("Submitting return request to API with formData:", formData);
       const response = await fetch(`${API_URL}/api/refunds/multipart`, {
         method: "POST",
         credentials: "include",
@@ -1173,20 +1230,23 @@ export default function UserOrderDetailPage() {
       const refundMessage = String(
         responsePayload?.refundMessage ?? responsePayload?.refund_message ?? "",
       );
+      const successMessage =
+        refundMessage ||
+        (confirmedRefundAmount <= 0
+          ? "Bạn sẽ không được hoàn tiền cho yêu cầu này vì voucher không còn đủ điều kiện sau khi trả hàng."
+          : `Yeu cau tra hang hoan tien da duoc gui. So tien du kien hoan: ${formatMoney(
+              confirmedRefundAmount,
+            )}.`);
+      const actionMessage = submittedByApi ? successMessage : errorMessage;
 
       setReturnActionMessage((prev) => ({
         ...prev,
-        [shipmentId]: submittedByApi
-          ? confirmedRefundAmount <= 0
-            ? refundMessage ||
-              "Bạn sẽ không được hoàn tiền cho yêu cầu này vì voucher không còn đủ điều kiện sau khi trả hàng."
-            : `Yeu cau tra hang hoan tien da duoc gui. So tien du kien hoan: ${formatMoney(
-                confirmedRefundAmount,
-              )}.`
-          : errorMessage,
+        [shipmentId]: actionMessage,
       }));
+      alert(actionMessage);
     } catch (error) {
       console.error("Submit return request failed:", error);
+      alert("Gui yeu cau that bai. Vui long thu lai.");
       setReturnActionMessage((prev) => ({
         ...prev,
         [shipmentId]: "Gui yeu cau that bai. Vui long thu lai.",
@@ -1505,20 +1565,6 @@ export default function UserOrderDetailPage() {
           };
         }) || [];
 
-        orderData?.items.forEach((item: any) => {
-          console.log(
-            "Shipment ID from order item:",
-            item?.shipmentId,
-            item?.lastReturnRequestId,
-          );
-          if (item?.shipmentId && item?.lastReturnRequestId) {
-            setRequestIdShipmentMap((prev) => ({
-              ...prev,
-              [item.shipmentId]: item.lastReturnRequestId,
-            }));
-          }
-        });
-
         const firstRecipient = shipments[0]?.recipient;
         const shippingAddress =
           buildAddress(firstRecipient) ||
@@ -1606,8 +1652,6 @@ export default function UserOrderDetailPage() {
       mounted = false;
     };
   }, [id]);
-
-  console.log("Request ID to Shipment Map:", requestIdShipmentMap);
 
   const statusChipClass = useMemo(() => {
     if (!order) return "bg-slate-100 text-slate-600";
@@ -1967,9 +2011,7 @@ export default function UserOrderDetailPage() {
                                           <button
                                             type="button"
                                             onClick={() =>
-                                              setViewReturnMediaShipmentId(
-                                                shipment.id,
-                                              )
+                                              openReturnModal(shipment.id)
                                             }
                                             className="btn btn-warning btn-sm"
                                           >
@@ -3045,9 +3087,6 @@ export default function UserOrderDetailPage() {
       {/* Return Request Modal */}
       {activeReturnShipment && (
         <ReturnRequestModal
-          onQuantityChange={(itemId, quantity) =>
-            onQuantityChange(activeReturnShipment.id, itemId, quantity)
-          }
           shipment={activeReturnShipment}
           draft={returnRequestDrafts[activeReturnShipment.id]}
           status={returnActionStatus[activeReturnShipment.id]}
@@ -3078,14 +3117,6 @@ export default function UserOrderDetailPage() {
         />
       )}
 
-      {/* ✅ FIX: ReturnAttachmentModal moved here to top-level, outside shipments.map loop */}
-      {viewReturnMediaShipmentId !== null && (
-        <ReturnAttachmentModal
-          returnRequestId={requestIdShipmentMap[viewReturnMediaShipmentId]}
-          setViewReturnMediaShipmentId={setViewReturnMediaShipmentId}
-          order={order}
-        />
-      )}
     </>
   );
 }

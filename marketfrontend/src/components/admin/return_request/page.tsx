@@ -101,6 +101,30 @@ const currency = (value: number) => `${value.toLocaleString("vi-VN")}₫`;
 const formatRequestCode = (id: number) =>
   `RR-${id.toString().padStart(5, "0")}`;
 
+const textOrEmpty = (value?: string | null) => value?.trim() || "";
+
+const getOrderLabel = (request: ReturnRequestAdmin) =>
+  textOrEmpty(request.orderNumber) || `Đơn #${request.orderId}`;
+
+const getShipmentLabel = (request: ReturnRequestAdmin) =>
+  textOrEmpty(request.shipmentTrackingNumber) ||
+  textOrEmpty(request.orderTrackingNumber) ||
+  (request.orderShipmentId
+    ? `Kiện #${request.orderShipmentId}`
+    : "Chưa có mã kiện");
+
+const getCustomerLabel = (request: ReturnRequestAdmin) =>
+  textOrEmpty(request.customerName) || `KH #${request.customerId}`;
+
+const getShopLabel = (request: ReturnRequestAdmin) =>
+  textOrEmpty(request.shopName) || `Shop #${request.shopId}`;
+
+const getItemLabel = (item: ReturnRequestAdmin["items"][number]) =>
+  textOrEmpty(item.productName) || `Order Item #${item.orderItemId}`;
+
+const getPrimaryItemLabel = (request: ReturnRequestAdmin) =>
+  request.items?.[0] ? getItemLabel(request.items[0]) : "Chưa có sản phẩm";
+
 const isVideoAttachment = (attachment: ReturnRequestAttachmentAdmin) =>
   attachment.fileType?.toLowerCase().startsWith("video/") ||
   attachment.fileUrl?.toLowerCase().match(/\.(mp4|mov|webm|m4v)$/);
@@ -256,26 +280,56 @@ function ReturnRequestDetailModal({
                     Mã đơn hàng
                   </p>
                   <p className="text-sm font-black text-slate-800 mt-1">
-                    #{request.orderId}
+                    {getOrderLabel(request)}
                   </p>
+                  {request.orderNumber && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      ID đơn: #{request.orderId}
+                    </p>
+                  )}
                 </div>
                 <div className="bg-white rounded-2xl p-4 border border-slate-100">
                   <p className="text-xs font-bold text-slate-400 uppercase">
-                    Mã kiện hàng
+                    Mã vận đơn
                   </p>
                   <p className="text-sm font-black text-slate-800 mt-1">
-                    {request.orderShipmentId
-                      ? `#${request.orderShipmentId}`
-                      : "Chưa gắn kiện"}
+                    {getShipmentLabel(request)}
                   </p>
+                  {(request.carrierName || request.shippingStatus) && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      {[request.carrierName, request.shippingStatus]
+                        .filter(Boolean)
+                        .join(" / ")}
+                    </p>
+                  )}
                 </div>
                 <div className="bg-white rounded-2xl p-4 border border-slate-100">
                   <p className="text-xs font-bold text-slate-400 uppercase">
-                    Khách hàng / Shop
+                    Khách hàng
                   </p>
                   <p className="text-sm font-black text-slate-800 mt-1">
-                    KH #{request.customerId} / Shop #{request.shopId}
+                    {getCustomerLabel(request)}
                   </p>
+                  {(request.customerEmail || request.customerPhone) && (
+                    <p className="text-xs text-slate-400 mt-1 break-all">
+                      {[request.customerEmail, request.customerPhone]
+                        .filter(Boolean)
+                        .join(" / ")}
+                    </p>
+                  )}
+                </div>
+                <div className="bg-white rounded-2xl p-4 border border-slate-100">
+                  <p className="text-xs font-bold text-slate-400 uppercase">
+                    Shop
+                  </p>
+                  <p className="text-sm font-black text-slate-800 mt-1">
+                    {getShopLabel(request)}
+                  </p>
+                  {request.shopName && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      Shop ID: #{request.shopId}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="bg-white rounded-2xl p-4 border border-slate-100 mt-4">
@@ -328,17 +382,49 @@ function ReturnRequestDetailModal({
                     key={item.id}
                     className="px-5 py-4 flex flex-col md:flex-row md:items-center justify-between gap-3"
                   >
-                    <div>
-                      <p className="text-sm font-black text-slate-800">
-                        Order Item #{item.orderItemId}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Yêu cầu #{item.id}
-                      </p>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        {item.productImage ? (
+                          <img
+                            src={item.productImage}
+                            alt={getItemLabel(item)}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Package size={18} className="text-slate-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-slate-800 line-clamp-2">
+                          {getItemLabel(item)}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {textOrEmpty(item.variantName) ||
+                            `Order Item #${item.orderItemId}`}
+                        </p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-3 flex-wrap text-xs font-bold">
                       <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700">
-                        SL: {item.quantity}
+                        SL trả: {item.quantity}
+                      </span>
+                      {!!item.orderQuantity && (
+                        <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700">
+                          Đã mua: {item.orderQuantity}
+                        </span>
+                      )}
+                      {!!item.price && (
+                        <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700">
+                          Giá: {currency(item.price)}
+                        </span>
+                      )}
+                      {!!item.totalPrice && (
+                        <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700">
+                          Tổng dòng: {currency(item.totalPrice)}
+                        </span>
+                      )}
+                      <span className="px-3 py-1 rounded-xl bg-blue-50 text-blue-700">
+                        Item #{item.orderItemId}
                       </span>
                       <span className="px-3 py-1 rounded-xl bg-amber-50 text-amber-700">
                         Yêu cầu: {currency(item.requestedAmount)}
@@ -478,12 +564,25 @@ export default function ReturnRequestsPage() {
 
       return [
         formatRequestCode(request.id),
+        getOrderLabel(request),
+        getShipmentLabel(request),
+        getCustomerLabel(request),
+        getShopLabel(request),
         String(request.orderId),
         String(request.shopId),
         String(request.customerId),
         String(request.orderShipmentId || ""),
+        request.customerEmail || "",
+        request.customerPhone || "",
+        request.carrierName || "",
+        request.shippingStatus || "",
         request.reason || "",
         request.status,
+        ...(request.items || []).flatMap((item) => [
+          getItemLabel(item),
+          item.variantName || "",
+          String(item.orderItemId),
+        ]),
       ]
         .join(" ")
         .toLowerCase()
@@ -725,16 +824,14 @@ export default function ReturnRequestsPage() {
                           {formatRequestCode(request.id)}
                         </p>
                         <p className="text-xs text-slate-500 mt-1">
-                          Đơn #{request.orderId}{" "}
-                          {request.orderShipmentId
-                            ? `• Kiện #${request.orderShipmentId}`
-                            : ""}
+                          {getOrderLabel(request)} • {getShipmentLabel(request)}
                         </p>
                         <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-1">
                           <Package size={11} />
-                          <span>
+                          <span className="line-clamp-1">
                             {request.items?.length || 0} sản phẩm •{" "}
-                            {request.attachments?.length || 0} tệp
+                            {request.attachments?.length || 0} tệp •{" "}
+                            {getPrimaryItemLabel(request)}
                           </span>
                         </div>
                       </div>
@@ -752,7 +849,10 @@ export default function ReturnRequestsPage() {
                           Khách hàng / Shop
                         </p>
                         <p className="font-black text-slate-800 mt-1">
-                          KH #{request.customerId} / Shop #{request.shopId}
+                          {getCustomerLabel(request)}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {getShopLabel(request)}
                         </p>
                       </div>
                       <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
@@ -863,23 +963,31 @@ export default function ReturnRequestsPage() {
                         <td className="px-5 py-4">
                           <div>
                             <p className="font-bold text-slate-800">
-                              Đơn #{request.orderId}
+                              {getOrderLabel(request)}
                             </p>
                             <p className="text-xs text-slate-500 mt-1">
-                              {request.orderShipmentId
-                                ? `Kiện #${request.orderShipmentId}`
-                                : "Chưa có mã kiện"}
+                              {getShipmentLabel(request)}
                             </p>
+                            {request.carrierName && (
+                              <p className="text-[11px] text-slate-400 mt-1">
+                                {request.carrierName}
+                              </p>
+                            )}
                           </div>
                         </td>
                         <td className="px-5 py-4">
                           <div>
                             <p className="font-bold text-slate-800">
-                              KH #{request.customerId}
+                              {getCustomerLabel(request)}
                             </p>
                             <p className="text-xs text-slate-500 mt-1">
-                              Shop #{request.shopId}
+                              {getShopLabel(request)}
                             </p>
+                            {request.customerEmail && (
+                              <p className="text-[11px] text-slate-400 mt-1 max-w-[180px] truncate">
+                                {request.customerEmail}
+                              </p>
+                            )}
                           </div>
                         </td>
                         <td className="px-5 py-4 max-w-[260px]">
@@ -888,13 +996,18 @@ export default function ReturnRequestsPage() {
                           </p>
                         </td>
                         <td className="px-5 py-4 text-center">
-                          <div className="inline-flex flex-col gap-1 text-xs font-bold">
-                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
-                              {request.items?.length || 0} sản phẩm
-                            </span>
-                            <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700">
-                              {request.attachments?.length || 0} tệp
-                            </span>
+                          <div className="inline-flex flex-col items-center gap-1 text-xs font-bold">
+                            <p className="max-w-[190px] truncate text-slate-700">
+                              {getPrimaryItemLabel(request)}
+                            </p>
+                            <div className="inline-flex gap-1">
+                              <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
+                                {request.items?.length || 0} sản phẩm
+                              </span>
+                              <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700">
+                                {request.attachments?.length || 0} tệp
+                              </span>
+                            </div>
                           </div>
                         </td>
                         <td className="px-5 py-4 text-right">
