@@ -28,9 +28,6 @@ import {
 import { API_URL } from "@/helper/api";
 import ReturnRequestModal, { ReturnRequestDraft } from "./ReturnRequestModal";
 import { useUserAuth } from "@/context/UserAuthContext";
-import { useQuery } from "@tanstack/react-query";
-import { ReturnRequestAttachment } from "@/types/data/refund/ReuturnRequestAttachment";
-import ReturnAttachmentModal from "./ReturnAttachmentModal";
 
 const orderStatusLabel: Record<Order["status"], string> = {
   PENDING: "Cho xac nhan",
@@ -259,6 +256,34 @@ const toOrderItem = (raw: any): OrderItem => ({
   lastReturnRequestId: raw?.lastReturnRequestId,
   price: asNumber(raw?.price, 0),
   discount: asNumber(raw?.discountAmount ?? raw?.discount_amount, 0),
+  shopVoucherDiscountAmount: asNumber(
+    raw?.shopVoucherDiscountAmount ?? raw?.shop_voucher_discount_amount,
+    0,
+  ),
+  platformVoucherDiscountAmount: asNumber(
+    raw?.platformVoucherDiscountAmount ?? raw?.platform_voucher_discount_amount,
+    0,
+  ),
+  totalVoucherDiscountAmount: asNumber(
+    raw?.totalVoucherDiscountAmount ?? raw?.total_voucher_discount_amount,
+    0,
+  ),
+  totalAfterShopVoucher: asNumber(
+    raw?.totalAfterShopVoucher ?? raw?.total_after_shop_voucher,
+    0,
+  ),
+  totalAfterAllVouchers: asNumber(
+    raw?.totalAfterAllVouchers ?? raw?.total_after_all_vouchers,
+    0,
+  ),
+  platformCommissionAmount: asNumber(
+    raw?.platformCommissionAmount ?? raw?.platform_commission_amount,
+    0,
+  ),
+  sellerReceivableAmount: asNumber(
+    raw?.sellerReceivableAmount ?? raw?.seller_receivable_amount,
+    0,
+  ),
   status: "Ready" as const,
 });
 
@@ -329,6 +354,28 @@ const getFirstSuccess = async <T,>(paths: string[]): Promise<T | null> => {
 };
 
 const formatMoney = (amount: number) => `${amount.toLocaleString("vi-VN")}d`;
+
+const getReturnItemPaidAmount = (item: OrderItem, quantity: number) => {
+  const safeQuantity = Math.max(0, Number(quantity || 0));
+  const orderedQuantity = Math.max(
+    1,
+    Number((item as any).originalQuantity ?? item.quantity ?? 1),
+  );
+  const totalAfterAllVouchers = Number(item.totalAfterAllVouchers || 0);
+
+  if (totalAfterAllVouchers > 0) {
+    return Math.max(
+      0,
+      (totalAfterAllVouchers / orderedQuantity) * safeQuantity,
+    );
+  }
+
+  const totalDiscount = Number(
+    item.totalVoucherDiscountAmount ?? item.discount ?? 0,
+  );
+  const unitDiscount = totalDiscount > 0 ? totalDiscount / orderedQuantity : 0;
+  return Math.max(0, (Number(item.price || 0) - unitDiscount) * safeQuantity);
+};
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleString("vi-VN", {
@@ -559,9 +606,6 @@ export default function UserOrderDetailPage() {
   const { userId } = useUserAuth();
 
   const [order, setOrder] = useState<Order | null>(null);
-  const [requestIdShipmentMap, setRequestIdShipmentMap] = useState<
-    Record<number, number>
-  >({});
   const [loading, setLoading] = useState(true);
   const [adjustmentActionStatus, setAdjustmentActionStatus] = useState<
     Record<string, "idle" | "pending" | "accepted" | "rejected">
@@ -600,11 +644,6 @@ export default function UserOrderDetailPage() {
   const [returnActionMessage, setReturnActionMessage] = useState<
     Record<number, string>
   >({});
-
-  // State for viewing return request media modal
-  const [viewReturnMediaShipmentId, setViewReturnMediaShipmentId] = useState<
-    number | null
-  >(null);
 
   const activeReviewShipment = useMemo(
     () =>
@@ -653,13 +692,34 @@ export default function UserOrderDetailPage() {
   const openReturnModal = (shipmentId: number) => {
     const shipment = order?.shipments?.find((item) => item.id === shipmentId);
     if (!shipment) return;
+    const hasExistingReturn =
+      !!shipment.returnStatusSummary && shipment.returnStatusSummary !== "NONE";
+    const returnRequestItemIds = new Set(
+      shipment.items
+        .filter((item) => !!item.lastReturnRequestId)
+        .map((item) => Number(item.id)),
+    );
 
     setReturnRequestDrafts((prev) => {
       const existing = prev[shipmentId];
       const selectedItemIds = shipment.items.reduce<Record<number, boolean>>(
         (acc, item) => {
           acc[Number(item.id)] =
-            existing?.selectedItemIds?.[Number(item.id)] || false;
+            existing?.selectedItemIds?.[Number(item.id)] ||
+            (hasExistingReturn && returnRequestItemIds.has(Number(item.id))) ||
+            false;
+          return acc;
+        },
+        {},
+      );
+      const returnQuantities = shipment.items.reduce<Record<number, number>>(
+        (acc, item) => {
+          const itemId = Number(item.id);
+          const selected =
+            existing?.selectedItemIds?.[itemId] ||
+            (hasExistingReturn && returnRequestItemIds.has(itemId)) ||
+            false;
+          acc[itemId] = selected ? Number(item.quantity || 1) : 0;
           return acc;
         },
         {},
@@ -670,7 +730,7 @@ export default function UserOrderDetailPage() {
           selectedItemIds,
           reason: existing?.reason || "",
           files: existing?.files || [],
-          returnQuantities: existing?.returnQuantities || {},
+          returnQuantities,
         },
       };
     });
@@ -705,27 +765,16 @@ export default function UserOrderDetailPage() {
     });
   };
 
-  const onQuantityChange = (
-    shipmentId: number,
-    itemId: number,
-    quantity: number,
-  ) => {
-    const currentDraft = returnRequestDrafts[shipmentId];
-    updateReturnDraft(shipmentId, {
-      returnQuantities: {
-        ...(currentDraft?.returnQuantities || {}),
-        [itemId]: quantity,
-      },
-    });
-  };
-
   const toggleReturnItem = (
     shipmentId: number,
     itemId: number,
     checked: boolean,
   ) => {
+    const shipment = order?.shipments?.find((item) => item.id === shipmentId);
+    const orderItem = shipment?.items?.find(
+      (item) => Number(item.id) === Number(itemId),
+    );
     const currentDraft = returnRequestDrafts[shipmentId];
-    const currentQty = Number(currentDraft?.returnQuantities?.[itemId] || 0);
     updateReturnDraft(shipmentId, {
       selectedItemIds: {
         ...(currentDraft?.selectedItemIds || {}),
@@ -733,7 +782,44 @@ export default function UserOrderDetailPage() {
       },
       returnQuantities: {
         ...(currentDraft?.returnQuantities || {}),
-        [itemId]: checked ? Math.max(1, currentQty) : 0,
+        [itemId]: checked
+          ? Math.min(
+              Number(orderItem?.quantity || 1),
+              Math.max(
+                1,
+                Number(
+                  currentDraft?.returnQuantities?.[itemId] ||
+                    orderItem?.quantity ||
+                    1,
+                ),
+              ),
+            )
+          : 0,
+      },
+    });
+  };
+
+  const changeReturnItemQuantity = (
+    shipmentId: number,
+    itemId: number,
+    quantity: number,
+  ) => {
+    const shipment = order?.shipments?.find((item) => item.id === shipmentId);
+    const orderItem = shipment?.items?.find(
+      (item) => Number(item.id) === Number(itemId),
+    );
+    const maxQty = Math.max(1, Number(orderItem?.quantity || 1));
+    const safeQty = Math.max(1, Math.min(Number(quantity || 1), maxQty));
+    const currentDraft = returnRequestDrafts[shipmentId];
+
+    updateReturnDraft(shipmentId, {
+      selectedItemIds: {
+        ...(currentDraft?.selectedItemIds || {}),
+        [itemId]: true,
+      },
+      returnQuantities: {
+        ...(currentDraft?.returnQuantities || {}),
+        [itemId]: safeQty,
       },
     });
   };
@@ -992,11 +1078,17 @@ export default function UserOrderDetailPage() {
     console.log("Submitting return request with draft:", draft);
     const selectedItems = activeReturnShipment.items
       .filter((item) => !!draft?.selectedItemIds?.[item.id])
-      .map((item) => ({
-        ...item,
-        // Use the quantity from draft.returnQuantities if present, otherwise fallback to 1
-        quantity: draft?.returnQuantities?.[item.id] ?? 1,
-      }));
+      .map((item) => {
+        const maxQty = Math.max(1, Number(item.quantity || 1));
+        const draftQty = Number(draft?.returnQuantities?.[item.id] || 1);
+        const safeQty = Math.max(1, Math.min(draftQty, maxQty));
+
+        return {
+          ...item,
+          originalQuantity: item.quantity,
+          quantity: safeQty,
+        };
+      });
     console.log("Selected items for return:", selectedItems);
     const reason = String(draft?.reason || "").trim();
 
@@ -1044,7 +1136,7 @@ export default function UserOrderDetailPage() {
     );
 
     const totalRequestedAmount = selectedItems.reduce(
-      (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
+      (sum, item) => sum + getReturnItemPaidAmount(item, item.quantity),
       0,
     );
     // alert(
@@ -1085,44 +1177,159 @@ export default function UserOrderDetailPage() {
     //     JSON.stringify(Object.fromEntries(formData.entries()), null, 2),
     // );
     // return;
+    const requestItems = selectedItems.map((item) => ({
+      orderItemId: item.id,
+      quantity: item.quantity,
+      orderShipmentId: shipmentId,
+      requestedAmount: getReturnItemPaidAmount(item, item.quantity),
+    }));
+
     let submittedByApi = false;
-    console.log("Submitting return request to API with formData:", formData);
     try {
-      alert(
-        "Vui long dien day du thong tin de gui yeu cau tra hang hoan tien den shop. Neu backend chua ho tro endpoint, noi dung yeu cau tra hang cua ban van duoc luu tam thoi tren giao dien va se duoc gui den shop khi backend san sang.",
+      const previewResponse = await fetch(`${API_URL}/api/refunds/preview`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: Number(id),
+          shopId: activeReturnShipment.shop_id,
+          customerId: userId,
+          reason,
+          orderShipmentId: shipmentId,
+          quantity: totalQuantity,
+          requestedAmount: totalRequestedAmount,
+          items: requestItems,
+        }),
+      });
+      const previewText = await previewResponse.text();
+      const previewPayload = previewText
+        ? (() => {
+            try {
+              return JSON.parse(previewText);
+            } catch {
+              return { message: previewText };
+            }
+          })()
+        : {};
+
+      if (!previewResponse.ok) {
+        const previewError =
+          previewPayload?.message ||
+          (typeof previewPayload === "string"
+            ? previewPayload
+            : JSON.stringify(previewPayload));
+        throw new Error(
+          previewError || "Khong the tinh truoc yeu cau tra hang.",
+        );
+      }
+
+      const previewRefundAmount = asNumber(
+        previewPayload?.requestedAmount ?? previewPayload?.requested_amount,
+        totalRequestedAmount,
       );
+      const previewMessage = String(
+        previewPayload?.refundMessage ?? previewPayload?.refund_message ?? "",
+      );
+      const confirmMessage =
+        previewMessage ||
+        (previewRefundAmount <= 0
+          ? "Bạn sẽ không được hoàn tiền cho yêu cầu này. Bạn có muốn gửi yêu cầu trả hàng không?"
+          : `Số tiền dự kiến hoàn là ${formatMoney(
+              previewRefundAmount,
+            )}. Bạn có muốn gửi yêu cầu trả hàng không?`);
+
+      if (
+        !window.confirm(`${confirmMessage}\n\nChọn OK để gửi, Cancel để hủy.`)
+      ) {
+        setReturnActionStatus((prev) => ({
+          ...prev,
+          [shipmentId]: "idle",
+        }));
+        setReturnActionMessage((prev) => ({
+          ...prev,
+          [shipmentId]: "Đã hủy gửi yêu cầu trả hàng.",
+        }));
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("orderId", id);
+      formData.append("shopId", String(activeReturnShipment.shop_id));
+      formData.append("customerId", String(userId));
+      formData.append("reason", reason);
+      formData.append("orderShipmentId", String(shipmentId));
+      formData.append("quantity", String(totalQuantity));
+      formData.append("requestedAmount", String(totalRequestedAmount));
+      formData.append("items", JSON.stringify(requestItems));
+
+      (draft?.files || []).forEach((file) => {
+        formData.append("files", file);
+        formData.append(
+          "descriptions",
+          `Evidence for order item issue - ${file.name}`,
+        );
+      });
+
+      console.log("Submitting return request to API with formData:", formData);
       const response = await fetch(`${API_URL}/api/refunds/multipart`, {
         method: "POST",
         credentials: "include",
         body: formData,
       });
 
+      const responseText = await response.text();
+      const responsePayload = responseText
+        ? (() => {
+            try {
+              return JSON.parse(responseText);
+            } catch {
+              return { message: responseText };
+            }
+          })()
+        : {};
+
       submittedByApi = response.ok;
       console.log("API response for return request submission:", {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
+        body: responsePayload,
       });
       let errorMessage = "Gui yeu cau that bai. Vui long thu lai.";
       if (!submittedByApi) {
-        try {
-          const errorBody = await response.text();
-          if (errorBody?.trim()) {
-            errorMessage = errorBody;
-          }
-        } catch {
-          // keep default message
+        const errorBody =
+          typeof responsePayload === "string"
+            ? responsePayload
+            : responsePayload?.message || JSON.stringify(responsePayload);
+        if (errorBody?.trim()) {
+          errorMessage = errorBody;
         }
       }
 
+      const confirmedRefundAmount = asNumber(
+        responsePayload?.requestedAmount ?? responsePayload?.requested_amount,
+        totalRequestedAmount,
+      );
+      const refundMessage = String(
+        responsePayload?.refundMessage ?? responsePayload?.refund_message ?? "",
+      );
+      const successMessage =
+        refundMessage ||
+        (confirmedRefundAmount <= 0
+          ? "Bạn sẽ không được hoàn tiền cho yêu cầu này vì voucher không còn đủ điều kiện sau khi trả hàng."
+          : `Yeu cau tra hang hoan tien da duoc gui. So tien du kien hoan: ${formatMoney(
+              confirmedRefundAmount,
+            )}.`);
+      const actionMessage = submittedByApi ? successMessage : errorMessage;
+
       setReturnActionMessage((prev) => ({
         ...prev,
-        [shipmentId]: submittedByApi
-          ? "Yeu cau tra hang hoan tien da duoc gui. Shop se phan hoi som."
-          : errorMessage,
+        [shipmentId]: actionMessage,
       }));
+      alert(actionMessage);
     } catch (error) {
       console.error("Submit return request failed:", error);
+      alert("Gui yeu cau that bai. Vui long thu lai.");
       setReturnActionMessage((prev) => ({
         ...prev,
         [shipmentId]: "Gui yeu cau that bai. Vui long thu lai.",
@@ -1441,20 +1648,6 @@ export default function UserOrderDetailPage() {
           };
         }) || [];
 
-        orderData?.items.forEach((item: any) => {
-          console.log(
-            "Shipment ID from order item:",
-            item?.shipmentId,
-            item?.lastReturnRequestId,
-          );
-          if (item?.shipmentId && item?.lastReturnRequestId) {
-            setRequestIdShipmentMap((prev) => ({
-              ...prev,
-              [item.shipmentId]: item.lastReturnRequestId,
-            }));
-          }
-        });
-
         const firstRecipient = shipments[0]?.recipient;
         const shippingAddress =
           buildAddress(firstRecipient) ||
@@ -1542,8 +1735,6 @@ export default function UserOrderDetailPage() {
       mounted = false;
     };
   }, [id]);
-
-  console.log("Request ID to Shipment Map:", requestIdShipmentMap);
 
   const statusChipClass = useMemo(() => {
     if (!order) return "bg-slate-100 text-slate-600";
@@ -1903,9 +2094,7 @@ export default function UserOrderDetailPage() {
                                           <button
                                             type="button"
                                             onClick={() =>
-                                              setViewReturnMediaShipmentId(
-                                                shipment.id,
-                                              )
+                                              openReturnModal(shipment.id)
                                             }
                                             className="btn btn-warning btn-sm"
                                           >
@@ -2981,15 +3170,15 @@ export default function UserOrderDetailPage() {
       {/* Return Request Modal */}
       {activeReturnShipment && (
         <ReturnRequestModal
-          onQuantityChange={(itemId, quantity) =>
-            onQuantityChange(activeReturnShipment.id, itemId, quantity)
-          }
           shipment={activeReturnShipment}
           draft={returnRequestDrafts[activeReturnShipment.id]}
           status={returnActionStatus[activeReturnShipment.id]}
           onClose={closeReturnModal}
           onToggleItem={(itemId: number, checked) =>
             toggleReturnItem(activeReturnShipment.id, itemId, checked)
+          }
+          onQuantityChange={(itemId: number, quantity: number) =>
+            changeReturnItemQuantity(activeReturnShipment.id, itemId, quantity)
           }
           onReasonChange={(reason) =>
             updateReturnDraft(activeReturnShipment.id, { reason })
@@ -3011,15 +3200,6 @@ export default function UserOrderDetailPage() {
             qtyBadge: styles.qtyBadge,
             reviewTextarea: styles.reviewTextarea,
           }}
-        />
-      )}
-
-      {/* ✅ FIX: ReturnAttachmentModal moved here to top-level, outside shipments.map loop */}
-      {viewReturnMediaShipmentId !== null && (
-        <ReturnAttachmentModal
-          returnRequestId={requestIdShipmentMap[viewReturnMediaShipmentId]}
-          setViewReturnMediaShipmentId={setViewReturnMediaShipmentId}
-          order={order}
         />
       )}
     </>

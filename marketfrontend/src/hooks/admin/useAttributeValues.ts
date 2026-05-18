@@ -5,6 +5,27 @@ import { API_URL } from "@/helper/api";
 
 const ATTRIBUTE_VALUE_API_URL = `${API_URL}/api/attribute-value`;
 
+export class AttributeValueRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "AttributeValueRequestError";
+    this.status = status;
+  }
+}
+
+const normalizeErrorMessage = (status: number, text: string) => {
+  const message = text.trim();
+  const lowerMessage = message.toLowerCase();
+
+  if (status === 409 || lowerMessage.includes("duplicate")) {
+    return "This value already exists for this attribute.";
+  }
+
+  return message || "Create failed";
+};
+
 export function useAttributeValues() {
   const [values, setValues] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,25 +50,25 @@ export function useAttributeValues() {
 
   // ================= CREATE =================
   const createValue = async (payload: any) => {
-    try {
-      const res = await fetch(ATTRIBUTE_VALUE_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+    const res = await fetch(ATTRIBUTE_VALUE_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-      const text = await res.text();
-      console.log("CREATE VALUE:", res.status, text);
+    const text = await res.text();
+    console.log("CREATE VALUE:", res.status, text);
 
-      if (!res.ok) throw new Error(text || "Create failed");
-
-      await fetchAll(); // 🔥 auto refresh UI
-    } catch (err) {
-      console.error("Create value error:", err);
-      throw err;
+    if (!res.ok) {
+      throw new AttributeValueRequestError(
+        normalizeErrorMessage(res.status, text),
+        res.status,
+      );
     }
+
+    await fetchAll(); // 🔥 auto refresh UI
   };
 
   // ================= DELETE =================

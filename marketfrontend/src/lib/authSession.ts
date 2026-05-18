@@ -10,10 +10,36 @@ const TOKEN_KEYS = {
 
 const ACCESS_REFRESH_WINDOW_MS = 2 * 60 * 1000;
 const DEFAULT_COOKIE_MAX_AGE_SECONDS = 24 * 60 * 60;
+const AUTH_REQUIRED_PATH_PREFIXES = [
+  "/checkout",
+  "/purchase",
+  "/profile",
+  "/orders",
+  "/admin",
+  "/seller",
+] as const;
 
 let refreshPromise: Promise<string | null> | null = null;
 
 const isBrowser = () => typeof window !== "undefined";
+
+const isPathOrChild = (pathname: string, basePath: string) =>
+  pathname === basePath || pathname.startsWith(`${basePath}/`);
+
+export const isAuthRequiredPathname = (pathname?: string | null) => {
+  const value = pathname || "/";
+  return AUTH_REQUIRED_PATH_PREFIXES.some((path) => isPathOrChild(value, path));
+};
+
+export const shouldRedirectToLoginOnAuthFailure = () =>
+  isBrowser() && isAuthRequiredPathname(window.location.pathname);
+
+export const getLoginRedirectUrl = () => {
+  if (!isBrowser()) return "/login";
+
+  const target = `${window.location.pathname}${window.location.search}`;
+  return `/login?redirect=${encodeURIComponent(target)}`;
+};
 
 const normalizeRole = (role?: string | null) => {
   const value = role?.trim().toLowerCase();
@@ -87,6 +113,8 @@ export const clearAuth = () => {
   ["token", "refreshToken", "role", "user"].forEach((name) =>
     setCookie(name, "", 0),
   );
+
+  window.dispatchEvent(new CustomEvent("auth:cleared"));
 };
 
 export const markAuthActivity = () => {
@@ -185,7 +213,7 @@ export const refreshAccessToken = async ({
         clearAuth();
 
         if (redirectOnFailure) {
-          window.location.href = "/login";
+          window.location.href = getLoginRedirectUrl();
         }
       }
 
@@ -211,4 +239,3 @@ export const getValidAccessToken = async (
 
   return isAccessTokenExpiring(0) ? null : token;
 };
-

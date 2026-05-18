@@ -95,7 +95,7 @@ public class RefundRequestController {
 			@RequestParam("status") String status,
 			@RequestParam(value = "refundedAmount", required = false) Double refundedAmount) {
 		try {
-			ReturnRequestStatus nextStatus = ReturnRequestStatus.valueOf(status.toUpperCase());
+			ReturnRequestStatus nextStatus = ReturnRequestStatus.fromValue(status);
 			var updated = refundRequestService.updateStatus(refundRequestId, nextStatus, refundedAmount);
 			if (updated == null) {
 				return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -126,6 +126,18 @@ public class RefundRequestController {
 			return ResponseEntity.ok(refundRequest);
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating refund request: " + e.getMessage());
+		}
+	}
+
+	@PostMapping("/preview")
+	public ResponseEntity<?> previewRefundRequest(@RequestBody RefundRequestDTO refundRequestDTO) {
+		try {
+			return ResponseEntity.ok(refundRequestService.previewRefundRequest(refundRequestDTO));
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.badRequest().body(e.getMessage());
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error previewing refund request: " + e.getMessage());
 		}
 	}
 

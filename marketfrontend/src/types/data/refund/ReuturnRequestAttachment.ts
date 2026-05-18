@@ -1,10 +1,10 @@
 import { Model } from "@/types/core/model";
 import { ObjectsFactory } from "@/types/core/objectFactory";
 import { IReturnRequestAttachment } from "@/validators/returnRequestAttachment";
-import path from "path";
+import { API_URL } from "@/helper/api";
 
 const modelConfig = {
-  path: "/api/return-request-attachments",
+  path: `${API_URL}/api/refunds-requests-attachments`,
   modal: "return-request-attachment",
 };
 
@@ -34,8 +34,8 @@ export class ReturnRequestAttachment extends Model {
             return r.data;
           })
           .catch((error) => {
-            console.error("Error fetching attachments:", error);
-            throw error;
+            console.warn("No return request attachments found:", error);
+            return [];
           }),
     };
   }

@@ -40,6 +40,7 @@ public class OrderService {
     private final RedisTemplate<Object, Object> redisTemplate;
 
     private static final String ROLLBACK_TEST_FLAG = "SIMULATE_ROLLBACK";
+    private static final double PLATFORM_COMMISSION_RATE = 0.10;
     private final int STOCK = 10;// Giả sử chỉ có 10 sản phẩm trong kho để bán
     private final WebClient webClient;
     private final String paymentServiceUrl;
@@ -401,9 +402,9 @@ public class OrderService {
                 .totalVoucherDiscountAmount(getTotalVoucherDiscountAmount(dto))
                 .totalAfterShopVoucher(getTotalAfterShopVoucher(dto))
                 .totalAfterAllVouchers(getTotalAfterAllVouchers(dto))
-                .platformCommissionRate(normalizeMoney(dto.getPlatform_commission_rate()))
-                .platformCommissionAmount(normalizeMoney(dto.getPlatform_commission_amount()))
-                .sellerReceivableAmount(normalizeMoney(dto.getSeller_receivable_amount()))
+                .platformCommissionRate(PLATFORM_COMMISSION_RATE)
+                .platformCommissionAmount(getPlatformCommissionAmount(dto))
+                .sellerReceivableAmount(getSellerReceivableAmount(dto))
                 .isAdjusted(false)
                 .build();
     }
@@ -450,6 +451,28 @@ public class OrderService {
             return Math.max(0.0, Math.min(getItemOriginalTotal(dto), explicitTotal));
         }
         return Math.max(0.0, getItemOriginalTotal(dto) - getTotalVoucherDiscountAmount(dto));
+    }
+
+    private double getCommissionBase(docker_test.com.dto.OrderItemDTO dto) {
+        double totalAfterShopVoucher = getTotalAfterShopVoucher(dto);
+        if (totalAfterShopVoucher > 0) {
+            return totalAfterShopVoucher;
+        }
+        return Math.max(0.0, getItemOriginalTotal(dto) - getShopVoucherDiscountAmount(dto));
+    }
+
+    private double getPlatformCommissionAmount(docker_test.com.dto.OrderItemDTO dto) {
+        return roundMoney(getCommissionBase(dto) * PLATFORM_COMMISSION_RATE);
+    }
+
+    private double getSellerReceivableAmount(docker_test.com.dto.OrderItemDTO dto) {
+        double commissionBase = getCommissionBase(dto);
+        double platformCommissionAmount = roundMoney(commissionBase * PLATFORM_COMMISSION_RATE);
+        return roundMoney(Math.max(0.0, commissionBase - platformCommissionAmount));
+    }
+
+    private double roundMoney(double value) {
+        return Math.round(Math.max(0.0, value) * 100.0) / 100.0;
     }
     
     

@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -50,6 +51,24 @@ public class ReturnRequestItem {
      
      @Column(name = "updated_at")
      private LocalDateTime updatedAt;
+
+     @Transient
+     private String productName;
+
+     @Transient
+     private String variantName;
+
+     @Transient
+     private String productImage;
+
+     @Transient
+     private double price;
+
+     @Transient
+     private double totalPrice;
+
+     @Transient
+     private int orderQuantity;
      
      
      @JsonBackReference("return-request-items")
