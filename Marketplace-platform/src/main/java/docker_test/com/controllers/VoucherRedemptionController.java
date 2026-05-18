@@ -80,4 +80,8 @@ public class VoucherRedemptionController {
 	public ResponseEntity<?> getItemsByOrder(@PathVariable Long orderId) {
 		return ResponseEntity.ok(itemRepo.getByOrderId(orderId));
 	}
+	@GetMapping("/order/{orderId}")
+	public ResponseEntity<?> getRedemptionsByOrder(@PathVariable Long orderId) {
+		return ResponseEntity.ok(repo.getByOrderId(orderId));
+	}
 }

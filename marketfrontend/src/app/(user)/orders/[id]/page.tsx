@@ -261,8 +261,7 @@ const toOrderItem = (raw: any): OrderItem => ({
     0,
   ),
   platformVoucherDiscountAmount: asNumber(
-    raw?.platformVoucherDiscountAmount ??
-      raw?.platform_voucher_discount_amount,
+    raw?.platformVoucherDiscountAmount ?? raw?.platform_voucher_discount_amount,
     0,
   ),
   totalVoucherDiscountAmount: asNumber(
@@ -365,7 +364,10 @@ const getReturnItemPaidAmount = (item: OrderItem, quantity: number) => {
   const totalAfterAllVouchers = Number(item.totalAfterAllVouchers || 0);
 
   if (totalAfterAllVouchers > 0) {
-    return Math.max(0, (totalAfterAllVouchers / orderedQuantity) * safeQuantity);
+    return Math.max(
+      0,
+      (totalAfterAllVouchers / orderedQuantity) * safeQuantity,
+    );
   }
 
   const totalDiscount = Number(
@@ -780,7 +782,44 @@ export default function UserOrderDetailPage() {
       },
       returnQuantities: {
         ...(currentDraft?.returnQuantities || {}),
-        [itemId]: checked ? Number(orderItem?.quantity || 1) : 0,
+        [itemId]: checked
+          ? Math.min(
+              Number(orderItem?.quantity || 1),
+              Math.max(
+                1,
+                Number(
+                  currentDraft?.returnQuantities?.[itemId] ||
+                    orderItem?.quantity ||
+                    1,
+                ),
+              ),
+            )
+          : 0,
+      },
+    });
+  };
+
+  const changeReturnItemQuantity = (
+    shipmentId: number,
+    itemId: number,
+    quantity: number,
+  ) => {
+    const shipment = order?.shipments?.find((item) => item.id === shipmentId);
+    const orderItem = shipment?.items?.find(
+      (item) => Number(item.id) === Number(itemId),
+    );
+    const maxQty = Math.max(1, Number(orderItem?.quantity || 1));
+    const safeQty = Math.max(1, Math.min(Number(quantity || 1), maxQty));
+    const currentDraft = returnRequestDrafts[shipmentId];
+
+    updateReturnDraft(shipmentId, {
+      selectedItemIds: {
+        ...(currentDraft?.selectedItemIds || {}),
+        [itemId]: true,
+      },
+      returnQuantities: {
+        ...(currentDraft?.returnQuantities || {}),
+        [itemId]: safeQty,
       },
     });
   };
@@ -1039,11 +1078,17 @@ export default function UserOrderDetailPage() {
     console.log("Submitting return request with draft:", draft);
     const selectedItems = activeReturnShipment.items
       .filter((item) => !!draft?.selectedItemIds?.[item.id])
-      .map((item) => ({
-        ...item,
-        originalQuantity: item.quantity,
-        quantity: Number(item.quantity || 1),
-      }));
+      .map((item) => {
+        const maxQty = Math.max(1, Number(item.quantity || 1));
+        const draftQty = Number(draft?.returnQuantities?.[item.id] || 1);
+        const safeQty = Math.max(1, Math.min(draftQty, maxQty));
+
+        return {
+          ...item,
+          originalQuantity: item.quantity,
+          quantity: safeQty,
+        };
+      });
     console.log("Selected items for return:", selectedItems);
     const reason = String(draft?.reason || "").trim();
 
@@ -1098,6 +1143,40 @@ export default function UserOrderDetailPage() {
     //   `Total quantity: ${totalQuantity}, Total requested amount: ${totalRequestedAmount}`,
     // );
     // alert("selectedItems data: " + JSON.stringify(selectedItems, null, 2));
+    alert("shipmentId: " + shipmentId);
+
+    const formData = new FormData();
+    formData.append("orderId", id);
+    formData.append("shopId", String(activeReturnShipment.shop_id));
+    formData.append("customerId", String(userId));
+    formData.append("reason", reason);
+    formData.append("orderShipmentId", String(shipmentId));
+    formData.append("quantity", String(totalQuantity));
+    formData.append("requestedAmount", String(totalRequestedAmount));
+    formData.append(
+      "items",
+      JSON.stringify(
+        selectedItems.map((item) => ({
+          orderItemId: item.id,
+          quantity: item.quantity,
+          orderShipmentId: shipmentId,
+          requestedAmount: Number(item.price || 0) * Number(item.quantity || 0),
+        })),
+      ),
+    );
+
+    (draft?.files || []).forEach((file) => {
+      formData.append("files", file);
+      formData.append(
+        "descriptions",
+        `Evidence for order item issue - ${file.name}`,
+      );
+    });
+    // alert(
+    //   "FormData for return request: " +
+    //     JSON.stringify(Object.fromEntries(formData.entries()), null, 2),
+    // );
+    // return;
     const requestItems = selectedItems.map((item) => ({
       orderItemId: item.id,
       quantity: item.quantity,
@@ -1139,7 +1218,9 @@ export default function UserOrderDetailPage() {
           (typeof previewPayload === "string"
             ? previewPayload
             : JSON.stringify(previewPayload));
-        throw new Error(previewError || "Khong the tinh truoc yeu cau tra hang.");
+        throw new Error(
+          previewError || "Khong the tinh truoc yeu cau tra hang.",
+        );
       }
 
       const previewRefundAmount = asNumber(
@@ -1157,7 +1238,9 @@ export default function UserOrderDetailPage() {
               previewRefundAmount,
             )}. Bạn có muốn gửi yêu cầu trả hàng không?`);
 
-      if (!window.confirm(`${confirmMessage}\n\nChọn OK để gửi, Cancel để hủy.`)) {
+      if (
+        !window.confirm(`${confirmMessage}\n\nChọn OK để gửi, Cancel để hủy.`)
+      ) {
         setReturnActionStatus((prev) => ({
           ...prev,
           [shipmentId]: "idle",
@@ -3094,6 +3177,9 @@ export default function UserOrderDetailPage() {
           onToggleItem={(itemId: number, checked) =>
             toggleReturnItem(activeReturnShipment.id, itemId, checked)
           }
+          onQuantityChange={(itemId: number, quantity: number) =>
+            changeReturnItemQuantity(activeReturnShipment.id, itemId, quantity)
+          }
           onReasonChange={(reason) =>
             updateReturnDraft(activeReturnShipment.id, { reason })
           }
@@ -3116,7 +3202,6 @@ export default function UserOrderDetailPage() {
           }}
         />
       )}
-
     </>
   );
 }

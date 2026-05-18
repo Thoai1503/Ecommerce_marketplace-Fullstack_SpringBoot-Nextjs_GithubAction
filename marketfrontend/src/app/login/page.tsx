@@ -69,10 +69,7 @@ const LoginForm = () => {
     }
 
     if (expiresIn > 0) {
-      localStorage.setItem(
-        "expiresAt",
-        String(Date.now() + expiresIn * 1000),
-      );
+      localStorage.setItem("expiresAt", String(Date.now() + expiresIn * 1000));
       localStorage.setItem(
         "expiresIn",
         JSON.stringify({
@@ -204,7 +201,8 @@ const LoginForm = () => {
       }; SameSite=Lax`;
 
       // Sau khi login thành công, điều hướng về trang mong muốn (nếu có ?redirect=...)
-      window.location.href = redirectTarget ?? getDefaultRedirectByRole(roleCookie);
+      window.location.href =
+        redirectTarget ?? getDefaultRedirectByRole(roleCookie);
     } catch (err) {
       setErrors({ general: "Không kết nối được server" });
     } finally {
@@ -292,7 +290,10 @@ const LoginForm = () => {
           )}
 
           <div className="flex justify-end mt-2">
-            <a href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+            <a
+              href="/forgot-password"
+              className="text-sm text-blue-600 hover:underline"
+            >
               Forgot password?
             </a>
           </div>
@@ -313,6 +314,47 @@ const LoginForm = () => {
                      hover:bg-blue-700 transition disabled:opacity-60"
         >
           {loading ? "Logging in..." : "Log in"}
+        </button>
+
+        {/* DIVIDER */}
+        <div className="flex items-center my-5">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="mx-3 text-sm text-gray-400">hoặc</span>
+          <div className="flex-1 h-px bg-gray-200" />
+        </div>
+
+        {/* GOOGLE LOGIN */}
+        <button
+          type="button"
+          onClick={() => {
+            window.location.href = `${API_URL}/auth/google`;
+          }}
+          className="w-full h-12 flex items-center justify-center gap-3 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 48 48"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fill="#EA4335"
+              d="M24 9.5c3.15 0 5.64 1.08 7.73 2.85l5.74-5.74C33.91 3.45 29.27 1.5 24 1.5 14.82 1.5 7.07 7.1 3.9 15.01l6.7 5.2C12.24 14.12 17.63 9.5 24 9.5z"
+            />
+            <path
+              fill="#4285F4"
+              d="M46.1 24.5c0-1.64-.15-3.22-.42-4.75H24v9h12.44c-.54 2.9-2.18 5.36-4.64 7.02l7.1 5.52C43.18 37.13 46.1 31.27 46.1 24.5z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M10.6 28.79A14.6 14.6 0 0 1 9.5 24c0-1.66.28-3.26.78-4.76l-6.7-5.2A22.48 22.48 0 0 0 1.5 24c0 3.62.87 7.04 2.4 10.06l6.7-5.27z"
+            />
+            <path
+              fill="#34A853"
+              d="M24 46.5c5.27 0 9.7-1.74 12.93-4.73l-7.1-5.52c-1.8 1.2-4.1 1.9-5.83 1.9-6.37 0-11.76-4.6-13.4-10.79l-6.7 5.27C7.07 40.9 14.82 46.5 24 46.5z"
+            />
+          </svg>
+          Đăng nhập bằng Google
         </button>
 
         <div className="mt-6 text-center">

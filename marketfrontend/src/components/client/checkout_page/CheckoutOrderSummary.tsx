@@ -40,6 +40,7 @@ interface CheckoutOrderSummaryProps {
   onApplyVoucherIds: (voucherIds: number[]) => void;
   voucherLoading: boolean;
   onOrder: () => void;
+  isOrderLoading?: boolean;
 }
 
 const getVoucherLabel = (voucher: CheckoutVoucher) => {
@@ -72,6 +73,7 @@ export default function CheckoutOrderSummary({
   onApplyVoucherIds,
   voucherLoading,
   onOrder,
+  isOrderLoading = false,
 }: CheckoutOrderSummaryProps) {
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [draftVoucherIds, setDraftVoucherIds] = useState<number[]>([]);
@@ -84,10 +86,7 @@ export default function CheckoutOrderSummary({
 
   const usableVouchers = voucherAvailabilityList.filter((x) => x.isEligible);
   const hasSelectedVouchers = selectedVouchers.length > 0;
-  const subtotalAfterShopVouchers = Math.max(
-    0,
-    subtotal - shopVoucherDiscount,
-  );
+  const subtotalAfterShopVouchers = Math.max(0, subtotal - shopVoucherDiscount);
   const hasAnyVoucherDiscount = voucherDiscount > 0;
 
   const toggleDraftVoucher = (voucher: CheckoutVoucher) => {
@@ -100,9 +99,10 @@ export default function CheckoutOrderSummary({
         return [voucher.id];
       }
 
-      const stackableCurrent = current.filter((id) =>
-        usableVouchers.find((item) => item.voucher.id === id)?.voucher
-          .stackable,
+      const stackableCurrent = current.filter(
+        (id) =>
+          usableVouchers.find((item) => item.voucher.id === id)?.voucher
+            .stackable,
       );
       return [...stackableCurrent, voucher.id];
     });
@@ -291,14 +291,30 @@ export default function CheckoutOrderSummary({
               </div>
 
               <button
-                style={styles.btnOrder}
+                style={{
+                  ...styles.btnOrder,
+                  opacity: isOrderLoading ? 0.75 : 1,
+                  cursor: isOrderLoading ? "not-allowed" : "pointer",
+                }}
                 className="mb-3"
                 onClick={onOrder}
+                disabled={isOrderLoading}
               >
-                <span className="d-flex align-items-center gap-2">
-                  <Lock size={16} strokeWidth={2} />
-                  PLACE ORDER NOW
-                </span>
+                {isOrderLoading ? (
+                  <span className="d-flex align-items-center gap-2">
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      aria-hidden="true"
+                    />
+                    Processing...
+                  </span>
+                ) : (
+                  <span className="d-flex align-items-center gap-2">
+                    <Lock size={16} strokeWidth={2} />
+                    PLACE ORDER NOW
+                  </span>
+                )}
                 <span
                   style={{
                     fontSize: 9,
@@ -308,7 +324,7 @@ export default function CheckoutOrderSummary({
                     letterSpacing: "0.08em",
                   }}
                 >
-                  Confirm &amp; Pay
+                  {isOrderLoading ? "Please wait..." : "Confirm & Pay"}
                 </span>
               </button>
 
@@ -345,9 +361,8 @@ export default function CheckoutOrderSummary({
             className="text-muted mb-0"
             style={{ fontSize: 11, lineHeight: 1.7 }}
           >
-            You are in <strong>Express Checkout</strong> mode. Your details
-            have been preloaded from a previous purchase so you can finish
-            faster.
+            You are in <strong>Express Checkout</strong> mode. Your details have
+            been preloaded from a previous purchase so you can finish faster.
           </p>
         </div>
       </div>
@@ -398,9 +413,7 @@ export default function CheckoutOrderSummary({
               style={{ maxHeight: "52vh", overflowY: "auto" }}
             >
               {voucherLoading && (
-                <div className="text-muted small">
-                  Loading vouchers...
-                </div>
+                <div className="text-muted small">Loading vouchers...</div>
               )}
 
               {!voucherLoading && ownedVouchers.length === 0 && (
@@ -409,11 +422,13 @@ export default function CheckoutOrderSummary({
                 </div>
               )}
 
-              {!voucherLoading && ownedVouchers.length > 0 && usableVouchers.length === 0 && (
-                <div className="alert alert-light small mb-0">
-                  There are no platform vouchers matching this cart yet.
-                </div>
-              )}
+              {!voucherLoading &&
+                ownedVouchers.length > 0 &&
+                usableVouchers.length === 0 && (
+                  <div className="alert alert-light small mb-0">
+                    There are no platform vouchers matching this cart yet.
+                  </div>
+                )}
 
               {!voucherLoading &&
                 usableVouchers.map(({ voucher, isEligible, reason }) => {
@@ -426,14 +441,12 @@ export default function CheckoutOrderSummary({
                       className={`btn text-start border rounded-4 p-0 overflow-hidden ${
                         isSelected
                           ? "border-primary shadow-sm"
-                           : "border-info-subtle"
-                       }`}
-                       onClick={() => toggleDraftVoucher(voucher)}
+                          : "border-info-subtle"
+                      }`}
+                      onClick={() => toggleDraftVoucher(voucher)}
                     >
                       <div className="row g-0 align-items-stretch">
-                        <div
-                          className="col-4 col-sm-3 d-flex flex-column justify-content-center text-white p-3 bg-primary"
-                        >
+                        <div className="col-4 col-sm-3 d-flex flex-column justify-content-center text-white p-3 bg-primary">
                           <div className="fw-bold">{voucher.code}</div>
                           <div className="small mt-2">
                             {getVoucherLabel(voucher)}
@@ -450,7 +463,9 @@ export default function CheckoutOrderSummary({
                               </div>
                               <div className="small text-muted mt-2">
                                 Min. order:{" "}
-                                {formatCurrency(Number(voucher.minOrderValue || 0))}
+                                {formatCurrency(
+                                  Number(voucher.minOrderValue || 0),
+                                )}
                               </div>
                               <div className="small text-muted">
                                 {voucher.stackable
@@ -460,9 +475,9 @@ export default function CheckoutOrderSummary({
                               <div className="small text-muted">
                                 Expiry:{" "}
                                 {voucher.validTo
-                                  ? new Date(voucher.validTo).toLocaleDateString(
-                                      "vi-VN",
-                                    )
+                                  ? new Date(
+                                      voucher.validTo,
+                                    ).toLocaleDateString("vi-VN")
                                   : "No expiry"}
                               </div>
                               {reason && (
