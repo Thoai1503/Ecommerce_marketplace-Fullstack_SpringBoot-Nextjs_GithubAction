@@ -228,6 +228,9 @@ public class RefundCalculationService {
     private Voucher getPlatformVoucher(List<Voucher> vouchers) {
     	return vouchers.stream().filter(voucher -> voucher.getIssuerType().equals("PLATFORM")).findFirst().orElse(null);
     }
+    private Voucher getShopVoucher(List<Voucher> vouchers, Long shopId) {
+		return vouchers.stream().filter(voucher -> voucher.getIssuerType().equals("SHOP") && voucher.getIssuerId() != null && voucher.getIssuerId().equals(shopId)).findFirst().orElse(null);
+	}
     
     
     

@@ -25,7 +25,7 @@ const ProductFetcher: React.FC<ProductFetcherProps> = ({ ownShopId }) => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch(`${INTERNAL_API}/product`);
+        const res = await fetch(`${INTERNAL_API}/api/product`);
         const productsPayload = await res.json();
         const rawProducts = unwrapCollection(
           productsPayload,
