@@ -37,41 +37,41 @@ public final class VoucherMapper implements IMapper<Voucher> {
 
 		// ===== ISSUER =====
 		v.setIssuerType(toUpper(rs.getString("issuer_type")));
-		v.setIssuerId(getLong(rs, "issuer_id"));
+//		v.setIssuerId(getLong(rs, "issuer_id"));
 
 		// ===== DISCOUNT =====
 		v.setDiscountType(toUpper(rs.getString("discount_type")));
 		v.setDiscountPercent(rs.getBigDecimal("discount_percent"));
 		v.setDiscountAmount(rs.getBigDecimal("discount_amount"));
-		v.setMaxDiscountAmount(rs.getBigDecimal("max_discount_amount"));
+	//	v.setMaxDiscountAmount(rs.getBigDecimal("max_discount_amount"));
 
 		// ===== ORDER CONDITION =====
 		v.setMinOrderValue(rs.getBigDecimal("min_order_value"));
-		v.setMaxOrderValue(rs.getBigDecimal("max_order_value"));
+	//	v.setMaxOrderValue(rs.getBigDecimal("max_order_value"));
 
 		// ===== QUOTA =====
-		v.setTotalQuota(getInteger(rs, "total_quota"));
-		v.setClaimedCount(getIntegerOrDefault(rs, "claimed_count", 0));
-		v.setRedeemedCount(getIntegerOrDefault(rs, "redeemed_count", 0));
-		v.setPerUserQuota(getInteger(rs, "per_user_quota"));
-
-		// ===== FLAG =====
-		v.setStackable(rs.getInt("stackable") == 1);
-
-		// ===== TIME =====
-		v.setClaimStartAt(getDateTime(rs, "claim_start_at"));
-		v.setClaimEndAt(getDateTime(rs, "claim_end_at"));
-		v.setValidFrom(getDateTime(rs, "valid_from"));
-		v.setValidTo(getDateTime(rs, "valid_to"));
-
-		// ===== STATUS =====
-		v.setStatus(toUpper(rs.getString("status")));
-		v.setPriority(getIntegerOrDefault(rs, "priority", 0));
-
-		// ===== AUDIT =====
-		v.setCreatedBy(getLong(rs, "created_by"));
-		v.setCreatedAt(getDateTime(rs, "created_at"));
-		v.setUpdatedAt(getDateTime(rs, "updated_at"));
+//		v.setTotalQuota(getInteger(rs, "total_quota"));
+//		v.setClaimedCount(getIntegerOrDefault(rs, "claimed_count", 0));
+//		v.setRedeemedCount(getIntegerOrDefault(rs, "redeemed_count", 0));
+//		v.setPerUserQuota(getInteger(rs, "per_user_quota"));
+//
+//		// ===== FLAG =====
+//		v.setStackable(rs.getInt("stackable") == 1);
+//
+//		// ===== TIME =====
+//		v.setClaimStartAt(getDateTime(rs, "claim_start_at"));
+//		v.setClaimEndAt(getDateTime(rs, "claim_end_at"));
+//		v.setValidFrom(getDateTime(rs, "valid_from"));
+//		v.setValidTo(getDateTime(rs, "valid_to"));
+//
+//		// ===== STATUS =====
+//		v.setStatus(toUpper(rs.getString("status")));
+//		v.setPriority(getIntegerOrDefault(rs, "priority", 0));
+//
+//		// ===== AUDIT =====
+//		v.setCreatedBy(getLong(rs, "created_by"));
+//		v.setCreatedAt(getDateTime(rs, "created_at"));
+//		v.setUpdatedAt(getDateTime(rs, "updated_at"));
 
 		return v;
 	}

@@ -56,63 +56,6 @@ public class RefundCalculationService {
     }
 
     @Transactional
-    public RefundCalculationResultDTO calculateByReturnRequestId(Long returnRequestId) {
-        ReturnRequest request = refundRequestRepository.findById(returnRequestId)
-                .orElseThrow(() -> new IllegalArgumentException("Return request not found: " + returnRequestId));
-        return calculate(request);
-    }
-    
-    @Transactional
-    public double calculateSuggestedRefundAmountByReturnRequestId(Long returnRequestId) {
-		ReturnRequest request = refundRequestRepository.findById(returnRequestId)
-				.orElseThrow(() -> new IllegalArgumentException("Return request not found: " + returnRequestId));
-		return calculateSuggestedRefundAmountByReturnRequestId(request);
-	}
-    
-    @Transactional
-    public double calculateSuggestedRefundAmountByReturnRequestId(ReturnRequest currentRequest) {
-			
-			RefundCalculationResultDTO result = calculate(currentRequest);
-//			result.getShipments();
-			if(result == null) {
-			throw new IllegalStateException("Cannot calculate refund amount for return request " + currentRequest.getId());
-			}
-			//Finding voucher redemption list by order id 
-			var voucherRedemptions = voucherRedemptionRepository.getByOrderId(currentRequest.getOrderId());
-	    	Map<Long, Voucher> voucherMap = mapVouchersById(voucherRepository.getBySetOfIds(voucherRedemptions.stream().map(vr -> vr.getVoucherId()).toList()));
-			
-			Map<Long, Double> shipmentTotalAfterRemoveReturnedItem = calculateTotalAfterRemoveReturnedItemByShipment(result.getShipments());
-			double totalAfterRemoveReturnedItem = totalAllShipmentAfterRemoveReturnedItem(result.getShipments());
-			double suggestedRefundAmount = money(Math.max(0.0, totalAfterRemoveReturnedItem - result.getAlreadyRefundedAmount()));
-			return suggestedRefundAmount;
-	    	
-			
-	//	return 0.0;
-	}
-    // tính toán lấy thông tin voucher áp dụng cho đơn hàng, sau đó tính toán lại tổng tiền của từng shipment sau khi đã loại bỏ số lượng hàng đã trả về, cuối cùng tính tổng tiền của tất cả các shipment sau khi đã loại bỏ số lượng hàng đã trả về để đưa ra số tiền đề xuất hoàn trả.
-
-    
-    
-    private Map<Long, Double> calculateTotalAfterRemoveReturnedItemByShipment(List<RefundCalculationShipmentDTO> shipments) {
-    			Map<Long, Double> totalAfterRemoveReturnedItemByShipment = new HashMap<>();
-    			for(RefundCalculationShipmentDTO shipment : shipments) {
-					double totalAfterRemoveReturnedItem = totalShipmentAfterRemoveReturnedItem(shipment);
-					totalAfterRemoveReturnedItemByShipment.put(shipment.getId(), totalAfterRemoveReturnedItem);
-				}
-    			return totalAfterRemoveReturnedItemByShipment;
-    }
-    
-    
-    private 	Map<Long, Voucher> mapVouchersById(List<Voucher> vouchers) {
-    	Map<Long, Voucher> voucherMap = new HashMap<>();
-		for (Voucher voucher : vouchers) {
-			voucherMap.put(voucher.getId(), voucher);	
-		}
-		return voucherMap;
-    }
-    
-
-    @Transactional
     public RefundCalculationResultDTO calculate(ReturnRequest currentRequest) {
         ReturnRequest managedRequest = refundRequestRepository.findById(currentRequest.getId())
             .orElseThrow(() -> new IllegalArgumentException("Return request not found: " + currentRequest.getId()));
@@ -212,31 +155,133 @@ public class RefundCalculationService {
 
         return result;
     }
+    
+    @Transactional
+    public RefundCalculationResultDTO calculateByReturnRequestId(Long returnRequestId) {
+        ReturnRequest request = refundRequestRepository.findById(returnRequestId)
+                .orElseThrow(() -> new IllegalArgumentException("Return request not found: " + returnRequestId));
+        return calculate(request);
+    }
+    
+    @Transactional
+    public double calculateSuggestedRefundAmountByReturnRequestId(Long returnRequestId) {
+		ReturnRequest request = refundRequestRepository.findById(returnRequestId)
+				.orElseThrow(() -> new IllegalArgumentException("Return request not found: " + returnRequestId));
+		return calculateSuggestedRefundAmountByReturnRequestId(request);
+	}
+    
+    @Transactional
+    public double calculateSuggestedRefundAmountByReturnRequestId(ReturnRequest currentRequest) {
+			
+			RefundCalculationResultDTO result = calculate(currentRequest);
+            var shipments= 			result.getShipments();
+			if(result == null) {
+			throw new IllegalStateException("Cannot calculate refund amount for return request " + currentRequest.getId());
+			}
+			//Finding voucher redemption list by order id 
+			var voucherRedemptions = voucherRedemptionRepository.getByOrderId(currentRequest.getOrderId());
+			List<Voucher> vouchers = voucherRepository.getBySetOfIds(voucherRedemptions.stream().map(vr -> vr.getVoucherId()).toList());
+	    	Map<Long, Voucher> voucherMap = mapVouchersById(vouchers);
+			
+			Map<Long, Double> shipmentTotalAfterRemoveReturnedItem = calculateTotalAfterRemoveReturnedItemByShipment(shipments);
+			double totalAfterRemoveReturnedItem = totalAllShipmentAfterRemoveReturnedItem(shipments);
+			double suggestedRefundAmount = money(Math.max(0.0, totalAfterRemoveReturnedItem - result.getAlreadyRefundedAmount()));
+			
+			Voucher platformVoucher = getPlatformVoucher(vouchers);
+			double discountOrderAmount = 0.0;
+			if (isEligibleForPlatformVoucher(totalAfterRemoveReturnedItem, platformVoucher)) {
+				
+				if ("PERCENT".equals(platformVoucher.getDiscountType()) && platformVoucher.getDiscountPercent() != null) {
+					discountOrderAmount = money(totalAfterRemoveReturnedItem * platformVoucher.getDiscountPercent().doubleValue() / 100.0);
+					if (platformVoucher.getMaxDiscountAmount() != null) {
+						discountOrderAmount = Math.min(discountOrderAmount, platformVoucher.getMaxDiscountAmount().doubleValue());
+					}
+				} else if ("AMOUNT".equals(platformVoucher.getDiscountType()) && platformVoucher.getDiscountAmount() != null) {
+					discountOrderAmount = platformVoucher.getDiscountAmount().doubleValue();
+				}
+				suggestedRefundAmount = money(suggestedRefundAmount - discountOrderAmount);
+			}
+			
+	    	
+			
+		return 0.0;
+	}
+    
+    private boolean isEligibleForPlatformVoucher(Double totalAfterRemoveReturnedItem, Voucher platformVoucher) {
+		if (platformVoucher == null) {
+			return false;
+		}
+		
+		if (platformVoucher.getMinOrderValue() != null && totalAfterRemoveReturnedItem < platformVoucher.getMinOrderValue().doubleValue()) {
+			return false;
+		}
+		
+		if (platformVoucher.getMaxOrderValue() != null && totalAfterRemoveReturnedItem > platformVoucher.getMaxOrderValue().doubleValue()) {
+			return false;
+		}
+		
+		return true;
+    	
+    }
+    
+    
+    private Voucher getPlatformVoucher(List<Voucher> vouchers) {
+    	return vouchers.stream().filter(voucher -> voucher.getIssuerType().equals("PLATFORM")).findFirst().orElse(null);
+    }
+    
+    
+    
+    
+    
+    // tính toán lấy thông tin voucher áp dụng cho đơn hàng, sau đó tính toán lại tổng tiền của từng shipment sau khi đã loại bỏ số lượng hàng đã trả về, cuối cùng tính tổng tiền của tất cả các shipment sau khi đã loại bỏ số lượng hàng đã trả về để đưa ra số tiền đề xuất hoàn trả.
+
+    	
+    
+    private Map<Long, Double> calculateTotalAfterRemoveReturnedItemByShipment(List<RefundCalculationShipmentDTO> shipments) {
+    			Map<Long, Double> totalAfterRemoveReturnedItemByShipment = new HashMap<>();
+    			for(RefundCalculationShipmentDTO shipment : shipments) {
+					double totalAfterRemoveReturnedItem = totalShipmentAfterRemoveReturnedItem(shipment);
+					totalAfterRemoveReturnedItemByShipment.put(shipment.getId(), totalAfterRemoveReturnedItem);
+				}
+    			return totalAfterRemoveReturnedItemByShipment;
+    }
+    
+    
+    private 	Map<Long, Voucher> mapVouchersById(List<Voucher> vouchers) {
+    	Map<Long, Voucher> voucherMap = new HashMap<>();
+		for (Voucher voucher : vouchers) {
+			voucherMap.put(voucher.getId(), voucher);	
+		}
+		return voucherMap;
+    }
+    
+
+ 
     private double totalAllShipmentAfterRemoveReturnedItem(List< RefundCalculationShipmentDTO> shipments) {
 		double total = 0.0;
 		for (RefundCalculationShipmentDTO shipment : shipments) {
-			double shipmentTotal = safeMoney(shipment.getItems().stream()
-					.mapToDouble(item -> item.getPrice() * item.getEffectiveQuantity())
-					.sum());
-			double returnedAmount = shipment.getItems().stream()
-					.filter(item -> item.getShipmentId() == shipment.getId() && item.getCurrentReturnQuantity() > 0)
-					.mapToDouble(item -> item.getPrice()* item.getEffectiveQuantity())
-					.sum();
-			total += money(shipmentTotal - returnedAmount);
+			
+			
+			double shipmentTotal = totalShipmentAfterRemoveReturnedItem(shipment);
+			total = money(total + shipmentTotal);
+			
 		}
 		return total;
 
 	}
     
+    
+    
     private double totalShipmentAfterRemoveReturnedItem(RefundCalculationShipmentDTO shipment) {
-    			double shipmentTotal = safeMoney(shipment.getItems().stream()
-    										.mapToDouble(item -> item.getPrice() * item.getEffectiveQuantity())
-    										.sum());
-    			double returnedAmount = shipment.getItems().stream()
-    					.filter(item -> item.getShipmentId() == shipment.getId() && item.getCurrentReturnQuantity() > 0)
-						.mapToDouble(item -> item.getPrice()* item.getEffectiveQuantity())
-						.sum();
-    			return money(shipmentTotal - returnedAmount);
+//    			double shipmentTotal = safeMoney(shipment.getItems().stream()
+//    										.mapToDouble(item -> item.getPrice() * item.getEffectiveQuantity() +item.getCurrentReturnQuantity() * item.getPrice())
+//    										.sum());
+//    			double returnedAmount = shipment.getItems().stream()
+//    					.filter(item -> item.getShipmentId() == shipment.getId() && item.getCurrentReturnQuantity() > 0)
+//						.mapToDouble(item -> item.getPrice()* item.getEffectiveQuantity())
+//						.sum();
+    			return money(safeMoney(shipment.getItems().stream().mapToDouble(item -> item.getPrice() * item.getEffectiveQuantity()).sum()
+    					));
     			
     }
     
