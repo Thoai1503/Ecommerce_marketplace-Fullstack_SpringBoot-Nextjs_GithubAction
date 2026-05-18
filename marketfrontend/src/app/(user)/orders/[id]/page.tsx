@@ -725,10 +725,15 @@ export default function UserOrderDetailPage() {
     checked: boolean,
   ) => {
     const currentDraft = returnRequestDrafts[shipmentId];
+    const currentQty = Number(currentDraft?.returnQuantities?.[itemId] || 0);
     updateReturnDraft(shipmentId, {
       selectedItemIds: {
         ...(currentDraft?.selectedItemIds || {}),
         [itemId]: checked,
+      },
+      returnQuantities: {
+        ...(currentDraft?.returnQuantities || {}),
+        [itemId]: checked ? Math.max(1, currentQty) : 0,
       },
     });
   };
@@ -1075,7 +1080,11 @@ export default function UserOrderDetailPage() {
         `Evidence for order item issue - ${file.name}`,
       );
     });
-
+    // alert(
+    //   "FormData for return request: " +
+    //     JSON.stringify(Object.fromEntries(formData.entries()), null, 2),
+    // );
+    // return;
     let submittedByApi = false;
     console.log("Submitting return request to API with formData:", formData);
     try {

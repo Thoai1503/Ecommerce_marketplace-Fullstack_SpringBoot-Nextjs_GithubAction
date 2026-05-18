@@ -1,5 +1,6 @@
 package docker_test.com.services;
 
+import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -9,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import docker_test.com.configs.publisher.ReturnRequestToLogistic;
 import docker_test.com.dto.RecipientDTO;
+import docker_test.com.dto.RefundCalculationResultDTO;
 import docker_test.com.dto.RefundRequestDTO;
 import docker_test.com.models.refunds.ReturnRequest;
 import docker_test.com.models.refunds.ReturnRequestStatus;
@@ -25,17 +27,20 @@ public class RefundRequestService {
 	private final ReturnRequestAttachmentService returnRequestAttachmentService;
 	private final ReturnRequestToLogistic returnRequestToLogistic;
 	private final AddressService addressService;
+	private final RefundCalculationService refundCalculationService;
 	
 	public RefundRequestService(
 			RefundRequestRepository refundRequestRepository,
 			ReturnReqestItemRepositrory returnReqestItemRepositrory,
 			ReturnRequestAttachmentService returnRequestAttachmentService,
-			ReturnRequestToLogistic returnRequestToLogistic) {
+			ReturnRequestToLogistic returnRequestToLogistic,
+			RefundCalculationService refundCalculationService) {
 		this.refundRequestRepository = refundRequestRepository;
 		this.returnReqestItemRepositrory = returnReqestItemRepositrory;
 		this.returnRequestAttachmentService = returnRequestAttachmentService;
         this.returnRequestToLogistic = returnRequestToLogistic;
 		this.addressService = new AddressService();
+		this.refundCalculationService = refundCalculationService;
 	}
 	
 	
@@ -93,10 +98,10 @@ public class RefundRequestService {
 			refundRequestDTO.getItems().forEach(item -> {
 				System.out.println("OrderItemId" + item.getOrderItemId() + " Quantity: " + item.getQuantity() + " RequestedAmount: " + item.getRequestedAmount());
 				docker_test.com.models.refunds.ReturnRequestItem refundRequestItem = new docker_test.com.models.refunds.ReturnRequestItem();
-				refundRequestItem.setReturnRequestId(savedRefundRequest.getId());
-				refundRequestItem.setQuantity(item.getQuantity());
-				refundRequestItem.setOrderItemId(item.getOrderItemId());
-				refundRequestItem.setRequestedAmount(item.getRequestedAmount());
+				setFieldValue(refundRequestItem, "returnRequestId", savedRefundRequest.getId());
+				setFieldValue(refundRequestItem, "quantity", item.getQuantity());
+				setFieldValue(refundRequestItem, "orderItemId", item.getOrderItemId());
+				setFieldValue(refundRequestItem, "requestedAmount", item.getRequestedAmount());
 				returnReqestItemRepositrory.save(refundRequestItem);
 			});
 		}
@@ -160,7 +165,9 @@ public class RefundRequestService {
 	public List<ReturnRequest> getAll() {
 		refundRequestRepository.findAll().forEach(request -> {
 			request.getItems().forEach(item -> {
-				System.out.println("OrderItemId: " + item.getOrderItemId() + " Quantity: " + item.getQuantity() + " RequestedAmount: " + item.getRequestedAmount());
+				System.out.println("OrderItemId: " + longField(item, "orderItemId")
+						+ " Quantity: " + intField(item, "quantity")
+						+ " RequestedAmount: " + doubleField(item, "requestedAmount"));
 			});
 		});
 		
@@ -173,6 +180,10 @@ public class RefundRequestService {
 		return refundRequestRepository.findById(id).orElse(null);
 	}
 
+	public RefundCalculationResultDTO getRefundCalculation(Long id) {
+		return refundCalculationService.calculateByReturnRequestId(id);
+	}
+
 	public ReturnRequest updateStatus(Long id, ReturnRequestStatus status, Double refundedAmount) {
 		ReturnRequest request = refundRequestRepository.findById(id).orElse(null);
 		if (request == null) {
@@ -181,12 +192,65 @@ public class RefundRequestService {
 
 		request.setStatus(status);
 		if (status == ReturnRequestStatus.REFUNDED) {
-			request.setRefundedAmount(refundedAmount != null ? refundedAmount : request.getRequestedAmount());
+			double resolvedRefundAmount;
+			if (refundedAmount != null) {
+				resolvedRefundAmount = refundedAmount;
+			} else {
+				RefundCalculationResultDTO calculation = refundCalculationService.calculate(request);
+				resolvedRefundAmount = Math.min(
+						request.getRequestedAmount(),
+						Math.max(0.0, calculation.getSuggestedRefundAmount()));
+			}
+			request.setRefundedAmount(resolvedRefundAmount);
 		} else if (refundedAmount != null) {
 			request.setRefundedAmount(refundedAmount);
 		}
 		request.setUpdatedAt(LocalDateTime.now());
 		return refundRequestRepository.save(request);
+	}
+
+	private void setFieldValue(Object target, String fieldName, Object value) {
+		try {
+			Field field = target.getClass().getDeclaredField(fieldName);
+			field.setAccessible(true);
+			field.set(target, value);
+		} catch (ReflectiveOperationException ex) {
+			throw new IllegalStateException("Cannot set field " + fieldName, ex);
+		}
+	}
+
+	private long longField(Object target, String fieldName) {
+		Object value = readField(target, fieldName);
+		if (value instanceof Number number) {
+			return number.longValue();
+		}
+		return 0L;
+	}
+
+	private int intField(Object target, String fieldName) {
+		Object value = readField(target, fieldName);
+		if (value instanceof Number number) {
+			return number.intValue();
+		}
+		return 0;
+	}
+
+	private double doubleField(Object target, String fieldName) {
+		Object value = readField(target, fieldName);
+		if (value instanceof Number number) {
+			return number.doubleValue();
+		}
+		return 0.0;
+	}
+
+	private Object readField(Object target, String fieldName) {
+		try {
+			Field field = target.getClass().getDeclaredField(fieldName);
+			field.setAccessible(true);
+			return field.get(target);
+		} catch (ReflectiveOperationException ex) {
+			throw new IllegalStateException("Cannot read field " + fieldName, ex);
+		}
 	}
 	
 }

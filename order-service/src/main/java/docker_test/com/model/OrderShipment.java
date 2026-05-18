@@ -1,9 +1,12 @@
 package docker_test.com.model;
 
 
+import java.util.List;
+
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 
-
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -46,8 +49,20 @@ public class OrderShipment {
 	     @Column(name = "shipping_status", nullable = false)	
 		private String shippingStatus;
 
+	     @JdbcTypeCode(SqlTypes.JSON)
+	     @Column(name = "voucher_id", columnDefinition = "json")
+
+	     private List<Long> voucherIds;
+	     
 	    @Column(name = "business_status")
 	    private String businessStatus;
+	    
+	    @Column(name = "subtotal")
+	    private Double subtotal;
+	    
+	    
+	    @Column(name = "total_after_voucher")
+	    private Double totalAfterVoucher;
 
 	    @Column(name = "latest_adjustment_request_id")
 	    private Long latestAdjustmentRequestId;

@@ -251,7 +251,9 @@ export default function ReturnRequestModal({
             {shipment.items.map((item) => {
               const checked = !!draft?.selectedItemIds?.[item.id];
               const maxQty = item.quantity || 1;
-              const value = draft?.returnQuantities?.[item.id] ?? 0;
+              const value = checked
+                ? (draft?.returnQuantities?.[item.id] ?? 1)
+                : 0;
               return (
                 <label
                   key={`${shipment.id}-return-${item.id}`}
@@ -314,7 +316,10 @@ export default function ReturnRequestModal({
                     </p>
                     <span style={styles.qtyBadge}>SL: {item.quantity}</span>
                     {checked && (
-                      <div style={{ marginTop: 6 }}>
+                      <div
+                        style={{ marginTop: 6 }}
+                        onClick={(event) => event.stopPropagation()}
+                      >
                         <input
                           type="number"
                           min={1}
@@ -325,8 +330,6 @@ export default function ReturnRequestModal({
                               1,
                               Math.min(Number(e.target.value) || 1, maxQty),
                             );
-                            // Nếu bỏ chọn thì không cho nhập
-                            if (!checked) v = 0;
                             onQuantityChange(Number(item.id), v);
                           }}
                           disabled={status === "pending"}

@@ -90,6 +90,10 @@ public class OrderItem {
 
 	@Column(name = "commission_calculated_at")
 	private LocalDateTime commissionCalculatedAt;
+	
+	
+	@Column(name = "unit_platform_voucher_discount", nullable = false)
+    private double unitPlatformVoucherDiscount;
 
 	@Column(name = "final_quantity")
 	private Integer finalQuantity;
@@ -100,6 +104,10 @@ public class OrderItem {
 	
 	@Column(name = "last_return_request_id")
 	private Long lastReturnRequestId;
+	
+	
+	@Column(name = "unit_shop_voucher_discount", nullable = false)
+    private double unitShopVoucherDiscount;
 	
 //	@Column(name = "created_at", nullable = false)
 //	private LocalDateTime createdAt;

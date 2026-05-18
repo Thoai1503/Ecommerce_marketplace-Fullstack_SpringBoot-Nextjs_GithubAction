@@ -233,4 +233,27 @@ public class VoucherRepository implements IRepositories<Voucher> {
 		}
 		return null;
 	}
+	
+	public List<Voucher> getBySetOfIds(List<Long> ids) {
+		if (ids == null || ids.isEmpty()) {
+			return List.of();
+		}
+
+		String placeholders = String.join(",", ids.stream().map(id -> "?").toArray(String[]::new));
+		String sql = "SELECT v.id,v.code, v.issuer_type,v.discount_type,v.discount_percent,v.discount_amount,v.min_order_value FROM voucher v WHERE id IN (" + placeholders + ")";
+
+		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+
+			for (int i = 0; i < ids.size(); i++) {
+				ps.setLong(i + 1, ids.get(i));
+			}
+
+			ResultSet rs = ps.executeQuery();
+			return mapper.RowsMap(rs);
+
+		} catch (Exception e) {
+			throw new RuntimeException("Get vouchers by set of ids failed", e);
+		}
+	}
+ 	
 }

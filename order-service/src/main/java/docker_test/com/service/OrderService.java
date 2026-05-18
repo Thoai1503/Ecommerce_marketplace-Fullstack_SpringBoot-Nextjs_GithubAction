@@ -95,18 +95,48 @@ public class OrderService {
         	orderShipmetDto.setAdjustmentRequired(false);
         	orderShipmetDto.setBusinessStatus("NORMAL");
         	orderShipmetDto.setReturnStatusSummary("NONE");
-			
+			orderShipmetDto.setVoucherIds(os.getVoucher_id());
 			orderShipmetDto.setShippingFee(Double.valueOf(os.getShipping_fee()));
 		    orderShipmetDto.setTotalAmount(os.getTotal_amount());
+		    orderShipmetDto.setSubtotal(os.getSubtotal());
+		    orderShipmetDto.setTotalAfterVoucher(os.getTotal_after_voucher());
 						var orderShipment =
 			orderShipmentRepository.save(orderShipmetDto);
-		    dto.getOrders_items().stream().filter(item -> Objects.equals(item.getShop_id(), os.getShop_id())).forEach(item->{
-		    	System.out.println("Shipment id = {}"+ orderShipment.getId());
-		    		     		item.setShipment_id(orderShipment.getId());
-		    		     		
-		    	orderItemRepository.save(buildItem(item, saved.getId()));
-		    });
 						
+						
+						
+            List<OrderItem> itemsForShop = itemsByShopIdMap.get(os.getShop_id());
+            calculateUnitShopDiscount(itemsForShop);
+            calculateUnitPlatformDiscount(itemsForShop);
+           
+           
+             orderItemRepository.saveAll(itemsForShop.stream().map(item -> {
+				 item.setOrderId(saved.getId());
+				 item.setShipmentId(orderShipment.getId());
+				 dto.getOrders_items().stream().filter(i -> Objects.equals(i.getShop_id(), os.getShop_id()) 
+						 && Objects.equals(i.getProduct_id(), item.getProductId())
+						 && Objects.equals(i.getVariant_id(), item.getVariantId())
+						 ).findFirst().ifPresent(matchingItem -> {
+							 item.setImage(matchingItem.getImage_url());
+							 item.setProductName(matchingItem.getProduct_name());
+							 item.setVariantName(matchingItem.getVariant_name());
+							 item.setShipmentId(orderShipment.getId());
+						 });
+				 return item;
+			 }).toList());
+//            
+//		    dto.getOrders_items().stream().filter(item -> Objects.equals(item.getShop_id(), os.getShop_id())).forEach(item->{
+//		   
+//		    		     		
+//		    	orderItemRepository.save(buildItem(item, saved.getId()));
+//		    });
+//						
+             dto.getOrders_items().stream().filter(item -> Objects.equals(item.getShop_id(), os.getShop_id())).forEach(item->{
+ 		    	System.out.println("Shipment id = {}"+ orderShipment.getId());
+ 		    		     		item.setShipment_id(orderShipment.getId());
+ 		    		     		
+ 		    	
+ 		    });
         	System.out.println("Order shipment = {}"+ os.toString());
 		});
         
@@ -114,12 +144,14 @@ public class OrderService {
 
 
         
-        dto.getOrders_items().stream().forEach(item ->{
-        	item.setOrder_id(saved.getId());
-        });
+    
         dto.setId(saved.getId());
         dto.setRecipient(dto.getRecipient());
         dto.setOrder_number(saved.getOrderNumber());
+        dto.getOrders_items().forEach(item -> {
+			item.setOrder_id(saved.getId());
+			
+		});
         
         
               
@@ -305,6 +337,7 @@ public class OrderService {
                 .orderStatus("PENDING")
                 .voucherId(normalizeVoucherId(dto.getVoucher_id()))
                 .returnStatusSummary(ReturnStatusSummary.NONE)
+                
                 .build();
     }
 
@@ -323,7 +356,7 @@ public class OrderService {
     }
 
     private List<OrderItem> buildItems(OrderDTO dto, Long orderId) {
-        return dto.getOrders_items().stream()
+        var list= dto.getOrders_items().stream()
                 .map(i -> OrderItem.builder()
                         .orderId(orderId)
                         .productId(i.getProduct_id())
@@ -341,8 +374,13 @@ public class OrderService {
                         .platformCommissionRate(normalizeMoney(i.getPlatform_commission_rate()))
                         .platformCommissionAmount(normalizeMoney(i.getPlatform_commission_amount()))
                         .sellerReceivableAmount(normalizeMoney(i.getSeller_receivable_amount()))
+                        .unitPlatformVoucherDiscount(getPlatformVoucherDiscountAmount(i) / Math.max(1, i.getQuantity()))
+                        .unitShopVoucherDiscount(getShopVoucherDiscountAmount(i) / Math.max(1, i.getQuantity()))
                         .build())
                 .toList();
+        
+        
+        return list;
     }
     
     private OrderItem buildItem (docker_test.com.dto.OrderItem dto, Long orderId) {
@@ -438,5 +476,152 @@ public class OrderService {
         return  list.stream().map(item -> buildItem(item, null)).collect(Collectors.groupingBy(OrderItem::getShopId));
     }
     
+    
+    public static List<OrderItem> allocatePlatformDiscount(
+            List<OrderItem> items,
+            double platformDiscount
+    ) {
+
+        double total = items.stream()
+                .mapToDouble(OrderItem::getTotalAfterShopVoucher)
+                .sum();
+
+        if (total <= 0 || platformDiscount <= 0) {
+            return items;
+        }
+
+        double allocatedSum = 0;
+
+        for (OrderItem item : items) {
+
+            double ratio = item.getTotalAfterShopVoucher() / total;
+
+            double raw = platformDiscount * ratio;
+
+            double allocated = floor2(raw);
+
+            item.setPlatformVoucherDiscountAmount(
+                    allocated
+            );
+
+            allocatedSum += allocated;
+        }
+
+        double remainder =
+                round2(platformDiscount - allocatedSum);
+
+        OrderItem lastItem =
+                items.get(items.size() - 1);
+
+        lastItem.setPlatformVoucherDiscountAmount(
+                round2(
+                        lastItem.getPlatformVoucherDiscountAmount()
+                                + remainder
+                )
+        );
+
+        calculateUnitPlatformDiscount(items);
+
+        return items;
+    }
+
+    public static List<OrderItem> allocateShopDiscount(
+            List<OrderItem> items,
+            double shopDiscount
+    ) {
+
+        double total = items.stream()
+                .mapToDouble(OrderItem::getTotalPrice)
+                .sum();
+
+        if (total <= 0 || shopDiscount <= 0) {
+            return items;
+        }
+
+        double allocatedSum = 0;
+
+        for (OrderItem item : items) {
+
+            double ratio =
+                    item.getTotalPrice() / total;
+
+            double raw =
+                    shopDiscount * ratio;
+
+            double allocated =
+                    floor2(raw);
+
+            item.setShopVoucherDiscountAmount(
+                    allocated
+            );
+
+            allocatedSum += allocated;
+        }
+
+        double remainder =
+                round2(shopDiscount - allocatedSum);
+
+        OrderItem lastItem =
+                items.get(items.size() - 1);
+
+        lastItem.setShopVoucherDiscountAmount(
+                round2(
+                        lastItem.getShopVoucherDiscountAmount()
+                                + remainder
+                )
+        );
+
+        calculateUnitShopDiscount(items);
+
+        return items;
+    }
+
+    private static void calculateUnitShopDiscount(
+            List<OrderItem> items
+    ) {
+
+        for (OrderItem item : items) {
+
+            if (item.getQuantity() <= 0) {
+                continue;
+            }
+
+            double unitDiscount =
+                    round2(
+                            item.getShopVoucherDiscountAmount()
+                                    / item.getQuantity()
+                    );
+
+            item.setUnitShopVoucherDiscount(
+                    unitDiscount
+            );
+        }
+    }
+
+    private static void calculateUnitPlatformDiscount(
+            List<OrderItem> items
+    ) {
+
+        for (OrderItem item : items) {
+
+            if (item.getQuantity() <= 0) {
+                continue;
+            }
+
+            double unitDiscount =round2(item.getPlatformVoucherDiscountAmount()/ item.getQuantity());
+
+            item.setUnitPlatformVoucherDiscount(
+                    unitDiscount
+            );
+        }
+    }
+
+    public static double floor2(double value) {
+        return Math.floor(value * 100) / 100;
+    }
+
+    public static double round2(double value) {
+        return Math.round(value * 100.0) / 100.0;
+    }
 	
 }

@@ -28,12 +28,12 @@ public final class VoucherMapper implements IMapper<Voucher> {
 
 		// ===== ID =====
 		v.setId(rs.getLong("id"));
-		v.setCampaignId(getLong(rs, "campaign_id"));
+	//	v.setCampaignId(getLong(rs, "campaign_id"));
 
 		// ===== BASIC =====
 		v.setCode(rs.getString("code"));
-		v.setTitle(rs.getString("title"));
-		v.setDescription(rs.getString("description"));
+		//v.setTitle(rs.getString("title"));
+	//	v.setDescription(rs.getString("description"));
 
 		// ===== ISSUER =====
 		v.setIssuerType(toUpper(rs.getString("issuer_type")));

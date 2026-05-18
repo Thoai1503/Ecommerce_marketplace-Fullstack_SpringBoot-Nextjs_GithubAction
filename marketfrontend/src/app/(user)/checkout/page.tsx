@@ -289,41 +289,43 @@ const normalizeBackendVoucherCalculation = (
   if (!value || typeof value !== "object") return fallback;
 
   const items = Array.isArray(value.items)
-    ? value.items.map((item: any): BackendVoucherItemBreakdown => ({
-        itemKey: String(item.itemKey ?? item.item_key ?? ""),
-        shopId: Number(item.shopId ?? item.shop_id ?? 0),
-        productId: Number(item.productId ?? item.product_id ?? 0),
-        variantId: Number(item.variantId ?? item.variant_id ?? 0),
-        subtotal: toMoneyAmount(normalizeVoucherNumber(item.subtotal)),
-        shopVoucherDiscountAmount: toMoneyAmount(
-          normalizeVoucherNumber(
-            item.shopVoucherDiscountAmount ??
-              item.shop_voucher_discount_amount,
+    ? value.items.map(
+        (item: any): BackendVoucherItemBreakdown => ({
+          itemKey: String(item.itemKey ?? item.item_key ?? ""),
+          shopId: Number(item.shopId ?? item.shop_id ?? 0),
+          productId: Number(item.productId ?? item.product_id ?? 0),
+          variantId: Number(item.variantId ?? item.variant_id ?? 0),
+          subtotal: toMoneyAmount(normalizeVoucherNumber(item.subtotal)),
+          shopVoucherDiscountAmount: toMoneyAmount(
+            normalizeVoucherNumber(
+              item.shopVoucherDiscountAmount ??
+                item.shop_voucher_discount_amount,
+            ),
           ),
-        ),
-        platformVoucherDiscountAmount: toMoneyAmount(
-          normalizeVoucherNumber(
-            item.platformVoucherDiscountAmount ??
-              item.platform_voucher_discount_amount,
+          platformVoucherDiscountAmount: toMoneyAmount(
+            normalizeVoucherNumber(
+              item.platformVoucherDiscountAmount ??
+                item.platform_voucher_discount_amount,
+            ),
           ),
-        ),
-        totalVoucherDiscountAmount: toMoneyAmount(
-          normalizeVoucherNumber(
-            item.totalVoucherDiscountAmount ??
-              item.total_voucher_discount_amount,
+          totalVoucherDiscountAmount: toMoneyAmount(
+            normalizeVoucherNumber(
+              item.totalVoucherDiscountAmount ??
+                item.total_voucher_discount_amount,
+            ),
           ),
-        ),
-        totalAfterShopVoucher: toMoneyAmount(
-          normalizeVoucherNumber(
-            item.totalAfterShopVoucher ?? item.total_after_shop_voucher,
+          totalAfterShopVoucher: toMoneyAmount(
+            normalizeVoucherNumber(
+              item.totalAfterShopVoucher ?? item.total_after_shop_voucher,
+            ),
           ),
-        ),
-        totalAfterAllVouchers: toMoneyAmount(
-          normalizeVoucherNumber(
-            item.totalAfterAllVouchers ?? item.total_after_all_vouchers,
+          totalAfterAllVouchers: toMoneyAmount(
+            normalizeVoucherNumber(
+              item.totalAfterAllVouchers ?? item.total_after_all_vouchers,
+            ),
           ),
-        ),
-      }))
+        }),
+      )
     : fallback.items;
 
   const voucherApplications = Array.isArray(
@@ -331,7 +333,9 @@ const normalizeBackendVoucherCalculation = (
   )
     ? (value.voucherApplications ?? value.voucher_applications).map(
         (application: any): BackendVoucherApplication => ({
-          voucherId: Number(application.voucherId ?? application.voucher_id ?? 0),
+          voucherId: Number(
+            application.voucherId ?? application.voucher_id ?? 0,
+          ),
           discountAmount: toMoneyAmount(
             normalizeVoucherNumber(
               application.discountAmount ?? application.discount_amount,
@@ -909,6 +913,7 @@ export default function CheckoutPage() {
     );
   const [voucherCalculationLoading, setVoucherCalculationLoading] =
     useState(false);
+  const [isOrderLoading, setIsOrderLoading] = useState(false);
 
   const defaultAddress =
     addresses.find((a) => a.id === selectedAddressId) ||
@@ -1497,35 +1502,55 @@ export default function CheckoutPage() {
     setSelectedPlatformVoucherIds(nextVouchers.map((voucher) => voucher.id));
   };
 
+  // Lưu voucher theo đúng thứ tự apply (voucher nào apply trước thì nằm trước)
   const handleApplyShopVoucherIds = (shopId: number, voucherIds: number[]) => {
-    const shopVoucherPool = (shopVoucherAvailabilityByShop[shopId] || []).map(
-      (item) => item.voucher,
-    );
-    const nextVouchers = voucherIds
-      .map((voucherId) =>
-        shopVoucherPool.find((voucher) => voucher.id === voucherId),
-      )
-      .filter((voucher): voucher is OwnedVoucher => Boolean(voucher));
-
-    if (nextVouchers.length === 0) {
-      setSelectedShopVoucherIds((current) => ({
+    setSelectedShopVoucherIds((current) => {
+      const prev = current[shopId] || [];
+      // Giữ lại thứ tự voucherIds truyền vào, loại bỏ trùng lặp, voucher nào apply trước nằm trước
+      const uniqueVoucherIds = voucherIds.filter(
+        (id, idx) => voucherIds.indexOf(id) === idx,
+      );
+      // Nếu có voucher không stackable, chỉ giữ lại voucher đó (ưu tiên voucher apply sau cùng)
+      const shopVoucherPool = (shopVoucherAvailabilityByShop[shopId] || []).map(
+        (item) => item.voucher,
+      );
+      const nonStackableVoucher = [...uniqueVoucherIds]
+        .reverse()
+        .map((id) => shopVoucherPool.find((v) => v.id === id))
+        .find((voucher) => voucher && !voucher.stackable);
+      return {
         ...current,
-        [shopId]: [],
-      }));
-      return;
-    }
-
-    const nonStackableVoucher = [...nextVouchers]
-      .reverse()
-      .find((voucher) => !voucher.stackable);
-
-    setSelectedShopVoucherIds((current) => ({
-      ...current,
-      [shopId]: nonStackableVoucher
-        ? [nonStackableVoucher.id]
-        : nextVouchers.map((voucher) => voucher.id),
-    }));
+        [shopId]: nonStackableVoucher
+          ? [nonStackableVoucher.id]
+          : uniqueVoucherIds,
+      };
+    });
   };
+  // Snapshot giá trị đơn hàng sau mỗi lần áp dụng voucher theo thứ tự apply
+  const voucherPriceSnapshotsByShop = useMemo(() => {
+    const snapshots: Record<number, number[]> = {};
+    Object.entries(selectedShopVouchersByShop).forEach(
+      ([shopIdStr, vouchers]) => {
+        const shopId = Number(shopIdStr);
+        let itemAmounts = getInitialVoucherItemAmounts(
+          cartItems.filter((item) => getCartItemShopId(item) === shopId),
+        );
+        const shopSnapshots: number[] = [];
+        vouchers.forEach((voucher) => {
+          const result = applyVoucherToItemAmounts(voucher, itemAmounts);
+          // Tính tổng tiền còn lại sau khi áp dụng voucher này
+          const totalAfterVoucher = result.itemAmounts.reduce(
+            (sum, entry) => sum + entry.amount,
+            0,
+          );
+          shopSnapshots.push(totalAfterVoucher);
+          itemAmounts = result.itemAmounts;
+        });
+        snapshots[shopId] = shopSnapshots;
+      },
+    );
+    return snapshots;
+  }, [selectedShopVouchersByShop, cartItems]);
 
   const handleClearShopVouchers = (shopId: number) => {
     setSelectedShopVoucherIds((current) => ({
@@ -2258,8 +2283,12 @@ export default function CheckoutPage() {
   };
 
   const handleOrder = async () => {
+    // alert(JSON.stringify(voucherPriceSnapshotsByShop));
+    // return;
+    setIsOrderLoading(true);
     if (hasOwnShopItems) {
       message.warning("Bạn không thể mua sản phẩm của chính shop mình.");
+      setIsOrderLoading(false);
       return;
     }
     // alert("Address id: " + selectedAddressId);
@@ -2267,6 +2296,7 @@ export default function CheckoutPage() {
     if (!hasAddress || !recipient) {
       message.warning("Vui lòng chọn địa chỉ nhận hàng trước khi đặt hàng.");
       setShowAddressPanel(true);
+      setIsOrderLoading(false);
       return;
     }
 
@@ -2281,6 +2311,7 @@ export default function CheckoutPage() {
     } catch (error) {
       console.error("Checkout voucher calculation before order failed:", error);
       message.error("Không thể tính voucher từ backend. Vui lòng thử lại.");
+      setIsOrderLoading(false);
       return;
     }
 
@@ -2296,9 +2327,9 @@ export default function CheckoutPage() {
       0,
       calculateSubtotal() - orderVoucherDiscount + effectiveShippingFee,
     );
-    alert(
-      `Thông tin thanh toán:\nSố tiền: ${orderFinalTotal}\nPhương thức: ${paymentInfo.method}\nMã đơn hàng: ${paymentInfo.orderId}`,
-    );
+    // alert(
+    //   `Thông tin thanh toán:\nSố tiền: ${orderFinalTotal}\nPhương thức: ${paymentInfo.method}\nMã đơn hàng: ${paymentInfo.orderId}`,
+    // );
 
     const baseTrackingSeed = Date.now();
     const ordersShipment: IOrderShipment[] = uniqueShopIds.map(
@@ -2349,17 +2380,17 @@ export default function CheckoutPage() {
         };
       },
     );
-    alert("Orders Shipment:\n" + JSON.stringify(ordersShipment, null, 2));
-    alert(
-      `Thông tin vận chuyển:\n${ordersShipment
-        .map(
-          (s) =>
-            `Shop ${s.shop_id}: Phí ${formatCurrency(s.shipping_fee)}, Tổng ${formatCurrency(
-              s.total_amount,
-            )}, Mã vận đơn ${s.tracking_number}`,
-        )
-        .join("\n")}`,
-    );
+    // alert("Orders Shipment:\n" + JSON.stringify(ordersShipment, null, 2));
+    // alert(
+    //   `Thông tin vận chuyển:\n${ordersShipment
+    //     .map(
+    //       (s) =>
+    //         `Shop ${s.shop_id}: Phí ${formatCurrency(s.shipping_fee)}, Tổng ${formatCurrency(
+    //           s.total_amount,
+    //         )}, Mã vận đơn ${s.tracking_number}`,
+    //     )
+    //     .join("\n")}`,
+    // );
     //return;
 
     const orderItems: IOrderItem[] = await Promise.all(
@@ -2438,6 +2469,8 @@ export default function CheckoutPage() {
       };
     });
 
+    // alert(selectedShopVoucherIds);
+
     const orderShipmentPayload = ordersShipment.map((shipment) => ({
       order_id: Number(shipment.orderId || (shipment as any).order_id || 0),
       shop_id: Number(shipment.shop_id || 0),
@@ -2445,7 +2478,29 @@ export default function CheckoutPage() {
       shipping_fee: Number(shipment.shipping_fee || 0),
       total_amount: Number(shipment.total_amount || 0),
       tracking_number: shipment.tracking_number || "",
+      voucher_id: selectedShopVoucherIds[shipment.shop_id],
       shipping_status: shipment.shipping_status || "PENDING",
+      // Thêm giá tổng cộng trước giảm và sau giảm cho từng shipment
+      subtotal: (() => {
+        // Tính tổng tiền sản phẩm của shop này
+        return cartItems
+          .filter((item) => item?.product?.shop?.id === shipment.shop_id)
+          .reduce(
+            (sum, item) =>
+              sum + (item.productVariant?.price || 0) * (item.quantity || 0),
+            0,
+          );
+      })(),
+      total_after_voucher: (() => {
+        // Tính tổng tiền sau giảm voucher cho shop này
+        const breakdown = orderVoucherCalculation.items.filter(
+          (item) => item.shopId === shipment.shop_id,
+        );
+        return breakdown.reduce(
+          (sum, item) => sum + (item.totalAfterAllVouchers || 0),
+          0,
+        );
+      })(),
     }));
 
     const primaryVoucher = selectedRedeemableVouchers[0];
@@ -2536,7 +2591,7 @@ export default function CheckoutPage() {
     createOrder(orderPayload as any)
       .then(async (dt) => {
         const orderId = Number(dt.id || dt.orderId || 0);
-        alert(`Đặt hàng thành công! Mã đơn hàng: ${orderId}`);
+        message.success(`Đặt hàng thành công! Mã đơn hàng: ${orderId}`);
 
         const cleanupTasks: Promise<unknown>[] = [];
 
@@ -2680,6 +2735,9 @@ export default function CheckoutPage() {
           (e.response?.data as any)?.status ||
           "Lỗi không xác định";
         message.error(`Đặt hàng thất bại: ${errorMessage}`);
+      })
+      .finally(() => {
+        setIsOrderLoading(false);
       });
   };
 
@@ -2751,6 +2809,7 @@ export default function CheckoutPage() {
             onApplyVoucherIds={handleApplyPlatformVoucherIds}
             voucherLoading={voucherLoading || voucherCalculationLoading}
             onOrder={handleOrder}
+            isOrderLoading={isOrderLoading}
           />
         </div>
       </div>
