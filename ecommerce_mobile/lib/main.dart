@@ -3,17 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/home/pages/home_page.dart';
 import 'filter_page.dart';
 import 'features/cart/pages/cart_page.dart';
+import 'features/voucher/pages/voucher_page.dart';
 
 // void main() {
 //   runApp(const MyApp());
 // }
 
 void main() {
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -46,6 +43,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => const HomePage(),
         '/filter': (context) => const FilterPage(),
         '/cart': (context) => const CartPage(),
+        '/vouchers': (context) => const VoucherPage(),
       },
     );
   }

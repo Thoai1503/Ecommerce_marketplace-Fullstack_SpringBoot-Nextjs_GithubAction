@@ -67,7 +67,9 @@ class WebHeader extends StatelessWidget {
                 tooltip: 'Cart',
               ),
               IconButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, '/vouchers');
+                },
                 icon: const Icon(Icons.notifications_outlined),
                 tooltip: 'Notifications',
               ),
