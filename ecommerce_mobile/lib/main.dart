@@ -8,8 +8,9 @@ import 'features/auth/pages/login_page.dart';
 import 'features/auth/pages/profile_page.dart';
 import 'core/api_client.dart';
 import 'services/auth_service.dart';
+import 'features/voucher/pages/voucher_page.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize API clients with interceptors
@@ -53,6 +54,9 @@ class MyApp extends StatelessWidget {
         '/product-detail': (context) => const ProductDetailPage(),
         '/login': (context) => const LoginPage(),
         '/profile': (context) => const ProfilePage(),
+        '/vouchers': (context) => AuthService().isLoggedInSync
+            ? const VoucherPage()
+            : const LoginPage(),
       },
     );
   }
