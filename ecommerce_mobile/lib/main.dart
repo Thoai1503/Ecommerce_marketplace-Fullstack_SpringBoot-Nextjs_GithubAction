@@ -46,17 +46,37 @@ class MyApp extends StatelessWidget {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      initialRoute: '/login',
-      routes: {
-        '/': (context) => const HomePage(),
-        '/filter': (context) => const FilterPage(),
-        '/cart': (context) => const CartPage(),
-        '/product-detail': (context) => const ProductDetailPage(),
-        '/login': (context) => const LoginPage(),
-        '/profile': (context) => const ProfilePage(),
-        '/vouchers': (context) => AuthService().isLoggedInSync
-            ? const VoucherPage()
-            : const LoginPage(),
+      onGenerateRoute: (RouteSettings settings) {
+        final isLoggedIn = AuthService().isLoggedInSync;
+
+        Widget page;
+        switch (settings.name) {
+          case '/':
+            page = isLoggedIn ? const HomePage() : const LoginPage();
+            break;
+          case '/filter':
+            page = isLoggedIn ? const FilterPage() : const LoginPage();
+            break;
+          case '/cart':
+            page = isLoggedIn ? const CartPage() : const LoginPage();
+            break;
+          case '/product-detail':
+            page = isLoggedIn ? const ProductDetailPage() : const LoginPage();
+            break;
+          case '/profile':
+            page = isLoggedIn ? const ProfilePage() : const LoginPage();
+            break;
+          case '/vouchers':
+            page = isLoggedIn ? const VoucherPage() : const LoginPage();
+            break;
+          case '/login':
+            page = isLoggedIn ? const HomePage() : const LoginPage();
+            break;
+          default:
+            page = isLoggedIn ? const HomePage() : const LoginPage();
+        }
+
+        return MaterialPageRoute(builder: (_) => page, settings: settings);
       },
     );
   }
