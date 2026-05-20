@@ -7,12 +7,15 @@ import 'features/product/pages/product_detail_page.dart';
 import 'features/auth/pages/login_page.dart';
 import 'features/auth/pages/profile_page.dart';
 import 'core/api_client.dart';
+import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize API clients with interceptors
   ApiClient.initialize();
+  // Restore session (reads token from storage before first API calls)
+  await AuthService().initializeSession();
 
   runApp(const ProviderScope(child: MyApp()));
 }

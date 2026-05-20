@@ -60,7 +60,7 @@ class Product {
       price: _parseDouble(json['price']),
       categoryName: json['category_name'],
       productName: json['product_name'] ?? 'Unknown Product',
-      stockQuantity: json['stock_quantity'],
+      stockQuantity: _extractStockQuantity(json),
       soldCount: json['sold_count'],
       rating: _parseDouble(json['rating']),
       reviewCount: json['review_count'],
@@ -77,6 +77,34 @@ class Product {
           ? DateTime.parse(json['updated_at'])
           : null,
     );
+  }
+
+  /// Extract stock quantity from multiple possible backend keys
+  static int? _extractStockQuantity(Map<String, dynamic> json) {
+    final candidates = [
+      'stock_quantity',
+      'stock',
+      'quantity',
+      'available_stock',
+      'availableQuantity',
+      'available_items',
+      'availableItems',
+      'inventory',
+    ];
+
+    for (final key in candidates) {
+      if (!json.containsKey(key)) continue;
+      final v = json[key];
+      final parsed = _parseInt(v);
+      if (parsed != null) return parsed;
+    }
+
+    // Check nested `data` envelope
+    if (json.containsKey('data') && json['data'] is Map<String, dynamic>) {
+      return _extractStockQuantity(json['data'] as Map<String, dynamic>);
+    }
+
+    return null;
   }
 
   /// Convert Product instance to JSON
@@ -113,6 +141,15 @@ class Product {
     if (value is double) return value;
     if (value is int) return value.toDouble();
     if (value is String) return double.tryParse(value);
+    return null;
+  }
+
+  /// Helper method to parse int values safely
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value);
     return null;
   }
 

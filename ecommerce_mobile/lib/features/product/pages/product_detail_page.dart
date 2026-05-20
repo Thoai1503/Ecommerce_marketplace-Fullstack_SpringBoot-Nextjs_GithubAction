@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/product.dart';
 import '../../../shared/widgets/layout/header/web_header.dart';
 import '../../../features/cart/providers/cart_provider.dart';
-import '../../../features/product/services/stock_service.dart';
+// StockService removed: prefer product-provided stockQuantity with dev fallback
 import '../../../services/auth_service.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -24,33 +24,11 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   @override
   void initState() {
     super.initState();
-    _currentStock = widget.product?.stockQuantity ?? 0;
-    _loadStock();
+    // Use product-provided stock when available; fallback to 10 for dev/testing
+    _currentStock = widget.product?.stockQuantity ?? 10;
+    _isLoadingStock = false;
   }
-
-  Future<void> _loadStock() async {
-    final product = widget.product;
-    if (product == null) return;
-
-    setState(() {
-      _isLoadingStock = true;
-    });
-
-    final fetchedStock = await StockService().getStockQuantity(
-      product.id,
-      fallback: product.stockQuantity ?? 0,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      _currentStock = fetchedStock;
-      _isLoadingStock = false;
-      if (_quantity > _currentStock) {
-        _quantity = _currentStock > 0 ? _currentStock : 1;
-      }
-    });
-  }
+  // No network stock lookup: use product.stockQuantity or dev fallback.
 
   int _getEffectiveStock() {
     return _currentStock;
@@ -440,7 +418,17 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           ),
         );
       }
-      await _loadStock();
+      // Locally adjust stock after adding to cart (no network lookup)
+      if (mounted) {
+        setState(() {
+          _currentStock = (_currentStock - _quantity) > 0
+              ? _currentStock - _quantity
+              : 0;
+          if (_quantity > _currentStock) {
+            _quantity = _currentStock > 0 ? _currentStock : 1;
+          }
+        });
+      }
     } catch (e) {
       debugPrint('[ProductDetail] ❌ Error adding to cart: $e');
       if (mounted) {

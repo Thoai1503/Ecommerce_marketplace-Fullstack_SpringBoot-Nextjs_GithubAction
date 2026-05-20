@@ -87,11 +87,41 @@ class AuthService {
         '[AuthService] Attempting login (attempt ${retryCount + 1}/$_maxRetries) with email: $email',
       );
 
-      // Call Marketplace-platform /api/v1/auth/login endpoint
-      final response = await dio.post(
+      // Try several common login endpoints to avoid 404 mismatch.
+      final possiblePaths = [
         '/user/login',
-        data: {'email': email, 'password': password},
-      );
+        '/users/login',
+        '/api/v1/auth/login',
+        '/api/v1/user/login',
+        '/auth/login',
+        '/login',
+      ];
+      Response? response;
+      for (final path in possiblePaths) {
+        try {
+          final attempt = await dio.post(
+            path,
+            data: {'email': email, 'password': password},
+            options: Options(validateStatus: (_) => true),
+          );
+          debugPrint(
+            '[AuthService] Login attempt $path returned ${attempt.statusCode}',
+          );
+          if (attempt.statusCode == 200 || attempt.statusCode == 201) {
+            response = attempt;
+            break;
+          }
+        } catch (e) {
+          debugPrint('[AuthService] Login attempt $path failed: $e');
+        }
+      }
+
+      if (response == null) {
+        final errorMsg =
+            'Login failed: no valid login endpoint responded successfully';
+        debugPrint('[AuthService] $errorMsg');
+        return {'success': false, 'error': errorMsg};
+      }
 
       debugPrint(
         '[AuthService] Login response received: ${response.statusCode}',
@@ -103,7 +133,7 @@ class AuthService {
       // Parse response - handle multiple response structures
       final token =
           data['accessToken'] ??
-          data['data']['token'] ??
+          data['data']?['token'] ??
           data['token'] ??
           data['access_token'];
 

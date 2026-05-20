@@ -17,8 +17,8 @@ import 'package:flutter/foundation.dart';
 String _backendHost(int port) =>
     'http://${kIsWeb ? 'localhost' : '127.0.0.1'}:$port';
 
-/// Marketplace-platform (Auth Service) - Port 8010
-String get authServiceUrl => _backendHost(8010);
+/// Marketplace-platform (Auth Service) - Port 8001
+String get authServiceUrl => _backendHost(8001);
 
 /// Cart-service - Handles shopping cart operations - Port 8003
 String get cartServiceUrl => _backendHost(8003);

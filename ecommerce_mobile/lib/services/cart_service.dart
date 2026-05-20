@@ -26,9 +26,32 @@ class CartService {
     }
 
     try {
-      final response = await dio.get('/api/cart/user/$userId');
+      // Try multiple endpoint variants to be resilient to different backend mappings
+      final endpoints = [
+        '/api/v1/cart/user/$userId',
+        '/api/cart/user/$userId',
+        '/cart/user/$userId',
+      ];
 
-      debugPrint('Cart data fetched successfully for user $userId');
+      Response? response;
+      for (final ep in endpoints) {
+        try {
+          response = await dio.get(ep);
+          if (response.statusCode == 200) break;
+        } catch (e) {
+          // try next
+        }
+      }
+
+      if (response == null || response.statusCode != 200) {
+        throw Exception(
+          'Cart endpoint returned no data (tried ${endpoints.length} endpoints)',
+        );
+      }
+
+      debugPrint(
+        'Cart data fetched successfully for user $userId (endpoint used)',
+      );
 
       final items = (response.data as List)
           .map((e) => CartItemModel.fromJson(e))
@@ -64,14 +87,28 @@ class CartService {
     }
 
     try {
-      await dio.post(
-        '/api/cart',
-        data: {
-          'product_id': int.parse(productId),
-          'user_id': userId,
-          'quantity': quantity,
-        },
-      );
+      final endpoints = ['/api/v1/cart', '/api/cart', '/cart'];
+      Response? resp;
+      for (final ep in endpoints) {
+        try {
+          resp = await dio.post(
+            ep,
+            data: {
+              'product_id': int.parse(productId),
+              'user_id': userId,
+              'quantity': quantity,
+            },
+          );
+          if (resp.statusCode == 200 || resp.statusCode == 201) break;
+        } catch (e) {
+          // try next endpoint
+        }
+      }
+
+      if (resp == null || !(resp.statusCode == 200 || resp.statusCode == 201)) {
+        throw Exception('Add to cart failed (no endpoint accepted request)');
+      }
+
       debugPrint('Item $productId added to cart (qty: $quantity)');
     } catch (e) {
       debugPrint('Error adding to cart: $e');

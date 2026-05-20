@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../services/auth_service.dart';
 
 class WebHeader extends StatelessWidget {
   const WebHeader({super.key});
@@ -12,12 +13,15 @@ class WebHeader extends StatelessWidget {
       child: Row(
         children: [
           // Logo
-          const Text(
-            'NexaMart',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue,
+          InkWell(
+            onTap: () => Navigator.pushNamed(context, '/'),
+            child: const Text(
+              'NexaMart',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
             ),
           ),
           const SizedBox(width: 48),
@@ -56,7 +60,7 @@ class WebHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 48),
-          // Action Icons
+          // Action Icons + user name
           Row(
             children: [
               IconButton(
@@ -77,6 +81,24 @@ class WebHeader extends StatelessWidget {
                 },
                 icon: const Icon(Icons.person_outline),
                 tooltip: 'Profile',
+              ),
+              const SizedBox(width: 12),
+              FutureBuilder<String?>(
+                future: AuthService().getStoredFullName(),
+                builder: (context, snap) {
+                  final name = snap.data;
+                  if (name == null || name.isEmpty) return const SizedBox();
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
