@@ -14,14 +14,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import docker_test.com.configs.DBConnection;
+import docker_test.com.configs.publisher.RefundedToOrderService;
 import docker_test.com.configs.publisher.ReturnRequestToLogistic;
 import docker_test.com.dto.RecipientDTO;
 import docker_test.com.dto.RefundCalculationResultDTO;
 import docker_test.com.dto.RefundRequestDTO;
+import docker_test.com.dto.RefundedToOrderServiceDTO;
 import docker_test.com.dto.RequestItemDTO;
 import docker_test.com.dto.voucher.CheckoutVoucherCalculationRequest;
 import docker_test.com.dto.voucher.CheckoutVoucherCalculationResponse;
@@ -29,8 +32,11 @@ import docker_test.com.models.refunds.ReturnRequest;
 import docker_test.com.models.refunds.ReturnRequestItem;
 import docker_test.com.models.refunds.ReturnRequestStatus;
 import docker_test.com.models.Address;
+import docker_test.com.models.ReturnShipment;
+import docker_test.com.models.ReturnShipmentStatus;
 import docker_test.com.repository.RefundRequestRepository;
 import docker_test.com.repository.ReturnReqestItemRepositrory;
+import docker_test.com.repository.ReturnShipmentRepository;
 import jakarta.transaction.Transactional;
 
 @Service
@@ -43,6 +49,10 @@ public class RefundRequestService {
 	private final VoucherCheckoutCalculationService voucherCheckoutCalculationService;
 	private final AddressService addressService;
 	private final RefundCalculationService refundCalculationService;
+	private final RefundedToOrderService refundedToOrderService;
+	private final ReturnShipmentRepository returnShipmentRepository;
+	private final static Logger LOGGER = org.slf4j.LoggerFactory.getLogger(RefundRequestService.class);
+
 	
 	public RefundRequestService(
 			RefundRequestRepository refundRequestRepository,
@@ -50,7 +60,10 @@ public class RefundRequestService {
 			ReturnRequestAttachmentService returnRequestAttachmentService,
 			ReturnRequestToLogistic returnRequestToLogistic,
 			RefundCalculationService refundCalculationService,
-			VoucherCheckoutCalculationService voucherCheckoutCalculationService
+			VoucherCheckoutCalculationService voucherCheckoutCalculationService,
+			RefundedToOrderService refundedToOrderService,
+			ReturnShipmentRepository returnShipmentRepository
+		
 			) {
 			
 		this.refundRequestRepository = refundRequestRepository;
@@ -60,6 +73,9 @@ public class RefundRequestService {
 		this.voucherCheckoutCalculationService = voucherCheckoutCalculationService;
 		this.addressService = new AddressService();
 		this.refundCalculationService = refundCalculationService;
+		this.refundedToOrderService = refundedToOrderService;
+		this.returnShipmentRepository = returnShipmentRepository;
+	
 	}
 	
 	
@@ -71,7 +87,7 @@ public class RefundRequestService {
 			returnRequestAttachmentService.createAttachments(savedRefundRequest.getId(), refundRequestDTO.getAttachments());
 		}
 
-		returnRequestToLogistic.publish(buildLogisticPayload(savedRefundRequest, refundRequestDTO));
+//		returnRequestToLogistic.publish(buildLogisticPayload(savedRefundRequest, refundRequestDTO));
 
 		return savedRefundRequest;
 	}
@@ -107,7 +123,7 @@ public class RefundRequestService {
 			returnRequestAttachmentService.createAttachments(savedRefundRequest.getId(), files, descriptions);
 		}
 		
-		returnRequestToLogistic.publish(buildLogisticPayload(savedRefundRequest, refundRequestDTO));
+//		returnRequestToLogistic.publish(buildLogisticPayload(savedRefundRequest, refundRequestDTO));
 
 		return savedRefundRequest;
 	}
@@ -290,6 +306,15 @@ public class RefundRequestService {
 				acceptedQty,
 				refundByOrderItemId,
 				message);
+	}
+	
+	private ReturnShipment buildLogisticPayload(ReturnRequest savedRefundRequest,Long returnRequestID) {
+	return	ReturnShipment.builder()
+				.returnRequestId(String.valueOf(returnRequestID))
+			
+				.status(ReturnShipmentStatus.PENDING)
+				.build();
+	
 	}
 
 	private void applyCalculatedAmountsToDtoItems(RefundRequestDTO refundRequestDTO, RefundCalculation calculation) {
@@ -711,24 +736,7 @@ public class RefundRequestService {
 		return value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
 	}
 
-	private RefundRequestDTO buildLogisticPayload(ReturnRequest savedRefundRequest, RefundRequestDTO sourceDto) {
-		RefundRequestDTO payload = new RefundRequestDTO();
-		payload.setReturnRequestId(savedRefundRequest.getId());
-		payload.setOrderId(savedRefundRequest.getOrderId());
-		payload.setOrderShipmentId(savedRefundRequest.getOrderShipmentId());
-		payload.setOrderItemId(sourceDto.getOrderItemId());
-		payload.setShopId(savedRefundRequest.getShopId());
-		payload.setCustomerId(savedRefundRequest.getCustomerId());
-		payload.setReason(savedRefundRequest.getReason());
-		payload.setDescription(sourceDto.getDescription());
-		payload.setQuantity(savedRefundRequest.getQuantity());
-		payload.setRequestedAmount(savedRefundRequest.getRequestedAmount());
-		payload.setItems(sourceDto.getItems());
-		payload.setAttachments(sourceDto.getAttachments());
-		payload.setRecipient(resolveShopRecipient(savedRefundRequest.getShopId()));
-		payload.setPickupContact(resolveCustomerPickup(savedRefundRequest.getCustomerId()));
-		return payload;
-	}
+
 
 	private RecipientDTO resolveCustomerPickup(Long customerId) {
 		List<Address> addresses = addressService.getAddressesByUserId(customerId);
@@ -753,6 +761,7 @@ public class RefundRequestService {
 
 	private RecipientDTO mapRecipient(Address address) {
 		RecipientDTO recipientDTO = new RecipientDTO();
+		recipientDTO.setId(address.getAddressId());
 		recipientDTO.setName(address.getRecipientName());
 		recipientDTO.setPhone(address.getRecipientPhone());
 		recipientDTO.setAddress(address.getAddressLine());
@@ -764,17 +773,16 @@ public class RefundRequestService {
 	 
 	@Transactional
 	public List<ReturnRequest> getAll() {
-		refundRequestRepository.findAll().forEach(request -> {
-			request.getItems().forEach(item -> {
-				System.out.println("OrderItemId: " + longField(item, "orderItemId")
-						+ " Quantity: " + intField(item, "quantity")
-						+ " RequestedAmount: " + doubleField(item, "requestedAmount"));
-			});
-		});
-		
-		return refundRequestRepository.findAll().stream()
-				.filter(request -> request.getAttachments().size()>0) // Replace 1L with the actual customer ID you want to filter by
-				.toList();
+		List<ReturnRequest> requests = refundRequestRepository.findAll();
+		logReturnRequestItems(requests);
+		return prepareReturnRequests(requests);
+	}
+
+	@Transactional
+	public List<ReturnRequest> getByShopId(Long shopId) {
+		List<ReturnRequest> requests = refundRequestRepository.findByShopId(shopId);
+		logReturnRequestItems(requests);
+		return prepareReturnRequests(requests);
 	}
 	
 	@Transactional
@@ -798,6 +806,26 @@ public class RefundRequestService {
 		if (request.getAttachments() != null) {
 			request.getAttachments().size();
 		}
+	}
+
+	private void logReturnRequestItems(List<ReturnRequest> requests) {
+		requests.forEach(request -> {
+			request.getItems().forEach(item -> {
+				System.out.println("OrderItemId: " + longField(item, "orderItemId")
+						+ " Quantity: " + intField(item, "quantity")
+						+ " RequestedAmount: " + doubleField(item, "requestedAmount"));
+			});
+		});
+	}
+
+	private List<ReturnRequest> prepareReturnRequests(List<ReturnRequest> requests) {
+		List<ReturnRequest> filteredRequests = requests.stream()
+				.filter(Objects::nonNull)
+				.filter(request -> request.getAttachments() != null && !request.getAttachments().isEmpty())
+				.toList();
+
+		enrichReturnRequests(filteredRequests);
+		return filteredRequests;
 	}
 
 	private void enrichReturnRequest(ReturnRequest request) {
@@ -954,9 +982,28 @@ public class RefundRequestService {
 		}
 
 		request.setStatus(status);
+		if(status.equals(ReturnRequestStatus.APPROVED)) {
+			 RefundCalculationResultDTO calculation = refundCalculationService.calculate(request);
+			 RefundedToOrderServiceDTO refundedToOrderServiceDTO = new RefundedToOrderServiceDTO();
+			 refundedToOrderServiceDTO.setSuggestedRefundAmount(refundedAmount);
+			 refundedToOrderServiceDTO.setRefundCalculationResult(calculation);
+			 ReturnShipment returnShipment = buildLogisticPayload(request, request.getId());
+			try {
+			 returnShipment = returnShipmentRepository.save(returnShipment);
+			}
+			catch(RuntimeException e) {
+				System.out.println("Error saving return shipment: " + e.getMessage());
+			}
+			 refundedToOrderService.publish(refundedToOrderServiceDTO);
+			 
+			 returnRequestToLogistic.publish(buildLogisticPayloadEvent(request,returnShipment.getId()));
+			 return request;
+		}
+		
+		
 		if (status == ReturnRequestStatus.REFUNDED) {
 			double resolvedRefundAmount;
-			if (refundedAmount != null) {
+			if (refundedAmount != null) {	
 				resolvedRefundAmount = refundedAmount;
 			} else {
 				RefundCalculationResultDTO calculation = refundCalculationService.calculate(request);
@@ -968,12 +1015,69 @@ public class RefundRequestService {
 		} else if (refundedAmount != null) {
 			request.setRefundedAmount(refundedAmount);
 		}
+		request.setOrderShipmentId( request.getOrderShipmentId());
 		request.setUpdatedAt(LocalDateTime.now());
-		ReturnRequest savedRequest = refundRequestRepository.save(request);
-		enrichReturnRequest(savedRequest);
+		ReturnRequest savedRequest = null;
+		
+		try {
+		
+		savedRequest = refundRequestRepository.save(request);
+		}
+		catch(RuntimeException e) {
+			System.out.println("Error saving return request: " + e.getMessage());
+			 throw e; 
+		}
+	//	enrichReturnRequest(savedRequest);
 		return savedRequest;
 	}
-
+//	private RefundRequestDTO buildLogisticPayload(ReturnRequest savedRefundRequest, RefundRequestDTO sourceDto) {
+//		RefundRequestDTO payload = new RefundRequestDTO();
+//		payload.setReturnRequestId(savedRefundRequest.getId());
+//		payload.setOrderId(savedRefundRequest.getOrderId());
+//		payload.setOrderShipmentId(savedRefundRequest.getOrderShipmentId());
+//		payload.setOrderItemId(sourceDto.getOrderItemId());
+//		payload.setShopId(savedRefundRequest.getShopId());
+//		payload.setCustomerId(savedRefundRequest.getCustomerId());
+//		payload.setReason(savedRefundRequest.getReason());
+//		payload.setDescription(sourceDto.getDescription());
+//		payload.setQuantity(savedRefundRequest.getQuantity());
+//		payload.setRequestedAmount(savedRefundRequest.getRequestedAmount());
+//		payload.setItems(sourceDto.getItems());
+//		payload.setAttachments(sourceDto.getAttachments());
+//		payload.setRecipient(resolveShopRecipient(savedRefundRequest.getShopId()));
+//		payload.setPickupContact(resolveCustomerPickup(savedRefundRequest.getCustomerId()));
+//		return payload;
+//	}
+ private RefundRequestDTO buildLogisticPayloadEvent(ReturnRequest returnRequest,Long returnShipmentId) {
+	 
+	 RefundRequestDTO payload = new RefundRequestDTO();
+	 
+	 payload.setReturnRequestId(returnRequest.getId());
+	 payload.setReturnShipmentId(returnShipmentId);
+	 payload.setOrderId(returnRequest.getOrderId());
+	 payload.setOrderShipmentId(returnRequest.getOrderShipmentId());
+	 payload.setShopId(returnRequest.getShopId());
+	 payload.setCustomerId(returnRequest.getCustomerId());
+	 payload.setReason(returnRequest.getReason());
+	 payload.setDescription(" Return request for order " + returnRequest.getOrderId());
+	 payload.setRequestedAmount(returnRequest.getRequestedAmount());
+	 payload.setRecipient(resolveShopRecipient(returnRequest.getShopId()));
+	 payload.setItems(returnRequest.getItems().stream().map(item -> {
+			RequestItemDTO itemDTO = new RequestItemDTO();
+			itemDTO.setOrderItemId(longField(item, "orderItemId"));
+			itemDTO.setQuantity(intField(item, "quantity"));
+			itemDTO.setRequestedAmount(doubleField(item, "requestedAmount"));
+			return itemDTO;
+		}).toList());
+	 payload.setPickupContact(resolveCustomerPickup(returnRequest.getCustomerId()));
+	 
+	 return payload;
+	 
+	 
+	 
+	 
+	 
+ }
 	private record OrderItemSnapshot(
 			Long orderItemId,
 			Long shopId,

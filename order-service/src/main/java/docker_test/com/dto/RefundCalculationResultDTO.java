@@ -85,6 +85,18 @@ public class RefundCalculationResultDTO {
     public void setItems(List<RefundCalculationItemDTO> items) {
         this.items = items == null ? new ArrayList<>() : items;
     }
+    @Override
+    public String toString() {
+		return "RefundCalculationResultDTO{" +
+				"returnRequestId=" + returnRequestId +
+				", orderId=" + orderId +
+				", currentPaidAmount=" + currentPaidAmount +
+				", recalculatedAmount=" + recalculatedAmount +
+				", alreadyRefundedAmount=" + alreadyRefundedAmount +
+				", suggestedRefundAmount=" + suggestedRefundAmount +
+				", items=" + items +
+				'}';
+	}
     
     
     public static class RefundCalculationShipmentDTO {

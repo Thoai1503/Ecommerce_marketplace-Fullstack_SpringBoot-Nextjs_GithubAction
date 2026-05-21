@@ -73,6 +73,13 @@ export const getAdminReturnRequests = async (): Promise<
   return Array.isArray(data) ? data : [];
 };
 
+export const getSellerReturnRequests = async (
+  shopId: number,
+): Promise<ReturnRequestAdmin[]> => {
+  const { data } = await http.get(`/api/refunds/shop/${shopId}`);
+  return Array.isArray(data) ? data : [];
+};
+
 export const updateReturnRequestStatus = async (
   id: number,
   status: ReturnRequestStatusAdmin,

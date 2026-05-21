@@ -61,6 +61,17 @@ public class RefundRequestController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching refund requests: " + e.getMessage());
 		}
 	}
+
+	@GetMapping("/shop/{shopId}")
+	public ResponseEntity<?> getRefundRequestsByShopId(@PathVariable Long shopId) {
+		try {
+			var refundRequests = refundRequestService.getByShopId(shopId);
+			return ResponseEntity.ok(refundRequests);
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error fetching refund requests by shopId: " + e.getMessage());
+		}
+	}
 	
 	@GetMapping("/{refundRequestId}")
 	public ResponseEntity<?> getRefundRequestById(@PathVariable Long refundRequestId) {

@@ -29,6 +29,8 @@ public class ShipmentStatusSubscriber {
     )
     public void consumeShipmentStatusUpdate(ShipmentStatusUpdatedEvent event) {
         log.info("Received shipment status event trackingCode={}, status={}", event.getTrackingCode(), event.getStatus());
+        if(!event.getTrackingCode().startsWith("RET")) {
         orderShipmentService.applyShipmentStatusEvent(event);
+        }
     }
 }

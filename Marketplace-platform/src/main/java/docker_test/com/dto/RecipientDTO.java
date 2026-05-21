@@ -1,6 +1,15 @@
 package docker_test.com.dto;
 
 public class RecipientDTO {
+	private Long id;
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
 	private String name;
 	private String phone;
 	private String email;

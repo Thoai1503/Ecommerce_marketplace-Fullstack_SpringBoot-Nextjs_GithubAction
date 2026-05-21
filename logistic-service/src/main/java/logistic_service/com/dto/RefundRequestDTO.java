@@ -7,6 +7,15 @@ public class RefundRequestDTO {
     private Long returnRequestId;
     private Long orderId;
 	private Long orderShipmentId;
+	private Long returnShipmentId;
+	public Long getReturnShipmentId() {
+		return returnShipmentId;
+	}
+
+	public void setReturnShipmentId(Long returnShipmentId) {
+		this.returnShipmentId = returnShipmentId;
+	}
+
 	private RecipientDTO recipient;
 	private RecipientDTO pickupContact;
 	private String description;

@@ -16,6 +16,7 @@ import logistic_service.com.dto.RequestItemDTO;
 import logistic_service.com.entities.Recipient;
 import logistic_service.com.entities.Shipment;
 import logistic_service.com.entities.ShipmentItem;
+import logistic_service.com.enums.ShipmentDirection;
 import logistic_service.com.enums.ShipmentStatus;
 import logistic_service.com.repositories.ShipmentItemRepository;
 import logistic_service.com.repositories.ShipmentRepository;
@@ -44,9 +45,9 @@ public class ReturnRequestLogisticService {
 		validate(refundRequest);
 
 		String requestMarker = buildRequestMarker(refundRequest);
-		Optional<Shipment> existingShipment = shipmentRepository.findFirstByOrderShipmentRefIdAndNoteContaining(
+		Optional<Shipment> existingShipment = shipmentRepository.findFirstByOrderShipmentRefIdAndDirection(
 				refundRequest.getOrderShipmentId(),
-				requestMarker);
+				ShipmentDirection.RETURN);
 
 		if (existingShipment.isPresent()) {
 			LOGGER.info(
@@ -57,18 +58,25 @@ public class ReturnRequestLogisticService {
 		}
 
 		Recipient recipient = recipientCreatingService.createRecipient(resolveRecipient(refundRequest));
+		Recipient pickupContact = recipientCreatingService.createRecipient(resolvePickupContact(refundRequest));
 
 		Shipment shipment = Shipment.builder()
-				.trackingCode(generateTrackingCode())
-				.orderShipmentRefId(refundRequest.getOrderShipmentId())
-				.shopRefId(refundRequest.getShopId())
-				.partnerId(DEFAULT_PARTNER_ID)
-				.recipientId(recipient.getId())
-				.status(ShipmentStatus.PENDING)
-				.shippingFee(0d)
-				.codAmount(0d)
-				.note(buildShipmentNote(refundRequest))
-				.build();
+			.trackingCode(generateTrackingCode())
+			.orderShipmentRefId(refundRequest.getReturnShipmentId())
+			.shopRefId(refundRequest.getShopId())
+			.partnerId(DEFAULT_PARTNER_ID)
+			.recipientId(recipient.getId())
+			.pickupContactId(pickupContact.getId())
+			.returnRequestRefId(refundRequest.getReturnRequestId())
+			.returnShipmentRefId(refundRequest.getReturnShipmentId())
+	        			.originalShipmentId(refundRequest.getOrderShipmentId())
+	        .businessRefType("RETURN_SHIPMENT")			
+			.status(ShipmentStatus.PENDING)
+			.shippingFee(0d)
+			.codAmount(0d)
+			.direction(ShipmentDirection.RETURN)
+			.note(buildShipmentNote(refundRequest))
+			.build();
 
 		Shipment savedShipment = shipmentRepository.save(shipment);
 		List<ShipmentItem> shipmentItems = new ArrayList<>();
@@ -76,6 +84,7 @@ public class ReturnRequestLogisticService {
 		for (RequestItemDTO item : refundRequest.getItems()) {
 			shipmentItems.add(ShipmentItem.builder()
 					.shipmentId(savedShipment.getId())
+					.returnRequestItemRefId(resolveReturnRequestItemRefId(item))
 					.productName(resolveProductName(item))
 					.sku(item.getSku())
 					.quantity(item.getQuantity())
@@ -99,6 +108,10 @@ public class ReturnRequestLogisticService {
 
 		if (refundRequest.getOrderShipmentId() == null) {
 			throw new IllegalArgumentException("orderShipmentId is required for logistics processing");
+		}
+
+		if (refundRequest.getReturnRequestId() == null) {
+			throw new IllegalArgumentException("returnRequestId is required for return shipment processing");
 		}
 
 		if (refundRequest.getShopId() == null) {
@@ -133,6 +146,13 @@ public class ReturnRequestLogisticService {
 		fallbackRecipient.setAddress("Pending pickup address for return order_shipment_id=" + refundRequest.getOrderShipmentId());
 		fallbackRecipient.setEmail(null);
 		return fallbackRecipient;
+	}
+
+	private RecipientDTO resolvePickupContact(RefundRequestDTO refundRequest) {
+		if (refundRequest.getPickupContact() != null) {
+			return refundRequest.getPickupContact();
+		}
+		return resolveRecipient(refundRequest);
 	}
 
 	private String buildShipmentNote(RefundRequestDTO refundRequest) {
@@ -172,6 +192,10 @@ public class ReturnRequestLogisticService {
 			return item.getPrice();
 		}
 		return item.getRequestedAmount();
+	}
+
+	private Long resolveReturnRequestItemRefId(RequestItemDTO item) {
+		return item.getOrderItemId();
 	}
 
 	private boolean isBlank(String value) {

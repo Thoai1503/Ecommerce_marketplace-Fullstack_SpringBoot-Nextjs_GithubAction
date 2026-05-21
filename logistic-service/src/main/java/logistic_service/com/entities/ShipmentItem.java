@@ -43,6 +43,9 @@ public class ShipmentItem {
 	@Column(name = "shipment_id", nullable = false)
 	private Long shipmentId;
 
+    @Column(name = "return_request_item_ref_id")
+    private Long returnRequestItemRefId;
+
     /** Tên sản phẩm tại thời điểm tạo vận đơn. */
     @Column(name = "product_name", nullable = false, length = 500)
     private String productName;

@@ -2,6 +2,7 @@ package logistic_service.com.services;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -77,7 +78,7 @@ public class ShipmentService {
 		try {
 			Shipment saved = shipmentRepository.save(shipment);
 			orderStatusPublisher.publishShipmentStatusUpdated(
-					new ShipmentStatusUpdatedEvent(saved.getTrackingCode(), saved.getStatus()));
+					new ShipmentStatusUpdatedEvent(saved.getTrackingCode(), saved.getStatus(), Optional.of(saved.getOrderShipmentRefId())));
 			return saved;
 		} catch (DataIntegrityViolationException | JpaSystemException ex) {
 			String dbMessage = extractRootCauseMessage(ex);
