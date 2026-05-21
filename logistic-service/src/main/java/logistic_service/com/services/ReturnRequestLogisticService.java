@@ -47,7 +47,7 @@ public class ReturnRequestLogisticService {
 		String requestMarker = buildRequestMarker(refundRequest);
 		Optional<Shipment> existingShipment = shipmentRepository.findFirstByOrderShipmentRefIdAndDirection(
 				refundRequest.getOrderShipmentId(),
-				ShipmentDirection.FORWARD);
+				ShipmentDirection.RETURN);
 
 		if (existingShipment.isPresent()) {
 			LOGGER.info(
