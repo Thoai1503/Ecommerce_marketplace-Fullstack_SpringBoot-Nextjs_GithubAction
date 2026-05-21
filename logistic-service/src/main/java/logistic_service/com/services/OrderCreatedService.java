@@ -13,6 +13,7 @@ import logistic_service.com.dto.OrderItemDTO;
 import logistic_service.com.dto.OrderDTO;
 import logistic_service.com.entities.Shipment;
 import logistic_service.com.entities.ShipmentItem;
+import logistic_service.com.enums.ShipmentDirection;
 import logistic_service.com.publisher.OrderStatusPublisher;
 import logistic_service.com.repositories.ShipmentItemRepository;
 import logistic_service.com.repositories.ShipmentRepository;
@@ -65,6 +66,8 @@ public class OrderCreatedService {
 		return Shipment.builder()
 				       .trackingCode("LOG"+ UUID.randomUUID().toString().toUpperCase().substring(0, 8))
 				       .orderShipmentRefId(shipmentId)
+				       .businessRefType("ORDER_SHIPMENT")
+				       .direction(ShipmentDirection.FORWARD)
 				       .recipientId(dto.getRecipient().getId())
 				       .shopRefId(dto.getOrders_items().stream().filter(i-> i.getShipment_id()==shipmentId).toList().get(0).getShop_id())
 				       .partnerId(Long.parseLong("1"))
