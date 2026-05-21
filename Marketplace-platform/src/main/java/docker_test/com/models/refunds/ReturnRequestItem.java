@@ -68,6 +68,12 @@ public class ReturnRequestItem {
      private double totalPrice;
 
      @Transient
+     private double totalAfterShopVoucher;
+
+     @Transient
+     private double totalAfterAllVouchers;
+
+     @Transient
      private int orderQuantity;
      
      

@@ -27,6 +27,7 @@ import {
   getAdminReturnRequests,
   ReturnRequestAdmin,
   ReturnRequestAttachmentAdmin,
+  ReturnRequestItemAdmin,
   ReturnRequestStatusAdmin,
   updateReturnRequestStatus,
 } from "@/service/returnRequests";
@@ -97,6 +98,41 @@ const STATUS_CONFIG: Record<
 };
 
 const currency = (value: number) => `${value.toLocaleString("vi-VN")}₫`;
+
+const toFiniteNumber = (value: unknown) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+};
+
+const getItemFinalAmount = (item: ReturnRequestItemAdmin) => {
+  const requestedAmount = toFiniteNumber(item.requestedAmount);
+  if (requestedAmount !== 0) return requestedAmount;
+
+  const orderQuantity = toFiniteNumber(item.orderQuantity);
+  const returnQuantity = toFiniteNumber(item.quantity);
+  const lineQuantity = orderQuantity || returnQuantity || 1;
+  const lineAmount =
+    toFiniteNumber(item.totalAfterAllVouchers) ||
+    toFiniteNumber(item.totalPrice) ||
+    toFiniteNumber(item.price) * Math.max(1, lineQuantity);
+
+  if (lineAmount <= 0 || returnQuantity <= 0) return 0;
+  if (orderQuantity <= 0) return lineAmount;
+  return (lineAmount * Math.min(returnQuantity, orderQuantity)) / orderQuantity;
+};
+
+const getRequestFinalAmount = (request: ReturnRequestAdmin) => {
+  const finalRequestedAmount = toFiniteNumber(request.finalRequestedAmount);
+  if (finalRequestedAmount !== 0) return finalRequestedAmount;
+
+  const requestedAmount = toFiniteNumber(request.requestedAmount);
+  if (requestedAmount !== 0) return requestedAmount;
+
+  return (request.items || []).reduce(
+    (sum, item) => sum + getItemFinalAmount(item),
+    0,
+  );
+};
 
 const formatRequestCode = (id: number) =>
   `RR-${id.toString().padStart(5, "0")}`;
@@ -237,7 +273,7 @@ function ReturnRequestDetailModal({
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <SummaryCard
               label="Tiền yêu cầu"
-              value={currency(request.requestedAmount)}
+              value={currency(getRequestFinalAmount(request))}
               icon={<Banknote className="text-green-600" size={20} />}
               color="bg-green-50 text-green-600"
             />
@@ -427,7 +463,7 @@ function ReturnRequestDetailModal({
                         Item #{item.orderItemId}
                       </span>
                       <span className="px-3 py-1 rounded-xl bg-amber-50 text-amber-700">
-                        Yêu cầu: {currency(item.requestedAmount)}
+                        Yêu cầu: {currency(getItemFinalAmount(item))}
                       </span>
                       <span className="px-3 py-1 rounded-xl bg-green-50 text-green-700">
                         Đã hoàn: {currency(item.refundedAmount)}
@@ -607,7 +643,7 @@ export default function ReturnRequestsPage() {
       const updated = await updateReturnRequestStatus(
         request.id,
         nextStatus,
-        nextStatus === "REFUNDED" ? request.requestedAmount : undefined,
+        nextStatus === "REFUNDED" ? getRequestFinalAmount(request) : undefined,
       );
 
       setRequests((prev) =>
@@ -631,7 +667,7 @@ export default function ReturnRequestsPage() {
       .length,
     refunded: requests.filter((item) => item.status === "REFUNDED").length,
     amount: requests.reduce(
-      (sum, item) => sum + (item.requestedAmount || 0),
+      (sum, item) => sum + getRequestFinalAmount(item),
       0,
     ),
   };
@@ -860,7 +896,7 @@ export default function ReturnRequestsPage() {
                           Tiền yêu cầu
                         </p>
                         <p className="font-black text-slate-800 mt-1">
-                          {currency(request.requestedAmount)}
+                          {currency(getRequestFinalAmount(request))}
                         </p>
                       </div>
                     </div>
@@ -1013,7 +1049,7 @@ export default function ReturnRequestsPage() {
                         <td className="px-5 py-4 text-right">
                           <div>
                             <p className="font-black text-slate-800">
-                              {currency(request.requestedAmount)}
+                              {currency(getRequestFinalAmount(request))}
                             </p>
                             <p className="text-xs text-slate-500 mt-1">
                               Đã hoàn: {currency(request.refundedAmount)}

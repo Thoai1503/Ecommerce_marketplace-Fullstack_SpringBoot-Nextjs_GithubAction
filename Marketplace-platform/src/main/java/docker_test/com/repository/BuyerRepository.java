@@ -3,7 +3,6 @@ package docker_test.com.repository;
 import java.sql.*;
 import java.util.List;
 
-import docker_test.com.configs.DBConnection;
 import docker_test.com.models.PageResult;
 import docker_test.com.models.User;
 
@@ -13,11 +12,21 @@ import docker_test.com.models.User;
  * Quản lý Khách hàng (Customers screen).
  */
 public class BuyerRepository extends UserRepository {
-    private DBConnection dbConnection;
-
     private static BuyerRepository instance;
 
     private static final String TYPE_CLAUSE = "user_type IN ('buyer', 'shipper')";
+    private static final String ALIASED_TYPE_CLAUSE = "u.user_type IN ('buyer', 'shipper')";
+    private static final String CUSTOMER_STATS_JOIN = """
+            LEFT JOIN (
+                SELECT
+                    user_id,
+                    COUNT(*) AS total_orders,
+                    COALESCE(SUM(final_amount), 0) AS total_spent,
+                    MAX(created_at) AS last_order_date
+                FROM `orders`
+                GROUP BY user_id
+            ) order_stats ON order_stats.user_id = u.id
+            """;
 
     private BuyerRepository() {
         super();
@@ -34,7 +43,15 @@ public class BuyerRepository extends UserRepository {
 
     public List<User> GetAllBuyers() {
 
-        String sql = "SELECT * FROM `user` WHERE " + TYPE_CLAUSE + " ORDER BY created_at DESC";
+        String sql = """
+                SELECT
+                    u.*,
+                    COALESCE(order_stats.total_orders, 0) AS total_orders,
+                    COALESCE(order_stats.total_spent, 0) AS total_spent,
+                    order_stats.last_order_date
+                FROM `user` u
+                """ + CUSTOMER_STATS_JOIN +
+                "WHERE " + ALIASED_TYPE_CLAUSE + " ORDER BY u.created_at DESC";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql);
@@ -52,7 +69,15 @@ public class BuyerRepository extends UserRepository {
 
     public User GetBuyerById(int id) {
 
-        String sql = "SELECT * FROM `user` WHERE id = ? AND " + TYPE_CLAUSE;
+        String sql = """
+                SELECT
+                    u.*,
+                    COALESCE(order_stats.total_orders, 0) AS total_orders,
+                    COALESCE(order_stats.total_spent, 0) AS total_spent,
+                    order_stats.last_order_date
+                FROM `user` u
+                """ + CUSTOMER_STATS_JOIN +
+                "WHERE u.id = ? AND " + ALIASED_TYPE_CLAUSE;
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -74,7 +99,7 @@ public class BuyerRepository extends UserRepository {
 
     public int GetTotalOrdersById(int buyerId) {
 
-        String sql = "SELECT COUNT(*) FROM `order` WHERE user_id = ?";
+        String sql = "SELECT COUNT(*) FROM `orders` WHERE user_id = ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -91,7 +116,7 @@ public class BuyerRepository extends UserRepository {
 
     public double GetTotalSpentById(int buyerId) {
 
-        String sql = "SELECT COALESCE(SUM(total_amount), 0) FROM `order` WHERE user_id = ?";
+        String sql = "SELECT COALESCE(SUM(final_amount), 0) FROM `orders` WHERE user_id = ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -108,7 +133,7 @@ public class BuyerRepository extends UserRepository {
 
     public double GetAvgOrderValueById(int buyerId) {
 
-        String sql = "SELECT COALESCE(AVG(total_amount), 0) FROM `order` WHERE user_id = ?";
+        String sql = "SELECT COALESCE(AVG(final_amount), 0) FROM `orders` WHERE user_id = ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -155,7 +180,7 @@ public class BuyerRepository extends UserRepository {
             int     page,
             int     pageSize
     ) {
-        return FilterByType(TYPE_CLAUSE, keyword, isActive, page, pageSize);
+        return FilterByType(ALIASED_TYPE_CLAUSE, keyword, isActive, page, pageSize);
     }
 
     private PageResult<User> FilterByType(
@@ -168,14 +193,21 @@ public class BuyerRepository extends UserRepository {
         StringBuilder where = new StringBuilder("WHERE " + typeClause);
 
         if (keyword != null && !keyword.isBlank()) {
-            where.append(" AND (full_name LIKE ? OR email LIKE ? OR phone LIKE ?)");
+            where.append(" AND (u.full_name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?)");
         }
         if (isActive != null) {
-            where.append(" AND is_active = ?");
+            where.append(" AND u.is_active = ?");
         }
 
-        String sqlCount = "SELECT COUNT(*) FROM `user` " + where;
-        String sqlData  = "SELECT * FROM `user` " + where + " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        String sqlCount = "SELECT COUNT(*) FROM `user` u " + where;
+        String sqlData  = """
+                SELECT
+                    u.*,
+                    COALESCE(order_stats.total_orders, 0) AS total_orders,
+                    COALESCE(order_stats.total_spent, 0) AS total_spent,
+                    order_stats.last_order_date
+                FROM `user` u
+                """ + CUSTOMER_STATS_JOIN + where + " ORDER BY u.created_at DESC LIMIT ? OFFSET ?";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement psCount = con.prepareStatement(sqlCount);

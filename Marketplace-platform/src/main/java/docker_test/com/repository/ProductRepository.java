@@ -31,6 +31,8 @@ import tools.jackson.databind.ObjectMapper;
 //@Repository
 public class ProductRepository implements IRepositories<Product> {
 
+	public static final String DUPLICATE_PRODUCT_NAME_MESSAGE = "Shop đã có sản phẩm cùng tên";
+
 	private DBConnection dbConnection;
 	private static ProductRepository instance = null;
 
@@ -48,9 +50,14 @@ public class ProductRepository implements IRepositories<Product> {
 	@Override
 	public Product Create(Product item) throws SQLException {
 		System.out.print("Body: " + item.toString());
-		String sql = "insert into product (shop_id,category_id,description,product_name,product_slug,price,original_price,weight,length,width,height,stock_quantity,brand_id) values (?,?,?,?,?,?,?,?,?,?,?,?,?)";
+		String sql = "insert into product (shop_id,category_id,description,product_name,product_slug,price,original_price,weight,length,width,height,stock_quantity,brand_id,is_active) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 		try (Connection con = dbConnection.getConn();
 				PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+			item.setProduct_name(item.getProduct_name().trim());
+			if (hasDuplicateProductName(con, item.getShop_id(), item.getProduct_name())) {
+				throw new SQLException(DUPLICATE_PRODUCT_NAME_MESSAGE);
+			}
+
 			ps.setLong(1, item.getShop_id());
 			ps.setLong(2, item.getCategory_id());
 			ps.setString(3, item.getDescription());
@@ -66,6 +73,8 @@ public class ProductRepository implements IRepositories<Product> {
 			ps.setInt(11, item.getHeight());
 			ps.setInt(12, item.getStock_quantity());
 			ps.setObject(13, item.getBrand());
+			ps.setInt(14, 0);
+			item.setIs_active(0);
 
 			int rows = ps.executeUpdate();
 
@@ -79,11 +88,29 @@ public class ProductRepository implements IRepositories<Product> {
 				}
 			}
 			return item;
+		} catch (SQLException ex) {
+			throw ex;
 		} catch (Exception ex) {
 			ex.printStackTrace();
 			;
 		}
 		return null;
+	}
+
+	private boolean hasDuplicateProductName(Connection con, int shopId, String productName) throws SQLException {
+		String sql = """
+				SELECT 1
+				FROM product
+				WHERE shop_id = ?
+				  AND LOWER(TRIM(product_name)) = LOWER(?)
+				LIMIT 1
+				""";
+
+		try (PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setInt(1, shopId);
+			ps.setString(2, productName);
+			return ps.executeQuery().next();
+		}
 	}
 
 	@Override
@@ -448,7 +475,7 @@ public class ProductRepository implements IRepositories<Product> {
 				Map<String, Object> row = new HashMap<>();
 
 				for (int i = 1; i <= meta.getColumnCount(); i++) {
-					row.put(meta.getColumnName(i), rs.getObject(i));
+					row.put(meta.getColumnLabel(i), rs.getObject(i));
 				}
 
 				list.add(row);
@@ -460,6 +487,229 @@ public class ProductRepository implements IRepositories<Product> {
 			e.printStackTrace();
 		}
 		return list;
+	}
+
+	public List<Map<String, Object>> GetAdminProducts(String keyword, Integer isActive, Integer shopId) {
+		List<Object> params = new ArrayList<>();
+		StringBuilder sql = new StringBuilder("""
+				SELECT
+				    p.id,
+				    p.shop_id,
+				    p.category_id,
+				    c.category_name,
+				    p.product_name,
+				    p.product_slug,
+				    p.description,
+				    p.price,
+				    p.original_price,
+				    COALESCE((
+				        SELECT SUM(COALESCE(pv.stock_quantity, 0))
+				        FROM product_variant pv
+				        WHERE pv.product_id = p.id
+				    ), 0) AS stock_quantity,
+				    COALESCE((
+				        SELECT SUM(COALESCE(oi.final_quantity, oi.quantity))
+				        FROM order_item oi
+				        INNER JOIN orders o ON o.id = oi.order_id
+				        WHERE oi.product_id = p.id
+				          AND UPPER(COALESCE(o.order_status, '')) NOT IN ('FAILED', 'CANCELED', 'CANCELLED')
+				    ), 0) AS sold_count,
+				    COALESCE(p.is_active, 0) AS is_active,
+				    p.reject_reason,
+				    p.created_at,
+				    p.updated_at,
+				    s.shop_name,
+				    s.shop_logo,
+				    u.email AS shop_email,
+				    u.phone AS shop_phone,
+				    (
+				        SELECT pv.sku
+				        FROM product_variant pv
+				        WHERE pv.product_id = p.id
+				        ORDER BY pv.id ASC
+				        LIMIT 1
+				    ) AS sku,
+				    (
+				        SELECT pi.image_url
+				        FROM product_image pi
+				        WHERE pi.product_id = p.id
+				        ORDER BY pi.is_thumbnail DESC, pi.display_order ASC, pi.id ASC
+				        LIMIT 1
+				    ) AS image_url
+				FROM product p
+				LEFT JOIN category c ON p.category_id = c.id
+				LEFT JOIN shop s ON p.shop_id = s.id
+				LEFT JOIN user u ON s.user_id = u.id
+				WHERE 1 = 1
+				""");
+
+		String value = keyword == null ? "" : keyword.trim().toLowerCase();
+		if (!value.isEmpty()) {
+			String like = "%" + value + "%";
+			sql.append("""
+					  AND (
+					      LOWER(p.product_name) LIKE ?
+					      OR LOWER(p.product_slug) LIKE ?
+					      OR LOWER(COALESCE(s.shop_name, '')) LIKE ?
+					      OR LOWER(COALESCE(u.email, '')) LIKE ?
+					      OR COALESCE(u.phone, '') LIKE ?
+					  )
+					""");
+			params.add(like);
+			params.add(like);
+			params.add(like);
+			params.add(like);
+			params.add("%" + value + "%");
+		}
+
+		if (isActive != null) {
+			sql.append(" AND COALESCE(p.is_active, 0) = ?");
+			params.add(isActive == 0 ? 0 : 1);
+		}
+
+		if (shopId != null) {
+			sql.append(" AND p.shop_id = ?");
+			params.add(shopId);
+		}
+
+		sql.append(" ORDER BY p.created_at DESC, p.id DESC");
+		return query(sql.toString(), params.toArray());
+	}
+
+	public Map<String, Object> GetAdminProductDetail(int id) {
+		String sql = """
+				SELECT
+				    p.id,
+				    p.shop_id,
+				    p.category_id,
+				    c.category_name,
+				    p.product_name,
+				    p.product_slug,
+				    p.description,
+				    p.price,
+				    p.original_price,
+				    COALESCE((
+				        SELECT SUM(COALESCE(pv.stock_quantity, 0))
+				        FROM product_variant pv
+				        WHERE pv.product_id = p.id
+				    ), 0) AS stock_quantity,
+				    COALESCE((
+				        SELECT SUM(COALESCE(oi.final_quantity, oi.quantity))
+				        FROM order_item oi
+				        INNER JOIN orders o ON o.id = oi.order_id
+				        WHERE oi.product_id = p.id
+				          AND UPPER(COALESCE(o.order_status, '')) NOT IN ('FAILED', 'CANCELED', 'CANCELLED')
+				    ), 0) AS sold_count,
+				    COALESCE(p.is_active, 0) AS is_active,
+				    p.reject_reason,
+				    p.rating,
+				    p.review_count,
+				    p.weight,
+				    p.length,
+				    p.width,
+				    p.height,
+				    p.created_at,
+				    p.updated_at,
+				    s.shop_name,
+				    s.shop_logo,
+				    u.email AS shop_email,
+				    u.phone AS shop_phone,
+				    (
+				        SELECT pv.sku
+				        FROM product_variant pv
+				        WHERE pv.product_id = p.id
+				        ORDER BY pv.id ASC
+				        LIMIT 1
+				    ) AS sku,
+				    (
+				        SELECT pi.image_url
+				        FROM product_image pi
+				        WHERE pi.product_id = p.id
+				        ORDER BY pi.is_thumbnail DESC, pi.display_order ASC, pi.id ASC
+				        LIMIT 1
+				    ) AS image_url,
+				    (
+				        SELECT JSON_ARRAYAGG(pi.image_url)
+				        FROM product_image pi
+				        WHERE pi.product_id = p.id
+				    ) AS images
+				FROM product p
+				LEFT JOIN category c ON p.category_id = c.id
+				LEFT JOIN shop s ON p.shop_id = s.id
+				LEFT JOIN user u ON s.user_id = u.id
+				WHERE p.id = ?
+				""";
+
+		List<Map<String, Object>> products = query(sql, id);
+		return products.isEmpty() ? null : products.get(0);
+	}
+
+	public boolean UpdateAdminProductActive(int id, boolean isActive, String reason) {
+		String selectSql = "SELECT id FROM product WHERE id = ? FOR UPDATE";
+		String updateSql = """
+				UPDATE product
+				SET is_active = ?,
+				    reject_reason = ?,
+				    updated_at = CURRENT_TIMESTAMP
+				WHERE id = ?
+				""";
+
+		Connection con = null;
+		try {
+			con = dbConnection.getConn();
+			con.setAutoCommit(false);
+
+			try (PreparedStatement ps = con.prepareStatement(selectSql)) {
+				ps.setInt(1, id);
+				try (ResultSet rs = ps.executeQuery()) {
+					if (!rs.next()) {
+						con.rollback();
+						return false;
+					}
+				}
+			}
+
+			try (PreparedStatement ps = con.prepareStatement(updateSql)) {
+				ps.setInt(1, isActive ? 1 : 0);
+				ps.setString(2, isActive ? null : cleanReason(reason));
+				ps.setInt(3, id);
+				if (ps.executeUpdate() <= 0) {
+					con.rollback();
+					return false;
+				}
+			}
+
+			con.commit();
+			return true;
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			try {
+				if (con != null) {
+					con.rollback();
+				}
+			} catch (Exception rollbackEx) {
+				rollbackEx.printStackTrace();
+			}
+			return false;
+		} finally {
+			try {
+				if (con != null) {
+					con.setAutoCommit(true);
+					con.close();
+				}
+			} catch (Exception closeEx) {
+				closeEx.printStackTrace();
+			}
+		}
+	}
+
+	private String cleanReason(String reason) {
+		if (reason == null) {
+			return null;
+		}
+
+		String value = reason.trim();
+		return value.isEmpty() ? null : value;
 	}
 
 	private List<String> expandSearchTerms(String keyword) {

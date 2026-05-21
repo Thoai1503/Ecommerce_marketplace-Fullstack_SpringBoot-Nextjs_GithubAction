@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, Suspense, useEffect } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { House } from "lucide-react";
 
 import { API_URL } from "@/helper/api";
 
@@ -143,11 +145,11 @@ const LoginForm = () => {
     const newErrors: typeof errors = {};
 
     if (!formData.email) {
-      newErrors.email = "Email không được để trống";
+      newErrors.email = "Email is required";
     }
 
     if (!formData.password) {
-      newErrors.password = "Mật khẩu không được để trống";
+      newErrors.password = "Password is required ";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -206,7 +208,7 @@ const LoginForm = () => {
       // Sau khi login thành công, điều hướng về trang mong muốn (nếu có ?redirect=...)
       window.location.href = redirectTarget ?? getDefaultRedirectByRole(roleCookie);
     } catch (err) {
-      setErrors({ general: "Không kết nối được server" });
+      setErrors({ general: "Cannot connect to server" });
     } finally {
       setLoading(false);
     }
@@ -228,6 +230,14 @@ const LoginForm = () => {
         onSubmit={handleSubmit}
         className="relative z-10 w-full max-w-[420px] bg-white rounded-xl shadow-xl px-8 py-10"
       >
+        <Link
+          href="/"
+          className="mb-6 inline-flex h-10 items-center gap-2 rounded-lg border border-gray-200 px-3 text-sm font-semibold text-gray-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+        >
+          <House size={16} />
+          Back to home page
+        </Link>
+
         <h1 className="text-2xl font-bold text-center text-gray-900">Login</h1>
         <p className="text-center text-gray-500 mt-1 mb-8">Welcome back!</p>
 
@@ -340,7 +350,7 @@ const LoginPage = () => {
   return (
     <Suspense
       fallback={
-        <div className="p-6 text-center">Đang tải trang đăng nhập...</div>
+        <div className="p-6 text-center">Loading login page...</div>
       }
     >
       <LoginForm />

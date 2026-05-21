@@ -1,14 +1,14 @@
 
 "use client";
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useSellerDetail } from '../../../hooks/admin/useSellers';
-import { useProducts } from '../../../hooks/admin/useProducts'; // Import hooks sản phẩm
+import { useSellerDetail, useSellerOrderShipments } from '../../../hooks/admin/useSellers';
+import { useSellerProducts } from '../../../hooks/admin/useProducts';
 import { 
   ChevronLeft, Edit3, Ban, Unlock, Mail, Phone, MapPin, Globe, 
   ShoppingBag, Truck, DollarSign, Star, Calendar, CheckCircle,
-  ExternalLink, MoreHorizontal, ArrowUpRight, ShieldCheck, Package, AlertCircle, XCircle,
+  ExternalLink, MoreHorizontal, ShieldCheck, Package, AlertCircle, XCircle,
   BrainCircuit, Sparkles, MessageSquare, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import ToastComponent, { ToastType } from '../../../components/ui/Toast';
@@ -24,6 +24,25 @@ const ProductStatusConfig: Record<ProductStatus, string> = {
   DRAFT: 'bg-slate-100 text-slate-600',
   HIDDEN: 'bg-indigo-50 text-indigo-700',
 };
+
+const StatusBadgeConfig: Record<string, string> = {
+  PENDING: 'bg-amber-50 text-amber-700',
+  CONFIRMED: 'bg-sky-50 text-sky-700',
+  SHIPPED: 'bg-indigo-50 text-indigo-700',
+  SHIPPING: 'bg-indigo-50 text-indigo-700',
+  DELIVERING: 'bg-blue-50 text-blue-700',
+  DELIVERED: 'bg-emerald-50 text-emerald-700',
+  COMPLETED: 'bg-emerald-50 text-emerald-700',
+  PAID: 'bg-emerald-50 text-emerald-700',
+  CANCELED: 'bg-rose-50 text-rose-700',
+  CANCELLED: 'bg-rose-50 text-rose-700',
+  FAILED: 'bg-rose-50 text-rose-700',
+};
+
+const getStatusBadgeClass = (status: string) =>
+  StatusBadgeConfig[status.toUpperCase()] || 'bg-slate-100 text-slate-600';
+
+const formatStatusLabel = (status: string) => status.replaceAll('_', ' ');
 
 // --- AI COMPONENT: REVIEW ANALYST ---
 const AISellerAnalyst = ({ seller }: { seller: Seller }) => {
@@ -147,17 +166,19 @@ export default function SellerDetail() {
   // Fetch Seller Info
   const { seller, isLoading: isLoadingSeller, updateSeller } = useSellerDetail(id || '');
   
-  // Fetch All Products (In real app, we would fetch /products?sellerId=...)
-  const { products, isLoading: isLoadingProducts } = useProducts();
+  const {
+    products: sellerProducts,
+    isLoading: isLoadingProducts,
+    isError: isProductsError,
+  } = useSellerProducts(id || '');
+  const {
+    shipments: sellerShipments,
+    isLoading: isLoadingShipments,
+    isError: isShipmentsError,
+  } = useSellerOrderShipments(id || '');
 
   const [toast, setToast] = React.useState<{ id: string; message: string; type: ToastType } | null>(null);
   const [isBlockModalOpen, setIsBlockModalOpen] = React.useState(false);
-
-  // Filter products belonging to this seller
-  const sellerProducts = useMemo(() => {
-    if (!products || !id) return [];
-    return products.filter(p => p.sellerId === id).slice(0, 5); // Take top 5 recent
-  }, [products, id]);
 
   if (isLoadingSeller) return <ProfileSkeleton />;
   
@@ -376,16 +397,21 @@ export default function SellerDetail() {
                <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full min-h-[400px]">
                   <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                      <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                        <ShoppingBag size={18} className="text-slate-400" /> Sản phẩm gần đây
+                        <ShoppingBag size={18} className="text-slate-400" /> Sản phẩm của shop
                      </h3>
                      <span className="text-xs font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-lg">
-                        {sellerProducts.length} hiển thị
+                        {sellerProducts.length} sản phẩm
                      </span>
                   </div>
-                  
+
                   {isLoadingProducts ? (
                      <div className="p-10 flex justify-center">
                         <div className="w-6 h-6 border-2 border-slate-300 border-t-blue-600 rounded-full animate-spin"></div>
+                     </div>
+                  ) : isProductsError ? (
+                     <div className="flex flex-col items-center justify-center py-20 text-rose-500">
+                        <AlertCircle size={40} className="mb-2 opacity-30" />
+                        <p className="text-sm font-medium">Không tải được sản phẩm của shop.</p>
                      </div>
                   ) : sellerProducts.length === 0 ? (
                      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -400,7 +426,7 @@ export default function SellerDetail() {
                                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-8">Sản phẩm</th>
                                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Giá bán</th>
                                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng thái</th>
-                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Lượt xem</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Kho hàng</th>
                               </tr>
                            </thead>
                            <tbody className="divide-y divide-slate-50">
@@ -427,16 +453,97 @@ export default function SellerDetail() {
                                         {item.status}
                                       </span>
                                    </td>
-                                   <td className="px-6 py-4 text-right pr-8 text-sm font-medium text-slate-500">{item.viewCount || 0}</td>
+                                   <td className="px-6 py-4 text-right pr-8 text-sm font-medium text-slate-500">{item.stock.toLocaleString('vi-VN')}</td>
                                 </tr>
                               ))}
                            </tbody>
                         </table>
-                        <div className="p-4 text-center border-t border-slate-50">
-                           <button className="text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline flex items-center justify-center gap-1 mx-auto transition-all">
-                             Xem toàn bộ danh mục <ArrowUpRight size={12} />
-                           </button>
-                        </div>
+                     </div>
+                  )}
+               </div>
+
+               <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden min-h-[360px]">
+                  <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                     <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                        <Truck size={18} className="text-slate-400" /> Order shipment của shop
+                     </h3>
+                     <span className="text-xs font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-lg">
+                        {sellerShipments.length} shipment
+                     </span>
+                  </div>
+
+                  {isLoadingShipments ? (
+                     <div className="p-10 flex justify-center">
+                        <div className="w-6 h-6 border-2 border-slate-300 border-t-blue-600 rounded-full animate-spin"></div>
+                     </div>
+                  ) : isShipmentsError ? (
+                     <div className="flex flex-col items-center justify-center py-20 text-rose-500">
+                        <AlertCircle size={40} className="mb-2 opacity-30" />
+                        <p className="text-sm font-medium">Không tải được đơn hàng của shop.</p>
+                     </div>
+                  ) : sellerShipments.length === 0 ? (
+                     <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                        <Truck size={40} className="mb-2 opacity-20" />
+                        <p className="text-sm font-medium">Shop chưa có order shipment nào.</p>
+                     </div>
+                  ) : (
+                     <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                           <thead>
+                              <tr className="bg-slate-50/50 border-b border-slate-100">
+                                 <th className="px-6 py-4 pl-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Đơn hàng</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Người nhận</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Sản phẩm</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Giá trị</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
+                                 <th className="px-6 py-4 pr-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giao hàng</th>
+                              </tr>
+                           </thead>
+                           <tbody className="divide-y divide-slate-50">
+                              {sellerShipments.map((shipment) => (
+                                 <tr
+                                   key={shipment.shipmentId}
+                                   className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                                   onClick={() => router.push(`/admin/orders/${shipment.orderId}`)}
+                                 >
+                                    <td className="px-6 py-4 pl-8">
+                                       <p className="text-sm font-bold text-slate-800">{shipment.orderNumber}</p>
+                                       <p className="text-[11px] font-mono text-slate-400">
+                                          Order #{shipment.orderId} / Shipment #{shipment.shipmentId}
+                                       </p>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                       <p className="text-sm font-bold text-slate-700">{shipment.recipientName}</p>
+                                       <p className="text-xs text-slate-500">{shipment.recipientPhone}</p>
+                                    </td>
+                                    <td className="px-6 py-4 text-center text-sm font-bold text-slate-700">
+                                       {shipment.itemCount.toLocaleString('vi-VN')}
+                                    </td>
+                                    <td className="px-6 py-4 text-right text-sm font-black text-slate-800">
+                                       {shipment.totalAmount.toLocaleString('vi-VN')}₫
+                                    </td>
+                                    <td className="px-6 py-4">
+                                       <div className="flex flex-col items-start gap-1.5">
+                                          <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${getStatusBadgeClass(shipment.orderStatus)}`}>
+                                             {formatStatusLabel(shipment.orderStatus)}
+                                          </span>
+                                          <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${getStatusBadgeClass(shipment.paymentStatus)}`}>
+                                             {formatStatusLabel(shipment.paymentStatus)}
+                                          </span>
+                                       </div>
+                                    </td>
+                                    <td className="px-6 py-4 pr-8">
+                                       <span className={`inline-flex px-2 py-1 rounded text-[10px] font-black uppercase ${getStatusBadgeClass(shipment.shippingStatus)}`}>
+                                          {formatStatusLabel(shipment.shippingStatus)}
+                                       </span>
+                                       <p className="mt-1 text-xs font-medium text-slate-500">
+                                          {shipment.carrierName} / {shipment.trackingNumber}
+                                       </p>
+                                    </td>
+                                 </tr>
+                              ))}
+                           </tbody>
+                        </table>
                      </div>
                   )}
                </div>

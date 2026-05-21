@@ -671,13 +671,17 @@ export interface Product {
   originalPrice?: number;
   stock: number;
   status: ProductStatus;
+  isActive: boolean;
   sellerId: string;
   sellerName: string;
   sellerAvatar?: string;
+  sellerEmail?: string;
+  sellerPhone?: string;
   attributes?: Record<string, string>;
   createdAt: string;
   rejectReason?: string;
   viewCount?: number;
+  soldCount: number;
 }
 
 export interface Address {

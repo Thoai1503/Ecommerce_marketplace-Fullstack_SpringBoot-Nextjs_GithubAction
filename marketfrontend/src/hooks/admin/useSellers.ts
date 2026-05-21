@@ -1,6 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getSellers, getSellerById, createSeller, updateSeller, deleteSellers, toggleSellerStatus } from '@/service/sellers';
+import { getSellers, getSellerById, getSellerOrderShipments, createSeller, updateSeller, deleteSellers, toggleSellerStatus } from '@/service/sellers';
 import { SellerStatus } from '@/types/index';
 
 export const useSellers = () => {
@@ -66,5 +66,20 @@ export const useSellerDetail = (id: string) => {
     createSeller: createMutation.mutateAsync,
     updateSeller: updateMutation.mutateAsync,
     isSaving: createMutation.isPending || updateMutation.isPending,
+  };
+};
+
+export const useSellerOrderShipments = (id: string) => {
+  const query = useQuery({
+    queryKey: ['admin', 'sellers', 'shipments', id],
+    queryFn: () => getSellerOrderShipments(id),
+    enabled: !!id,
+  });
+
+  return {
+    shipments: query.data || [],
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
   };
 };

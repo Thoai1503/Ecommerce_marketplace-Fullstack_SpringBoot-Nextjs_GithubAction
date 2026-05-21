@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -56,8 +57,20 @@ public class ProductController {
 		
 		 System.out.print("Send..");
 		 var attributes = product.getAttributes();
-		 
-		 Product en = (Product) repositories.Create(product);
+
+		 Product en;
+		 try {
+			 en = (Product) repositories.Create(product);
+		 } catch (SQLException ex) {
+			 if (ProductRepository.DUPLICATE_PRODUCT_NAME_MESSAGE.equals(ex.getMessage())) {
+				 return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
+			 }
+			 throw ex;
+		 }
+
+		 if (en == null) {
+			 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Tạo sản phẩm thất bại");
+		 }
 
 		 if (en != null && en.getId() != null && attributes != null && !attributes.isEmpty()) {
 			 try {

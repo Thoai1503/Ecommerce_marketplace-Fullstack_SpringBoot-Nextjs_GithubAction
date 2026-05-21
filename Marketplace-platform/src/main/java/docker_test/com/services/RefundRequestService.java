@@ -612,6 +612,36 @@ public class RefundRequestService {
 		}
 	}
 
+	private double findFallbackRequestedAmount(Long returnRequestId) {
+		if (returnRequestId == null) {
+			return 0.0;
+		}
+		String sql = """
+				SELECT COALESCE(SUM(
+					CASE
+						WHEN COALESCE(rri.requested_amount, 0) <> 0 THEN rri.requested_amount
+						WHEN COALESCE(oi.quantity, 0) > 0 AND COALESCE(oi.total_after_all_vouchers, 0) > 0
+							THEN oi.total_after_all_vouchers * LEAST(GREATEST(COALESCE(rri.quantity, 0), 0), oi.quantity) / oi.quantity
+						WHEN COALESCE(oi.quantity, 0) > 0 AND COALESCE(oi.total_price, 0) > 0
+							THEN oi.total_price * LEAST(GREATEST(COALESCE(rri.quantity, 0), 0), oi.quantity) / oi.quantity
+						ELSE COALESCE(oi.price, 0) * GREATEST(COALESCE(rri.quantity, 0), 0)
+					END
+				), 0) AS fallback_amount
+				FROM return_request_item rri
+				LEFT JOIN order_item oi ON oi.id = rri.order_item_id
+				WHERE rri.return_request_id = ?
+				""";
+
+		try (Connection con = DBConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setLong(1, returnRequestId);
+			ResultSet rs = ps.executeQuery();
+			return rs.next() ? signedMoney(rs.getDouble("fallback_amount")) : 0.0;
+		} catch (Exception e) {
+			throw new RuntimeException("Unable to resolve fallback requested amount.", e);
+		}
+	}
+
 	private VoucherSelection findVoucherSelection(Long orderId) {
 		String sql = """
 				SELECT DISTINCT
@@ -858,6 +888,7 @@ public class RefundRequestService {
 		}
 
 		enrichReturnRequestItems(requests);
+		applyFinalRequestedAmounts(requests);
 	}
 
 	private void enrichReturnRequestItems(List<ReturnRequest> requests) {
@@ -885,6 +916,8 @@ public class RefundRequestService {
 					oi.image AS product_image,
 					oi.price,
 					oi.total_price,
+					COALESCE(oi.total_after_shop_voucher, 0) AS total_after_shop_voucher,
+					COALESCE(oi.total_after_all_vouchers, 0) AS total_after_all_vouchers,
 					oi.quantity AS order_quantity
 				FROM return_request_item rri
 				LEFT JOIN order_item oi ON oi.id = rri.order_item_id
@@ -909,11 +942,62 @@ public class RefundRequestService {
 				item.setProductImage(rs.getString("product_image"));
 				item.setPrice(money(rs.getDouble("price")));
 				item.setTotalPrice(money(rs.getDouble("total_price")));
+				item.setTotalAfterShopVoucher(money(rs.getDouble("total_after_shop_voucher")));
+				item.setTotalAfterAllVouchers(money(rs.getDouble("total_after_all_vouchers")));
 				item.setOrderQuantity(Math.max(0, rs.getInt("order_quantity")));
 			}
 		} catch (Exception e) {
 			throw new RuntimeException("Unable to enrich return request items.", e);
 		}
+	}
+
+	private void applyFinalRequestedAmounts(List<ReturnRequest> requests) {
+		for (ReturnRequest request : requests) {
+			request.setFinalRequestedAmount(resolveFinalRequestedAmount(request));
+		}
+	}
+
+	private double resolveFinalRequestedAmount(ReturnRequest request) {
+		if (request == null) {
+			return 0.0;
+		}
+		if (request.getRequestedAmount() != 0.0) {
+			return signedMoney(request.getRequestedAmount());
+		}
+		if (request.getItems() == null || request.getItems().isEmpty()) {
+			return 0.0;
+		}
+		return signedMoney(request.getItems().stream()
+				.mapToDouble(this::resolveFinalRequestedItemAmount)
+				.sum());
+	}
+
+	private double resolveFinalRequestedItemAmount(ReturnRequestItem item) {
+		if (item == null) {
+			return 0.0;
+		}
+		if (item.getRequestedAmount() != 0.0) {
+			return signedMoney(item.getRequestedAmount());
+		}
+		double lineAmount = item.getTotalAfterAllVouchers() > 0.0
+				? item.getTotalAfterAllVouchers()
+				: item.getTotalPrice();
+		if (lineAmount <= 0.0 && item.getPrice() > 0.0) {
+			int quantity = item.getOrderQuantity() > 0 ? item.getOrderQuantity() : Math.max(1, item.getQuantity());
+			lineAmount = item.getPrice() * quantity;
+		}
+		return prorateLineAmount(lineAmount, item.getOrderQuantity(), item.getQuantity());
+	}
+
+	private double prorateLineAmount(double lineAmount, int orderQuantity, int returnQuantity) {
+		if (lineAmount <= 0.0 || returnQuantity <= 0) {
+			return 0.0;
+		}
+		if (orderQuantity <= 0) {
+			return money(lineAmount);
+		}
+		int effectiveReturnQuantity = Math.min(returnQuantity, orderQuantity);
+		return money(lineAmount * effectiveReturnQuantity / orderQuantity);
 	}
 
 	private String placeholders(int count) {
@@ -936,7 +1020,14 @@ public class RefundRequestService {
 
 		request.setStatus(status);
 		if (status == ReturnRequestStatus.REFUNDED) {
-			request.setRefundedAmount(refundedAmount != null ? refundedAmount : request.getRequestedAmount());
+			double amount = refundedAmount != null ? refundedAmount : request.getRequestedAmount();
+			if (amount == 0.0) {
+				double fallbackAmount = findFallbackRequestedAmount(id);
+				if (fallbackAmount > 0.0) {
+					amount = fallbackAmount;
+				}
+			}
+			request.setRefundedAmount(amount);
 		} else if (refundedAmount != null) {
 			request.setRefundedAmount(refundedAmount);
 		}

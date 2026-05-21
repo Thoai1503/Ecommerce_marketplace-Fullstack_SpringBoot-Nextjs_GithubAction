@@ -47,7 +47,7 @@ public class ReturnRequest {
     private Long customerId;
     
     
-    @Column(name = "order_shipment_id", nullable = false)
+    @Column(name = "order_shipment_id")
     private Long orderShipmentId;
     
     @Enumerated(EnumType.STRING)
@@ -95,6 +95,9 @@ public class ReturnRequest {
 
     @Transient
     private String refundMessage;
+
+    @Transient
+    private double finalRequestedAmount;
 
     @Transient
     private String orderNumber;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { X, Check } from "lucide-react";
 
 type Props = {
@@ -23,14 +23,23 @@ export default function SelectUnitModal({
   const [selected, setSelected] = useState<number | null>(null);
   const [search, setSearch] = useState(""); // 🔥 thêm
 
+  useEffect(() => {
+    if (open) {
+      setSelected(null);
+      setSearch("");
+    }
+  }, [attribute?.id, open]);
+
   if (!open) return null;
 
   // 🔥 FILTER
   const filteredUnits = units?.filter((u: any) => {
-    const keyword = search.toLowerCase();
+    const keyword = search.trim().toLowerCase();
+    const label = String(u.label ?? u.name ?? "").toLowerCase();
+    const symbol = String(u.symbol ?? "").toLowerCase();
+
     return (
-      u.name?.toLowerCase().includes(keyword) ||
-      u.symbol?.toLowerCase().includes(keyword)
+      !keyword || label.includes(keyword) || symbol.includes(keyword)
     );
   });
 
@@ -63,36 +72,41 @@ export default function SelectUnitModal({
         {/* LIST UNIT */}
         <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
           {filteredUnits?.map((u: any) => {
-            const isUsed = existingUnitIds.includes(Number(u.id));
+            const unitId = Number(u.id);
+            const label = String(u.label ?? u.name ?? `Unit #${u.id}`);
+            const symbol = String(u.symbol ?? "");
+            const isUsed = existingUnitIds.includes(unitId);
 
             return (
               <div
                 key={u.id}
                 onClick={() => {
                   if (isUsed) return;
-                  setSelected(u.id);
+                  setSelected(unitId);
                 }}
                 className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition border
                   ${
                     isUsed
                       ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
-                      : selected === u.id
+                      : selected === unitId
                       ? "bg-blue-50 border-blue-500"
                       : "hover:bg-gray-50 border-transparent"
                   }
                 `}
               >
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold">{u.name}</span>
-                  <span className="text-xs text-gray-400">
-                    Symbol: {u.symbol}
-                  </span>
+                  <span className="text-sm font-semibold">{label}</span>
+                  {symbol && (
+                    <span className="text-xs text-gray-400">
+                      Symbol: {symbol}
+                    </span>
+                  )}
                 </div>
 
                 {/* trạng thái */}
                 {isUsed ? (
                   <span className="text-xs text-gray-400">Used</span>
-                ) : selected === u.id ? (
+                ) : selected === unitId ? (
                   <Check size={16} className="text-blue-600" />
                 ) : null}
               </div>

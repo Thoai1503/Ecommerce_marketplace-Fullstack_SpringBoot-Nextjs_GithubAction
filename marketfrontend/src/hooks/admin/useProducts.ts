@@ -1,7 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getProducts, deleteProducts, approveProduct, rejectProduct, getProductById, duplicateProduct, updateProductStatus } from '@/service/products';
-import { Product, ProductStatus } from '@/types/index';
+import { getProducts, getProductsBySellerId, deleteProducts, approveProduct, rejectProduct, getProductById, updateProductActive } from '@/service/products';
 
 export const useProducts = () => {
   const queryClient = useQueryClient();
@@ -26,13 +25,8 @@ export const useProducts = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }),
   });
 
-  const duplicateMutation = useMutation({
-    mutationFn: duplicateProduct,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }),
-  });
-
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: ProductStatus }) => updateProductStatus(id, status),
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => updateProductActive(id, isActive),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }),
   });
 
@@ -45,9 +39,7 @@ export const useProducts = () => {
     isDeleting: deleteMutation.isPending,
     approveProduct: approveMutation.mutateAsync,
     rejectProduct: rejectMutation.mutateAsync,
-    duplicateProduct: duplicateMutation.mutateAsync,
-    isDuplicating: duplicateMutation.isPending,
-    updateProductStatus: updateStatusMutation.mutateAsync,
+    updateProductActive: updateStatusMutation.mutateAsync,
   };
 };
 
@@ -57,4 +49,19 @@ export const useProductDetail = (id: string) => {
     queryFn: () => getProductById(id),
     enabled: !!id,
   });
+};
+
+export const useSellerProducts = (sellerId: string) => {
+  const query = useQuery({
+    queryKey: ['admin', 'products', 'seller', sellerId],
+    queryFn: () => getProductsBySellerId(sellerId),
+    enabled: !!sellerId,
+  });
+
+  return {
+    products: query.data || [],
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
+  };
 };

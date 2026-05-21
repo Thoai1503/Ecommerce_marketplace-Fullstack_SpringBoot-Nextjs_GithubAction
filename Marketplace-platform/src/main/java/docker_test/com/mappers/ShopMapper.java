@@ -1,6 +1,7 @@
 package docker_test.com.mappers;
 
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -11,6 +12,32 @@ import org.springframework.jdbc.core.RowMapper;
 import docker_test.com.models.Shop;
 
 public class ShopMapper implements RowMapper<Shop> {
+
+    private boolean hasColumn(ResultSet rs, String columnName) throws SQLException {
+        ResultSetMetaData metadata = rs.getMetaData();
+
+        for (int index = 1; index <= metadata.getColumnCount(); index++) {
+            if (columnName.equalsIgnoreCase(metadata.getColumnLabel(index))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void mapComputedStats(ResultSet rs, Shop shop) throws SQLException {
+        if (hasColumn(rs, "computed_total_products")) {
+            shop.setTotal_products(rs.getInt("computed_total_products"));
+        }
+
+        if (hasColumn(rs, "computed_total_orders")) {
+            shop.setTotal_orders(rs.getInt("computed_total_orders"));
+        }
+
+        if (hasColumn(rs, "total_revenue")) {
+            shop.setTotal_revenue(rs.getDouble("total_revenue"));
+        }
+    }
 
     /* ================= MAP SINGLE ROW ================= */
     public Shop RowMap(ResultSet rs) throws SQLException {
@@ -34,6 +61,7 @@ public class ShopMapper implements RowMapper<Shop> {
         shop.setRating(rs.getDouble("rating"));
         shop.setTotal_products(rs.getInt("total_products"));
         shop.setTotal_orders(rs.getInt("total_orders"));
+        mapComputedStats(rs, shop);
 
         shop.setResponse_rate(rs.getDouble("response_rate"));
         shop.setResponse_time(rs.getInt("response_time"));
@@ -89,6 +117,7 @@ public class ShopMapper implements RowMapper<Shop> {
         shop.setRating(rs.getDouble("rating"));
         shop.setTotal_products(rs.getInt("total_products"));
         shop.setTotal_orders(rs.getInt("total_orders"));
+        mapComputedStats(rs, shop);
 
         shop.setResponse_rate(rs.getDouble("response_rate"));
         shop.setResponse_time(rs.getInt("response_time"));

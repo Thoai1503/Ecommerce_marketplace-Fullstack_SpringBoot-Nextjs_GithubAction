@@ -5,9 +5,9 @@ import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProducts } from '@/hooks/admin/useProducts';
 import { useToast } from '@/context/ToastContext';
-import { 
-  Search, Plus, Filter, Trash2, Edit3, Eye, CheckCircle, XCircle, 
-  AlertCircle, Package, ArrowUpDown, Copy, Power, RefreshCw
+import {
+  Search, Plus, Filter, Trash2, Edit3, Eye, CheckCircle, XCircle,
+  AlertCircle, Package, ArrowUpDown, Power
 } from 'lucide-react';
 import { Product, ProductStatus } from '@/types';
 import { TableRowSkeleton } from '@/components/ui/Skeleton';
@@ -40,7 +40,7 @@ const StatusConfig: Record<ProductStatus, { label: string; color: string; bgColo
 
 export default function ProductsPage() {
   const router = useRouter();
-  const { products, isLoading, isError, refetch, deleteProducts, approveProduct, rejectProduct, duplicateProduct, updateProductStatus } = useProducts();
+  const { products, isLoading, isError, refetch, deleteProducts, approveProduct, rejectProduct, updateProductActive } = useProducts();
   const toast = useToast();
 
   // --- Table State ---
@@ -66,11 +66,11 @@ export default function ProductsPage() {
     } catch(e) { toast.error('Lỗi khi duyệt sản phẩm.'); }
   };
 
-  const handleToggleStatus = async (e: React.MouseEvent, id: string, current: ProductStatus) => {
+  const handleToggleActive = async (e: React.MouseEvent, id: string, current: boolean) => {
     e.stopPropagation();
-    const newStatus = current === 'HIDDEN' ? 'APPROVED' : 'HIDDEN';
-    await updateProductStatus({ id, status: newStatus });
-    toast.success(`Cập nhật trạng thái: ${newStatus}`);
+    const nextActive = !current;
+    await updateProductActive({ id, isActive: nextActive });
+    toast.success(nextActive ? 'Đã bật sản phẩm.' : 'Đã tắt sản phẩm.');
   };
 
   const openDeleteModal = (ids: string[], name?: string) => {
@@ -141,6 +141,20 @@ export default function ProductsPage() {
       header: 'Giá bán',
       cell: ({ getValue }) => <span className="font-black text-slate-800 text-sm">{getValue().toLocaleString()}₫</span>,
     }),
+    columnHelper.accessor(
+      (product) => `${product.sellerName} ${product.sellerEmail || ''} ${product.sellerPhone || ''}`,
+      {
+        id: 'sellerContact',
+        header: 'Shop',
+        cell: ({ row }) => (
+          <div className="min-w-[190px] max-w-[240px]">
+            <p className="truncate text-sm font-bold text-slate-700">{row.original.sellerName}</p>
+            <p className="truncate text-xs text-slate-500">{row.original.sellerEmail || 'Chưa có email'}</p>
+            <p className="truncate text-xs text-slate-500">{row.original.sellerPhone || 'Chưa có SĐT'}</p>
+          </div>
+        ),
+      }
+    ),
     columnHelper.accessor('stock', {
       header: 'Kho hàng',
       cell: ({ getValue }) => {
@@ -154,6 +168,14 @@ export default function ProductsPage() {
           </div>
         );
       }
+    }),
+    columnHelper.accessor('soldCount', {
+      header: 'Đã bán',
+      cell: ({ getValue }) => (
+        <span className="inline-flex min-w-16 justify-center rounded-lg bg-blue-50 px-3 py-1 text-sm font-black text-blue-700">
+          {getValue().toLocaleString('vi-VN')}
+        </span>
+      ),
     }),
     columnHelper.accessor('status', {
       header: 'Trạng thái',
@@ -172,6 +194,13 @@ export default function ProductsPage() {
       header: 'Hành động',
       cell: ({ row }) => (
         <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+           <button
+             onClick={() => router.push(`/admin/products/${row.original.id}`)}
+             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+             title="Xem chi tiết"
+           >
+             <Eye size={16} />
+           </button>
            {row.original.status === 'PENDING' ? (
              <>
                <button onClick={(e) => handleApprove(e, row.original.id)} className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg"><CheckCircle size={16} /></button>
@@ -180,11 +209,7 @@ export default function ProductsPage() {
            ) : (
              <>
                <button onClick={() => router.push(`/admin/products/${row.original.id}/edit`)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Edit3 size={16} /></button>
-               <button onClick={(e) => handleToggleStatus(e, row.original.id, row.original.status)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg"><Power size={16} /></button>
-               <button onClick={() => {
-                  duplicateProduct(row.original);
-                  toast.success('Đã nhân bản sản phẩm');
-               }} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg"><Copy size={16} /></button>
+               <button onClick={(e) => handleToggleActive(e, row.original.id, row.original.isActive)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg"><Power size={16} /></button>
                <button onClick={(e) => { e.stopPropagation(); openDeleteModal([row.original.id], row.original.name); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
              </>
            )}
@@ -206,6 +231,7 @@ export default function ProductsPage() {
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    autoResetPageIndex: false,
   });
 
   const selectedIds = Object.keys(rowSelection);
@@ -260,7 +286,7 @@ export default function ProductsPage() {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                   type="text"
-                  placeholder="Tìm tên sản phẩm, SKU..."
+                  placeholder="Tìm sản phẩm, SKU, email hoặc SĐT shop..."
                   value={globalFilter ?? ''}
                   onChange={(e) => setGlobalFilter(e.target.value)}
                   className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/5 text-sm font-medium"

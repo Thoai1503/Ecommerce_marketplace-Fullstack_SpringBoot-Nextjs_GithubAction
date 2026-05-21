@@ -24,6 +24,8 @@ export interface ReturnRequestItemAdmin {
   productImage?: string | null;
   price?: number | null;
   totalPrice?: number | null;
+  totalAfterShopVoucher?: number | null;
+  totalAfterAllVouchers?: number | null;
   orderQuantity?: number | null;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -48,6 +50,7 @@ export interface ReturnRequestAdmin {
   reason?: string | null;
   quantity: number;
   requestedAmount: number;
+  finalRequestedAmount?: number | null;
   refundedAmount: number;
   orderNumber?: string | null;
   orderTrackingNumber?: string | null;
