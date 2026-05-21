@@ -8,4 +8,5 @@ public enum ReturnStatusSummary {
     PARTIAL_RETURN_IN_PROGRESS,
     REFUND_IN_PROGRESS,
     REFUNDED,
+    PARTIAL_RETURNED
 }

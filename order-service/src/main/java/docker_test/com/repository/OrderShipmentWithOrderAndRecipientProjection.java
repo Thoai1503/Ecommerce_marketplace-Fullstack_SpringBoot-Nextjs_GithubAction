@@ -1,14 +1,18 @@
 package docker_test.com.repository;
 
+import java.util.List;
+
 public interface OrderShipmentWithOrderAndRecipientProjection {
     Long getShipmentId();
     Long getOrderId();
     Long getShopId();
     String getShopName();
-    
+    List<Long> getVoucherId();
     String getCarrierName();
     String getTrackingNumber();
     String getShippingStatus();
+    Double getSubtotal();
+    Double getTotalAfterVoucher();
 
     String getOrderNumber();
     Long getUserId();

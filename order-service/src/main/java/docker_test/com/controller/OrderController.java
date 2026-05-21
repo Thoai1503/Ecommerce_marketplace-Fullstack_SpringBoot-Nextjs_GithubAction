@@ -1,4 +1,4 @@
-package docker_test.com.controller;
+ package docker_test.com.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -49,6 +49,14 @@ public class OrderController {
 
 	@PostMapping
 	public ResponseEntity<OrderResponeDTO> placeOrder(@Valid @RequestBody OrderDTO dto) {
+		dto.getOrder_shipment().forEach(shipment -> 
+		{
+			if(shipment.getVoucher_id() != null) {
+			shipment.getVoucher_id().forEach(voucherId -> System.out.println("Shipment " + shipment.getOrder_id() + " has voucher ID: " + voucherId));
+			} 
+		}
+		
+				);
 		try {
 			RecipientDTO recipient = dto.getRecipient();
 

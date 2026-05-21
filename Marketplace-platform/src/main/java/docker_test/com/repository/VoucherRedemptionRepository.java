@@ -7,6 +7,7 @@ import docker_test.com.configs.DBConnection;
 import docker_test.com.mappers.voucher.VoucherRedemptionMapper;
 import docker_test.com.models.voucher.VoucherRedemption;
 
+
 public class VoucherRedemptionRepository implements IRepositories<VoucherRedemption> {
 
 	private static VoucherRedemptionRepository instance;
@@ -136,6 +137,36 @@ public class VoucherRedemptionRepository implements IRepositories<VoucherRedempt
 
 			ps.setObject(1, userId);
 			return mapper.RowsMap(ps.executeQuery());
+
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	public List<VoucherRedemption> getByOrderId(Long orderId) {
+
+		List<VoucherRedemption> list = new java.util.ArrayList<>();
+		String sql = "SELECT vr.id, vr.voucher_id, vr.original_shipping_fee,vr.original_order_amount, vr.discount_amount_applied FROM voucher_redemption vr WHERE order_id = ?";
+
+		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+
+			
+			ps.setObject(1, orderId);
+		    			 ResultSet rs = ps.executeQuery();
+			 while (rs.next()) {
+				 VoucherRedemption v = new VoucherRedemption();
+				 v.setId(rs.getLong("id"));
+				 v.setVoucherId(rs.getLong("voucher_id"));
+				 v.setOriginalShippingFee(rs.getBigDecimal("original_shipping_fee"));
+				 v.setOriginalOrderAmount(rs.getBigDecimal("original_order_amount"));
+				 v.setDiscountAmountApplied(rs.getBigDecimal("discount_amount_applied"));
+				 
+				
+				 list.add(v);
+			 }
+			 return list;
+			
+			//	return mapper.RowsMap(ps.executeQuery());
 
 		} catch (Exception e) {
 			throw new RuntimeException(e);

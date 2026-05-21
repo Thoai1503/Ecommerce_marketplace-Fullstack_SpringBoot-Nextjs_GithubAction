@@ -24,6 +24,7 @@ import com.google.gson.reflect.TypeToken;
 import docker_test.com.dto.RequestItemDTO;
 import docker_test.com.dto.RefundRequestDTO;
 import docker_test.com.models.refunds.ReturnRequestStatus;
+import docker_test.com.services.RefundCalculationService;
 import docker_test.com.services.RefundRequestService;
 
 @RestController
@@ -31,9 +32,13 @@ import docker_test.com.services.RefundRequestService;
 public class RefundRequestController {
 
 	private final RefundRequestService refundRequestService;
+	private final RefundCalculationService refundCalculationService;
 	private final Gson gson = new Gson();
 	
-	public RefundRequestController(RefundRequestService refundRequestService) {
+	public RefundRequestController(RefundRequestService refundRequestService,
+			
+			RefundCalculationService refundCalculationService) {
+			this.refundCalculationService = refundCalculationService;
 		this.refundRequestService = refundRequestService;
 	}
 		@GetMapping("/shipment/{orderShipmentId}")
@@ -68,6 +73,19 @@ public class RefundRequestController {
 			}
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching refund request: " + e.getMessage());
+		}
+	}
+
+	@GetMapping("/{refundRequestId}/calculation")
+	public ResponseEntity<?> getRefundCalculation(@PathVariable Long refundRequestId) {
+		try {
+			var calculation = refundRequestService.getRefundCalculation(refundRequestId);
+			return ResponseEntity.ok(calculation);
+		} catch (IllegalArgumentException ex) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error calculating refund amount: " + e.getMessage());
 		}
 	}
 
@@ -185,6 +203,19 @@ public class RefundRequestController {
 			return Double.parseDouble(rawValue);
 		} catch (Exception ex) {
 			throw new IllegalArgumentException(fieldName + " không hợp lệ");
+		}
+	}
+	
+	@GetMapping("/{refundRequestId}/calculate-final-price")
+	public ResponseEntity<?> calculateFinalRefundPrice(@PathVariable Long refundRequestId) {
+		try {
+			double finalPrice = refundCalculationService.calculateSuggestedRefundAmountByReturnRequestId(refundRequestId);
+			return ResponseEntity.ok(finalPrice);
+		} catch (IllegalArgumentException ex) {
+			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error calculating final refund price: " + e.getMessage());
 		}
 	}
 	
