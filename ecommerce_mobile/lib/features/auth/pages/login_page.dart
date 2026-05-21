@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants.dart';
 import '../../../services/auth_service.dart';
+import '../providers/auth_provider.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -36,7 +38,11 @@ class _LoginPageState extends State<LoginPage> {
 
     if (result['success'] == true) {
       if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      // ✅ Refresh auth state in Riverpod after successful login
+      await ref.read(authProvider.notifier).refreshAuthState();
+      // ✅ Pop back to previous screen without any hardcoded navigation
+      if (!mounted) return; // Check mounted state after async operation
+      Navigator.of(context).pop(true);
       return;
     }
 

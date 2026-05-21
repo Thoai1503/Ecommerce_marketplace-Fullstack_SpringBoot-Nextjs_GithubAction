@@ -23,8 +23,8 @@ class CartNotifier extends StateNotifier<AsyncValue<CartModel>> {
     }
   }
 
-  Future<void> addItem(String productId) async {
-    await _service.addToCart(productId: productId, quantity: 1);
+  Future<void> addItem(String productId, int quantity) async {
+    await _service.addToCart(productId: productId, quantity: quantity);
 
     await loadCart();
   }

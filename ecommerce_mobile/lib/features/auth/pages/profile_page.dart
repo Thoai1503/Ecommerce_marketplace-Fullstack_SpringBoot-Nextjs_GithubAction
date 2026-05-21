@@ -1,32 +1,41 @@
 import 'package:flutter/material.dart';
-import '../../../services/auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/widgets/layout/header/web_header.dart';
+import '../providers/auth_provider.dart';
 
-class ProfilePage extends StatefulWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
-  final AuthService _authService = AuthService();
-
-  Future<Map<String, String?>> _loadProfile() async {
-    final userId = await _authService.getStoredUserId();
-    final email = await _authService.getStoredEmail();
-    final fullName = await _authService.getStoredFullName();
-    return {'userId': userId?.toString(), 'email': email, 'fullName': fullName};
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+  Future<void> _handleLogout() async {
+    await ref.read(authProvider.notifier).logout();
+    if (!mounted) return;
+    // ✅ Navigate back to home after logout
+    Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
   }
 
-  Future<void> _logout() async {
-    await _authService.logout();
-    if (!mounted) return;
-    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+  Future<void> _handleLogin() async {
+    // ✅ ACTION-BASED AUTH: Open login and wait for result
+    final loggedIn = await Navigator.of(context).pushNamed<bool>('/login');
+    if (loggedIn == true && mounted) {
+      // Refresh the profile after login
+      setState(() {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Watch auth state from Riverpod
+    final authState = ref.watch(authProvider);
+    final isLoggedIn = authState.isLoggedIn;
+    final fullName = authState.fullName;
+    final email = authState.email;
+    final userId = authState.userId;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: Column(
@@ -38,125 +47,133 @@ class _ProfilePageState extends State<ProfilePage> {
                 constraints: const BoxConstraints(maxWidth: 900),
                 child: Padding(
                   padding: const EdgeInsets.all(24),
-                  child: FutureBuilder<Map<String, String?>>(
-                    future: _loadProfile(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState != ConnectionState.done) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      final profile = snapshot.data;
-                      final fullName = profile?['fullName']?.trim();
-                      final email = profile?['email']?.trim();
-                      final userId = profile?['userId']?.trim();
-                      final isAuthenticated = fullName != null || email != null;
-
-                      if (!isAuthenticated) {
-                        return Column(
+                  child: !isLoggedIn
+                      ? // ✅ GUEST MODE: Show login prompt
+                        Column(
                           mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             const Text(
                               'You are not signed in.',
-                              style: TextStyle(fontSize: 20),
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             const SizedBox(height: 12),
+                            const Text(
+                              'Sign in to view your profile, orders, and account details.',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
                             ElevatedButton(
-                              onPressed: () {
-                                Navigator.of(context).pushNamed('/login');
-                              },
-                              child: const Text('Sign in'),
+                              onPressed: _handleLogin,
+                              child: const Text('Sign in to Account'),
                             ),
                           ],
-                        );
-                      }
-
-                      final initials =
-                          fullName
-                              ?.split(' ')
-                              .where((part) => part.isNotEmpty)
-                              .map((part) => part[0])
-                              .take(2)
-                              .join()
-                              .toUpperCase() ??
-                          'U';
-
-                      return Card(
-                        elevation: 4,
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 32,
-                                    child: Text(initials),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          fullName ?? 'Guest User',
-                                          style: const TextStyle(
-                                            fontSize: 24,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          email ?? '',
-                                          style: const TextStyle(fontSize: 16),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 24),
-                              if (userId != null)
-                                Text(
-                                  'User ID: $userId',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              const SizedBox(height: 12),
-                              const Divider(),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'Account details',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text('Full name: ${fullName ?? 'Unknown'}'),
-                              Text('Email: ${email ?? 'Unknown'}'),
-                              const SizedBox(height: 24),
-                              ElevatedButton(
-                                onPressed: _logout,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.error,
-                                ),
-                                child: const Text('Log out'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                        )
+                      : // ✅ AUTHENTICATED MODE: Show profile card
+                        _buildProfileCard(fullName, email, userId),
                 ),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProfileCard(String? fullName, String? email, int? userId) {
+    final initials =
+        fullName
+            ?.split(' ')
+            .where((part) => part.isNotEmpty)
+            .map((part) => part[0])
+            .take(2)
+            .join()
+            .toUpperCase() ??
+        'U';
+
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 32,
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        fullName ?? 'Guest User',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        email ?? 'No email',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            if (userId != null)
+              Text(
+                'User ID: $userId',
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            const Text(
+              'Account Details',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Full name: ${fullName ?? 'Unknown'}',
+              style: const TextStyle(fontSize: 14),
+            ),
+            Text(
+              'Email: ${email ?? 'Unknown'}',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _handleLogout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+              ),
+              child: const Text('Log Out'),
+            ),
+          ],
+        ),
       ),
     );
   }

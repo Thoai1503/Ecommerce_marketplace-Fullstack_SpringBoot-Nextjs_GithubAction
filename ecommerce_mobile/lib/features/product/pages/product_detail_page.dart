@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/product.dart';
 import '../../../shared/widgets/layout/header/web_header.dart';
 import '../../../features/cart/providers/cart_provider.dart';
+import '../../../features/auth/providers/auth_provider.dart';
 // StockService removed: prefer product-provided stockQuantity with dev fallback
-import '../../../services/auth_service.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
   final Product? product;
@@ -381,12 +381,14 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     try {
       debugPrint('[ProductDetail] Add to cart button clicked');
 
-      final authService = AuthService();
-      final userId = await authService.getStoredUserId();
+      // Check auth status via Riverpod provider (Action-Based Auth)
+      final authState = ref.read(authProvider);
 
-      debugPrint('[ProductDetail] Retrieved userId: $userId');
+      debugPrint(
+        '[ProductDetail] Auth state: isLoggedIn=${authState.isLoggedIn}, userId=${authState.userId}',
+      );
 
-      if (userId == null) {
+      if (!authState.isLoggedIn || authState.userId == null) {
         debugPrint('[ProductDetail] ❌ User not logged in');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -396,18 +398,29 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               duration: Duration(seconds: 3),
             ),
           );
+
+          final loggedIn = await Navigator.of(
+            context,
+          ).pushNamed<bool>('/login');
+          if (loggedIn == true) {
+            // Refresh auth state after returning from login
+            await ref.read(authProvider.notifier).refreshAuthState();
+            await _handleAddToCart();
+          }
         }
         return;
       }
 
       debugPrint('[ProductDetail] ✅ User authenticated. Adding to cart...');
 
-      // Add to cart
+      // Add to cart with the selected quantity
       await ref
           .read(cartProvider.notifier)
-          .addItem(widget.product!.id.toString());
+          .addItem(widget.product!.id.toString(), _quantity);
 
-      debugPrint('[ProductDetail] ✅ Item added to cart successfully');
+      debugPrint(
+        '[ProductDetail] ✅ Item added to cart successfully (qty=$_quantity)',
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

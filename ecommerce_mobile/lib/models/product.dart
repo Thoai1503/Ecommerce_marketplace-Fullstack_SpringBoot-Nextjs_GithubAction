@@ -60,7 +60,7 @@ class Product {
       price: _parseDouble(json['price']),
       categoryName: json['category_name'],
       productName: json['product_name'] ?? 'Unknown Product',
-      stockQuantity: _extractStockQuantity(json),
+      stockQuantity: _parseStockQuantity(json),
       soldCount: json['sold_count'],
       rating: _parseDouble(json['rating']),
       reviewCount: json['review_count'],
@@ -79,12 +79,11 @@ class Product {
     );
   }
 
-  /// Extract stock quantity from multiple possible backend keys
-  static int? _extractStockQuantity(Map<String, dynamic> json) {
+  /// Parse stock quantity from the backend response using explicit inventory fields.
+  static int? _parseStockQuantity(Map<String, dynamic> json) {
     final candidates = [
       'stock_quantity',
       'stock',
-      'quantity',
       'available_stock',
       'availableQuantity',
       'available_items',
@@ -101,7 +100,7 @@ class Product {
 
     // Check nested `data` envelope
     if (json.containsKey('data') && json['data'] is Map<String, dynamic>) {
-      return _extractStockQuantity(json['data'] as Map<String, dynamic>);
+      return _parseStockQuantity(json['data'] as Map<String, dynamic>);
     }
 
     return null;

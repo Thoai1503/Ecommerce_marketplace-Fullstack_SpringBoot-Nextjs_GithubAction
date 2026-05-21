@@ -13,6 +13,11 @@ class CategoryService {
     );
   }
 
+  Future<List<Category>> fetchTopLevel() async {
+    final allCategories = await fetchAll();
+    return allCategories.where((cat) => cat.level == 0).toList();
+  }
+
   Future<Category> getById(int id) {
     return api.get<Category>(
       '/api/categories/$id',

@@ -28,7 +28,7 @@ class HomeData extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final fetchedCategories = await _categoryService.fetchAll();
+      final fetchedCategories = await _categoryService.fetchTopLevel();
       final fetchedProducts = await _productService.fetchAll();
       categories = fetchedCategories;
       products = fetchedProducts;

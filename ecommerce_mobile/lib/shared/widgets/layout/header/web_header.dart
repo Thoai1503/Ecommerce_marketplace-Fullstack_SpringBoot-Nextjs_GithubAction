@@ -1,8 +1,34 @@
 import 'package:flutter/material.dart';
 import '../../../../services/auth_service.dart';
+import '../../../../features/auth/pages/login_page.dart' as auth_pages;
 
 class WebHeader extends StatelessWidget {
   const WebHeader({super.key});
+
+  Future<void> _openProtectedRoute(BuildContext context, String route) async {
+    final loggedIn = AuthService().isLoggedInSync;
+    if (loggedIn) {
+      Navigator.pushNamed(context, route);
+      return;
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng đăng nhập'),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+    }
+
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const auth_pages.LoginPage()),
+    );
+
+    if (result == true && context.mounted) {
+      Navigator.pushNamed(context, route);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,23 +90,17 @@ class WebHeader extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/cart');
-                },
+                onPressed: () => _openProtectedRoute(context, '/cart'),
                 icon: const Icon(Icons.shopping_cart_outlined),
                 tooltip: 'Cart',
               ),
               IconButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/vouchers');
-                },
+                onPressed: () => _openProtectedRoute(context, '/vouchers'),
                 icon: const Icon(Icons.notifications_outlined),
                 tooltip: 'Notifications',
               ),
               IconButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/profile');
-                },
+                onPressed: () => _openProtectedRoute(context, '/profile'),
                 icon: const Icon(Icons.person_outline),
                 tooltip: 'Profile',
               ),

@@ -16,10 +16,10 @@ class CategoryGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Take first 8 categories plus "All"
+    // Only display top-level parent categories and add an "All" option.
     final displayCategories = [
       Category(id: -1, categoryName: 'All'),
-      ...categories.take(10),
+      ...categories.where((cat) => cat.level == 0).take(10),
     ];
 
     return Column(
