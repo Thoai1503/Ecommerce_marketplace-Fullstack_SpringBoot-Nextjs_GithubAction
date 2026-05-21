@@ -542,52 +542,58 @@ export default function ReturnRequestsPage() {
 
   const filteredRequests = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-    return requests.filter((request) => {
-      const matchesStatus =
-        statusFilter === "ALL" || request.status === statusFilter;
-      if (!matchesStatus) return false;
-      if (shopFilter && String(request.shopId) !== shopFilter.trim())
-        return false;
-      if (
-        customerFilter &&
-        String(request.customerId) !== customerFilter.trim()
-      )
-        return false;
+    return requests
+      .filter((request) => {
+        const matchesStatus =
+          statusFilter === "ALL" || request.status === statusFilter;
+        if (!matchesStatus) return false;
+        if (shopFilter && String(request.shopId) !== shopFilter.trim())
+          return false;
+        if (
+          customerFilter &&
+          String(request.customerId) !== customerFilter.trim()
+        )
+          return false;
 
-      const createdDate = request.createdAt
-        ? request.createdAt.slice(0, 10)
-        : "";
-      if (startDate && createdDate < startDate) return false;
-      if (endDate && createdDate > endDate) return false;
+        const createdDate = request.createdAt
+          ? request.createdAt.slice(0, 10)
+          : "";
+        if (startDate && createdDate < startDate) return false;
+        if (endDate && createdDate > endDate) return false;
 
-      if (!keyword) return true;
+        if (!keyword) return true;
 
-      return [
-        formatRequestCode(request.id),
-        getOrderLabel(request),
-        getShipmentLabel(request),
-        getCustomerLabel(request),
-        getShopLabel(request),
-        String(request.orderId),
-        String(request.shopId),
-        String(request.customerId),
-        String(request.orderShipmentId || ""),
-        request.customerEmail || "",
-        request.customerPhone || "",
-        request.carrierName || "",
-        request.shippingStatus || "",
-        request.reason || "",
-        request.status,
-        ...(request.items || []).flatMap((item) => [
-          getItemLabel(item),
-          item.variantName || "",
-          String(item.orderItemId),
-        ]),
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(keyword);
-    });
+        return [
+          formatRequestCode(request.id),
+          getOrderLabel(request),
+          getShipmentLabel(request),
+          getCustomerLabel(request),
+          getShopLabel(request),
+          String(request.orderId),
+          String(request.shopId),
+          String(request.customerId),
+          String(request.orderShipmentId || ""),
+          request.customerEmail || "",
+          request.customerPhone || "",
+          request.carrierName || "",
+          request.shippingStatus || "",
+          request.reason || "",
+          request.status,
+          ...(request.items || []).flatMap((item) => [
+            getItemLabel(item),
+            item.variantName || "",
+            String(item.orderItemId),
+          ]),
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(keyword);
+      })
+      .sort((a, b) => {
+        const left = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const right = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return right - left;
+      });
   }, [
     requests,
     search,

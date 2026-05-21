@@ -174,52 +174,162 @@ public class RefundCalculationService {
     public double calculateSuggestedRefundAmountByReturnRequestId(ReturnRequest currentRequest) {
 			
 			RefundCalculationResultDTO result = calculate(currentRequest);
-            var shipments= 			result.getShipments();
-			if(result == null) {
-			throw new IllegalStateException("Cannot calculate refund amount for return request " + currentRequest.getId());
-			}
-			//Finding voucher redemption list by order id 
+            var shipments = result.getShipments();
+			
 			var voucherRedemptions = voucherRedemptionRepository.getByOrderId(currentRequest.getOrderId());
 			List<Voucher> vouchers = voucherRepository.getBySetOfIds(voucherRedemptions.stream().map(vr -> vr.getVoucherId()).toList());
+			if (vouchers == null) {
+				vouchers = List.of();
+			}
 	    	Map<Long, Voucher> voucherMap = mapVouchersById(vouchers);
 			
-			Map<Long, Double> shipmentTotalAfterRemoveReturnedItem = calculateTotalAfterRemoveReturnedItemByShipment(shipments);
+			//Map<Long, Double> shipmentTotalAfterRemoveReturnedItem = calculateTotalAfterRemoveReturnedItemByShipment(shipments);
 			double totalAfterRemoveReturnedItem = totalAllShipmentAfterRemoveReturnedItem(shipments);
-			double suggestedRefundAmount = money(Math.max(0.0, totalAfterRemoveReturnedItem - result.getAlreadyRefundedAmount()));
-			
+			double newPaidResult = money(Math.max(0.0, totalAfterRemoveReturnedItem - result.getAlreadyRefundedAmount()));
 			Voucher platformVoucher = getPlatformVoucher(vouchers);
-			double discountOrderAmount = 0.0;
-			if (isEligibleForPlatformVoucher(totalAfterRemoveReturnedItem, platformVoucher)) {
-				
-				if ("PERCENT".equals(platformVoucher.getDiscountType()) && platformVoucher.getDiscountPercent() != null) {
-					discountOrderAmount = money(totalAfterRemoveReturnedItem * platformVoucher.getDiscountPercent().doubleValue() / 100.0);
-					if (platformVoucher.getMaxDiscountAmount() != null) {
-						discountOrderAmount = Math.min(discountOrderAmount, platformVoucher.getMaxDiscountAmount().doubleValue());
-					}
-				} else if ("AMOUNT".equals(platformVoucher.getDiscountType()) && platformVoucher.getDiscountAmount() != null) {
-					discountOrderAmount = platformVoucher.getDiscountAmount().doubleValue();
-				}
-				suggestedRefundAmount = money(suggestedRefundAmount - discountOrderAmount);
-			}
+	        var isEligibleForPlatformVoucher = isEligibleForPlatformVoucher(totalAfterRemoveReturnedItem, platformVoucher);
+		   
+		    newPaidResult = applyAllVoucherStrategy(shipments, voucherMap);
+		          				
 			
-	    	
-			
-		return 0.0;
+			var isHaveNotEligibleShopVoucher = shipments.stream().anyMatch(shipment -> {
+			         return	! shipment.isEligibleVoucherForRefund();
+				 
+			});
+ 			var returnAmount = 0.0;
+			if (isEligibleForPlatformVoucher && !isHaveNotEligibleShopVoucher) {
+				returnAmount = money(result.getItems().stream()
+						.filter(item -> item.getCurrentReturnQuantity() > 0)
+						.mapToDouble(item -> item.getCurrentReturnQuantity()*item.getPrice()).sum());
+			} else if (!isEligibleForPlatformVoucher && isHaveNotEligibleShopVoucher) {
+				returnAmount =
+						money(result.getItems().stream()
+								.filter(item -> item.getCurrentReturnQuantity() > 0)
+								.mapToDouble(item -> item.getCurrentReturnQuantity()*item.getPrice()).sum());
+			} else if (!isEligibleForPlatformVoucher && !isHaveNotEligibleShopVoucher) {
+				returnAmount =  (money(result.getCurrentPaidAmount() - newPaidResult));
+			} else if (isEligibleForPlatformVoucher && isHaveNotEligibleShopVoucher) {
+				returnAmount =  (money(result.getCurrentPaidAmount() - newPaidResult));
+			} else {
+			    returnAmount = money(result.getItems().stream()
+						.filter(item -> item.getCurrentReturnQuantity() > 0)
+						.mapToDouble(item -> item.getCurrentReturnQuantity()*item.getPrice()).sum());
+			}				
+			return returnAmount;
 	}
+     
+    
+    
+    private double calculateRefundAmountViaEligibleVoucherStrategy(RefundCalculationResultDTO result, Map<Long, Voucher> voucherMap) {
+    			var shipments = result.getShipments();
+    			Map<Long, Double> shipmentTotalAfterRemoveReturnedItem = calculateTotalAfterRemoveReturnedItemByShipment(shipments);
+    			double totalAfterRemoveReturnedItem = totalAllShipmentAfterRemoveReturnedItem(shipments);
+    			double newPaidResult = money(Math.max(0.0, totalAfterRemoveReturnedItem - result.getAlreadyRefundedAmount()));
+    			Voucher platformVoucher = getPlatformVoucher(voucherMap.values().stream().toList());
+    			if (isEligibleForPlatformVoucher(totalAfterRemoveReturnedItem, platformVoucher)) {
+				
+					newPaidResult = applyAllVoucherStrategy(shipments, voucherMap);
+			          				
+				}
+    			return newPaidResult;
+    			
+    }
+    
+    
+    
+    private double applyAllVoucherStrategy(List<RefundCalculationShipmentDTO> shipments, Map<Long, Voucher> voucherMap) {
+				double totalAfterShopVoucher = applyShopVoucherStrategy(shipments, voucherMap);
+				Voucher platformVoucher = getPlatformVoucher(voucherMap.values().stream().toList());
+				return applyPlatformVoucherStrategy(totalAfterShopVoucher, platformVoucher);
+	}
+    
+    
+    private double applyShopVoucherStrategy(List<RefundCalculationShipmentDTO> shipments, Map<Long, Voucher> voucherMap) {
+    			double totalAfterShopVoucher = 0.0;
+    			for (RefundCalculationShipmentDTO shipment : shipments) {
+    				double shipmentTotal = shipment.getItems().stream()
+							.mapToDouble(item -> item.getPrice() * item.getEffectiveQuantity())
+							.sum();
+    		        if(shipment.getVoucherIds().size()==0) {
+    		        	shipment.setEligibleVoucherForRefund(true);
+    		        }
+    				
+    				
+					for (Long voucherId : shipment.getVoucherIds()) {
+						Voucher voucher = voucherMap.get(voucherId) != null ? voucherMap.get(voucherId) : null;
+						boolean  isEligible = isEligibleForShopVoucher(shipmentTotal, voucher);
+						shipment.setEligibleVoucherForRefund(isEligible);
+						if (isEligible) {
+							if ("PERCENT".equals(voucher.getDiscountType()) && voucher.getDiscountPercent() != null) {
+								double discountAmount = money(shipmentTotal * voucher.getDiscountPercent().doubleValue() / 100.0);
+								if (voucher.getMaxDiscountAmount() != null) {
+									discountAmount = Math.min(discountAmount, voucher.getMaxDiscountAmount().doubleValue());
+								}
+								shipmentTotal = money(Math.max(0.0, shipmentTotal - discountAmount));
+							} else if ("FIXED".equals(voucher.getDiscountType()) && voucher.getDiscountAmount() != null) {
+								shipmentTotal = money(Math.max(0.0, shipmentTotal - voucher.getDiscountAmount().doubleValue()));
+							}
+						}
+						
+					}
+					totalAfterShopVoucher = money(totalAfterShopVoucher + Math.max(0.0, shipmentTotal));									
+    									
+    	        }
+    			return totalAfterShopVoucher;
+    }
+    
+    
+
+    private double applyPlatformVoucherStrategy(double totalAfterRemoveReturnedItem, Voucher platformVoucher) {
+    			if (platformVoucher == null) {
+    			   return totalAfterRemoveReturnedItem;
+    			}
+    			
+    			double discountOrderAmount = 0.0;
+    			if (isEligibleForPlatformVoucher(totalAfterRemoveReturnedItem, platformVoucher)) {
+					if ("PERCENT".equals(platformVoucher.getDiscountType()) && platformVoucher.getDiscountPercent() != null) {
+						discountOrderAmount = money(totalAfterRemoveReturnedItem * platformVoucher.getDiscountPercent().doubleValue() / 100.0);
+						if (platformVoucher.getMaxDiscountAmount() != null) {
+							discountOrderAmount = Math.min(discountOrderAmount, platformVoucher.getMaxDiscountAmount().doubleValue());
+						}
+					} else if ("FIXED".equals(platformVoucher.getDiscountType()) && platformVoucher.getDiscountAmount() != null) {
+						discountOrderAmount = platformVoucher.getDiscountAmount().doubleValue();
+					}
+				}
+    			
+    			return money(Math.max(0.0, totalAfterRemoveReturnedItem - discountOrderAmount));
+    }
+    
+    
+    
+    
+    private boolean isEligibleForShopVoucher(Double totalShipmentAfterRemoveReturnedItem, Voucher shopVoucher) {
+		
+    	if (shopVoucher == null) {
+			return true ;
+		}
+		if (shopVoucher.getMinOrderValue() != null && totalShipmentAfterRemoveReturnedItem < shopVoucher.getMinOrderValue().doubleValue()) {
+			return false;
+		}
+		if (shopVoucher.getMaxOrderValue() != null && totalShipmentAfterRemoveReturnedItem > shopVoucher.getMaxOrderValue().doubleValue()) {
+		    return false;
+		}
+		return true;
+		
+    }
+    
+    
     
     private boolean isEligibleForPlatformVoucher(Double totalAfterRemoveReturnedItem, Voucher platformVoucher) {
 		if (platformVoucher == null) {
 			return false;
 		}
-		
 		if (platformVoucher.getMinOrderValue() != null && totalAfterRemoveReturnedItem < platformVoucher.getMinOrderValue().doubleValue()) {
 			return false;
 		}
-		
 		if (platformVoucher.getMaxOrderValue() != null && totalAfterRemoveReturnedItem > platformVoucher.getMaxOrderValue().doubleValue()) {
 			return false;
 		}
-		
 		return true;
     	
     }
@@ -232,13 +342,7 @@ public class RefundCalculationService {
 		return vouchers.stream().filter(voucher -> voucher.getIssuerType().equals("SHOP") && voucher.getIssuerId() != null && voucher.getIssuerId().equals(shopId)).findFirst().orElse(null);
 	}
     
-    
-    
-    
-    
-    // tính toán lấy thông tin voucher áp dụng cho đơn hàng, sau đó tính toán lại tổng tiền của từng shipment sau khi đã loại bỏ số lượng hàng đã trả về, cuối cùng tính tổng tiền của tất cả các shipment sau khi đã loại bỏ số lượng hàng đã trả về để đưa ra số tiền đề xuất hoàn trả.
 
-    	
     
     private Map<Long, Double> calculateTotalAfterRemoveReturnedItemByShipment(List<RefundCalculationShipmentDTO> shipments) {
     			Map<Long, Double> totalAfterRemoveReturnedItemByShipment = new HashMap<>();
@@ -276,13 +380,6 @@ public class RefundCalculationService {
     
     
     private double totalShipmentAfterRemoveReturnedItem(RefundCalculationShipmentDTO shipment) {
-//    			double shipmentTotal = safeMoney(shipment.getItems().stream()
-//    										.mapToDouble(item -> item.getPrice() * item.getEffectiveQuantity() +item.getCurrentReturnQuantity() * item.getPrice())
-//    										.sum());
-//    			double returnedAmount = shipment.getItems().stream()
-//    					.filter(item -> item.getShipmentId() == shipment.getId() && item.getCurrentReturnQuantity() > 0)
-//						.mapToDouble(item -> item.getPrice()* item.getEffectiveQuantity())
-//						.sum();
     			return money(safeMoney(shipment.getItems().stream().mapToDouble(item -> item.getPrice() * item.getEffectiveQuantity()).sum()
     					));
     			
