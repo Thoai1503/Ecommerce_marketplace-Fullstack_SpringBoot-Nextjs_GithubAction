@@ -1,6 +1,7 @@
 package logistic_service.com.repositories;
 
 import logistic_service.com.entities.Shipment;
+import logistic_service.com.enums.ShipmentDirection;
 import logistic_service.com.enums.ShipmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -25,7 +26,10 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long>, JpaSp
      * Phương thức này thường được dùng bởi khách hàng để theo dõi hàng.
      */
     Optional<Shipment> findByTrackingCode(String trackingCode);
-
+    
+    
+    
+    Optional<Shipment> findFirstByOrderShipmentRefIdAndDirection(Long orderShipmentRefId, ShipmentDirection direction);
     /**
      * Lấy tất cả vận đơn của một order từ ecommerce.
      * Hỗ trợ multi-tracking (1 order -> N shipments).

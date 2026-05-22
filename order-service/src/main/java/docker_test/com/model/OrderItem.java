@@ -63,7 +63,12 @@ public class OrderItem {
 	
 	@Column(name = "total_price", nullable = false)
 	private Double totalPrice;
-
+    
+	@Column(name = "return_request_quantity", nullable = false)
+	private Integer returnRequestQuantity;
+	
+	
+	
 	@Column(name = "shop_voucher_discount_amount", nullable = false)
 	private Double shopVoucherDiscountAmount;
 

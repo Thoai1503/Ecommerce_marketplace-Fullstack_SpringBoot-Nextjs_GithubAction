@@ -254,13 +254,15 @@ function ReturnRequestDetailModal({
               >
                 Reject
               </button>
-              <button
-                onClick={() => onStatusAction(request, "REFUNDED")}
-                disabled={actionLoading || request.status === "REFUNDED"}
-                className="px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 border-0"
-              >
-                Refund
-              </button>
+              {request.status === "INSPECTION_PASSED" && (
+                <button
+                  onClick={() => onStatusAction(request, "REFUNDED")}
+                  disabled={actionLoading}
+                  className="px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 border-0"
+                >
+                  Refund
+                </button>
+              )}
             </div>
           </div>
           <button
@@ -582,52 +584,58 @@ export default function ReturnRequestsPage() {
 
   const filteredRequests = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-    return requests.filter((request) => {
-      const matchesStatus =
-        statusFilter === "ALL" || request.status === statusFilter;
-      if (!matchesStatus) return false;
-      if (shopFilter && String(request.shopId) !== shopFilter.trim())
-        return false;
-      if (
-        customerFilter &&
-        String(request.customerId) !== customerFilter.trim()
-      )
-        return false;
+    return requests
+      .filter((request) => {
+        const matchesStatus =
+          statusFilter === "ALL" || request.status === statusFilter;
+        if (!matchesStatus) return false;
+        if (shopFilter && String(request.shopId) !== shopFilter.trim())
+          return false;
+        if (
+          customerFilter &&
+          String(request.customerId) !== customerFilter.trim()
+        )
+          return false;
 
-      const createdDate = request.createdAt
-        ? request.createdAt.slice(0, 10)
-        : "";
-      if (startDate && createdDate < startDate) return false;
-      if (endDate && createdDate > endDate) return false;
+        const createdDate = request.createdAt
+          ? request.createdAt.slice(0, 10)
+          : "";
+        if (startDate && createdDate < startDate) return false;
+        if (endDate && createdDate > endDate) return false;
 
-      if (!keyword) return true;
+        if (!keyword) return true;
 
-      return [
-        formatRequestCode(request.id),
-        getOrderLabel(request),
-        getShipmentLabel(request),
-        getCustomerLabel(request),
-        getShopLabel(request),
-        String(request.orderId),
-        String(request.shopId),
-        String(request.customerId),
-        String(request.orderShipmentId || ""),
-        request.customerEmail || "",
-        request.customerPhone || "",
-        request.carrierName || "",
-        request.shippingStatus || "",
-        request.reason || "",
-        request.status,
-        ...(request.items || []).flatMap((item) => [
-          getItemLabel(item),
-          item.variantName || "",
-          String(item.orderItemId),
-        ]),
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(keyword);
-    });
+        return [
+          formatRequestCode(request.id),
+          getOrderLabel(request),
+          getShipmentLabel(request),
+          getCustomerLabel(request),
+          getShopLabel(request),
+          String(request.orderId),
+          String(request.shopId),
+          String(request.customerId),
+          String(request.orderShipmentId || ""),
+          request.customerEmail || "",
+          request.customerPhone || "",
+          request.carrierName || "",
+          request.shippingStatus || "",
+          request.reason || "",
+          request.status,
+          ...(request.items || []).flatMap((item) => [
+            getItemLabel(item),
+            item.variantName || "",
+            String(item.orderItemId),
+          ]),
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(keyword);
+      })
+      .sort((a, b) => {
+        const left = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const right = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return right - left;
+      });
   }, [
     requests,
     search,
@@ -1124,18 +1132,17 @@ export default function ReturnRequestsPage() {
                             >
                               Reject
                             </button>
-                            <button
-                              onClick={() =>
-                                handleStatusAction(request, "REFUNDED")
-                              }
-                              disabled={
-                                actionLoadingId === request.id ||
-                                request.status === "REFUNDED"
-                              }
-                              className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 border-0 disabled:opacity-50"
-                            >
-                              Refund
-                            </button>
+                            {request.status === "INSPECTION_PASSED" && (
+                              <button
+                                onClick={() =>
+                                  handleStatusAction(request, "REFUNDED")
+                                }
+                                disabled={actionLoadingId === request.id}
+                                className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 border-0 disabled:opacity-50"
+                              >
+                                Refund
+                              </button>
+                            )}
                             <button
                               onClick={() => setSelectedRequest(request)}
                               className="inline-flex items-center gap-2 px-3 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 border-0"

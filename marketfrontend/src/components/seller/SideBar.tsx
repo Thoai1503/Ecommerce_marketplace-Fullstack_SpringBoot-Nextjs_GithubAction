@@ -60,7 +60,7 @@ export default function Sidebar() {
           },
           {
             label: "Return/Refund Request or Cancellation Request",
-            href: "/seller/orders/returns",
+            href: "/seller/return-refund-cancel",
           },
           { label: "Shipping Settings", href: "/seller/orders/shipping" },
         ],

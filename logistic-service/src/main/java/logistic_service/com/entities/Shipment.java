@@ -1,5 +1,6 @@
 package logistic_service.com.entities;
 
+import logistic_service.com.enums.ShipmentDirection;
 //package com.logistics.domain.entity;
 //
 //import com.logistics.domain.base.BaseEntity;
@@ -49,13 +50,31 @@ public class Shipment  {
     /** Mã tracking hiển thị cho khách hàng (VD: LOG20240001). */
     @Column(name = "tracking_code", nullable = false, length = 100)
     private String trackingCode;
-
+    
+    
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "shipment_direction", nullable = false, length = 20)
+    private ShipmentDirection direction ;
+    
     /**
      * order_id bên ecommerce service.
      * Chỉ lưu để đối chiếu / callback — KHÔNG phải FK, không join ecommerce DB.
      */
-    @Column(name = "order_shipment_ref_id", nullable = false, length = 100)
+    @Column(name = "order_shipment_ref_id", length = 100)
     private Long orderShipmentRefId;
+
+    @Column(name = "business_ref_type", nullable = false, length = 30)
+    private String businessRefType;
+
+    @Column(name = "return_request_ref_id")
+    private Long returnRequestRefId;
+
+    @Column(name = "return_shipment_ref_id")
+    private Long returnShipmentRefId;
+
+    @Column(name = "original_shipment_id")
+    private Long originalShipmentId;
 
     /**
      * shop_id bên ecommerce service.
@@ -87,6 +106,9 @@ public class Shipment  {
     
     @Column(name = "recipient_id", nullable = false)
     private Long recipientId;
+
+    @Column(name = "pickup_contact_id")
+    private Long pickupContactId;
 
     
 

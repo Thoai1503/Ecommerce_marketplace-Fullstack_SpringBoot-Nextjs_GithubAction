@@ -40,8 +40,7 @@ const getVisibleShopVouchers = (vouchers: any[], shopId: unknown) =>
       );
     })
     .sort(
-      (a: any, b: any) =>
-        Number(b.priority ?? 0) - Number(a.priority ?? 0),
+      (a: any, b: any) => Number(b.priority ?? 0) - Number(a.priority ?? 0),
     );
 
 const getVoucherRemainingCount = (voucher: any) => {
@@ -99,7 +98,7 @@ export default function ShopPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
-
+  console.log("Voucher :", shopVouchers);
   // ===== FETCH =====
   useEffect(() => {
     if (!shopId) return;
@@ -181,9 +180,7 @@ export default function ShopPage() {
         if (!res.ok) return;
 
         const data = await res.json();
-        const followers = Number(
-          data?.followers ?? data?.follower_count ?? 0,
-        );
+        const followers = Number(data?.followers ?? data?.follower_count ?? 0);
 
         setFollowerCount(Number.isFinite(followers) ? followers : 0);
         setIsFollowing(Boolean(data?.isFollowing ?? data?.is_following));
@@ -320,7 +317,8 @@ export default function ShopPage() {
     return (
       <div className="container my-5">
         <div className="alert alert-info rounded-4 border-0 shadow-sm">
-          Sản phẩm của chính shop bạn sẽ không hiển thị ở khu vực mua hàng khi đang đăng nhập bằng tài khoản này.
+          Sản phẩm của chính shop bạn sẽ không hiển thị ở khu vực mua hàng khi
+          đang đăng nhập bằng tài khoản này.
         </div>
       </div>
     );
@@ -393,9 +391,7 @@ export default function ShopPage() {
 
               <div className="shop-stat">
                 <div className="text-white-50 small">Followers</div>
-                <div className="fw-bold text-white fs-5">
-                  {followerCount}
-                </div>
+                <div className="fw-bold text-white fs-5">{followerCount}</div>
               </div>
 
               <div className="shop-stat">
@@ -477,7 +473,9 @@ export default function ShopPage() {
                         voucherId={Number(voucher.id)}
                         voucherCode={voucher.code}
                         voucherStatus={voucher.status}
-                        claimStartAt={voucher.claimStartAt ?? voucher.claim_start_at}
+                        claimStartAt={
+                          voucher.claimStartAt ?? voucher.claim_start_at
+                        }
                         claimEndAt={voucher.claimEndAt ?? voucher.claim_end_at}
                         totalQuota={Number(
                           voucher.totalQuota ?? voucher.total_quota ?? 0,
@@ -496,7 +494,9 @@ export default function ShopPage() {
                           });
                           const data = await res.json();
                           const vouchers = Array.isArray(data) ? data : [];
-                          setShopVouchers(getVisibleShopVouchers(vouchers, shopId));
+                          setShopVouchers(
+                            getVisibleShopVouchers(vouchers, shopId),
+                          );
                         }}
                       />
                     </div>
@@ -527,7 +527,10 @@ export default function ShopPage() {
           Find {filteredProducts.length} Products
         </span>
         <div className="d-flex gap-2">
-          <select className="form-select form-select-sm border-0 shadow-sm" style={{width: 'auto'}}>
+          <select
+            className="form-select form-select-sm border-0 shadow-sm"
+            style={{ width: "auto" }}
+          >
             <option>Sort by: Newest</option>
             <option>Price: Low to High</option>
             <option>Price: High to Low</option>
@@ -645,7 +648,10 @@ export default function ShopPage() {
           gap: 6px;
           min-height: 26px;
           padding: 0 12px;
-          transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+          transition:
+            background 0.18s ease,
+            color 0.18s ease,
+            border-color 0.18s ease;
           white-space: nowrap;
         }
 
@@ -683,7 +689,10 @@ export default function ShopPage() {
           display: inline-flex;
           height: 30px;
           justify-content: center;
-          transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+          transition:
+            background 0.18s ease,
+            border-color 0.18s ease,
+            color 0.18s ease;
           width: 30px;
         }
 

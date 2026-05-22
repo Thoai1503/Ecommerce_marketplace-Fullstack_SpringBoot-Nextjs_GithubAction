@@ -34,6 +34,33 @@ type ReturnRequestView = {
   refundedAmount?: number;
   items?: ReturnRequestItemView[];
   attachments?: AttachmentView[];
+  returnShipment?: {
+    id?: number;
+    trackingCode?: string;
+    status?: string;
+    courierName?: string;
+    notes?: string;
+    failedReason?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  } | null;
+  returnShipmentHistory?: Array<{
+    id?: number;
+    status?: string;
+    description?: string;
+    location?: string;
+    eventCode?: string;
+    source?: string;
+    timestamp?: string;
+    createdAt?: string;
+  }>;
+  timeline?: Array<{
+    id?: number;
+    eventType?: string;
+    eventDetails?: string;
+    actorType?: string;
+    timestamp?: string;
+  }>;
 };
 
 type DisplayReturnItem = {
@@ -46,6 +73,13 @@ type DisplayReturnItem = {
 
 const formatMoney = (amount?: number) =>
   `${Number(amount || 0).toLocaleString("vi-VN")}d`;
+
+const formatDateTime = (value?: string) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("vi-VN", { hour12: false });
+};
 
 const getAttachmentUrl = (attachment: AttachmentView) =>
   attachment.fileUrl || attachment.file_url || attachment.url || "";
@@ -107,13 +141,22 @@ const ReturnAttachmentModal = ({
     queryKey: ["RETURN_REQUEST_DETAIL_QUERY", safeReturnRequestId, shipmentId],
     queryFn: async () => {
       if (safeReturnRequestId > 0) {
-        const response = await fetch(
+        const detailResponse = await fetch(
+          `${API_URL}/api/refunds/${safeReturnRequestId}/detail`,
+          { credentials: "include" },
+        );
+
+        if (detailResponse.ok) {
+          return detailResponse.json();
+        }
+
+        const fallbackResponse = await fetch(
           `${API_URL}/api/refunds/${safeReturnRequestId}`,
           { credentials: "include" },
         );
 
-        if (response.ok) {
-          return response.json();
+        if (fallbackResponse.ok) {
+          return fallbackResponse.json();
         }
       }
 
@@ -151,8 +194,12 @@ const ReturnAttachmentModal = ({
   });
 
   const requestItems = returnRequest?.items || [];
-  const visibleAttachments =
-    returnRequest?.attachments?.length ? returnRequest.attachments : attachments;
+  const returnShipment = returnRequest?.returnShipment || null;
+  const returnShipmentHistory = returnRequest?.returnShipmentHistory || [];
+  const returnRequestTimeline = returnRequest?.timeline || [];
+  const visibleAttachments = returnRequest?.attachments?.length
+    ? returnRequest.attachments
+    : attachments;
   const fallbackReturnItems = useMemo(
     () =>
       (shipment?.items || []).filter(
@@ -343,14 +390,21 @@ const ReturnAttachmentModal = ({
               <div style={styles.summaryBox}>
                 <div className="d-flex flex-wrap justify-content-between gap-3">
                   <div>
-                    <p className="mb-1" style={{ fontSize: 12, fontWeight: 800 }}>
-                      Kien hang: {shipment?.tracking_number || shipment?.id || "-"}
+                    <p
+                      className="mb-1"
+                      style={{ fontSize: 12, fontWeight: 800 }}
+                    >
+                      Kien hang:{" "}
+                      {shipment?.tracking_number || shipment?.id || "-"}
                     </p>
                     <p className="mb-0 text-muted" style={{ fontSize: 12 }}>
                       Trang thai:{" "}
                       {returnRequest?.status ||
                         shipment?.returnStatusSummary ||
                         "Dang cap nhat"}
+                    </p>
+                    <p className="mb-0 text-muted" style={{ fontSize: 12 }}>
+                      Ma van don tra hang: {returnShipment?.trackingCode || "-"}
                     </p>
                   </div>
                   <div className="text-end">
@@ -359,12 +413,139 @@ const ReturnAttachmentModal = ({
                     </p>
                     <p
                       className="mb-0"
-                      style={{ fontSize: 16, fontWeight: 800, color: "#dc2626" }}
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: "#dc2626",
+                      }}
                     >
                       {formatMoney(displayRequestedAmount)}
                     </p>
                   </div>
                 </div>
+              </div>
+
+              <div className="mb-4">
+                <h4 style={styles.sectionTitle}>
+                  Thong tin van chuyen tra hang
+                </h4>
+                {!returnShipment && (
+                  <div className="text-muted" style={{ fontSize: 12 }}>
+                    Chua co thong tin return_shipment cho yeu cau nay.
+                  </div>
+                )}
+                {!!returnShipment && (
+                  <>
+                    <div
+                      style={{
+                        border: "1px solid #e2e8f0",
+                        borderRadius: 10,
+                        padding: 12,
+                        background: "#f8fafc",
+                      }}
+                    >
+                      <div className="d-flex flex-wrap gap-3 justify-content-between mb-2">
+                        <p className="mb-0" style={{ fontSize: 12 }}>
+                          ID shipment:{" "}
+                          <strong>{returnShipment.id || "-"}</strong>
+                        </p>
+                        <p className="mb-0" style={{ fontSize: 12 }}>
+                          Trang thai:{" "}
+                          <strong>{returnShipment.status || "-"}</strong>
+                        </p>
+                        <p className="mb-0" style={{ fontSize: 12 }}>
+                          Don vi van chuyen:{" "}
+                          <strong>{returnShipment.courierName || "-"}</strong>
+                        </p>
+                      </div>
+                      <p className="mb-1" style={{ fontSize: 12 }}>
+                        Cap nhat luc: {formatDateTime(returnShipment.updatedAt)}
+                      </p>
+                      {!!returnShipment.notes && (
+                        <p className="mb-1" style={{ fontSize: 12 }}>
+                          Ghi chu: {returnShipment.notes}
+                        </p>
+                      )}
+                      {!!returnShipment.failedReason && (
+                        <p
+                          className="mb-0 text-danger"
+                          style={{ fontSize: 12 }}
+                        >
+                          Ly do that bai: {returnShipment.failedReason}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="mt-3">
+                      <h5
+                        className="mb-2"
+                        style={{ fontSize: 13, fontWeight: 700 }}
+                      >
+                        Lich su return_shipment
+                      </h5>
+                      {returnShipmentHistory.length === 0 && (
+                        <div className="text-muted" style={{ fontSize: 12 }}>
+                          Chua co return_shipment_history.
+                        </div>
+                      )}
+                      {returnShipmentHistory.length > 0 && (
+                        <ul className="mb-0 ps-3 d-flex flex-column gap-1">
+                          {returnShipmentHistory.map((entry, index) => (
+                            <li
+                              key={`${entry.id || index}`}
+                              style={{ fontSize: 12 }}
+                            >
+                              <strong>{entry.status || "UNKNOWN"}</strong> -{" "}
+                              {entry.description || "Khong co mo ta"}
+                              {entry.location ? ` (${entry.location})` : ""}
+                              <span className="text-muted">
+                                {" "}
+                                -{" "}
+                                {formatDateTime(
+                                  entry.timestamp || entry.createdAt,
+                                )}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="mt-3">
+                      <h5
+                        className="mb-2"
+                        style={{ fontSize: 13, fontWeight: 700 }}
+                      >
+                        Timeline yeu cau tra hang
+                      </h5>
+                      {returnRequestTimeline.length === 0 && (
+                        <div className="text-muted" style={{ fontSize: 12 }}>
+                          Chua co return_request_timeline.
+                        </div>
+                      )}
+                      {returnRequestTimeline.length > 0 && (
+                        <ul className="mb-0 ps-3 d-flex flex-column gap-1">
+                          {returnRequestTimeline.map((event, index) => (
+                            <li
+                              key={`${event.id || index}`}
+                              style={{ fontSize: 12 }}
+                            >
+                              <strong>{event.eventType || "EVENT"}</strong>
+                              {event.actorType ? ` (${event.actorType})` : ""}
+                              {event.eventDetails
+                                ? ` - ${event.eventDetails}`
+                                : ""}
+                              <span className="text-muted">
+                                {" "}
+                                - {formatDateTime(event.timestamp)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="mb-4">
@@ -376,7 +557,8 @@ const ReturnAttachmentModal = ({
                 {isRequestLoading && <div>Dang tai san pham tra hang...</div>}
                 {isShowingMatchedFallback && (
                   <div className="text-muted mb-2" style={{ fontSize: 12 }}>
-                    Dang hien san pham co ma yeu cau tra hang trung voi kien nay.
+                    Dang hien san pham co ma yeu cau tra hang trung voi kien
+                    nay.
                   </div>
                 )}
                 {isShowingShipmentFallback && (
@@ -404,7 +586,8 @@ const ReturnAttachmentModal = ({
                     const displayQuantity =
                       requestItem?.quantity ?? displayItem.quantity;
                     const displayAmount =
-                      requestItem?.requestedAmount ?? displayItem.estimatedAmount;
+                      requestItem?.requestedAmount ??
+                      displayItem.estimatedAmount;
 
                     return (
                       <div key={key} style={styles.productCard}>
@@ -434,7 +617,10 @@ const ReturnAttachmentModal = ({
                             {product?.productName ||
                               `San pham #${requestItem?.orderItemId || "-"}`}
                           </p>
-                          <p className="mb-0 text-muted" style={{ fontSize: 11 }}>
+                          <p
+                            className="mb-0 text-muted"
+                            style={{ fontSize: 11 }}
+                          >
                             {product?.variant ? `${product.variant} | ` : ""}
                             SKU: {product?.sku || "-"}
                           </p>
@@ -563,7 +749,10 @@ const ReturnAttachmentModal = ({
                                 href={fileUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                style={{ fontSize: 12, wordBreak: "break-word" }}
+                                style={{
+                                  fontSize: 12,
+                                  wordBreak: "break-word",
+                                }}
                               >
                                 {getAttachmentName(attachment)}
                               </a>

@@ -50,6 +50,7 @@ public class ReturnRequest {
     @Column(name = "order_shipment_id")
     private Long orderShipmentId;
     
+    
     @Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
     @Builder.Default
@@ -65,6 +66,12 @@ public class ReturnRequest {
     @Column(name = "requested_amount", nullable = false)
     private double requestedAmount;
     
+    @Column(name ="approved_amount")
+    private Double approvedAmount;
+    
+    @Column(name = "refunded_amount")
+    private double refundedAmount;
+    
     @JsonManagedReference("return-request-items")
     @OneToMany(mappedBy = "returnRequest", fetch = jakarta.persistence.FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -75,8 +82,6 @@ public class ReturnRequest {
     @Builder.Default
     private List<ReturnRequestAttachment> attachments = new java.util.ArrayList<>();
     
-    @Column(name = "refunded_amount")
-    private double refundedAmount;
 
     @Transient
     private double returnedGrossAmount;
@@ -131,6 +136,17 @@ public class ReturnRequest {
 
     @Transient
     private String shopLogo;
+
+    @Transient
+    private java.util.Map<String, Object> returnShipment;
+
+    @Transient
+    @Builder.Default
+    private java.util.List<java.util.Map<String, Object>> returnShipmentHistory = new java.util.ArrayList<>();
+
+    @Transient
+    @Builder.Default
+    private java.util.List<java.util.Map<String, Object>> timeline = new java.util.ArrayList<>();
     
     @Column(name = "created_at", updatable = false)
     @Builder.Default

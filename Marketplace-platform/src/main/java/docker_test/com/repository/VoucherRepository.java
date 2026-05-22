@@ -239,7 +239,7 @@ public class VoucherRepository implements IRepositories<Voucher> {
 		if (ids == null || ids.isEmpty()) {
 			return List.of();
 		}
-
+        List<Voucher> vouchers = new java.util.ArrayList<>();
 		//String placeholders = String.join(",", ids.stream().map(id -> "?").toArray(String[]::new));
 		String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
 		String sql = "SELECT v.id,v.code, v.issuer_type,v.discount_type,v.discount_percent,v.discount_amount,v.min_order_value FROM voucher v WHERE id IN (" + placeholders + ")";
@@ -251,7 +251,21 @@ public class VoucherRepository implements IRepositories<Voucher> {
 			}
 
 			ResultSet rs = ps.executeQuery();
-			return mapper.RowsMap(rs);
+			
+			while (rs.next()) {
+				System.out.println("ID: " + rs.getLong("id") + ", Code: " + rs.getString("code"));
+				Voucher v = new Voucher();
+				v.setId(rs.getLong("id"));
+				v.setCode(rs.getString("code"));
+				v.setIssuerType(rs.getString("issuer_type"));
+				v.setDiscountType(rs.getString("discount_type"));
+				v.setDiscountPercent(rs.getBigDecimal("discount_percent"));
+				v.setDiscountAmount(rs.getBigDecimal("discount_amount"));
+				v.setMinOrderValue(rs.getBigDecimal("min_order_value"));
+				vouchers.add(v);
+			}
+			
+			return vouchers; 
 
 		} catch (Exception e) {
 			throw new RuntimeException("Get vouchers by set of ids failed", e);

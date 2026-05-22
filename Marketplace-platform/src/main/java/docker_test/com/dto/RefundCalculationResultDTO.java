@@ -29,8 +29,8 @@ public class RefundCalculationResultDTO {
     private Double alreadyRefundedAmount;
     private Double suggestedRefundAmount;
     private List<RefundCalculationItemDTO> items = new ArrayList<>();
-
-    public Long getReturnRequestId() {
+ 
+	public Long getReturnRequestId() {
         return returnRequestId;
     }
 
@@ -109,6 +109,17 @@ public class RefundCalculationResultDTO {
 		private Long shopId;
 		private  Double subtotal;
 		private Double totalAfterVoucher;
+		
+		   private boolean setEligibleVoucherForRefund;
+		    
+		   public boolean isEligibleVoucherForRefund() {
+			   		        return this.setEligibleVoucherForRefund;
+		    }
+
+		    public void setEligibleVoucherForRefund(boolean setEligibleVoucherForRefund) {
+		        this.setEligibleVoucherForRefund = setEligibleVoucherForRefund;
+		   }
+
 		
 		public Double getTotalAfterVoucher() {
 			return totalAfterVoucher;

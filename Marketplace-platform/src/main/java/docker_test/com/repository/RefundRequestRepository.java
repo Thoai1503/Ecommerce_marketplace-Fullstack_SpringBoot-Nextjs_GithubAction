@@ -13,6 +13,8 @@ public interface RefundRequestRepository extends org.springframework.data.jpa.re
 
 	ReturnRequest findByOrderShipmentId(Long orderShipmentId);
 
+	List<ReturnRequest> findByShopId(Long shopId);
+
 	List<ReturnRequest> findByOrderId(Long orderId);
 
 	List<ReturnRequest> findByOrderIdAndStatusIn(Long orderId, Collection<ReturnRequestStatus> statuses);
