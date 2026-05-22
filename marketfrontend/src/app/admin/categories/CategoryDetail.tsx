@@ -84,7 +84,8 @@ export default function CategoryDetail() {
   const { units } = useUnits();
   const [selectedAttr, setSelectedAttr] = useState<any>(null);
   const [openUnitModal, setOpenUnitModal] = useState(false);
-  const { attributeUnits, deleteAttributeUnit } = useAttributeUnits();
+  const { attributeUnits, createAttributeUnit, deleteAttributeUnit } =
+    useAttributeUnits();
   const [collapsedAttrs, setCollapsedAttrs] = useState<number[]>([]);
 
   useEffect(() => {
@@ -171,27 +172,6 @@ export default function CategoryDetail() {
     setSelectedUnit(unit);
     setOpenValueModal(true);
   };
-  const addAttributeUnit = async (attributeId: number, unitId: number) => {
-    const res = await fetch(`${API_URL}/api/attribute-unit`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        attribute_id: attributeId,
-        unit_id: unitId,
-        status: 1,
-      }),
-    });
-
-    const text = await res.text();
-    console.log("ADD ATTRIBUTE UNIT:", res.status, text);
-
-    if (!res.ok) {
-      throw new Error(text || "Add failed");
-    }
-  };
-
   const {
     categoryAttributes,
     loading: loadingAttr,
@@ -732,7 +712,10 @@ export default function CategoryDetail() {
           if (!selectedAttr) return;
 
           try {
-            await addAttributeUnit(Number(selectedAttr.id), Number(unitId));
+            await createAttributeUnit(
+              Number(selectedAttr.id),
+              Number(unitId),
+            );
             info("Unit added successfully");
             setOpenUnitModal(false);
           } catch (err) {

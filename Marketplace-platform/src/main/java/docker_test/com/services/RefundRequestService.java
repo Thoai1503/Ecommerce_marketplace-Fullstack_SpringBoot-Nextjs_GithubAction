@@ -905,6 +905,172 @@ public class RefundRequestService {
 		}
 
 		enrichReturnRequestItems(requests);
+		enrichReturnShipmentAndTimeline(requests);
+	}
+
+	private void enrichReturnShipmentAndTimeline(List<ReturnRequest> requests) {
+		for (ReturnRequest request : requests) {
+			if (request == null || request.getId() == null) {
+				continue;
+			}
+
+			Map<String, Object> returnShipment = findReturnShipmentByRequestId(request.getId());
+			request.setReturnShipment(returnShipment);
+
+			Long returnShipmentId = null;
+			if (returnShipment != null) {
+				Object shipmentIdValue = returnShipment.get("id");
+				if (shipmentIdValue instanceof Number number) {
+					returnShipmentId = number.longValue();
+				}
+			}
+
+			request.setReturnShipmentHistory(
+					returnShipmentId == null
+							? new ArrayList<>()
+							: findReturnShipmentHistory(returnShipmentId));
+			request.setTimeline(findReturnRequestTimeline(request.getId()));
+		}
+	}
+
+	private Map<String, Object> findReturnShipmentByRequestId(Long returnRequestId) {
+		String sql = """
+				SELECT
+					rs.id,
+					rs.return_request_id,
+					rs.tracking_code,
+					rs.status,
+					rs.pickup_address_id,
+					rs.return_address_id,
+					rs.scheduled_pickup_date,
+					rs.actual_pickup_date,
+					rs.delivery_date,
+					rs.courier_id,
+					rs.courier_name,
+					rs.logistics_webhook_count,
+					rs.notes,
+					rs.failed_reason,
+					rs.retry_count,
+					rs.created_at,
+					rs.updated_at
+				FROM return_shipment rs
+				WHERE rs.return_request_id = ?
+				ORDER BY rs.updated_at DESC, rs.id DESC
+				LIMIT 1
+				""";
+
+		try (Connection con = DBConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setLong(1, returnRequestId);
+			ResultSet rs = ps.executeQuery();
+			if (!rs.next()) {
+				return null;
+			}
+
+			Map<String, Object> payload = new LinkedHashMap<>();
+			payload.put("id", rs.getLong("id"));
+			payload.put("returnRequestId", rs.getLong("return_request_id"));
+			payload.put("trackingCode", rs.getString("tracking_code"));
+			payload.put("status", rs.getString("status"));
+			payload.put("pickupAddressId", rs.getObject("pickup_address_id"));
+			payload.put("returnAddressId", rs.getObject("return_address_id"));
+			payload.put("scheduledPickupDate", rs.getObject("scheduled_pickup_date"));
+			payload.put("actualPickupDate", rs.getObject("actual_pickup_date"));
+			payload.put("deliveryDate", rs.getObject("delivery_date"));
+			payload.put("courierId", rs.getObject("courier_id"));
+			payload.put("courierName", rs.getString("courier_name"));
+			payload.put("logisticsWebhookCount", rs.getObject("logistics_webhook_count"));
+			payload.put("notes", rs.getString("notes"));
+			payload.put("failedReason", rs.getString("failed_reason"));
+			payload.put("retryCount", rs.getObject("retry_count"));
+			payload.put("createdAt", rs.getObject("created_at"));
+			payload.put("updatedAt", rs.getObject("updated_at"));
+			return payload;
+		} catch (Exception e) {
+			throw new RuntimeException("Unable to read return_shipment for return request " + returnRequestId, e);
+		}
+	}
+
+	private List<Map<String, Object>> findReturnShipmentHistory(Long returnShipmentId) {
+		String sql = """
+				SELECT
+					rsh.id,
+					rsh.return_shipment_id,
+					rsh.status,
+					rsh.description,
+					rsh.location,
+					rsh.event_code,
+					rsh.source,
+					rsh.external_event_id,
+					rsh.timestamp,
+					rsh.created_at
+				FROM return_shipment_history rsh
+				WHERE rsh.return_shipment_id = ?
+				ORDER BY rsh.timestamp DESC, rsh.id DESC
+				""";
+
+		List<Map<String, Object>> history = new ArrayList<>();
+		try (Connection con = DBConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setLong(1, returnShipmentId);
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				Map<String, Object> row = new LinkedHashMap<>();
+				row.put("id", rs.getLong("id"));
+				row.put("returnShipmentId", rs.getLong("return_shipment_id"));
+				row.put("status", rs.getString("status"));
+				row.put("description", rs.getString("description"));
+				row.put("location", rs.getString("location"));
+				row.put("eventCode", rs.getString("event_code"));
+				row.put("source", rs.getString("source"));
+				row.put("externalEventId", rs.getString("external_event_id"));
+				row.put("timestamp", rs.getObject("timestamp"));
+				row.put("createdAt", rs.getObject("created_at"));
+				history.add(row);
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Unable to read return_shipment_history for shipment " + returnShipmentId, e);
+		}
+
+		return history;
+	}
+
+	private List<Map<String, Object>> findReturnRequestTimeline(Long returnRequestId) {
+		String sql = """
+				SELECT
+					rrt.id,
+					rrt.return_request_id,
+					rrt.event_type,
+					rrt.event_details,
+					rrt.actor_id,
+					rrt.actor_type,
+					rrt.timestamp
+				FROM return_request_timeline rrt
+				WHERE rrt.return_request_id = ?
+				ORDER BY rrt.timestamp DESC, rrt.id DESC
+				""";
+
+		List<Map<String, Object>> timeline = new ArrayList<>();
+		try (Connection con = DBConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setLong(1, returnRequestId);
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				Map<String, Object> row = new LinkedHashMap<>();
+				row.put("id", rs.getLong("id"));
+				row.put("returnRequestId", rs.getLong("return_request_id"));
+				row.put("eventType", rs.getString("event_type"));
+				row.put("eventDetails", rs.getString("event_details"));
+				row.put("actorId", rs.getObject("actor_id"));
+				row.put("actorType", rs.getString("actor_type"));
+				row.put("timestamp", rs.getObject("timestamp"));
+				timeline.add(row);
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Unable to read return_request_timeline for return request " + returnRequestId, e);
+		}
+
+		return timeline;
 	}
 
 	private void enrichReturnRequestItems(List<ReturnRequest> requests) {
@@ -983,21 +1149,37 @@ public class RefundRequestService {
 
 		request.setStatus(status);
 		if(status.equals(ReturnRequestStatus.APPROVED)) {
-			 RefundCalculationResultDTO calculation = refundCalculationService.calculate(request);
+			double resolvedApprovedAmount;
+			if (refundedAmount != null) {
+				resolvedApprovedAmount = refundedAmount;
+			} else {
+				resolvedApprovedAmount = request.getRequestedAmount();
+			}
+
+			request.setApprovedAmount(resolvedApprovedAmount);
+			applyApprovedAmountToItems(request, resolvedApprovedAmount);
+			request.setUpdatedAt(LocalDateTime.now());
+			ReturnRequest savedRequest = refundRequestRepository.save(request);
+
+			 RefundCalculationResultDTO calculation = refundCalculationService.calculate(savedRequest);
 			 RefundedToOrderServiceDTO refundedToOrderServiceDTO = new RefundedToOrderServiceDTO();
-			 refundedToOrderServiceDTO.setSuggestedRefundAmount(refundedAmount);
+			 refundedToOrderServiceDTO.setSuggestedRefundAmount(resolvedApprovedAmount);
 			 refundedToOrderServiceDTO.setRefundCalculationResult(calculation);
-			 ReturnShipment returnShipment = buildLogisticPayload(request, request.getId());
+			 ReturnShipment returnShipment = buildLogisticPayload(savedRequest, savedRequest.getId());
 			try {
+				
+			
 			 returnShipment = returnShipmentRepository.save(returnShipment);
 			}
 			catch(RuntimeException e) {
 				System.out.println("Error saving return shipment: " + e.getMessage());
 			}
+			refundedToOrderServiceDTO.setStatus(status.toString());
+			refundedToOrderServiceDTO.setSuggestedRefundAmount(resolvedApprovedAmount);
 			 refundedToOrderService.publish(refundedToOrderServiceDTO);
-			 
-			 returnRequestToLogistic.publish(buildLogisticPayloadEvent(request,returnShipment.getId()));
-			 return request;
+			 	
+			 returnRequestToLogistic.publish(buildLogisticPayloadEvent(savedRequest,returnShipment.getId()));
+			 return savedRequest;
 		}
 		
 		
@@ -1012,6 +1194,10 @@ public class RefundRequestService {
 						Math.max(0.0, calculation.getSuggestedRefundAmount()));
 			}
 			request.setRefundedAmount(resolvedRefundAmount);
+		} else if (status == ReturnRequestStatus.INSPECTION_PASSED) {
+			// Shop confirmed returned shipment is fully received and inspected.
+			// Persist approved_amount using the current requested_amount value.
+			request.setApprovedAmount(request.getRequestedAmount());
 		} else if (refundedAmount != null) {
 			request.setRefundedAmount(refundedAmount);
 		}
@@ -1030,24 +1216,36 @@ public class RefundRequestService {
 	//	enrichReturnRequest(savedRequest);
 		return savedRequest;
 	}
-//	private RefundRequestDTO buildLogisticPayload(ReturnRequest savedRefundRequest, RefundRequestDTO sourceDto) {
-//		RefundRequestDTO payload = new RefundRequestDTO();
-//		payload.setReturnRequestId(savedRefundRequest.getId());
-//		payload.setOrderId(savedRefundRequest.getOrderId());
-//		payload.setOrderShipmentId(savedRefundRequest.getOrderShipmentId());
-//		payload.setOrderItemId(sourceDto.getOrderItemId());
-//		payload.setShopId(savedRefundRequest.getShopId());
-//		payload.setCustomerId(savedRefundRequest.getCustomerId());
-//		payload.setReason(savedRefundRequest.getReason());
-//		payload.setDescription(sourceDto.getDescription());
-//		payload.setQuantity(savedRefundRequest.getQuantity());
-//		payload.setRequestedAmount(savedRefundRequest.getRequestedAmount());
-//		payload.setItems(sourceDto.getItems());
-//		payload.setAttachments(sourceDto.getAttachments());
-//		payload.setRecipient(resolveShopRecipient(savedRefundRequest.getShopId()));
-//		payload.setPickupContact(resolveCustomerPickup(savedRefundRequest.getCustomerId()));
-//		return payload;
-//	}
+
+	private void applyApprovedAmountToItems(ReturnRequest request, double approvedAmount) {
+		if (request.getItems() == null || request.getItems().isEmpty()) {
+			return;
+		}
+
+		double totalRequested = request.getItems().stream()
+				.mapToDouble(item -> Math.max(0.0, item.getRequestedAmount()))
+				.sum();
+
+		if (totalRequested <= 0.0) {
+			request.getItems().forEach(item -> item.setApprovedAmount(0.0));
+			return;
+		}
+
+		double distributed = 0.0;
+		for (int index = 0; index < request.getItems().size(); index++) {
+			ReturnRequestItem item = request.getItems().get(index);
+			if (index == request.getItems().size() - 1) {
+				double remainder = money(approvedAmount - distributed);
+				item.setApprovedAmount(Math.max(0.0, remainder));
+				continue;
+			}
+			double ratio = Math.max(0.0, item.getRequestedAmount()) / totalRequested;
+			double itemApprovedAmount = money(approvedAmount * ratio);
+			item.setApprovedAmount(itemApprovedAmount);
+			distributed += itemApprovedAmount;
+		}
+	}
+
  private RefundRequestDTO buildLogisticPayloadEvent(ReturnRequest returnRequest,Long returnShipmentId) {
 	 
 	 RefundRequestDTO payload = new RefundRequestDTO();

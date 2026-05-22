@@ -5,11 +5,20 @@ public class RefundedToOrderServiceDTO {
    public RefundedToOrderServiceDTO() {
 		super();
 	}
-   public RefundedToOrderServiceDTO(Double suggestedRefundAmount, RefundCalculationResultDTO refundCalculationResult) {
+   public RefundedToOrderServiceDTO(Double suggestedRefundAmount, RefundCalculationResultDTO refundCalculationResult, String status) {
 		super();
 		this.suggestedRefundAmount = suggestedRefundAmount;
 		this.refundCalculationResult = refundCalculationResult;
+		this.status = status;
 	}
+	private String status;
+	
+	   public String getStatus() {
+			return status;
+		}
+		public void setStatus(String status) {
+			this.status = status;
+		}
    private Double suggestedRefundAmount;
    public Double getSuggestedRefundAmount() {
 	return suggestedRefundAmount;

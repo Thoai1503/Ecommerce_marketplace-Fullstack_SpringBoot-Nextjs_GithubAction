@@ -132,7 +132,7 @@ public class RefundCalculationService {
             result.getItems().add(detail);
         }
 
-        double suggestedRefundAmount = money(Math.max(0.0, currentPaidAmount - recalculatedAmount - alreadyRefundedAmount));
+        double suggestedRefundAmount = money(currentPaidAmount - recalculatedAmount - alreadyRefundedAmount);
 
         result.setCurrentPaidAmount(currentPaidAmount);
         result.setTotalAmount(snapshot.getTotalAmount());

@@ -194,17 +194,32 @@ function SellerReturnRequestDetail({
   onClose,
   onOpenShipment,
   onApprove,
+  onMarkInspectionPassed,
   isApproving,
+  isMarkingInspection,
 }: {
   request: ReturnRequestAdmin | null;
   onClose: () => void;
   onOpenShipment: (shipmentId?: number | null) => void;
-  onApprove: (requestId: number) => void;
+  onApprove: (requestId: number, refundAmount: number) => void;
+  onMarkInspectionPassed: (requestId: number) => void;
   isApproving: boolean;
+  isMarkingInspection: boolean;
 }) {
+  const [isTimelineModalOpen, setIsTimelineModalOpen] = useState(false);
+
   if (!request) return null;
 
   const status = getStatusMeta(request.status);
+  const returnShipmentStatusMeta = getStatusMeta(
+    request.returnShipment?.status || "",
+  );
+  const canMarkInspectionPassed =
+    ["DELIVERD", "DELIVERED"].includes(
+      String(request.returnShipment?.status || "").toUpperCase(),
+    ) && request.status !== "INSPECTION_PASSED";
+  const returnShipmentHistory = request.returnShipmentHistory || [];
+  const returnTimeline = request.timeline || [];
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
@@ -318,6 +333,22 @@ function SellerReturnRequestDetail({
                   label="Ngày tạo"
                   value={formatDateTime(request.createdAt)}
                 />
+                <InfoField
+                  label="Số tiền duyệt"
+                  value={
+                    request.approvedAmount != null
+                      ? formatCurrency(Number(request.approvedAmount))
+                      : "-"
+                  }
+                />
+                <InfoField
+                  label="Số tiền đã hoàn"
+                  value={
+                    Number(request.refundedAmount || 0) > 0
+                      ? formatCurrency(Number(request.refundedAmount))
+                      : "-"
+                  }
+                />
               </div>
               <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
@@ -328,11 +359,153 @@ function SellerReturnRequestDetail({
                     "Người mua chưa cung cấp lý do."}
                 </p>
               </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                  Return shipment
+                </p>
+
+                {!request.returnShipment ? (
+                  <p className="mt-2 text-sm text-slate-500">
+                    Chưa có dữ liệu return_shipment cho yêu cầu này.
+                  </p>
+                ) : (
+                  <>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center gap-2 rounded-2xl px-3 py-1 text-xs font-bold ${returnShipmentStatusMeta.badge}`}
+                      >
+                        {returnShipmentStatusMeta.icon}
+                        {returnShipmentStatusMeta.label}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <InfoField
+                        label="Mã vận đơn trả"
+                        value={
+                          normalizeText(request.returnShipment.trackingCode) ||
+                          "-"
+                        }
+                      />
+                      <InfoField
+                        label="Đơn vị vận chuyển"
+                        value={
+                          normalizeText(request.returnShipment.courierName) ||
+                          "-"
+                        }
+                      />
+                      <InfoField
+                        label="Ngày lấy hàng dự kiến"
+                        value={formatDateTime(
+                          request.returnShipment.scheduledPickupDate,
+                        )}
+                      />
+                      <InfoField
+                        label="Ngày lấy hàng thực tế"
+                        value={formatDateTime(
+                          request.returnShipment.actualPickupDate,
+                        )}
+                      />
+                      <InfoField
+                        label="Ngày giao hoàn"
+                        value={formatDateTime(
+                          request.returnShipment.deliveryDate,
+                        )}
+                      />
+                      <InfoField
+                        label="Cập nhật gần nhất"
+                        value={formatDateTime(request.returnShipment.updatedAt)}
+                      />
+                    </div>
+
+                    {(normalizeText(request.returnShipment.notes) ||
+                      normalizeText(request.returnShipment.failedReason)) && (
+                      <div className="mt-3 space-y-2">
+                        {normalizeText(request.returnShipment.notes) && (
+                          <p className="text-sm text-slate-700">
+                            <span className="font-bold">Ghi chú:</span>{" "}
+                            {request.returnShipment.notes}
+                          </p>
+                        )}
+                        {normalizeText(request.returnShipment.failedReason) && (
+                          <p className="text-sm text-rose-600">
+                            <span className="font-bold">Lý do thất bại:</span>{" "}
+                            {request.returnShipment.failedReason}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                      <p className="mb-0 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                        Return shipment history
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsTimelineModalOpen(true)}
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                      >
+                        Xem timeline trả hàng
+                      </button>
+                    </div>
+
+                    {returnShipmentHistory.length === 0 ? (
+                      <div className="mt-2 rounded-xl border border-dashed border-slate-200 px-3 py-3 text-sm text-slate-500">
+                        Chưa có return_shipment_history.
+                      </div>
+                    ) : (
+                      <div className="mt-2 overflow-x-auto rounded-2xl border border-slate-200">
+                        <table className="table mb-0 table-sm align-middle">
+                          <thead className="table-light">
+                            <tr>
+                              <th>Thời gian</th>
+                              <th>Trạng thái</th>
+                              <th>Mô tả</th>
+                              <th>Vị trí</th>
+                              <th>Nguồn</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {returnShipmentHistory.map((entry, index) => (
+                              <tr
+                                key={`${request.id}-shipment-history-${entry.id ?? index}`}
+                              >
+                                <td>
+                                  {formatDateTime(
+                                    entry.timestamp || entry.createdAt,
+                                  )}
+                                </td>
+                                <td>
+                                  <span className="badge bg-slate-100 text-slate-700">
+                                    {normalizeText(entry.status) || "-"}
+                                  </span>
+                                </td>
+                                <td>
+                                  {normalizeText(entry.description) || "-"}
+                                </td>
+                                <td>{normalizeText(entry.location) || "-"}</td>
+                                <td>{normalizeText(entry.source) || "-"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
               <div className="mt-4 flex flex-wrap gap-3">
                 {request.status === "PENDING_APPROVAL" && (
                   <button
                     type="button"
-                    onClick={() => onApprove(request.id)}
+                    onClick={() =>
+                      onApprove(
+                        request.id,
+                        Number(request.requestedAmount || 0),
+                      )
+                    }
                     disabled={isApproving}
                     className="rounded-2xl bg-success px-4 py-3 text-sm font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -347,6 +520,18 @@ function SellerReturnRequestDetail({
                 >
                   Xem chi tiết vận đơn
                 </button>
+                {canMarkInspectionPassed && (
+                  <button
+                    type="button"
+                    onClick={() => onMarkInspectionPassed(request.id)}
+                    disabled={isMarkingInspection}
+                    className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isMarkingInspection
+                      ? "Đang cập nhật..."
+                      : "Đã nhận và kiểm tra đầy đủ"}
+                  </button>
+                )}
               </div>
             </section>
 
@@ -455,6 +640,106 @@ function SellerReturnRequestDetail({
           </section>
         </div>
       </div>
+
+      {isTimelineModalOpen && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 p-4"
+          onClick={() => setIsTimelineModalOpen(false)}
+        >
+          <div
+            className="max-h-[86vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 d-flex align-items-start justify-content-between gap-3">
+              <div>
+                <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+                  Timeline trả hàng
+                </p>
+                <h3 className="mb-0 text-xl font-black text-slate-800">
+                  {formatRequestCode(request.id)}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTimelineModalOpen(false)}
+                className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Đóng
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <section className="rounded-2xl border border-slate-200 p-4">
+                <h4 className="mb-3 text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+                  return_shipment_history
+                </h4>
+                {returnShipmentHistory.length === 0 ? (
+                  <p className="mb-0 text-sm text-slate-500">
+                    Chưa có dữ liệu.
+                  </p>
+                ) : (
+                  <ul className="mb-0 d-flex flex-column gap-3 list-unstyled">
+                    {returnShipmentHistory.map((entry, index) => (
+                      <li
+                        key={`${request.id}-timeline-history-${entry.id ?? index}`}
+                        className="rounded-xl border border-slate-200 p-3"
+                      >
+                        <p className="mb-1 text-xs text-slate-500">
+                          {formatDateTime(entry.timestamp || entry.createdAt)}
+                        </p>
+                        <p className="mb-1 text-sm font-bold text-slate-800">
+                          {normalizeText(entry.status) || "-"}
+                        </p>
+                        <p className="mb-1 text-sm text-slate-700">
+                          {normalizeText(entry.description) || "Không có mô tả"}
+                        </p>
+                        <p className="mb-0 text-xs text-slate-500">
+                          {normalizeText(entry.location) || "-"} |{" "}
+                          {normalizeText(entry.source) || "-"}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 p-4">
+                <h4 className="mb-3 text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+                  return_request_timeline
+                </h4>
+                {returnTimeline.length === 0 ? (
+                  <p className="mb-0 text-sm text-slate-500">
+                    Chưa có dữ liệu.
+                  </p>
+                ) : (
+                  <ul className="mb-0 d-flex flex-column gap-3 list-unstyled">
+                    {returnTimeline.map((entry, index) => (
+                      <li
+                        key={`${request.id}-timeline-request-${entry.id ?? index}`}
+                        className="rounded-xl border border-slate-200 p-3"
+                      >
+                        <p className="mb-1 text-xs text-slate-500">
+                          {formatDateTime(entry.timestamp)}
+                        </p>
+                        <p className="mb-1 text-sm font-bold text-slate-800">
+                          {normalizeText(entry.eventType) || "EVENT"}
+                        </p>
+                        <p className="mb-1 text-sm text-slate-700">
+                          {normalizeText(entry.eventDetails) ||
+                            "Không có chi tiết"}
+                        </p>
+                        <p className="mb-0 text-xs text-slate-500">
+                          Actor: {normalizeText(entry.actorType) || "SYSTEM"}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -515,6 +800,9 @@ export default function SellerReturnRefundCancelPage() {
   const [approvingRequestId, setApprovingRequestId] = useState<number | null>(
     null,
   );
+  const [markingInspectionRequestId, setMarkingInspectionRequestId] = useState<
+    number | null
+  >(null);
 
   const shopId = Number(shop?.id ?? 0);
 
@@ -533,14 +821,27 @@ export default function SellerReturnRefundCancelPage() {
   const filteredRequests = useMemo(() => {
     const search = keyword.trim().toLowerCase();
 
-    return requests.filter((request) => {
-      const matchStatus =
-        statusFilter === "ALL" || request.status === statusFilter;
-      const matchSearch =
-        search.length === 0 || getRequestSearchText(request).includes(search);
+    return requests
+      .filter((request) => {
+        const matchStatus =
+          statusFilter === "ALL" || request.status === statusFilter;
+        const matchSearch =
+          search.length === 0 || getRequestSearchText(request).includes(search);
 
-      return matchStatus && matchSearch;
-    });
+        return matchStatus && matchSearch;
+      })
+      .sort((left, right) => {
+        const leftTime = new Date(left.createdAt || "").getTime();
+        const rightTime = new Date(right.createdAt || "").getTime();
+
+        if (Number.isFinite(leftTime) && Number.isFinite(rightTime)) {
+          if (rightTime !== leftTime) {
+            return rightTime - leftTime;
+          }
+        }
+
+        return Number(right.id || 0) - Number(left.id || 0);
+      });
   }, [keyword, requests, statusFilter]);
 
   const stats = useMemo(() => {
@@ -573,10 +874,13 @@ export default function SellerReturnRefundCancelPage() {
     router.push(`/seller/orders/${shipmentId}`);
   };
 
-  const handleApproveRequest = async (requestId: number) => {
+  const handleApproveRequest = async (
+    requestId: number,
+    refundAmount: number,
+  ) => {
     try {
       setApprovingRequestId(requestId);
-      await updateReturnRequestStatus(requestId, "APPROVED");
+      await updateReturnRequestStatus(requestId, "APPROVED", refundAmount);
       await refetch();
     } catch (error) {
       const message =
@@ -586,6 +890,31 @@ export default function SellerReturnRefundCancelPage() {
       window.alert(message);
     } finally {
       setApprovingRequestId(null);
+    }
+  };
+
+  const handleMarkInspectionPassed = async (requestId: number) => {
+    try {
+      setMarkingInspectionRequestId(requestId);
+      await updateReturnRequestStatus(requestId, "INSPECTION_PASSED");
+      await refetch();
+      setSelectedRequest((prev) =>
+        prev && prev.id === requestId
+          ? {
+              ...prev,
+              status: "INSPECTION_PASSED",
+              approvedAmount: prev.requestedAmount,
+            }
+          : prev,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Không thể cập nhật trạng thái kiểm tra lúc này.";
+      window.alert(message);
+    } finally {
+      setMarkingInspectionRequestId(null);
     }
   };
 
@@ -860,9 +1189,17 @@ export default function SellerReturnRefundCancelPage() {
                           <div className="fw-bold">
                             {formatCurrency(request.requestedAmount)}
                           </div>
-                          <small className="text-success d-block mt-1">
-                            Đã hoàn: {formatCurrency(request.refundedAmount)}
+                          <small className="text-primary d-block mt-1">
+                            Duyệt:{" "}
+                            {request.approvedAmount != null
+                              ? formatCurrency(Number(request.approvedAmount))
+                              : "-"}
                           </small>
+                          {Number(request.refundedAmount || 0) > 0 && (
+                            <small className="text-success d-block mt-1">
+                              Đã hoàn: {formatCurrency(request.refundedAmount)}
+                            </small>
+                          )}
                         </td>
                         <td>
                           <span className={`badge ${status.badge}`}>
@@ -888,7 +1225,12 @@ export default function SellerReturnRefundCancelPage() {
                             {request.status === "PENDING_APPROVAL" && (
                               <button
                                 type="button"
-                                onClick={() => handleApproveRequest(request.id)}
+                                onClick={() =>
+                                  handleApproveRequest(
+                                    request.id,
+                                    Number(request.requestedAmount || 0),
+                                  )
+                                }
                                 disabled={approvingRequestId === request.id}
                                 className="btn btn-link p-0 text-success text-decoration-none small text-start"
                               >
@@ -1004,8 +1346,12 @@ export default function SellerReturnRefundCancelPage() {
         onClose={() => setSelectedRequest(null)}
         onOpenShipment={openShipment}
         onApprove={handleApproveRequest}
+        onMarkInspectionPassed={handleMarkInspectionPassed}
         isApproving={
           !!selectedRequest && approvingRequestId === selectedRequest.id
+        }
+        isMarkingInspection={
+          !!selectedRequest && markingInspectionRequestId === selectedRequest.id
         }
       />
     </>

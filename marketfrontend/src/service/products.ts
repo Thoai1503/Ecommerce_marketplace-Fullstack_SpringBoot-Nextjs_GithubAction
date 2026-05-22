@@ -1,186 +1,134 @@
 
-import { mockGet } from '../lib/http';
+import http from '@/lib/http';
 import { Product, ProductStatus } from '@/types/index';
 
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+const FALLBACK_PRODUCT_IMAGE = '/image/no-image.png';
+const FALLBACK_SELLER_AVATAR = '/image/user/avatar_default.jpg';
+const unwrapCollection = (payload: unknown): Record<string, unknown>[] => {
+  if (Array.isArray(payload)) return payload as Record<string, unknown>[];
+  if (!payload || typeof payload !== 'object') return [];
 
-const BASE_PRODUCTS: Product[] = [
-  {
-    id: 'p1',
-    productCode: 'PRD-0001',
-    name: 'iPhone 15 Pro Max 256GB - Titan Tự Nhiên',
-    description: 'iPhone 15 Pro Max. Thiết kế titan bền bỉ và nhẹ. Chip A17 Pro. Nút Tác Vụ tùy chỉnh. Hệ thống camera iPhone mạnh mẽ nhất.',
-    sku: 'APL-IP15PM-256',
-    images: ['https://images.unsplash.com/photo-1696446701796-da61225697cc?w=200&q=80'],
-    category: 'Điện thoại',
-    price: 28990000,
-    originalPrice: 32000000,
-    stock: 45,
-    status: 'APPROVED',
-    sellerId: 's1',
-    sellerName: 'Apple Store VN',
-    sellerAvatar: 'https://ui-avatars.com/api/?name=Apple+Store&background=000&color=fff',
-    attributes: { 'Thương hiệu': 'Apple', 'Màu sắc': 'Titan Tự Nhiên', 'Dung lượng': '256GB' },
-    createdAt: '2023-12-01T08:00:00Z',
-    viewCount: 1250
-  },
-  {
-    id: 'p2',
-    productCode: 'PRD-0002',
-    name: 'MacBook Air M2 13 inch 8GB/256GB',
-    description: 'MacBook Air M2 được thiết kế lại hoàn toàn siêu mỏng, nhẹ và mạnh mẽ.',
-    sku: 'APL-MBA-M2-256',
-    images: ['https://images.unsplash.com/photo-1611186871348-b1ec696e5237?w=200&q=80'],
-    category: 'Laptop',
-    price: 24500000,
-    stock: 12,
-    status: 'APPROVED',
-    sellerId: 's2',
-    sellerName: 'STAY-GO Official',
-    sellerAvatar: 'https://ui-avatars.com/api/?name=Stay+Go&background=3b82f6&color=fff',
-    attributes: { 'Thương hiệu': 'Apple', 'Chip': 'M2', 'RAM': '8GB' },
-    createdAt: '2023-11-15T10:30:00Z',
-    viewCount: 850
-  },
-  {
-    id: 'p3',
-    productCode: 'PRD-0003',
-    name: 'Tai nghe Sony WH-1000XM5 Chống ồn',
-    description: 'Tai nghe chống ồn tốt nhất thị trường với thời lượng pin 30 giờ.',
-    sku: 'SNY-WH1000-XM5',
-    images: ['https://images.unsplash.com/photo-1670054131709-646738c80084?w=200&q=80'],
-    category: 'Phụ kiện',
-    price: 8490000,
-    stock: 50,
-    status: 'PENDING', // Đang chờ duyệt
-    sellerId: 's3',
-    sellerName: 'Sony Center',
-    sellerAvatar: 'https://ui-avatars.com/api/?name=Sony&background=000&color=fff',
-    attributes: { 'Thương hiệu': 'Sony', 'Loại': 'Over-ear' },
-    createdAt: '2024-03-10T14:20:00Z',
-    viewCount: 320
-  },
-  {
-    id: 'p4',
-    productCode: 'PRD-0004',
-    name: 'Ốp lưng MagSafe Silicone iPhone 15',
-    description: 'Ốp lưng chính hãng Apple, hỗ trợ sạc MagSafe.',
-    sku: 'APL-CASE-15-SIL',
-    images: ['https://images.unsplash.com/photo-1603891128711-11b4b03bb138?w=200&q=80'],
-    category: 'Phụ kiện',
-    price: 1290000,
-    stock: 150,
-    status: 'DRAFT',
-    sellerId: 's1',
-    sellerName: 'Apple Store VN',
-    sellerAvatar: 'https://ui-avatars.com/api/?name=Apple+Store&background=000&color=fff',
-    createdAt: '2024-02-05T09:15:00Z',
-    viewCount: 45
-  },
-  {
-    id: 'p5',
-    productCode: 'PRD-0005',
-    name: 'Giày Thể Thao Hunter X',
-    description: 'Giày thể thao nam cao cấp, thoáng khí.',
-    sku: 'BTS-HUNTER-X',
-    images: ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&q=80'],
-    category: 'Thời trang',
-    price: 650000,
-    stock: 25,
-    status: 'REJECTED',
-    rejectReason: 'Hình ảnh sản phẩm bị mờ, vui lòng cập nhật lại.',
-    sellerId: 's4',
-    sellerName: 'Biti\'s Official',
-    sellerAvatar: 'https://ui-avatars.com/api/?name=Bitis&background=orange&color=fff',
-    createdAt: '2024-03-12T09:00:00Z',
-    viewCount: 150
-  },
-  {
-    id: 'p6',
-    productCode: 'PRD-0006',
-    name: 'Đồng hồ thông minh Smart Watch S8',
-    description: 'Đồng hồ thông minh giá rẻ, đầy đủ tính năng.',
-    sku: 'SMT-W-S8',
-    images: ['https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=200&q=80'],
-    category: 'Đồng hồ',
-    price: 450000,
-    stock: 100,
-    status: 'PENDING',
-    sellerId: 's5',
-    sellerName: 'Tech Gadget Store',
-    sellerAvatar: 'https://ui-avatars.com/api/?name=Tech+Store&background=purple&color=fff',
-    createdAt: '2024-03-15T08:30:00Z',
-    viewCount: 60
+  const record = payload as Record<string, unknown>;
+  const collection = record.data || record.items || record.content || record.results;
+  return Array.isArray(collection) ? collection as Record<string, unknown>[] : [];
+};
+
+const toNumber = (value: unknown, fallback = 0) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+};
+
+const toOptionalNumber = (value: unknown) => {
+  if (value === null || value === undefined || value === '') return undefined;
+  return toNumber(value);
+};
+
+const toText = (value: unknown, fallback = '') => {
+  if (value === null || value === undefined) return fallback;
+  return String(value);
+};
+
+const getImageUrls = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((image) => {
+        if (typeof image === 'string') return image;
+        if (image && typeof image === 'object') {
+          return toText((image as Record<string, unknown>).image_url);
+        }
+        return '';
+      })
+      .filter(Boolean);
   }
-];
 
-// Generate 120 items to simulate ~12 pages of data
-const MOCK_PRODUCTS: Product[] = Array.from({ length: 120 }, (_, i) => {
-  const base = BASE_PRODUCTS[i % BASE_PRODUCTS.length];
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      return getImageUrls(JSON.parse(value));
+    } catch {
+      return [value];
+    }
+  }
+
+  return [];
+};
+
+const toBoolean = (value: unknown) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  return toText(value).trim() === '1' || toText(value).trim().toLowerCase() === 'true';
+};
+
+const getApprovalStatus = (isActive: boolean, rejectReason: string): ProductStatus => {
+  if (isActive) return 'APPROVED';
+  return rejectReason ? 'REJECTED' : 'PENDING';
+};
+
+const buildProductCode = (id: string) => `PRD-${id.padStart(4, '0')}`;
+
+const mapAdminProduct = (raw: Record<string, unknown>): Product => {
+  const id = toText(raw.id);
+  const images = getImageUrls(raw.images);
+  const thumbnail = toText(raw.image_url);
+  const isActive = toBoolean(raw.is_active);
+  const rejectReason = toText(raw.reject_reason);
+
   return {
-    ...base,
-    id: `${base.id}_${i}`,
-    productCode: `PRD-${String(1000 + i)}`,
-    name: `${base.name} (V${i+1})`,
-    viewCount: Math.floor(Math.random() * 5000),
+    id,
+    productCode: buildProductCode(id),
+    name: toText(raw.product_name, 'Sản phẩm chưa đặt tên'),
+    description: toText(raw.description),
+    sku: toText(raw.sku, toText(raw.product_slug, buildProductCode(id))),
+    images: images.length > 0 ? images : [thumbnail || FALLBACK_PRODUCT_IMAGE],
+    category: toText(raw.category_name, 'Chưa phân loại'),
+    price: toNumber(raw.price),
+    originalPrice: toOptionalNumber(raw.original_price),
+    stock: toNumber(raw.stock_quantity),
+    status: getApprovalStatus(isActive, rejectReason),
+    isActive,
+    sellerId: toText(raw.shop_id),
+    sellerName: toText(raw.shop_name, 'Shop chưa đặt tên'),
+    sellerAvatar: toText(raw.shop_logo, FALLBACK_SELLER_AVATAR),
+    sellerEmail: toText(raw.shop_email) || undefined,
+    sellerPhone: toText(raw.shop_phone) || undefined,
+    createdAt: toText(raw.created_at, new Date(0).toISOString()),
+    rejectReason: rejectReason || undefined,
+    soldCount: toNumber(raw.sold_count),
   };
-});
+};
 
 export const getProducts = async (): Promise<Product[]> => {
-  return await mockGet('/admin/products', MOCK_PRODUCTS);
+  const response = await http.get('/api/admin/products');
+  return unwrapCollection(response.data).map(mapAdminProduct);
+};
+
+export const getProductsBySellerId = async (sellerId: string): Promise<Product[]> => {
+  const response = await http.get('/api/admin/products', {
+    params: { shopId: sellerId },
+  });
+  return unwrapCollection(response.data).map(mapAdminProduct);
 };
 
 export const getProductById = async (id: string): Promise<Product | undefined> => {
-  await delay(800);
-  const productIndex = MOCK_PRODUCTS.findIndex(p => p.id === id);
-  if (productIndex > -1) {
-    MOCK_PRODUCTS[productIndex].viewCount = (MOCK_PRODUCTS[productIndex].viewCount || 0) + 1;
-    return { ...MOCK_PRODUCTS[productIndex] };
-  }
-  return undefined;
+  const response = await http.get(`/api/admin/products/${id}`);
+  return response.data ? mapAdminProduct(response.data as Record<string, unknown>) : undefined;
 };
 
 export const deleteProducts = async (ids: string[]): Promise<boolean> => {
-  await delay(800);
-  console.log('Deleted products:', ids);
-  // In a real app, you would filter MOCK_PRODUCTS here. For demo, we assume success.
+  await Promise.all(ids.map((id) => http.delete(`/api/admin/products/${id}`)));
   return true;
 };
 
 export const approveProduct = async (id: string): Promise<boolean> => {
-  await delay(600);
-  console.log('Approved product:', id);
-  const product = MOCK_PRODUCTS.find(p => p.id === id);
-  if (product) product.status = 'APPROVED';
+  await http.put(`/api/admin/products/${id}/approve`);
   return true;
 };
 
 export const rejectProduct = async (id: string, reason: string): Promise<boolean> => {
-  await delay(600);
-  console.log('Rejected product:', id, 'Reason:', reason);
-  const product = MOCK_PRODUCTS.find(p => p.id === id);
-  if (product) product.status = 'REJECTED';
+  await http.put(`/api/admin/products/${id}/reject`, { reason });
   return true;
 };
 
-export const duplicateProduct = async (product: Product): Promise<Product> => {
-  await delay(800);
-  const newProduct: Product = {
-    ...product,
-    id: `p${Date.now()}`,
-    productCode: `PRD-${Date.now().toString().slice(-4)}`,
-    name: `${product.name} (Copy)`,
-    status: 'DRAFT',
-    createdAt: new Date().toISOString(),
-    viewCount: 0
-  };
-  MOCK_PRODUCTS.unshift(newProduct);
-  return newProduct;
-};
-
-export const updateProductStatus = async (id: string, status: ProductStatus): Promise<boolean> => {
-  await delay(600);
-  const product = MOCK_PRODUCTS.find(p => p.id === id);
-  if (product) product.status = status;
+export const updateProductActive = async (id: string, isActive: boolean): Promise<boolean> => {
+  await http.patch(`/api/admin/products/${id}/active`, { is_active: isActive ? 1 : 0 });
   return true;
 };

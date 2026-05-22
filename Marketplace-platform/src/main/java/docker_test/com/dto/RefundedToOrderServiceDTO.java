@@ -1,6 +1,15 @@
 package docker_test.com.dto;
 
 public class RefundedToOrderServiceDTO {
+
+	private String status;
+	
+   public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
    public RefundedToOrderServiceDTO() {
 		super();
 	}

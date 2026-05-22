@@ -27,6 +27,7 @@ import {
 } from "@/types";
 import { API_URL } from "@/helper/api";
 import ReturnRequestModal, { ReturnRequestDraft } from "./ReturnRequestModal";
+import ReturnAttachmentModal from "./ReturnAttachmentModal";
 import { useUserAuth } from "@/context/UserAuthContext";
 
 const orderStatusLabel: Record<Order["status"], string> = {
@@ -634,6 +635,9 @@ export default function UserOrderDetailPage() {
   const [returnModalShipmentId, setReturnModalShipmentId] = useState<
     number | null
   >(null);
+  const [viewReturnMediaShipmentId, setViewReturnMediaShipmentId] = useState<
+    number | null
+  >(null);
   const [returnRequestDrafts, setReturnRequestDrafts] = useState<
     Record<number, ReturnRequestDraft>
   >({});
@@ -659,6 +663,14 @@ export default function UserOrderDetailPage() {
         (shipment) => shipment.id === returnModalShipmentId,
       ) || null,
     [order, returnModalShipmentId],
+  );
+
+  const activeReturnMediaShipment = useMemo(
+    () =>
+      order?.shipments?.find(
+        (shipment) => Number(shipment.id) === viewReturnMediaShipmentId,
+      ) || null,
+    [order, viewReturnMediaShipmentId],
   );
 
   const openReviewModal = (shipmentId: number) => {
@@ -740,6 +752,10 @@ export default function UserOrderDetailPage() {
 
   const closeReturnModal = () => {
     setReturnModalShipmentId(null);
+  };
+
+  const openReturnDetailModal = (shipmentId: number) => {
+    setViewReturnMediaShipmentId(shipmentId);
   };
 
   const updateReturnDraft = (
@@ -2094,7 +2110,9 @@ export default function UserOrderDetailPage() {
                                           <button
                                             type="button"
                                             onClick={() =>
-                                              openReturnModal(shipment.id)
+                                              openReturnDetailModal(
+                                                Number(shipment.id),
+                                              )
                                             }
                                             className="btn btn-warning btn-sm"
                                           >
@@ -3200,6 +3218,18 @@ export default function UserOrderDetailPage() {
             qtyBadge: styles.qtyBadge,
             reviewTextarea: styles.reviewTextarea,
           }}
+        />
+      )}
+
+      {activeReturnMediaShipment && (
+        <ReturnAttachmentModal
+          shipment={activeReturnMediaShipment}
+          returnRequestId={Number(
+            activeReturnMediaShipment.items?.find(
+              (item) => Number(item.lastReturnRequestId) > 0,
+            )?.lastReturnRequestId || 0,
+          )}
+          setViewReturnMediaShipmentId={setViewReturnMediaShipmentId}
         />
       )}
     </>

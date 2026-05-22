@@ -19,6 +19,7 @@ public final class Shop {
 	private Double rating;
 	private int total_products;
 	private int total_orders;
+	private Double total_revenue = 0.0;
 	private Double response_rate;
 	private int response_time;
 	private int is_verified;
@@ -181,6 +182,14 @@ public final class Shop {
 
 	public void setTotal_orders(int total_orders) {
 		this.total_orders = total_orders;
+	}
+
+	public Double getTotal_revenue() {
+		return total_revenue;
+	}
+
+	public void setTotal_revenue(Double total_revenue) {
+		this.total_revenue = total_revenue == null ? 0.0 : total_revenue;
 	}
 
 	public Double getResponse_rate() {

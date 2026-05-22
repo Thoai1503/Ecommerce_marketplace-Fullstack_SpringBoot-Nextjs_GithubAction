@@ -53,6 +53,30 @@ public final class UserMapper implements IMapper<User> {
                 user.setLastLogin(lastLogin.toLocalDateTime());
             }
 
+            try {
+                Object totalOrders = rs.getObject("total_orders");
+                if (totalOrders != null) {
+                    user.setTotalOrders(((Number) totalOrders).intValue());
+                }
+            } catch (SQLException ignored) {
+            }
+
+            try {
+                Object totalSpent = rs.getObject("total_spent");
+                if (totalSpent != null) {
+                    user.setTotalSpent(((Number) totalSpent).doubleValue());
+                }
+            } catch (SQLException ignored) {
+            }
+
+            try {
+                Timestamp lastOrderDate = rs.getTimestamp("last_order_date");
+                if (lastOrderDate != null) {
+                    user.setLastOrderDate(lastOrderDate.toLocalDateTime());
+                }
+            } catch (SQLException ignored) {
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }

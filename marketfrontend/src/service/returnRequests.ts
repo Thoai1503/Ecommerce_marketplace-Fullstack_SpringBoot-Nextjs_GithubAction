@@ -24,6 +24,8 @@ export interface ReturnRequestItemAdmin {
   productImage?: string | null;
   price?: number | null;
   totalPrice?: number | null;
+  totalAfterShopVoucher?: number | null;
+  totalAfterAllVouchers?: number | null;
   orderQuantity?: number | null;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -38,6 +40,49 @@ export interface ReturnRequestAttachmentAdmin {
   createdAt?: string | null;
 }
 
+export interface ReturnShipmentAdmin {
+  id?: number;
+  returnRequestId?: number;
+  trackingCode?: string | null;
+  status?: string | null;
+  pickupAddressId?: number | null;
+  returnAddressId?: number | null;
+  scheduledPickupDate?: string | null;
+  actualPickupDate?: string | null;
+  deliveryDate?: string | null;
+  courierId?: number | null;
+  courierName?: string | null;
+  logisticsWebhookCount?: number | null;
+  notes?: string | null;
+  failedReason?: string | null;
+  retryCount?: number | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface ReturnShipmentHistoryAdmin {
+  id?: number;
+  returnShipmentId?: number;
+  status?: string | null;
+  description?: string | null;
+  location?: string | null;
+  eventCode?: string | null;
+  source?: string | null;
+  externalEventId?: string | null;
+  timestamp?: string | null;
+  createdAt?: string | null;
+}
+
+export interface ReturnRequestTimelineAdmin {
+  id?: number;
+  returnRequestId?: number;
+  eventType?: string | null;
+  eventDetails?: string | null;
+  actorId?: number | null;
+  actorType?: string | null;
+  timestamp?: string | null;
+}
+
 export interface ReturnRequestAdmin {
   id: number;
   orderId: number;
@@ -48,6 +93,8 @@ export interface ReturnRequestAdmin {
   reason?: string | null;
   quantity: number;
   requestedAmount: number;
+  approvedAmount?: number | null;
+  finalRequestedAmount?: number | null;
   refundedAmount: number;
   orderNumber?: string | null;
   orderTrackingNumber?: string | null;
@@ -64,6 +111,9 @@ export interface ReturnRequestAdmin {
   updatedAt?: string | null;
   items: ReturnRequestItemAdmin[];
   attachments: ReturnRequestAttachmentAdmin[];
+  returnShipment?: ReturnShipmentAdmin | null;
+  returnShipmentHistory?: ReturnShipmentHistoryAdmin[];
+  timeline?: ReturnRequestTimelineAdmin[];
 }
 
 export const getAdminReturnRequests = async (): Promise<
