@@ -25,11 +25,11 @@ export const BlockCustomerModal = ({ isOpen, onClose, onConfirm, customerName, i
           </div>
 
           <h3 className="text-xl font-bold text-slate-800 mb-2">
-            {isBlocked ? 'Mở khóa tài khoản?' : 'Chặn khách hàng?'}
+            {isBlocked ? 'Unlock account?' : 'Block customer?'}
           </h3>
           
           <p className="text-slate-500 text-sm font-medium mb-2">
-            Bạn có chắc muốn {isBlocked ? 'bỏ chặn' : 'chặn'} khách hàng này không?
+            Are you sure you want to {isBlocked ? 'unlock' : 'block'} this customer?
           </p>
           
           <p className="text-slate-800 font-bold text-sm bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 max-w-full truncate">
@@ -39,7 +39,7 @@ export const BlockCustomerModal = ({ isOpen, onClose, onConfirm, customerName, i
           {!isBlocked && (
             <p className="text-xs text-red-500 mt-4 bg-red-50 px-3 py-2 rounded-lg flex items-center gap-2 text-left">
               <AlertTriangle size={16} className="shrink-0" />
-              Khách hàng sẽ không thể đăng nhập hoặc đặt hàng sau khi bị chặn.
+              The customer will not be able to log in or place orders after being blocked.
             </p>
           )}
         </div>
@@ -49,7 +49,7 @@ export const BlockCustomerModal = ({ isOpen, onClose, onConfirm, customerName, i
             onClick={onClose}
             className="flex-1 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all border-0 bg-transparent"
           >
-            Hủy bỏ
+            Cancel
           </button>
           <button 
             onClick={onConfirm}
@@ -59,7 +59,7 @@ export const BlockCustomerModal = ({ isOpen, onClose, onConfirm, customerName, i
                 : 'bg-red-600 hover:bg-red-700 shadow-red-500/20'
             }`}
           >
-            {isBlocked ? 'Mở khóa ngay' : 'Chặn ngay'}
+            {isBlocked ? 'Unlock immediately' : 'Block immediately'}
           </button>
         </div>
       </div>
@@ -87,10 +87,10 @@ export const DeleteCustomerModal = ({ isOpen, onClose, onConfirm, customerName, 
             <Trash2 size={32} />
           </div>
 
-          <h3 className="text-xl font-bold text-slate-800 mb-2">Xóa khách hàng?</h3>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Delete Customer?</h3>
           
           <p className="text-slate-500 text-sm font-medium mb-2">
-            Hành động này sẽ xóa dữ liệu khách hàng khỏi hệ thống.
+            This action will delete the customer's data from the system.
           </p>
           
           {customerName && (
@@ -101,13 +101,13 @@ export const DeleteCustomerModal = ({ isOpen, onClose, onConfirm, customerName, 
 
           {count > 1 && (
              <p className="text-slate-800 font-bold text-sm bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 mt-2">
-               Số lượng: {count} khách hàng
+               Quantity: {count} customers
              </p>
           )}
 
           <p className="text-xs text-amber-600 mt-4 bg-amber-50 px-3 py-2 rounded-lg flex items-center gap-2 text-left">
             <AlertTriangle size={16} className="shrink-0" />
-            Lưu ý: Dữ liệu đơn hàng lịch sử có thể bị ảnh hưởng.
+            Note: Historical order data may be affected.
           </p>
         </div>
 
@@ -116,13 +116,13 @@ export const DeleteCustomerModal = ({ isOpen, onClose, onConfirm, customerName, 
             onClick={onClose}
             className="flex-1 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-all border-0 bg-transparent"
           >
-            Hủy bỏ
+            Cancel
           </button>
           <button 
             onClick={onConfirm}
             className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-red-500/20 transition-all border-0"
           >
-            Xóa vĩnh viễn
+            Delete Permanently
           </button>
         </div>
       </div>

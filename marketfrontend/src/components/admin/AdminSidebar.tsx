@@ -229,22 +229,20 @@ export default function AdminSidebar({
 
   const navigation = [
     {
-      group: "CHÍNH",
-      items: [
-        { label: "Tổng quan", path: "/admin", icon: <LayoutDashboard /> },
-      ],
+      group: "MAIN",
+      items: [{ label: "Overview", path: "/admin", icon: <LayoutDashboard /> }],
     },
     {
-      group: "KINH DOANH",
+      group: "BUSINESS",
       items: [
-        { label: "Sản phẩm", path: "/admin/products", icon: <Package /> },
+        { label: "Products", path: "/admin/products", icon: <Package /> },
         {
-          label: "Quản lý đơn hàng",
+          label: "Order Management",
           id: "order-management",
           icon: <ShoppingCart />,
           children: [
             {
-              label: "Đơn hàng",
+              label: "Orders",
               path: "/admin/orders",
               active:
                 pathname === "/admin/orders" &&
@@ -252,44 +250,44 @@ export default function AdminSidebar({
                 paymentStatus === "ALL",
             },
             {
-              label: "Đơn hàng thành công",
+              label: "Successful Orders",
               path: "/admin/orders?paymentStatus=PAID",
               active: pathname === "/admin/orders" && paymentStatus === "PAID",
             },
             {
-              label: "Kiện hàng",
+              label: "Processing Orders",
               path: "/admin/orders?status=PROCESSING",
               active:
                 pathname === "/admin/orders" && orderStatus === "PROCESSING",
             },
             {
-              label: "Đang giao",
+              label: "Shipped Orders",
               path: "/admin/orders?status=SHIPPED",
               active: pathname === "/admin/orders" && orderStatus === "SHIPPED",
             },
             {
-              label: "Đã giao",
+              label: "Completed Orders",
               path: "/admin/orders?status=COMPLETED",
               active:
                 pathname === "/admin/orders" && orderStatus === "COMPLETED",
             },
             {
-              label: "Trả hàng hoàn tiền",
+              label: "Return Requests",
               path: "/admin/return-requests",
               active: pathname === "/admin/return-requests",
             },
           ],
         },
-        { label: "Khách hàng", path: "/admin/customers", icon: <Users /> },
-        { label: "Nhà bán hàng", path: "/admin/sellers", icon: <Store /> },
-        { label: "Mã giảm giá", path: "/admin/vouchers", icon: <Ticket /> },
+        { label: "Customers", path: "/admin/customers", icon: <Users /> },
+        { label: "Sellers", path: "/admin/sellers", icon: <Store /> },
+        { label: "Vouchers", path: "/admin/vouchers", icon: <Ticket /> },
         {
-          label: "Tài chính",
+          label: "Finance",
           id: "finance",
           icon: <Wallet />,
           children: [
             {
-              label: "Tổng quan",
+              label: "Overview",
               path: "/admin/finance",
               active: pathname === "/admin/finance",
             },
@@ -304,32 +302,32 @@ export default function AdminSidebar({
               active: pathname === "/admin/finance/reconciliation",
             },
             {
-              label: "Giao dịch",
+              label: "Transactions",
               path: "/admin/finance/transactions",
               active: pathname === "/admin/finance/transactions",
             },
             {
-              label: "Hoàn tiền",
+              label: "Refunds",
               path: "/admin/finance/refunds",
               active: pathname === "/admin/finance/refunds",
             },
             {
-              label: "Tranh chấp",
+              label: "Disputes",
               path: "/admin/finance/disputes",
               active: pathname === "/admin/finance/disputes",
             },
             {
-              label: "Đối soát seller",
+              label: "Seller Settlements",
               path: "/admin/finance/settlements",
               active: pathname === "/admin/finance/settlements",
             },
             {
-              label: "Ví người dùng",
+              label: "User Wallets",
               path: "/admin/finance/wallets",
               active: pathname === "/admin/finance/wallets",
             },
             {
-              label: "Thanh toán Seller",
+              label: "Seller Payments",
               path: "/admin/finance/payments",
               active: pathname === "/admin/finance/payments",
             },
@@ -367,8 +365,8 @@ export default function AdminSidebar({
             },
           ],
         },
-        { label: "Phân quyền", path: "/admin/users", icon: <ShieldCheck /> },
-        { label: "Cài đặt", path: "/admin/settings", icon: <Settings /> },
+        { label: "Permissions", path: "/admin/users", icon: <ShieldCheck /> },
+        { label: "Settings", path: "/admin/settings", icon: <Settings /> },
       ],
     },
   ];
@@ -389,23 +387,23 @@ export default function AdminSidebar({
         <Link
           href="/admin"
           onClick={onCloseMobile}
-          data-tooltip="Trang chủ"
+          data-tooltip="Homepage"
           className="no-underline tooltip-trigger flex items-center gap-3 overflow-hidden"
         >
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
-            <span className="font-black text-xl text-white italic">S</span>
+            <span className="font-black text-xl text-white italic">N</span>
           </div>
           <span
             className={`font-bold text-xl tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent transition-opacity duration-300 ${isCollapsed ? "lg:opacity-0" : "opacity-100"}`}
           >
-            STAY-GO
+            NexaMart
           </span>
         </Link>
 
         <div className="flex items-center">
           <button
             onClick={onToggleCollapse}
-            data-tooltip={isCollapsed ? "Mở rộng" : "Thu gọn"}
+            data-tooltip={isCollapsed ? "Extend" : "Collapse"}
             className="hidden lg:flex tooltip-trigger p-1.5 rounded-lg bg-slate-800/50 text-slate-400 hover:text-white border-0 transition-colors"
           >
             <ChevronLeft
@@ -483,12 +481,12 @@ export default function AdminSidebar({
               Admin Manager
             </p>
             <p className="text-[10px] text-slate-500 truncate">
-              Sàn TMĐT STAY-GO
+              NexaMart e-commerce platform{" "}
             </p>
           </div>
 
           <button
-            title="Đăng xuất"
+            title="Logout"
             onClick={handleLogout}
             className={`p-2 text-slate-500 hover:text-red-400 transition-all duration-300 border-0 bg-transparent shrink-0 ${isCollapsed ? "lg:opacity-0 lg:absolute" : "opacity-100"}`}
           >
@@ -499,7 +497,7 @@ export default function AdminSidebar({
             <button
               onClick={handleLogout}
               className="absolute inset-0 opacity-0 cursor-pointer lg:block hidden"
-              data-tooltip="Đăng xuất"
+              data-tooltip="Logout"
             />
           )}
         </div>

@@ -16,9 +16,9 @@ import Pagination from '../../../components/ui/Pagination';
 
 // --- CONFIGS ---
 const StatusConfig: Record<SellerStatus, { label: string; color: string; bgColor: string; icon: any }> = {
-  ACTIVE: { label: 'Hoạt động', color: 'text-green-700', bgColor: 'bg-green-50', icon: <CheckCircle size={14} /> },
-  PENDING: { label: 'Chờ duyệt', color: 'text-amber-700', bgColor: 'bg-amber-50', icon: <AlertTriangle size={14} /> },
-  BLOCKED: { label: 'Đã khóa', color: 'text-red-700', bgColor: 'bg-red-50', icon: <Lock size={14} /> },
+  ACTIVE: { label: 'Work', color: 'text-green-700', bgColor: 'bg-green-50', icon: <CheckCircle size={14} /> },
+  PENDING: { label: 'Pending', color: 'text-amber-700', bgColor: 'bg-amber-50', icon: <AlertTriangle size={14} /> },
+  BLOCKED: { label: 'Blocked', color: 'text-red-700', bgColor: 'bg-red-50', icon: <Lock size={14} /> },
 };
 
 const ITEMS_PER_PAGE_GRID = 8;
@@ -85,13 +85,13 @@ export default function SellersPage() {
   const confirmBlock = async () => {
     const { id, isBlocked } = blockModal;
     const newStatus = isBlocked ? 'ACTIVE' : 'BLOCKED';
-    const action = isBlocked ? 'bỏ chặn' : 'chặn';
+    const action = isBlocked ? 'unblock' : 'block';
     try {
       await updateStatus({ id, status: newStatus });
-      setToast({ id: Date.now().toString(), message: `Đã ${action} nhà bán hàng thành công.`, type: 'success' });
+      setToast({ id: Date.now().toString(), message: `Already ${action} successful salesperson.`, type: 'success' });
       setBlockModal({ ...blockModal, isOpen: false });
     } catch (err) {
-      setToast({ id: Date.now().toString(), message: `Lỗi khi ${action} nhà bán hàng.`, type: 'error' });
+      setToast({ id: Date.now().toString(), message: `Error when ${action} seller.`, type: 'error' });
     }
   };
 
@@ -103,11 +103,11 @@ export default function SellersPage() {
   const confirmDelete = async () => {
     try {
       await deleteSellers(deleteModal.ids);
-      setToast({ id: Date.now().toString(), message: `Đã xóa ${deleteModal.ids.length} nhà bán hàng!`, type: 'success' });
+      setToast({ id: Date.now().toString(), message: `Successfully deleted ${deleteModal.ids.length} sellers.`, type: 'success' });
       setDeleteModal({ ...deleteModal, isOpen: false });
       setSelectedIds([]);
     } catch (err) {
-      setToast({ id: Date.now().toString(), message: 'Lỗi khi xóa nhà bán hàng.', type: 'error' });
+      setToast({ id: Date.now().toString(), message: `Error when deleting seller.`, type: 'error' });
     }
   };
 
@@ -147,9 +147,9 @@ export default function SellersPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
-             🏪 Nhà bán hàng (Sellers)
+             🏪 Sellers
           </h1>
-          <p className="text-sm text-slate-500 font-medium">Quản lý tất cả đối tác bán hàng trong hệ thống.</p>
+          <p className="text-sm text-slate-500 font-medium">Manage all seller partners in the system.</p>
         </div>
         
         <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
@@ -172,7 +172,7 @@ export default function SellersPage() {
              onClick={() => router.push('/admin/sellers/new')}
              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 border-0"
            >
-             <Plus size={16} /> Thêm Seller
+             <Plus size={16} /> Add Seller
            </button>
         </div>
       </div>
@@ -180,11 +180,11 @@ export default function SellersPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
-          { label: 'Tổng số', value: stats.total, icon: <ShoppingBag size={18} />, color: 'bg-blue-50 text-blue-600', tab: 'ALL' },
-          { label: 'Chờ duyệt', value: stats.pending, icon: <AlertTriangle size={18} />, color: 'bg-amber-50 text-amber-600', tab: 'PENDING' },
-          { label: 'Hoạt động', value: stats.active, icon: <CheckCircle size={18} />, color: 'bg-green-50 text-green-600', tab: 'ACTIVE' },
-          { label: 'Đã khóa', value: stats.blocked, icon: <Ban size={18} />, color: 'bg-red-50 text-red-600', tab: 'BLOCKED' },
-          { label: 'Doanh thu', value: `${(stats.revenue / 1000000).toFixed(1)}M`, icon: <DollarSign size={18} />, color: 'bg-purple-50 text-purple-600', tab: 'ALL' },
+          { label: 'Total', value: stats.total, icon: <ShoppingBag size={18} />, color: 'bg-blue-50 text-blue-600', tab: 'ALL' },
+          { label: 'Pending', value: stats.pending, icon: <AlertTriangle size={18} />, color: 'bg-amber-50 text-amber-600', tab: 'PENDING' },
+          { label: 'Active', value: stats.active, icon: <CheckCircle size={18} />, color: 'bg-green-50 text-green-600', tab: 'ACTIVE' },
+          { label: 'Blocked', value: stats.blocked, icon: <Ban size={18} />, color: 'bg-red-50 text-red-600', tab: 'BLOCKED' },
+          { label: 'Revenue', value: `${(stats.revenue / 1000000).toFixed(1)}M`, icon: <DollarSign size={18} />, color: 'bg-purple-50 text-purple-600', tab: 'ALL' },
         ].map((stat, idx) => (
           <button 
              key={idx}
@@ -208,7 +208,7 @@ export default function SellersPage() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
                 type="text"
-                placeholder="Tìm kiếm theo tên, email, vị trí..."
+                placeholder="Search by name, email, location..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/5 text-sm font-medium transition-shadow"
@@ -222,7 +222,7 @@ export default function SellersPage() {
                    onClick={() => setActiveTab(tab as any)}
                    className={`px-3 py-2 text-xs font-bold rounded-lg transition-all border-0 ${activeTab === tab ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                  >
-                   {tab === 'ALL' ? 'Tất cả' : StatusConfig[tab as SellerStatus].label}
+                   {tab === 'ALL' ? 'ALL' : StatusConfig[tab as SellerStatus].label}
                  </button>
                ))}
             </div>
@@ -232,10 +232,10 @@ export default function SellersPage() {
         {/* Title Bar */}
         <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
              <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                Danh sách nhà bán hàng
+                Seller List
              </h3>
              <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
-                {filteredSellers.length} nhà bán
+                {filteredSellers.length} sellers
              </span>
         </div>
 
@@ -247,7 +247,7 @@ export default function SellersPage() {
                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-3">
                   <Search size={32} className="text-slate-300" />
                </div>
-               <p className="text-slate-400 font-bold">Không tìm thấy nhà bán hàng nào.</p>
+               <p className="text-slate-400 font-bold">No sellers found.</p>
             </div>
         ) : (
             <>
@@ -278,15 +278,15 @@ export default function SellersPage() {
 
                         <div className="grid grid-cols-3 gap-2 py-3 border-t border-slate-100 mb-4">
                            <div className="text-center">
-                              <p className="text-[10px] text-slate-400 font-bold uppercase">Sản phẩm</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase">Products</p>
                               <p className="text-sm font-black text-slate-800">{seller.totalProducts}</p>
                            </div>
                            <div className="text-center border-l border-slate-100">
-                              <p className="text-[10px] text-slate-400 font-bold uppercase">Đơn hàng</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase">Orders</p>
                               <p className="text-sm font-black text-slate-800">{seller.totalOrders}</p>
                            </div>
                            <div className="text-center border-l border-slate-100">
-                              <p className="text-[10px] text-slate-400 font-bold uppercase">Doanh thu</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase">Revenue</p>
                               <p className="text-sm font-black text-slate-800">{(seller.totalRevenue / 1000000).toFixed(0)}M</p>
                            </div>
                         </div>
@@ -296,19 +296,19 @@ export default function SellersPage() {
                              onClick={(e) => { e.stopPropagation(); router.push(`/admin/sellers/${seller.id}`); }}
                              className="flex-1 py-2 text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border-0"
                            >
-                             Xem
+                             View
                            </button>
                            <button 
                              onClick={(e) => { e.stopPropagation(); router.push(`/admin/sellers/${seller.id}/edit`); }}
                              className="flex-1 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border-0"
                            >
-                             Sửa
+                             Edit
                            </button>
                            {seller.status === 'BLOCKED' ? (
                               <button 
                                 onClick={(e) => handleBlockClick(e, seller.id, seller.brandTitle, seller.status)}
                                 className="p-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg border-0"
-                                title="Mở khóa"
+                                title="Unblock"
                               >
                                 <Unlock size={14} />
                               </button>
@@ -316,7 +316,7 @@ export default function SellersPage() {
                               <button 
                                 onClick={(e) => handleBlockClick(e, seller.id, seller.brandTitle, seller.status)}
                                 className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border-0"
-                                title="Khóa"
+                                title="Block"
                               >
                                 <Ban size={14} />
                               </button>
@@ -333,12 +333,12 @@ export default function SellersPage() {
                             <th className="px-6 py-4 w-12 text-center">
                                <input type="checkbox" className="rounded border-slate-300" onChange={toggleSelectAll} checked={selectedIds.length === paginatedSellers.length && paginatedSellers.length > 0} />
                             </th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nhà bán hàng</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Chủ sở hữu / Liên hệ</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Địa chỉ</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Thống kê</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng thái</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Hành động</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Seller</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Owner / Contact</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Address</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Statistics</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                          </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
@@ -383,12 +383,12 @@ export default function SellersPage() {
                                </td>
                                <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
                                   <div className="flex items-center justify-end gap-1">
-                                     <button onClick={() => router.push(`/admin/sellers/${seller.id}`)} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg transition-colors border-0 bg-transparent" title="Xem chi tiết"><Eye size={16} /></button>
-                                     <button onClick={() => router.push(`/admin/sellers/${seller.id}/edit`)} className="p-2 text-slate-400 hover:text-amber-600 rounded-lg transition-colors border-0 bg-transparent" title="Chỉnh sửa"><Edit3 size={16} /></button>
+                                     <button onClick={() => router.push(`/admin/sellers/${seller.id}`)} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg transition-colors border-0 bg-transparent" title="See details"><Eye size={16} /></button>
+                                     <button onClick={() => router.push(`/admin/sellers/${seller.id}/edit`)} className="p-2 text-slate-400 hover:text-amber-600 rounded-lg transition-colors border-0 bg-transparent" title="Edit"><Edit3 size={16} /></button>
                                      <button 
                                        onClick={(e) => handleBlockClick(e, seller.id, seller.brandTitle, seller.status)}
                                        className={`p-2 rounded-lg transition-colors border-0 bg-transparent ${seller.status === 'BLOCKED' ? 'text-green-500 hover:bg-green-50' : 'text-red-400 hover:text-red-600 hover:bg-red-50'}`}
-                                       title={seller.status === 'BLOCKED' ? "Mở khóa" : "Khóa tài khoản"}
+                                       title={seller.status === 'BLOCKED' ? "Unblock" : "Block account"}
                                      >
                                         {seller.status === 'BLOCKED' ? <Unlock size={16} /> : <Ban size={16} />}
                                      </button>

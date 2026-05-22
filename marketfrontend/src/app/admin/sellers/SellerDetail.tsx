@@ -60,20 +60,20 @@ const AISellerAnalyst = ({ seller }: { seller: Seller }) => {
       let cons: string[] = [];
 
       if (seller.rating >= 4.5) {
-        summary = "Shop có chỉ số uy tín rất cao. Dữ liệu từ 3 tháng gần nhất cho thấy khách hàng đặc biệt hài lòng về chất lượng sản phẩm chính hãng và tốc độ giao hàng. AI không phát hiện dấu hiệu seeding đánh giá ảo.";
+        summary = "The shop has a very high reputation score. Data from the last 3 months shows that customers are particularly satisfied with the quality of genuine products and the speed of delivery. The AI ​​did not detect any signs of fake or misleading reviews.";
         sentimentScore = 94;
-        pros = ["Giao hàng siêu tốc", "Hàng chuẩn auth", "Đóng gói kỹ 2 lớp"];
-        cons = ["Rep inbox hơi chậm (T7-CN)"];
+        pros = ["Super fast shipping", "Genuine products", "Double-layer packaging"];
+        cons = ["Rep inbox is a bit slow (Sat-Sun)"];
       } else if (seller.rating >= 4.0) {
-        summary = "Đánh giá tổng quan ở mức Khá. Sản phẩm đúng mô tả và giá cả cạnh tranh là điểm mạnh. Tuy nhiên, AI phát hiện cụm từ 'hộp móp' xuất hiện trong 15% đánh giá gần đây, cần cải thiện khâu đóng gói.";
+        summary = "The overall rating is good. The products match their descriptions and the prices are competitive. However, the AI detected the phrase 'hộp móp' appearing in 15% of recent reviews, indicating a need to improve packaging.";
         sentimentScore = 78;
-        pros = ["Giá rẻ hơn thị trường", "Đúng mô tả"];
-        cons = ["Hộp hay bị móp", "Giao hàng lâu"];
+        pros = [" cheaper than market price", "Accurate descriptions"];
+        cons = ["Rep inbox is a bit slow (Sat-Sun)", "Slow delivery"];
       } else {
-        summary = "CẢNH BÁO: AI phát hiện nhiều tín hiệu tiêu cực. Khách hàng phàn nàn nhiều về việc giao sai mẫu và thái độ phục vụ khi khiếu nại. Tỷ lệ quay lại mua hàng (Retention) dự báo rất thấp.";
+        summary = "WARNING: AI detected multiple negative signals. Customers frequently complain about receiving wrong items and poor customer service during complaints. The predicted return rate (Retention) is very low.";
         sentimentScore = 42;
-        pros = ["Giá rẻ nhất sàn"];
-        cons = ["Giao sai màu", "CSKH kém", "Khó đổi trả", "Thái độ lồi lõm"];
+        pros = [" cheapest on the platform"];
+        cons = ["Wrong colors delivered", "Poor customer service", "Difficult returns", "Inconsistent attitude"];
       }
 
       setAnalysis({ summary, sentimentScore, pros, cons });
@@ -104,7 +104,7 @@ const AISellerAnalyst = ({ seller }: { seller: Seller }) => {
                 <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce delay-75"></div>
                 <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce delay-150"></div>
               </div>
-              <span className="text-xs font-bold text-white/90">Đang đọc {seller.reviewCount.toLocaleString()} đánh giá & comment...</span>
+              <span className="text-xs font-bold text-white/90">Analyzing {seller.reviewCount.toLocaleString()} reviews & comments...</span>
            </div>
            <div className="h-16 bg-white/10 rounded-xl w-full border border-white/5"></div>
            <div className="flex gap-2">
@@ -124,13 +124,13 @@ const AISellerAnalyst = ({ seller }: { seller: Seller }) => {
            {/* Score & Tags */}
            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div className="flex flex-col gap-1">
-                 <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Chỉ số cảm xúc (Sentiment Score)</span>
+                 <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">Sentiment Score</span>
                  <div className="flex items-baseline gap-2">
                     <span className={`text-4xl font-black ${analysis.sentimentScore >= 80 ? 'text-green-300' : analysis.sentimentScore >= 50 ? 'text-yellow-300' : 'text-red-300'}`}>
                       {analysis.sentimentScore}/100
                     </span>
                     <span className="text-xs font-bold opacity-80 mb-1">
-                      {analysis.sentimentScore >= 80 ? 'Rất tích cực' : analysis.sentimentScore >= 50 ? 'Trung bình' : 'Tiêu cực'}
+                      {analysis.sentimentScore >= 80 ? 'Very Positive' : analysis.sentimentScore >= 50 ? 'Neutral' : 'Negative'}
                     </span>
                  </div>
               </div>
@@ -182,12 +182,12 @@ export default function SellerDetail() {
 
   if (isLoadingSeller) return <ProfileSkeleton />;
   
-  if (!seller) return <div className="p-20 text-center text-slate-400 font-bold">Không tìm thấy nhà bán hàng</div>;
+  if (!seller) return <div className="p-20 text-center text-slate-400 font-bold">Seller not found</div>;
 
   const handleBlockConfirm = async () => {
     const newStatus = seller.status === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED';
     await updateSeller({ status: newStatus });
-    setToast({ id: Date.now().toString(), message: `Đã cập nhật trạng thái thành ${newStatus}`, type: 'success' });
+    setToast({ id: Date.now().toString(), message: `Updated status to ${newStatus}`, type: 'success' });
     setIsBlockModalOpen(false);
   };
 
@@ -249,7 +249,7 @@ export default function SellerDetail() {
                         <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
                         <span className="flex items-center gap-1.5 font-mono">ID: {seller.accountCode}</span>
                         <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                        <span className="flex items-center gap-1"><Calendar size={14} /> Tham gia {new Date(seller.createdAt).toLocaleDateString()}</span>
+                        <span className="flex items-center gap-1"><Calendar size={14} /> Joined {new Date(seller.createdAt).toLocaleDateString()}</span>
                      </div>
                   </div>
 
@@ -258,7 +258,7 @@ export default function SellerDetail() {
                        onClick={() => router.push(`/admin/sellers/${seller.id}/edit`)}
                        className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
                      >
-                       <Edit3 size={16} /> Chỉnh sửa
+                       <Edit3 size={16} /> Edit
                      </button>
                      <button 
                         onClick={() => setIsBlockModalOpen(true)}
@@ -269,7 +269,7 @@ export default function SellerDetail() {
                         }`}
                      >
                         {seller.status === 'BLOCKED' ? <Unlock size={16} /> : <Ban size={16} />}
-                        {seller.status === 'BLOCKED' ? 'Mở khóa' : 'Chặn'}
+                        {seller.status === 'BLOCKED' ? 'Unblock' : 'Block'}
                      </button>
                   </div>
                </div>
@@ -281,7 +281,7 @@ export default function SellerDetail() {
             {/* LEFT COLUMN: Contact & Info */}
             <div className="space-y-6">
                <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-6">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Thông tin liên hệ</h3>
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Contact Information</h3>
                   <div className="space-y-4">
                      {seller.website && (
                         <div className="flex items-start gap-4 group">
@@ -319,7 +319,7 @@ export default function SellerDetail() {
                            <MapPin size={20} />
                         </div>
                         <div className="min-w-0">
-                           <p className="text-[10px] font-bold text-slate-400 uppercase">Địa chỉ</p>
+                           <p className="text-[10px] font-bold text-slate-400 uppercase">Address</p>
                            <p className="text-sm font-bold text-slate-800 leading-snug">{seller.location}</p>
                         </div>
                      </div>
@@ -332,7 +332,7 @@ export default function SellerDetail() {
                   </div>
                   <div className="relative z-10">
                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xs font-bold text-white/60 uppercase tracking-widest">Đánh giá Shop</h3>
+                        <h3 className="text-xs font-bold text-white/60 uppercase tracking-widest">Seller Reviews</h3>
                         <div className="p-2 bg-white/10 rounded-lg text-yellow-400">
                            <Star size={18} fill="currentColor" />
                         </div>
@@ -342,10 +342,10 @@ export default function SellerDetail() {
                         <span className="text-xl text-white/40 font-medium">/5</span>
                      </div>
                      <div className="text-center text-sm font-medium text-white/60 pb-4 border-b border-white/10">
-                        Dựa trên <strong>{seller.reviewCount}</strong> lượt đánh giá
+                        Based on <strong>{seller.reviewCount}</strong> reviews
                      </div>
                      <button className="w-full mt-4 py-3 bg-white text-slate-900 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-blue-50 transition-colors">
-                        Xem chi tiết đánh giá
+                        View Review Details
                      </button>
                   </div>
                </div>
@@ -367,7 +367,7 @@ export default function SellerDetail() {
                         <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full">+12%</span>
                      </div>
                      <span className="text-3xl font-black text-slate-800 tracking-tight">{seller.totalProducts}</span>
-                     <p className="text-xs font-bold text-slate-400 uppercase mt-1">Sản phẩm</p>
+                     <p className="text-xs font-bold text-slate-400 uppercase mt-1">Products</p>
                   </div>
                   
                   <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm hover:border-green-300 transition-all group">
@@ -378,7 +378,7 @@ export default function SellerDetail() {
                         <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full">+5%</span>
                      </div>
                      <span className="text-3xl font-black text-slate-800 tracking-tight">{seller.totalOrders.toLocaleString()}</span>
-                     <p className="text-xs font-bold text-slate-400 uppercase mt-1">Đơn hàng</p>
+                     <p className="text-xs font-bold text-slate-400 uppercase mt-1">Orders</p>
                   </div>
 
                   <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm hover:border-purple-300 transition-all group">
@@ -389,7 +389,7 @@ export default function SellerDetail() {
                         <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full">+24%</span>
                      </div>
                      <span className="text-3xl font-black text-slate-800 tracking-tight">{(seller.totalRevenue / 1000000).toFixed(1)}M</span>
-                     <p className="text-xs font-bold text-slate-400 uppercase mt-1">Doanh thu</p>
+                     <p className="text-xs font-bold text-slate-400 uppercase mt-1">Revenue</p>
                   </div>
                </div>
 
@@ -397,10 +397,10 @@ export default function SellerDetail() {
                <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full min-h-[400px]">
                   <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                      <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                        <ShoppingBag size={18} className="text-slate-400" /> Sản phẩm của shop
+                        <ShoppingBag size={18} className="text-slate-400" /> Products
                      </h3>
                      <span className="text-xs font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-lg">
-                        {sellerProducts.length} sản phẩm
+                        {sellerProducts.length} products
                      </span>
                   </div>
 
@@ -411,22 +411,22 @@ export default function SellerDetail() {
                   ) : isProductsError ? (
                      <div className="flex flex-col items-center justify-center py-20 text-rose-500">
                         <AlertCircle size={40} className="mb-2 opacity-30" />
-                        <p className="text-sm font-medium">Không tải được sản phẩm của shop.</p>
+                        <p className="text-sm font-medium">Cannot load shop products.</p>
                      </div>
                   ) : sellerProducts.length === 0 ? (
                      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                         <Package size={40} className="mb-2 opacity-20" />
-                        <p className="text-sm font-medium">Chưa có sản phẩm nào.</p>
+                        <p className="text-sm font-medium">No products available.</p>
                      </div>
                   ) : (
                      <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                            <thead>
                               <tr className="bg-slate-50/50 border-b border-slate-100">
-                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-8">Sản phẩm</th>
-                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Giá bán</th>
-                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng thái</th>
-                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Kho hàng</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-8">Products</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Price</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Stock</th>
                               </tr>
                            </thead>
                            <tbody className="divide-y divide-slate-50">
@@ -465,7 +465,7 @@ export default function SellerDetail() {
                <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden min-h-[360px]">
                   <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                      <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                        <Truck size={18} className="text-slate-400" /> Order shipment của shop
+                        <Truck size={18} className="text-slate-400" /> Order shipments
                      </h3>
                      <span className="text-xs font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-lg">
                         {sellerShipments.length} shipment
@@ -479,24 +479,24 @@ export default function SellerDetail() {
                   ) : isShipmentsError ? (
                      <div className="flex flex-col items-center justify-center py-20 text-rose-500">
                         <AlertCircle size={40} className="mb-2 opacity-30" />
-                        <p className="text-sm font-medium">Không tải được đơn hàng của shop.</p>
+                        <p className="text-sm font-medium">Unable to load the order from the shop.</p>
                      </div>
                   ) : sellerShipments.length === 0 ? (
                      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                         <Truck size={40} className="mb-2 opacity-20" />
-                        <p className="text-sm font-medium">Shop chưa có order shipment nào.</p>
+                        <p className="text-sm font-medium">The shop hasn't received any shipment orders yet.</p>
                      </div>
                   ) : (
                      <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                            <thead>
                               <tr className="bg-slate-50/50 border-b border-slate-100">
-                                 <th className="px-6 py-4 pl-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Đơn hàng</th>
-                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Người nhận</th>
-                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Sản phẩm</th>
-                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Giá trị</th>
-                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
-                                 <th className="px-6 py-4 pr-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giao hàng</th>
+                                 <th className="px-6 py-4 pl-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Order</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Recipient</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Products</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Value</th>
+                                 <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                 <th className="px-6 py-4 pr-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Delivery</th>
                               </tr>
                            </thead>
                            <tbody className="divide-y divide-slate-50">

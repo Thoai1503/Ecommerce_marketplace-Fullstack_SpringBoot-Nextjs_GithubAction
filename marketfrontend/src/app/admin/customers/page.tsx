@@ -87,11 +87,11 @@ export default function CustomersPage() {
   const confirmDelete = async () => {
     try {
       await deleteCustomers(deleteModal.ids);
-      setToast({ message: `Đã xóa ${deleteModal.ids.length} khách hàng!`, type: 'success' });
+      setToast({ message: `Deleted ${deleteModal.ids.length} customers!`, type: 'success' });
       setSelectedIds([]);
       setDeleteModal({ isOpen: false, ids: [] });
     } catch (err) {
-      setToast({ message: 'Lỗi khi xóa khách hàng.', type: 'error' });
+      setToast({ message: 'Error occurred while deleting customers.', type: 'error' });
     }
   };
 
@@ -103,20 +103,20 @@ export default function CustomersPage() {
 
   const confirmBlock = async () => {
     const { id, isBlocked } = blockModal;
-    const action = isBlocked ? 'bỏ chặn' : 'chặn'; // isBlocked=true means we are Unblocking
+    const action = isBlocked ? 'unlock' : 'block'; // isBlocked=true means we are Unblocking
     try {
       // Toggle logic: If currently blocked (isBlocked=true), we send isBlocked=false to API (Unblock)
       await toggleBlockStatus({ id, isBlocked: !isBlocked });
-      setToast({ message: `Đã ${action} khách hàng thành công.`, type: 'success' });
+      setToast({ message: `Successfully ${action}ed customer.`, type: 'success' });
       setBlockModal({ ...blockModal, isOpen: false });
     } catch (err) {
-      setToast({ message: `Lỗi khi ${action} khách hàng.`, type: 'error' });
+      setToast({ message: `Error occurred while ${action}ing customer.`, type: 'error' });
     }
   };
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    setToast({ message: `Đã sao chép ${label}`, type: 'success' });
+    setToast({ message: `Successfully copied ${label}.`, type: 'success' });
   };
 
   const toggleSelect = (id: string) => {
@@ -156,15 +156,12 @@ export default function CustomersPage() {
         customerName={deleteModal.name}
         count={deleteModal.ids.length}
       />
-
-      <Breadcrumbs items={[{ label: 'Customers' }]} />
-
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
-             👥 Quản lý Khách hàng
+             👥 Customer Management
           </h1>
-          <p className="text-sm text-slate-500 font-medium">Quản lý thông tin và lịch sử mua hàng của khách.</p>
+          <p className="text-sm text-slate-500 font-medium">Manage customer information and purchase history.</p>
         </div>
       </div>
 
@@ -176,7 +173,7 @@ export default function CustomersPage() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
                 type="text"
-                placeholder="Tìm theo tên, email, số điện thoại..."
+                placeholder="Search by name, email, or phone number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/5 text-sm font-medium transition-shadow"
@@ -190,7 +187,7 @@ export default function CustomersPage() {
                    onClick={() => setActiveTab(tab as any)}
                    className={`px-3 py-2 text-xs font-bold rounded-lg transition-all border-0 whitespace-nowrap ${activeTab === tab ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                  >
-                   {tab === 'ALL' ? 'Tất cả' : StatusConfig[tab as CustomerStatus].label}
+                   {tab === 'ALL' ? 'All' : StatusConfig[tab as CustomerStatus].label}
                  </button>
                ))}
             </div>
@@ -202,13 +199,13 @@ export default function CustomersPage() {
 
           {selectedIds.length > 0 && (
             <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
-              <span className="text-sm font-bold text-slate-500">Đã chọn {selectedIds.length}</span>
+              <span className="text-sm font-bold text-slate-500">Selected {selectedIds.length}</span>
               <button 
                 onClick={handleBulkDeleteClick}
                 disabled={isDeleting}
                 className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-all border-0"
               >
-                <Trash2 size={14} /> Xóa
+                <Trash2 size={14} /> Delete
               </button>
             </div>
           )}
@@ -217,10 +214,10 @@ export default function CustomersPage() {
         {/* Title Bar */}
         <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
              <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                Danh sách khách hàng
+                Customer list
              </h3>
              <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
-                {filteredCustomers.length} khách hàng
+                {filteredCustomers.length} customers
              </span>
         </div>
 
@@ -230,9 +227,9 @@ export default function CustomersPage() {
               <div className="p-4"><Skeleton className="h-24 w-full rounded-xl" /></div>
            ) : filteredCustomers.length === 0 ? (
               <EmptyState 
-                 title="Không tìm thấy khách hàng"
-                 description="Thử thay đổi từ khóa tìm kiếm."
-                 actionLabel="Xóa bộ lọc"
+                 title="No customers found"
+                 description="Try adjusting your search criteria."
+                 actionLabel="Clear Filters"
                  onAction={clearFilters}
                  type="search"
               />
@@ -258,11 +255,11 @@ export default function CustomersPage() {
                        
                        <div className="flex justify-between items-center mb-2">
                           <div className="flex flex-col">
-                             <span className="text-[10px] font-bold text-slate-400 uppercase">Chi tiêu</span>
+                             <span className="text-[10px] font-bold text-slate-400 uppercase">Spending</span>
                              <span className="text-sm font-black text-slate-800">{customer.totalSpent.toLocaleString()}₫</span>
                           </div>
                           <div className="flex flex-col items-end">
-                             <span className="text-[10px] font-bold text-slate-400 uppercase">Hạng</span>
+                             <span className="text-[10px] font-bold text-slate-400 uppercase">Tier</span>
                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border ${tier.color}`}>
                                 {tier.icon} {tier.label}
                              </span>
@@ -271,7 +268,7 @@ export default function CustomersPage() {
 
                        <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-slate-50">
                           <button className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold" onClick={(e) => { e.stopPropagation(); router.push(`/admin/customers/${customer.id}`) }}>
-                             Chi tiết
+                             Details
                           </button>
                        </div>
                     </div>
@@ -293,13 +290,13 @@ export default function CustomersPage() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Thông tin khách hàng</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Liên hệ</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Đơn hàng</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Chi tiêu & Hạng</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Đơn cuối</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng thái</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Hành động</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer Information</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Contact</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Orders</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Spending & Tier</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Last Order</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -311,9 +308,9 @@ export default function CustomersPage() {
                 <tr>
                   <td colSpan={9}>
                     <EmptyState 
-                       title="Không tìm thấy khách hàng"
-                       description="Thử thay đổi từ khóa hoặc bộ lọc."
-                       actionLabel="Xóa bộ lọc"
+                       title="No customers found"
+                       description="Try adjusting your search criteria."
+                       actionLabel="Clear Filters"
                        onAction={clearFilters}
                        type="search"
                     />
@@ -384,7 +381,7 @@ export default function CustomersPage() {
 
                     <td className="px-6 py-5">
                        <span className="text-xs font-bold text-slate-500">
-                         {customer.lastOrderDate ? new Date(customer.lastOrderDate).toLocaleDateString() : 'Chưa có'}
+                         {customer.lastOrderDate ? new Date(customer.lastOrderDate).toLocaleDateString() : 'Not yet'}
                        </span>
                     </td>
 
@@ -409,7 +406,7 @@ export default function CustomersPage() {
                         <button 
                            onClick={() => router.push(`/admin/customers/${customer.id}/edit`)}
                            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all border-0 bg-transparent"
-                           title="Chỉnh sửa"
+                           title="Edit"
                            aria-label="Edit Customer"
                         >
                           <Edit3 size={16} />
@@ -419,7 +416,7 @@ export default function CustomersPage() {
                           <button 
                              onClick={() => handleBlockClick(customer.id, customer.fullName, customer.status)}
                              className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all border-0 bg-transparent"
-                             title="Mở khóa tài khoản"
+                             title="Unblock Customer"
                              aria-label="Unblock Customer"
                           >
                              <Unlock size={16} />
@@ -428,7 +425,7 @@ export default function CustomersPage() {
                           <button 
                              onClick={() => handleBlockClick(customer.id, customer.fullName, customer.status)}
                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all border-0 bg-transparent"
-                             title="Chặn tài khoản"
+                             title="Block Customer"
                              aria-label="Block Customer"
                           >
                              <Ban size={16} />
@@ -438,7 +435,7 @@ export default function CustomersPage() {
                         <button 
                            onClick={() => handleSingleDeleteClick(customer.id, customer.fullName)}
                            className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all border-0 bg-transparent group/del"
-                           title="Xóa khách hàng"
+                           title="Delete Customer"
                            aria-label="Delete Customer"
                         >
                            <Trash2 size={16} className="group-hover/del:fill-red-100" />
