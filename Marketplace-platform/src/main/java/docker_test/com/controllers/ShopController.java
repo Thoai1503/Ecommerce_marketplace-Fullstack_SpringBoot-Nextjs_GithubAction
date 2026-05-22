@@ -274,12 +274,14 @@ public class ShopController {
 		String urlCardFront = getPayloadString(payload, "url_card_front", existing.getUrl_card_front());
 		String urlCardBack = getPayloadString(payload, "url_card_back", existing.getUrl_card_back());
 		Integer onboardingStep = getPayloadInteger(payload, "onboarding_step", existing.getOnboarding_step());
+		Integer isActive = getPayloadInteger(payload, "is_active", existing.getIs_active());
 
 		existing.setBusiness_license(businessLicense);
 		existing.setTax_code(taxCode);
 		existing.setOwner_name(ownerName);
 		existing.setUrl_card_front(urlCardFront);
 		existing.setUrl_card_back(urlCardBack);
+		existing.setIs_active(isActive == null || isActive <= 0 ? 0 : 1);
 		existing.setOnboarding_step(resolveOnboardingStep(existing, onboardingStep));
 		existing.setUpdated_at(LocalDateTime.now());
 

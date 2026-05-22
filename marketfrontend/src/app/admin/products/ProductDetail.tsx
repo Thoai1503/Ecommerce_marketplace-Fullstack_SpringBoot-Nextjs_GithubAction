@@ -221,6 +221,9 @@ export default function ProductDetail() {
               <span className="flex items-center gap-1.5 font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100">
                  <Box size={14} /> {product.stock} sp
               </span>
+              <span className="flex items-center gap-1.5 font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                 <BarChart3 size={14} /> Đã bán {product.soldCount.toLocaleString('vi-VN')}
+              </span>
             </div>
           </div>
         </div>
@@ -391,7 +394,7 @@ export default function ProductDetail() {
         <div className="space-y-8">
           
           {/* Action Card (If Pending) */}
-          {product.status === 'PENDING' && (
+          {!product.isActive && (
             <div className="bg-amber-50 rounded-[24px] border border-amber-200 p-6 animate-in slide-in-from-top-4">
               <h3 className="text-xs font-black text-amber-800 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                 <AlertCircle size={14} /> Cần phê duyệt
@@ -445,9 +448,9 @@ export default function ProductDetail() {
                     <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">
                       <BarChart3 size={20} />
                     </div>
-                    <span className="text-sm font-bold text-slate-600">Lượt xem</span>
+                    <span className="text-sm font-bold text-slate-600">Đã bán</span>
                  </div>
-                 <span className="text-lg font-black text-slate-800">{product.viewCount?.toLocaleString() || 0}</span>
+                 <span className="text-lg font-black text-slate-800">{product.soldCount.toLocaleString('vi-VN')}</span>
               </div>
               
               <div className="pt-4 border-t border-slate-50">
@@ -480,7 +483,8 @@ export default function ProductDetail() {
                    <img src={product.sellerAvatar} alt="" className="w-10 h-10 rounded-full border border-slate-200" />
                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-slate-800 truncate">{product.sellerName}</p>
-                      <p className="text-xs text-blue-600 font-bold group-hover:underline">Xem hồ sơ</p>
+                      <p className="truncate text-xs text-slate-500">{product.sellerEmail || 'Chưa có email'}</p>
+                      <p className="truncate text-xs text-slate-500">{product.sellerPhone || 'Chưa có SĐT'}</p>
                    </div>
                    
                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

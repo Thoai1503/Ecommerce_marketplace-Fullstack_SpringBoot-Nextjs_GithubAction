@@ -60,6 +60,16 @@ public class Order {
       @Column(name = "payment_method", nullable = false)
       private String paymentMethod;
       
+      @Column(name = "total_return_approved_amount", nullable = false)
+      private Double totalReturnApprovedAmount;
+      
+      @Column(name = "total_return_requested_amount", nullable = false)
+      private Double totalReturnRequestedAmount;
+      
+      
+      @Column(name = "total_refunded_amount", nullable = false)
+      private Double totalRefundedAmount;
+      
       @Column(name = "order_status", nullable = false)
       private String orderStatus;
       

@@ -42,6 +42,9 @@ public class ReturnRequestItem {
      
      @Column(name = "requested_amount", nullable = false)
      private double requestedAmount;
+
+     @Column(name = "approved_amount")
+     private Double approvedAmount;
      
      @Column(name = "refunded_amount")
      private double refundedAmount;
@@ -66,6 +69,12 @@ public class ReturnRequestItem {
 
      @Transient
      private double totalPrice;
+
+     @Transient
+     private double totalAfterShopVoucher;
+
+     @Transient
+     private double totalAfterAllVouchers;
 
      @Transient
      private int orderQuantity;

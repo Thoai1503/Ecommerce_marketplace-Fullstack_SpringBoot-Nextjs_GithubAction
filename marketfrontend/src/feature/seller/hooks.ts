@@ -227,9 +227,13 @@ export const useAddProductSeller = (
         image_url: data.image_url || "",
       });
     },
-    onError: (error) => {
-      //  alert(error.message);
-      message.error("Lỗi thêm sản phẩm: " + error.message);
+    onError: (error: any) => {
+      const responseMessage =
+        typeof error?.response?.data === "string"
+          ? error.response.data
+          : error?.response?.data?.message;
+
+      message.error("Lỗi thêm sản phẩm: " + (responseMessage || error.message));
     },
   });
 

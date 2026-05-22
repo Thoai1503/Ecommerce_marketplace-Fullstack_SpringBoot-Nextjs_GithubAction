@@ -87,6 +87,21 @@ public class RefundRequestController {
 		}
 	}
 
+	@GetMapping("/{refundRequestId}/detail")
+	public ResponseEntity<?> getRefundRequestDetailById(@PathVariable Long refundRequestId) {
+		try {
+			var refundRequest = refundRequestService.getRefundRequestById(refundRequestId);
+			if (refundRequest != null) {
+				return ResponseEntity.ok(refundRequest);
+			}
+			return ResponseEntity.status(HttpStatus.NOT_FOUND)
+					.body("Refund request detail not found with id: " + refundRequestId);
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error fetching refund request detail: " + e.getMessage());
+		}
+	}
+
 	@GetMapping("/{refundRequestId}/calculation")
 	public ResponseEntity<?> getRefundCalculation(@PathVariable Long refundRequestId) {
 		try {

@@ -27,9 +27,17 @@ public class ApprovedReturnRequest {
 			}
 	)
     public void consumeApprovedReturnRequest(RefundedToOrderServiceDTO event) {
-		log.info("Received approved return request event: {}", event);
-		log.info("RefundCalled= {}",event.getRefundCalculationResult().toString());
-		approvedReturnService.processApprovedReturn(event);
+		try {
+			log.info("Received approved return request event: {}", event);
+			if (event == null || event.getRefundCalculationResult() == null) {
+				log.warn("Approved return event is missing refundCalculationResult: {}", event);
+			}
+			approvedReturnService.processApprovedReturn(event);
+			log.info("Processed approved return request successfully");
+		} catch (Exception ex) {
+			log.error("Failed to process approved return request event: {}", event, ex);
+			throw ex;
+		}
 		
 		
     }

@@ -119,9 +119,25 @@ public class CustomerController {
                     .body("Customer not found");
         }
 
-        existing.setFullName(req.getFullName());
-        existing.setPhone(req.getPhone());
-        existing.setAvatarUrl(req.getAvatarUrl());
+        if (req.getFullName() != null) {
+            existing.setFullName(req.getFullName());
+        }
+
+        if (req.getEmail() != null) {
+            existing.setEmail(req.getEmail());
+        }
+
+        if (req.getPhone() != null) {
+            existing.setPhone(req.getPhone());
+        }
+
+        if (req.getAvatarUrl() != null) {
+            existing.setAvatarUrl(req.getAvatarUrl());
+        }
+
+        if (req.getIsActive() != null) {
+            existing.setIsActive(req.getIsActive());
+        }
 
         // dateOfBirth & gender chỉ set 1 lần
         if (existing.getDateOfBirth() == null) {

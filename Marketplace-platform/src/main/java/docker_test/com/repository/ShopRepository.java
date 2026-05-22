@@ -19,6 +19,34 @@ public class ShopRepository implements IRepositories<Shop> {
 	private static ShopRepository instance = null;
 	private final DBConnection dbConnection;
 	private final ShopMapper shopMapper;
+	private static final String SHOP_STATS_SELECT = """
+				SELECT s.*,
+				       COALESCE(product_stats.total_products, 0) AS computed_total_products,
+				       COALESCE(order_stats.total_orders, 0) AS computed_total_orders,
+				       COALESCE(order_stats.total_revenue, 0) AS total_revenue
+				FROM shop s
+				LEFT JOIN (
+				    SELECT p.shop_id,
+				           COUNT(p.id) AS total_products
+				    FROM product p
+				    GROUP BY p.shop_id
+				) product_stats ON product_stats.shop_id = s.id
+				LEFT JOIN (
+				    SELECT os.shop_id,
+				           COUNT(os.id) AS total_orders,
+				           COALESCE(SUM(
+				               CASE
+				                   WHEN UPPER(COALESCE(o.order_status, '')) NOT IN ('FAILED', 'CANCELED', 'CANCELLED')
+				                    AND UPPER(COALESCE(os.shipping_status, '')) NOT IN ('FAILED', 'CANCELED', 'CANCELLED')
+				                   THEN COALESCE(os.adjusted_total_amount, os.total_amount, 0)
+				                   ELSE 0
+				               END
+				           ), 0) AS total_revenue
+				    FROM order_shipment os
+				    INNER JOIN orders o ON o.id = os.order_id
+				    GROUP BY os.shop_id
+				) order_stats ON order_stats.shop_id = s.id
+			""";
 
 	private ShopRepository() {
 		this.dbConnection = DBConnection.getInstance();
@@ -189,7 +217,7 @@ public class ShopRepository implements IRepositories<Shop> {
 
 	/* ================= GET BY ID ================= */
 	public Shop GetById(int id) {
-		String sql = "SELECT * FROM shop WHERE id = ?";
+		String sql = SHOP_STATS_SELECT + " WHERE s.id = ?";
 
 		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
 
@@ -230,7 +258,7 @@ public class ShopRepository implements IRepositories<Shop> {
 	@Override
 	public List<Shop> GetAll() {
 
-		String sql = "SELECT * FROM shop";
+		String sql = SHOP_STATS_SELECT;
 
 		try (Connection con = dbConnection.getConn();
 				PreparedStatement ps = con.prepareStatement(sql);

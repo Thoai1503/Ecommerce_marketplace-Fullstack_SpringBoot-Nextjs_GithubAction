@@ -19,6 +19,9 @@ public final class User {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime lastLogin;
+    private Integer totalOrders;
+    private Double totalSpent;
+    private LocalDateTime lastOrderDate;
 
     public User() {
         this.userType = "buyer";
@@ -141,6 +144,30 @@ public final class User {
     public void setLastLogin(LocalDateTime lastLogin) {
         this.lastLogin = lastLogin;
     }
+
+    public Integer getTotalOrders() {
+        return totalOrders;
+    }
+
+    public void setTotalOrders(Integer totalOrders) {
+        this.totalOrders = totalOrders;
+    }
+
+    public Double getTotalSpent() {
+        return totalSpent;
+    }
+
+    public void setTotalSpent(Double totalSpent) {
+        this.totalSpent = totalSpent;
+    }
+
+    public LocalDateTime getLastOrderDate() {
+        return lastOrderDate;
+    }
+
+    public void setLastOrderDate(LocalDateTime lastOrderDate) {
+        this.lastOrderDate = lastOrderDate;
+    }
     @Override
     public String toString() {
 		return "User{" +
@@ -156,6 +183,9 @@ public final class User {
 				", createdAt=" + createdAt +
 				", updatedAt=" + updatedAt +
 				", lastLogin=" + lastLogin +
+				", totalOrders=" + totalOrders +
+				", totalSpent=" + totalSpent +
+				", lastOrderDate=" + lastOrderDate +
 				'}';
     }
 }
