@@ -1057,7 +1057,9 @@ export default function ReturnRequestsPage() {
                         <td className="px-5 py-4 text-right">
                           <div>
                             <p className="font-black text-slate-800">
-                              {currency(getRequestFinalAmount(request))}
+                              {getRequestFinalAmount(request) > 0
+                                ? `Trả lại: ${currency(getRequestFinalAmount(request))}`
+                                : `Khách trả thêm: ${currency(-getRequestFinalAmount(request))}`}
                             </p>
                             <p className="text-xs text-slate-500 mt-1">
                               Đã hoàn: {currency(request.refundedAmount)}

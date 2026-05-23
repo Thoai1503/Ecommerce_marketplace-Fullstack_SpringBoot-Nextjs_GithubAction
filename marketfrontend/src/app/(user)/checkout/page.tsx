@@ -2403,6 +2403,7 @@ export default function CheckoutPage() {
           shipmentId: 0,
           shipmentCode: `SHIP-${baseTrackingSeed}-${index + 1}`,
           shipping_fee: shopShippingFee,
+          subtotal: shopSubtotal,
           total_amount: Math.max(
             0,
             shopSubtotal - shopVoucherDiscount + shopShippingFee,
