@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import EmptyState from "@/components/ui/EmptyState";
@@ -803,6 +803,7 @@ export default function SellerReturnRefundCancelPage() {
   const [markingInspectionRequestId, setMarkingInspectionRequestId] = useState<
     number | null
   >(null);
+  const approvingInFlightRef = useRef<Set<number>>(new Set());
 
   const shopId = Number(shop?.id ?? 0);
 
@@ -878,7 +879,12 @@ export default function SellerReturnRefundCancelPage() {
     requestId: number,
     refundAmount: number,
   ) => {
+    if (approvingInFlightRef.current.has(requestId)) {
+      return;
+    }
+
     try {
+      approvingInFlightRef.current.add(requestId);
       setApprovingRequestId(requestId);
       await updateReturnRequestStatus(requestId, "APPROVED", refundAmount);
       await refetch();
@@ -889,6 +895,7 @@ export default function SellerReturnRefundCancelPage() {
           : "Không thể chấp nhận yêu cầu lúc này.";
       window.alert(message);
     } finally {
+      approvingInFlightRef.current.delete(requestId);
       setApprovingRequestId(null);
     }
   };
@@ -1187,7 +1194,11 @@ export default function SellerReturnRefundCancelPage() {
                         </td>
                         <td>
                           <div className="fw-bold">
-                            {formatCurrency(request.requestedAmount)}
+                            {Number(request.requestedAmount || 0) > 0
+                              ? `Trả lại: ${formatCurrency(request.requestedAmount)}`
+                              : `Khách trả thêm: ${formatCurrency(
+                                  -Number(request.requestedAmount || 0),
+                                )}`}
                           </div>
                           <small className="text-primary d-block mt-1">
                             Duyệt:{" "}

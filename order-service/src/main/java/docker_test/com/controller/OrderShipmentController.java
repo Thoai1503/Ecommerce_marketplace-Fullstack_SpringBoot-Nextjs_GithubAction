@@ -33,6 +33,19 @@ public class OrderShipmentController {
 		this.orderShipmentService = orderShipmentService;
 	}
 
+	@GetMapping
+	public ResponseEntity<List<OrderShipmentByShopResponseDTO>> getAllShipments(
+			@RequestParam(defaultValue = "ALL") String status,
+			@RequestParam(defaultValue = "ALL") String paymentStatus,
+			@RequestParam(defaultValue = "1") int page,
+			@RequestParam(defaultValue = "50") int size,
+			@RequestParam(defaultValue = "desc") String sortOrder,
+			@RequestParam(required = false) String sortBy,
+			@RequestParam(required = false) String search
+	) {
+		return ResponseEntity.ok(orderShipmentService.getAllShipments(status, page, size, sortBy, sortOrder, search, paymentStatus));
+	}
+
 	@GetMapping("/shop/{shopId}")
 	public ResponseEntity<List<OrderShipmentByShopResponseDTO>> getShipmentsByShopId(@PathVariable Long shopId,
 			@RequestParam(defaultValue = "ALL") String status,

@@ -13,7 +13,7 @@ public interface OrderShipmentWithOrderAndRecipientProjection {
     String getShippingStatus();
     Double getSubtotal();
     Double getTotalAfterVoucher();
-
+    Long getLastReturnRequestId();
     String getOrderNumber();
     Long getUserId();
     Long getAddressId();

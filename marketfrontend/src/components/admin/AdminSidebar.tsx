@@ -258,9 +258,8 @@ export default function AdminSidebar({
             },
             {
               label: "Kiện hàng",
-              path: "/admin/orders?status=PROCESSING",
-              active:
-                pathname === "/admin/orders" && orderStatus === "PROCESSING",
+              path: "/admin/order-shipment",
+              active: pathname === "/admin/order-shipment",
             },
             {
               label: "Đang giao",

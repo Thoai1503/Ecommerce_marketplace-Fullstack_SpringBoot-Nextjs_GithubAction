@@ -9,9 +9,12 @@ public record OrderShipmentByShopResponseDTO(
         String shopName,
         Long shippingFee,
         Long totalAmount,
+        Long subtotal,
+        Long totalAfterVoucher,
         String carrierName,
         String trackingNumber,
         String shippingStatus,
+        Long lastReturnRequestId,
         OrderInfoDTO order,
         RecipientInfoDTO recipient,
         List<OrderItemInfoDTO> items
