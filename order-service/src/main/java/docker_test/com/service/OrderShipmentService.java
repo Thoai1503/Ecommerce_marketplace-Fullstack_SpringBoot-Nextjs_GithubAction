@@ -120,6 +120,9 @@ public class OrderShipmentService {
                 row.getShopName(),
                 row.getShippingFee(),
                 Long.valueOf(row.getTotalAmount().longValue()),
+                Long.valueOf(row.getSubtotal().longValue()),
+                 Long.valueOf(row.getTotalAfterVoucher().longValue()),
+                 row.getLastReturnRequestId(),
                 row.getCarrierName(),
                 row.getTrackingNumber(), 
                 row.getShippingStatus(),
@@ -160,6 +163,29 @@ public class OrderShipmentService {
         List<OrderShipmentWithOrderAndRecipientProjection> rows = orderShipmentRepository.findShipmentDetailsByShopId(shopId,status, paymentStatus);
         System.out.println("Fetched " + rows.size() + " shipments for shopId: " + shopId);
         System.out.println("Total amount of first shipment: " + (rows.isEmpty() ? "N/A" : rows.get(0).getTotalAmount()));
+
+        return mapRowsToShipmentByShopResponse(rows);
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderShipmentByShopResponseDTO> getAllShipments(
+            String status,
+            int page,
+            int size,
+            String sortBy,
+            String sortOrder,
+            String search,
+            String paymentStatus
+    ) {
+        List<OrderShipmentWithOrderAndRecipientProjection> rows = orderShipmentRepository
+                .findShipmentDetailsAll(status, paymentStatus, search);
+
+        return mapRowsToShipmentByShopResponse(rows);
+    }
+
+    private List<OrderShipmentByShopResponseDTO> mapRowsToShipmentByShopResponse(
+            List<OrderShipmentWithOrderAndRecipientProjection> rows
+    ) {
         List<Long> shipmentIds = rows.stream()
                 .map(OrderShipmentWithOrderAndRecipientProjection::getShipmentId)
                 .toList();
@@ -199,9 +225,12 @@ public class OrderShipmentService {
                         row.getShopName(),
                         row.getShippingFee(),
                   Long.valueOf(row.getTotalAmount().longValue()),
+                   Long.valueOf(row.getSubtotal().longValue()),
+                    Long.valueOf(row.getTotalAfterVoucher().longValue()),
                         row.getCarrierName(),
                         row.getTrackingNumber(), 
                         row.getShippingStatus(),
+                        row.getLastReturnRequestId(),
                         new OrderShipmentByShopResponseDTO.OrderInfoDTO(
                                 row.getOrderNumber(),
                                 row.getUserId(),

@@ -221,6 +221,7 @@ export default function AdminSidebar({
     }
     if (
       pathname.includes("/admin/orders") ||
+      pathname.includes("/admin/order-shipment") ||
       pathname.includes("/admin/return-requests")
     ) {
       setOpenSubmenu("order-management");
@@ -259,6 +260,11 @@ export default function AdminSidebar({
               path: "/admin/orders?status=PROCESSING",
               active:
                 pathname === "/admin/orders" && orderStatus === "PROCESSING",
+            },
+            {
+              label: "Kiện hàng",
+              path: "/admin/order-shipment",
+              active: pathname.startsWith("/admin/order-shipment"),
             },
             {
               label: "Shipped Orders",

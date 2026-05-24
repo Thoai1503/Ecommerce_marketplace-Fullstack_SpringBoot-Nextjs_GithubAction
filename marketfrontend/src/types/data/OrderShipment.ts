@@ -13,6 +13,7 @@ export class OrderShipments extends Model {
     paginate: "ORDER_SHIPMENTS_PAGINATE_QUERY",
     findOne: "ORDER_SHIPMENTS_FIND_ONE_QUERY",
     findByShopId: "ORDER_SHIPMENTS_FIND_ONE_BY_SHOP_ID",
+    findAll: "ORDER_SHIPMENTS_FIND_ALL",
   };
   static object = ObjectsFactory.factory<IOrderShipment>(
     modelConfig,
@@ -77,6 +78,38 @@ export class OrderShipments extends Model {
           })
           .then((r) => r.data),
       enabled: !!shipmentId,
+    };
+  }
+
+  static getAll(filters?: {
+    status?: string;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: string;
+    page?: number;
+    pageSize?: number;
+    paymentStatus?: string;
+  }) {
+    const params = new URLSearchParams();
+
+    if (filters?.status && filters.status !== "ALL")
+      params.set("status", filters.status);
+    if (filters?.paymentStatus && filters.paymentStatus !== "ALL")
+      params.set("paymentStatus", filters.paymentStatus);
+    if (filters?.search) params.set("search", filters.search);
+    if (filters?.sortBy) params.set("sortBy", filters.sortBy);
+    if (filters?.sortOrder) params.set("sortOrder", filters.sortOrder);
+    if (filters?.page) params.set("page", filters.page.toString());
+    if (filters?.pageSize) params.set("size", filters.pageSize.toString());
+
+    return {
+      queryKey: [this.queryKeys.findAll, JSON.stringify(filters ?? {})],
+      queryFn: (): Promise<IOrderShipment[]> =>
+        this.api
+          .get<IOrderShipment[]>({
+            url: `${API_URL}/api/orders/shipments${params.toString() ? `?${params.toString()}` : ""}`,
+          })
+          .then((r) => r.data),
     };
   }
 

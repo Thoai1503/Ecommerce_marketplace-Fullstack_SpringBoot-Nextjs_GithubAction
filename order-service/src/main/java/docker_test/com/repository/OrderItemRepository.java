@@ -21,7 +21,12 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long>{
     
 
     @Transactional  
-	@Query(value="UPDATE order_item SET return_request_quantity = :returnQuantity WHERE id = :id", nativeQuery = true)
+	@Query(value="""
+			UPDATE order_item
+			SET return_request_quantity = :returnQuantity
+			WHERE id = :id
+			  AND COALESCE(return_request_quantity, -1) <> COALESCE(:returnQuantity, -1)
+			""", nativeQuery = true)
     @Modifying
     void updateReturnQuantity(@Param("id") Long id, @Param("returnQuantity") Integer returnQuantity);
 }

@@ -640,7 +640,7 @@ public class RefundRequestService {
 				FROM return_request_item rri
 				JOIN return_request rr ON rr.id = rri.return_request_id
 				WHERE rr.order_id = ?
-				  AND UPPER(rr.status) NOT IN ('REJECTED', 'CANCELED', 'CANCELLED')
+				  AND UPPER(rr.status) NOT IN ('REJECTED', 'CANCELED', 'CANCELLED',"PENDING_APPROVAL")
 				GROUP BY rri.order_item_id
 				""";
 
@@ -663,7 +663,7 @@ public class RefundRequestService {
 				SELECT COALESCE(SUM(requested_amount), 0) AS refunded_amount
 				FROM return_request
 				WHERE order_id = ?
-				  AND UPPER(status) NOT IN ('REJECTED', 'CANCELED', 'CANCELLED')
+				  AND UPPER(status) NOT IN ('REJECTED', 'CANCELED', 'CANCELLED',"PENDING_APPROVAL")
 				""";
 
 		try (Connection con = DBConnection.getConn();
@@ -1174,9 +1174,14 @@ public class RefundRequestService {
 
 	@Transactional
 	public ReturnRequest updateStatus(Long id, ReturnRequestStatus status, Double refundedAmount) {
-		ReturnRequest request = refundRequestRepository.findById(id).orElse(null);
+		ReturnRequest request = refundRequestRepository.findByIdForUpdate(id).orElse(null);
 		if (request == null) {
 			return null;
+		}
+
+		if (status == ReturnRequestStatus.APPROVED
+				&& request.getStatus() == ReturnRequestStatus.APPROVED) {
+			return request;
 		}
 
 		request.setStatus(status);
@@ -1225,15 +1230,23 @@ public class RefundRequestService {
 						request.getRequestedAmount(),
 						Math.max(0.0, calculation.getSuggestedRefundAmount()));
 			}
+			RefundedToOrderServiceDTO refundedToOrderServiceDTO = new RefundedToOrderServiceDTO();
+
+			refundedToOrderServiceDTO.setSuggestedRefundAmount(resolvedRefundAmount);
+			refundedToOrderServiceDTO.setRefundCalculationResult(refundCalculationService.calculate(request));
+			refundedToOrderServiceDTO.setStatus(status.toString());
+			
+			refundedToOrderService.publish(refundedToOrderServiceDTO);
+			
 			request.setRefundedAmount(resolvedRefundAmount);
+			
 		} else if (status == ReturnRequestStatus.INSPECTION_PASSED) {
-			// Shop confirmed returned shipment is fully received and inspected.
-			// Persist approved_amount using the current requested_amount value.
+	
 			request.setApprovedAmount(request.getRequestedAmount());
 		} else if (refundedAmount != null) {
 			request.setRefundedAmount(refundedAmount);
 		}
-		request.setOrderShipmentId( request.getOrderShipmentId());
+		request.setOrderShipmentId(request.getOrderShipmentId());
 		request.setUpdatedAt(LocalDateTime.now());
 		ReturnRequest savedRequest = null;
 		

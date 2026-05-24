@@ -103,7 +103,11 @@ const normalizeShipment = (raw: any): IOrderShipment => {
     orderId: Number(raw?.orderId ?? raw?.order_id ?? 0),
     shop_id: Number(raw?.shop_id ?? raw?.shopId ?? 0),
     shipping_fee: Number(raw?.shipping_fee ?? raw?.shippingFee ?? 0),
+    subtotal: Number(raw?.subtotal ?? raw?.subtotal ?? 0),
     total_amount: Number(raw?.total_amount ?? raw?.totalAmount ?? 0),
+    total_after_discount: Number(
+      raw?.total_after_discount ?? raw?.totalAfterDiscount ?? 0,
+    ),
     carrier_name: String(raw?.carrier_name ?? raw?.carrierName ?? ""),
     tracking_number: raw?.tracking_number ?? raw?.trackingNumber ?? null,
     shipping_status: String(raw?.shipping_status ?? raw?.shippingStatus ?? ""),
@@ -180,9 +184,7 @@ const normalizeShipment = (raw: any): IOrderShipment => {
         item?.platformCommissionRate ?? item?.platform_commission_rate ?? 0,
       ),
       platformCommissionAmount: Number(
-        item?.platformCommissionAmount ??
-          item?.platform_commission_amount ??
-          0,
+        item?.platformCommissionAmount ?? item?.platform_commission_amount ?? 0,
       ),
       sellerReceivableAmount: Number(
         item?.sellerReceivableAmount ?? item?.seller_receivable_amount ?? 0,
@@ -335,6 +337,8 @@ export default function ShipmentDetailPage() {
     orderId,
     carrier_name,
     tracking_number,
+    total_after_discount,
+
     shipping_status,
     shipping_fee,
     total_amount,
@@ -489,7 +493,7 @@ export default function ShipmentDetailPage() {
                           Tiền hàng
                         </span>
                       </td>
-                      <td>{formatCurrency(order.totalAmount)}</td>
+                      <td>{formatCurrency(shipment.subtotal)}</td>
                     </tr>
                     <tr>
                       <td className="text-muted">
@@ -507,8 +511,12 @@ export default function ShipmentDetailPage() {
                           Giảm giá
                         </span>
                       </td>
-                      <td className="text-success">
-                        -{formatCurrency(order.discountAmount)}
+                      <td className="text-danger">
+                        -{" "}
+                        {formatCurrency(
+                          shipment.subtotal -
+                            (shipment.total_after_discount ?? 0),
+                        )}
                       </td>
                     </tr>
                     <tr className="border-top">
@@ -518,8 +526,11 @@ export default function ShipmentDetailPage() {
                           Tổng thanh toán
                         </span>
                       </td>
-                      <td className="fw-bold text-danger fs-6">
-                        {formatCurrency(order.finalAmount)}
+                      <td className="fw-bold text-success fs-6">
+                        {formatCurrency(
+                          shipment.total_after_discount ??
+                            shipment.total_amount,
+                        )}
                       </td>
                     </tr>
                   </tbody>
@@ -753,7 +764,7 @@ export default function ShipmentDetailPage() {
                   Tổng shipment
                 </span>
                 <span className="text-danger">
-                  {formatCurrency(total_amount + shipping_fee)}
+                  {shipment.total_after_discount}
                 </span>
               </div>
             </div>
