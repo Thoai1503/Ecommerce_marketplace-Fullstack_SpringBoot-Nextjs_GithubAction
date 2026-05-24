@@ -1345,10 +1345,14 @@ export default function UserOrderDetailPage() {
       alert(actionMessage);
     } catch (error) {
       console.error("Submit return request failed:", error);
-      alert("Gui yeu cau that bai. Vui long thu lai.");
+      const submitErrorMessage =
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : "Gui yeu cau that bai. Vui long thu lai.";
+      alert(submitErrorMessage);
       setReturnActionMessage((prev) => ({
         ...prev,
-        [shipmentId]: "Gui yeu cau that bai. Vui long thu lai.",
+        [shipmentId]: submitErrorMessage,
       }));
     } finally {
       setReturnActionStatus((prev) => ({

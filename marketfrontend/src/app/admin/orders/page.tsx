@@ -2,10 +2,8 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useOrders } from "@/hooks/admin/useOrders";
 import { useOrderFilters } from "@/hooks/admin/useOrderFilters";
 import { getOrdersWithFilters } from "@/service/orders";
-import { useToast } from "@/context/ToastContext";
 import {
   Search,
   Download,
@@ -14,14 +12,10 @@ import {
   XCircle,
   AlertTriangle,
   Pencil,
-  CheckSquare,
   Truck,
   Clock,
-  Ban,
   MapPin,
   Check,
-  FileText,
-  Filter,
   History,
   ShoppingBag,
   Package,
@@ -33,12 +27,8 @@ import {
   Banknote,
 } from "lucide-react";
 import { OrderStatus, PaymentStatus } from "@/types";
-import { updateOrderStatus } from "@/service/orders";
 import { OrderTableSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
-import ConfirmationModal, {
-  ModalVariant,
-} from "@/components/ui/ConfirmationModal";
 import Pagination from "@/components/ui/Pagination";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
@@ -124,13 +114,13 @@ const PaymentMethodConfig: Record<
     bgColor: "bg-cyan-50",
   },
   BANK_TRANSFER: {
-    label: "Chuyển khoản",
+    label: "Transfer",
     icon: <Landmark size={11} />,
     color: "text-green-700",
     bgColor: "bg-green-50",
   },
   CREDIT_CARD: {
-    label: "Thẻ tín dụng",
+    label: "Credit Card",
     icon: <CreditCard size={11} />,
     color: "text-purple-700",
     bgColor: "bg-purple-50",
@@ -138,7 +128,7 @@ const PaymentMethodConfig: Record<
 };
 
 const defaultPaymentMethodConfig = {
-  label: "Khác",
+  label: "Other",
   icon: <Banknote size={11} />,
   color: "text-slate-600",
   bgColor: "bg-slate-100",
@@ -179,7 +169,6 @@ const PaymentConfig: Record<
 
 function OrdersPageContent() {
   const router = useRouter();
-  const toast = useToast();
   const {
     filters,
     updateFilter,
@@ -240,25 +229,6 @@ function OrdersPageContent() {
     }
   };
 
-  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
-
-  // Modal State
-  const [modalConfig, setModalConfig] = useState<{
-    isOpen: boolean;
-    title: string;
-    description: string;
-    variant: ModalVariant;
-    confirmLabel: string;
-    onConfirm: () => void;
-  }>({
-    isOpen: false,
-    title: "",
-    description: "",
-    variant: "info",
-    confirmLabel: "Confirm",
-    onConfirm: () => {},
-  });
-
   // Calculate Pending Stats for Banner
   const pendingOrders = useMemo(
     () => orders.filter((o: any) => o.status === "PENDING"),
@@ -278,79 +248,6 @@ function OrdersPageContent() {
     return s;
   }, [orders]);
 
-  const toggleSelectAll = () => {
-    if (selectedOrders.length === orders.length && orders.length > 0) {
-      setSelectedOrders([]);
-    } else {
-      setSelectedOrders(orders.map((o: any) => o.id));
-    }
-  };
-
-  const toggleSelectOrder = (id: string) => {
-    setSelectedOrders((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-    );
-  };
-
-  const openConfirmation = (
-    title: string,
-    description: string,
-    onConfirm: () => void,
-    variant: ModalVariant = "info",
-    confirmLabel = "Xác nhận",
-  ) => {
-    setModalConfig({
-      isOpen: true,
-      title,
-      description,
-      onConfirm,
-      variant,
-      confirmLabel,
-    });
-  };
-
-  const handleBulkApproveClick = () => {
-    openConfirmation(
-      "Duyệt đơn hàng hàng loạt?",
-      `Bạn có chắc chắn muốn duyệt ${selectedOrders.length} đơn hàng đã chọn?`,
-      async () => {
-        await new Promise((r) => setTimeout(r, 500));
-        toast.success(
-          `Đã phê duyệt thành công ${selectedOrders.length} đơn hàng!`,
-        );
-        setSelectedOrders([]);
-        refetch();
-        setModalConfig((prev) => ({ ...prev, isOpen: false }));
-      },
-      "success",
-      "Duyệt ngay",
-    );
-  };
-
-  const handleStatusUpdateClick = (id: string, status: OrderStatus) => {
-    const isCancel = status === "CANCELED";
-    openConfirmation(
-      isCancel ? "Hủy đơn hàng?" : "Cập nhật trạng thái?",
-      isCancel
-        ? "Hành động này không thể hoàn tác. Bạn có chắc chắn?"
-        : `Chuyển trạng thái đơn hàng sang ${status}?`,
-      async () => {
-        const success = await updateOrderStatus(id, status);
-        if (success) {
-          toast.success(`Cập nhật trạng thái thành công: ${status}`);
-          refetch();
-        }
-        setModalConfig((prev) => ({ ...prev, isOpen: false }));
-      },
-      isCancel ? "danger" : "info",
-      isCancel ? "Hủy đơn" : "Cập nhật",
-    );
-  };
-
-  const handlePaymentStatusFilterClick = (status: string) => {
-    updateFilter("paymentStatus", status as any);
-  };
-
   const handleSortChange = (sortBy: string, sortOrder: string) => {
     updateFilter("sortBy", sortBy as any);
     updateFilter("sortOrder", sortOrder as any);
@@ -362,16 +259,6 @@ function OrdersPageContent() {
 
   return (
     <div className="p-4 lg:p-8 animate-in fade-in duration-500 space-y-6 no-print">
-      <ConfirmationModal
-        isOpen={modalConfig.isOpen}
-        onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
-        onConfirm={modalConfig.onConfirm}
-        title={modalConfig.title}
-        description={modalConfig.description}
-        variant={modalConfig.variant}
-        confirmLabel={modalConfig.confirmLabel}
-      />
-
       <Breadcrumbs items={[{ label: "Orders" }]} />
 
       {/* --- URGENT PENDING BANNER --- */}
@@ -392,14 +279,14 @@ function OrdersPageContent() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider text-white border border-white/10">
-                  Cần xử lý gấp
+                  Follow
                 </span>
               </div>
               <h4 className="font-bold text-2xl mb-1">
-                Có {pendingCount} đơn hàng chờ xử lý
+                There are {pendingCount} orders pending processing
               </h4>
               <p className="text-sm font-medium text-white/90">
-                Tổng giá trị cần duyệt:{" "}
+                Total value pending:{" "}
                 <span className="font-black text-white text-lg">
                   {pendingTotal.toLocaleString()}₫
                 </span>
@@ -409,7 +296,7 @@ function OrdersPageContent() {
 
           <div className="relative z-10">
             <button className="px-6 py-3 bg-white text-orange-600 text-sm font-bold rounded-xl hover:bg-orange-50 transition-all shadow-sm border-0 whitespace-nowrap flex items-center gap-2">
-              Duyệt đơn hàng ngay <ChevronRight size={16} />
+              View Pending Orders <ChevronRight size={16} />
             </button>
           </div>
         </div>
@@ -462,34 +349,16 @@ function OrdersPageContent() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex flex-col">
               <h3 className="text-lg font-black text-slate-800">
-                🛒 Order Management
+                🛒 Order tracking
               </h3>
               <p className="text-xs text-slate-400 font-medium">
-                Hiển thị {orders.length} đơn hàng
+                Displaying {orders.length} orders
               </p>
             </div>
 
-            {selectedOrders.length > 0 ? (
-              <div className="flex items-center gap-2 animate-in zoom-in duration-200">
-                <button
-                  onClick={handleBulkApproveClick}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-all shadow-lg border-0"
-                >
-                  <Check size={16} /> Duyệt ({selectedOrders.length})
-                </button>
-                <button
-                  onClick={() => setSelectedOrders([])}
-                  className="p-2 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-all border-0"
-                  aria-label="Clear selection"
-                >
-                  <XCircle size={18} />
-                </button>
-              </div>
-            ) : (
-              <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-900 transition-all shadow-lg border-0 self-start md:self-auto">
-                <Download size={16} /> Export
-              </button>
-            )}
+            <button className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-900 transition-all shadow-lg border-0 self-start md:self-auto">
+              <Download size={16} /> Export
+            </button>
           </div>
 
           <div className="flex flex-col md:flex-row gap-3">
@@ -502,7 +371,7 @@ function OrdersPageContent() {
                 type="text"
                 value={filters.search}
                 onChange={(e) => updateFilter("search", e.target.value)}
-                placeholder="Tìm mã đơn, tên khách hàng..."
+                placeholder="Search order ID, customer name..."
                 className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/10 text-sm font-medium"
               />
             </div>
@@ -533,10 +402,10 @@ function OrdersPageContent() {
                 }
                 className="pl-3 pr-2 py-2.5 bg-slate-50 border-0 rounded-xl text-sm font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10"
               >
-                <option value="all">Tất cả thanh toán</option>
-                <option value="PAID">Đã thanh toán</option>
-                <option value="UNPAID">Chưa thanh toán</option>
-                <option value="REFUNDED">Hoàn tiền</option>
+                <option value="all">All Payment Status</option>
+                <option value="PAID">Paid</option>
+                <option value="UNPAID">Unpaid</option>
+                <option value="REFUNDED">Refunded</option>
               </select>
 
               <select
@@ -547,11 +416,11 @@ function OrdersPageContent() {
                 }}
                 className="pl-3 pr-2 py-2.5 bg-slate-50 border-0 rounded-xl text-sm font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/10"
               >
-                <option value="date-desc">Ngày mới nhất</option>
-                <option value="date-asc">Ngày cũ nhất</option>
-                <option value="amount-desc">Giá cao nhất</option>
-                <option value="amount-asc">Giá thấp nhất</option>
-                <option value="status-asc">Trạng thái A-Z</option>
+                <option value="date-desc">Newest First</option>
+                <option value="date-asc">Oldest First</option>
+                <option value="amount-desc">Highest Value</option>
+                <option value="amount-asc">Lowest Value</option>
+                <option value="status-asc">Status A-Z</option>
               </select>
             </div>
 
@@ -585,15 +454,15 @@ function OrdersPageContent() {
           <div className="p-20">
             <ErrorState
               type="error"
-              actionLabel="Thử lại"
+              actionLabel="Retry"
               onAction={() => refetch()}
             />
           </div>
         ) : orders.length === 0 ? (
           <EmptyState
-            title="Không tìm thấy đơn hàng"
-            description="Thử thay đổi bộ lọc, từ khóa hoặc kiểm tra khoảng thời gian."
-            actionLabel="Xóa bộ lọc"
+            title="No orders found"
+            description="Try adjusting the filters, search term, or time range."
+            actionLabel="Clear Filters"
             onAction={() => clearFilters()}
             type="search"
           />
@@ -621,7 +490,7 @@ function OrdersPageContent() {
                               order.itemsCount ??
                               0
                             ).toLocaleString()}{" "}
-                            kiện hàng
+                           Order Shipments
                           </span>
                         </div>
                       </div>
@@ -655,7 +524,7 @@ function OrdersPageContent() {
                   <div className="flex justify-between items-center border-t border-slate-50 pt-3">
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase">
-                        Tổng tiền
+                        Total amount
                       </p>
                       <p className="text-sm font-black text-slate-900">
                         {order.totalAmount.toLocaleString()}₫
@@ -672,18 +541,6 @@ function OrdersPageContent() {
                       })()}
                     </div>
                     <div className="flex items-center gap-2">
-                      {order.status === "PENDING" && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStatusUpdateClick(order.id, "CONFIRMED");
-                          }}
-                          className="p-2 bg-green-50 text-green-600 rounded-lg"
-                          title="Approve"
-                        >
-                          <Check size={16} />
-                        </button>
-                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -691,7 +548,7 @@ function OrdersPageContent() {
                         }}
                         className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold"
                       >
-                        Chi tiết
+                        Detail
                       </button>
                     </div>
                   </div>
@@ -704,36 +561,26 @@ function OrdersPageContent() {
               <table className="w-full border-collapse min-w-[1000px]">
                 <thead>
                   <tr className="bg-slate-50/50 text-left border-b border-slate-100">
-                    <th className="px-4 py-4 w-12 text-center">
-                      <div
-                        onClick={toggleSelectAll}
-                        className={`w-5 h-5 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-all ${selectedOrders.length === orders.length ? "bg-blue-600 text-white" : "bg-white border-2 border-slate-300"}`}
-                      >
-                        {selectedOrders.length === orders.length && (
-                          <CheckSquare size={14} />
-                        )}
-                      </div>
+                    <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Order ID
                     </th>
                     <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Mã đơn hàng
-                    </th>
-                    <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Khách hàng
+                      Customer
                     </th>
                     <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
-                      Tổng tiền
+                      Total amount
                     </th>
                     <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-                      Thanh toán
+                      Payment
                     </th>
                     <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
-                      Trạng thái
+                      Status
                     </th>
                     <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
-                      Ngày tạo
+                      Created Date
                     </th>
                     <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
-                      Hành động
+                      Actions
                     </th>
                   </tr>
                 </thead>
@@ -741,18 +588,8 @@ function OrdersPageContent() {
                   {orders.map((order: any) => (
                     <tr
                       key={order.id}
-                      className={`hover:bg-slate-50/80 transition-all group ${selectedOrders.includes(order.id) ? "bg-blue-50/40" : ""}`}
+                      className="hover:bg-slate-50/80 transition-all group"
                     >
-                      <td className="px-4 py-4">
-                        <div
-                          onClick={() => toggleSelectOrder(order.id)}
-                          className={`w-5 h-5 mx-auto rounded-md flex items-center justify-center cursor-pointer transition-all ${selectedOrders.includes(order.id) ? "bg-blue-600 text-white" : "bg-white border-2 border-slate-200"}`}
-                        >
-                          {selectedOrders.includes(order.id) && (
-                            <CheckSquare size={14} />
-                          )}
-                        </div>
-                      </td>
                       <td
                         className="px-4 py-4 font-black text-slate-800 text-sm hover:text-blue-600 cursor-pointer"
                         onClick={() => router.push(`/admin/orders/${order.id}`)}
@@ -767,7 +604,7 @@ function OrdersPageContent() {
                                 order.itemsCount ??
                                 0
                               ).toLocaleString()}{" "}
-                              kiện hàng
+                              Order Shipments
                             </span>
                           </div>
                         </div>
@@ -830,36 +667,11 @@ function OrdersPageContent() {
                               router.push(`/admin/orders/${order.id}`)
                             }
                             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all border-0 bg-transparent"
-                            title="Xem chi tiết"
+                            title="See details"
                             aria-label="View Details"
                           >
                             <Eye size={16} />
                           </button>
-
-                          {order.status === "PENDING" && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleStatusUpdateClick(order.id, "CONFIRMED")
-                                }
-                                className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all border-0 bg-transparent"
-                                title="Xác nhận đơn"
-                                aria-label="Approve Order"
-                              >
-                                <CheckCircle2 size={16} />
-                              </button>
-                              <button
-                                onClick={() =>
-                                  handleStatusUpdateClick(order.id, "CANCELED")
-                                }
-                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all border-0 bg-transparent"
-                                title="Hủy đơn"
-                                aria-label="Cancel Order"
-                              >
-                                <Ban size={16} />
-                              </button>
-                            </>
-                          )}
                         </div>
                       </td>
                     </tr>

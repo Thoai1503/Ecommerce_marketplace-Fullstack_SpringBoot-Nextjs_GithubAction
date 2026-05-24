@@ -120,7 +120,9 @@ export const getAdminReturnRequests = async (): Promise<
   ReturnRequestAdmin[]
 > => {
   const { data } = await http.get("/api/refunds");
-  return Array.isArray(data) ? data : [];
+  return Array.isArray(data)
+    ? data.filter((request) => Array.isArray(request.items) && request.items.length > 0)
+    : [];
 };
 
 export const getSellerReturnRequests = async (

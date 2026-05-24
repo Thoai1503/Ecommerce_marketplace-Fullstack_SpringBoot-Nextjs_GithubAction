@@ -31,7 +31,7 @@ import { API_URL } from "@/helper/api";
 
 // --- ZOD SCHEMA ---
 const sellerSchema = z.object({
-  brandTitle: z.string().min(1, "Tên thương hiệu là bắt buộc."),
+  brandTitle: z.string().min(1, "A brand name is required."),
   category: z.string().min(1),
   website: z
     .string()
@@ -42,29 +42,29 @@ const sellerSchema = z.object({
         /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/.test(
           val,
         ),
-      "Địa chỉ website không hợp lệ.",
+      "Invalid website URL.",
     ),
-  location: z.string().min(1, "Địa chỉ kho/văn phòng là bắt buộc."),
+  location: z.string().min(1, "Warehouse/Office address is required."),
   email: z
     .string()
-    .min(1, "Email là bắt buộc.")
-    .email("Định dạng email không hợp lệ."),
+    .min(1, "Email is required.")
+    .email("Invalid email format."),
   phone: z
     .string()
-    .min(1, "Số điện thoại là bắt buộc.")
+    .min(1, "Phone number is required.")
     .regex(
       /(84|0[3|5|7|8|9])+([0-9]{8})\b/,
-      "Số điện thoại không đúng định dạng VN.",
+      "Invalid phone number format.",
     ),
   status: z.enum(["ACTIVE", "BLOCKED", "PENDING"]),
-  ownerName: z.string().min(1, "Tên người đại diện là bắt buộc."),
+  ownerName: z.string().min(1, "Owner name is required."),
   idCardFront: z
     .string()
     .optional()
     .refine(
       (val) =>
         !val || /^(https?:\/\/|\/).+\.(jpg|jpeg|png|gif|webp)$/i.test(val),
-      "Đường dẫn ảnh mặt trước thẻ không hợp lệ.",
+      "Invalid image URL for front ID card.",
     ),
   idCardBack: z
     .string()
@@ -72,7 +72,7 @@ const sellerSchema = z.object({
     .refine(
       (val) =>
         !val || /^(https?:\/\/|\/).+\.(jpg|jpeg|png|gif|webp)$/i.test(val),
-      "Đường dẫn ảnh mặt sau thẻ không hợp lệ.",
+      "Invalid image URL for back ID card.",
     ),
   password: z.string().optional(),
 });
@@ -283,7 +283,7 @@ export default function EditSeller() {
       if (data.password !== undefined && data.password.length < 8) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Mật khẩu phải có ít nhất 8 ký tự.",
+          message: "The password must have at least 8 characters.",
           path: ["password"],
         });
       }
@@ -306,7 +306,7 @@ export default function EditSeller() {
       if (isEmailDuplicate) {
         setErrors((prev) => ({
           ...prev,
-          email: "Email này đã được sử dụng trên hệ thống.",
+          email: "This email is already in use.",
         }));
         return false;
       }
@@ -377,13 +377,13 @@ export default function EditSeller() {
       }));
       setToast({
         id: Date.now().toString(),
-        message: "Ảnh đã được tải lên thành công.",
+        message: "Image uploaded successfully.",
         type: "success",
       });
     } catch (error) {
       setToast({
         id: Date.now().toString(),
-        message: "Tải ảnh thất bại. Vui lòng thử lại.",
+        message: "Failed to upload image. Please try again.",
         type: "error",
       });
     }
@@ -394,7 +394,7 @@ export default function EditSeller() {
     if (!isValid) {
       setToast({
         id: Date.now().toString(),
-        message: "Vui lòng kiểm tra lại thông tin nhập liệu.",
+        message: "Please check your input.",
         type: "error",
       });
       return;
@@ -417,7 +417,7 @@ export default function EditSeller() {
         }
         setToast({
           id: Date.now().toString(),
-          message: "Cập nhật thông tin thành công!",
+          message: "Information updated successfully!",
           type: "success",
         });
         setTimeout(() => router.push("/admin/sellers"), 1000);
@@ -449,7 +449,7 @@ export default function EditSeller() {
 
         setToast({
           id: Date.now().toString(),
-          message: `Đã tạo tài khoản cho "${formData.brandTitle}"!`,
+          message: `Account created for "${formData.brandTitle}"!`,
           type: "success",
         });
 
@@ -478,7 +478,7 @@ export default function EditSeller() {
     } catch (e) {
       setToast({
         id: Date.now().toString(),
-        message: "Đã có lỗi xảy ra. Vui lòng thử lại.",
+        message: "An error occurred. Please try again.",
         type: "error",
       });
     }
@@ -529,7 +529,7 @@ export default function EditSeller() {
     return (
       <div className="p-20 flex flex-col items-center justify-center min-h-[60vh]">
         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="font-bold text-slate-400">Đang tải dữ liệu...</p>
+        <p className="font-bold text-slate-400">Loading data...</p>
       </div>
     );
 
@@ -922,7 +922,7 @@ export default function EditSeller() {
           {!isEditMode && (
             <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-6 space-y-4 animate-in slide-in-from-right-4 duration-500">
               <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                <Key size={18} className="text-slate-600" /> Thiết lập mật khẩu
+                <Key size={18} className="text-slate-600" /> Set up password
               </h3>
 
               <div className="space-y-4">
@@ -932,13 +932,13 @@ export default function EditSeller() {
                     onClick={() => setAuthMethod("invite")}
                     className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${authMethod === "invite" ? "bg-white shadow-sm text-blue-600" : "text-slate-500 hover:text-slate-700"}`}
                   >
-                    Gửi Email Mời
+                    Send Email Invitation
                   </button>
                   <button
                     onClick={() => setAuthMethod("manual")}
                     className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${authMethod === "manual" ? "bg-white shadow-sm text-blue-600" : "text-slate-500 hover:text-slate-700"}`}
                   >
-                    Tạo Thủ Công
+                    Create Manually
                   </button>
                 </div>
 
@@ -951,12 +951,12 @@ export default function EditSeller() {
                       </div>
                       <div>
                         <p className="text-sm font-bold text-blue-900">
-                          Email kích hoạt
+                          Email Invitation
                         </p>
                         <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-                          Hệ thống sẽ gửi link đặt mật khẩu đến{" "}
-                          <strong>{formData.email || "email này"}</strong>.
-                          Seller tự thiết lập mật khẩu khi đăng nhập lần đầu.
+                          The system will send a password setup link to{" "}
+                          <strong>{formData.email || "this email"}</strong>.
+                          Seller will set up their password upon first login.
                         </p>
                       </div>
                     </div>
@@ -964,7 +964,7 @@ export default function EditSeller() {
                 ) : (
                   <div className="space-y-3">
                     <label className="text-xs font-bold text-slate-500 uppercase">
-                      Mật khẩu khởi tạo <span className="text-red-500">*</span>
+                      Initial Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <input
@@ -976,7 +976,7 @@ export default function EditSeller() {
                             setErrors({ ...errors, password: "" });
                         }}
                         className={`w-full pl-10 pr-10 py-3 bg-white border rounded-xl focus:outline-none focus:ring-4 text-sm font-bold tracking-wider ${errors.password ? "border-red-300 focus:ring-red-100" : "border-slate-200 focus:ring-blue-500/10"}`}
-                        placeholder="Nhập mật khẩu..."
+                        placeholder="Enter password..."
                       />
                       <Lock
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -1011,7 +1011,7 @@ export default function EditSeller() {
                       </div>
                     )}
                     <p className="text-[10px] text-slate-400 flex items-center gap-1">
-                      <Info size={10} /> Hãy chia sẻ mật khẩu này cho Seller.
+                      <Info size={10} /> Please share this password with the Seller.
                     </p>
                   </div>
                 )}
@@ -1032,17 +1032,17 @@ export default function EditSeller() {
                   {
                     id: "PENDING",
                     label: "PENDING (Chờ duyệt)",
-                    desc: "Chưa thể đăng bán, chờ admin duyệt hồ sơ.",
+                      desc: "Not yet available for sale, awaiting admin approval.",
                   },
                   {
                     id: "ACTIVE",
                     label: "ACTIVE (Hoạt động)",
-                    desc: "Được phép đăng bán và truy cập hệ thống.",
+                    desc: "Allowed to list products and access the system.",
                   },
                   {
                     id: "BLOCKED",
                     label: "BLOCKED (Khóa)",
-                    desc: "Tài khoản bị vô hiệu hóa tạm thời.",
+                    desc: "Account temporarily disabled.",
                   },
                 ].map((st) => (
                   <button
@@ -1110,12 +1110,12 @@ export default function EditSeller() {
           {isEditMode && seller && (
             <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-6 space-y-4">
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-                Thống kê nhanh
+                Quick statistics
               </h3>
 
               <div className="flex justify-between items-center py-2 border-b border-slate-50">
                 <span className="text-sm font-medium text-slate-600">
-                  Ngày đăng ký
+                  Registration date
                 </span>
                 <span className="text-sm font-bold text-slate-800">
                   {new Date(seller.createdAt).toLocaleDateString()}
@@ -1123,7 +1123,7 @@ export default function EditSeller() {
               </div>
               <div className="flex justify-between items-center py-2 border-b border-slate-50">
                 <span className="text-sm font-medium text-slate-600">
-                  Tổng sản phẩm
+                  Total product
                 </span>
                 <span className="text-sm font-bold text-slate-800">
                   {seller.totalProducts}
@@ -1131,7 +1131,7 @@ export default function EditSeller() {
               </div>
               <div className="flex justify-between items-center py-2 border-b border-slate-50">
                 <span className="text-sm font-medium text-slate-600">
-                  Tổng doanh thu
+                  Total revenue
                 </span>
                 <span className="text-sm font-bold text-blue-600">
                   {(seller.totalRevenue / 1000000).toFixed(1)}M

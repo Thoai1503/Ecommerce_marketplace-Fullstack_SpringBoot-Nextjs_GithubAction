@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { logoutAction } from "@/app/actions/auth";
@@ -27,6 +29,11 @@ interface AdminHeaderProps {
 }
 
 type Theme = "light" | "dark" | "system";
+type StoredAdminUser = {
+  email?: string;
+  fullName?: string;
+  name?: string;
+};
 
 const financeQuickLinks = [
   {
@@ -50,6 +57,7 @@ const financeQuickLinks = [
     icon: Wallet,
   },
 ];
+
 
 const clearAuthStorage = () => {
   [
@@ -75,6 +83,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
   const pathname = usePathname();
 
   const [theme, setTheme] = useState<Theme>("system");
+  const [adminUser, setAdminUser] = useState<StoredAdminUser | null>(null);
   const [isThemeOpen, setIsThemeOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [toast, setToast] = useState<{
@@ -92,6 +101,13 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
       const savedTheme = localStorage.getItem("theme") as Theme;
       if (savedTheme) {
         setTheme(savedTheme);
+      }
+
+      try {
+        const rawUser = localStorage.getItem("user");
+        setAdminUser(rawUser ? JSON.parse(rawUser) : null);
+      } catch {
+        setAdminUser(null);
       }
     }
   }, []);
@@ -146,14 +162,14 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
   }, []);
 
   const getPageTitle = (path: string) => {
-    if (path.includes("/orders")) return "Đơn hàng";
-    if (path.includes("/products")) return "Sản phẩm";
-    if (path.includes("/vouchers")) return "Voucher";
-    if (path.includes("/customers")) return "Khách hàng";
-    if (path.includes("/categories")) return "Danh mục";
-    if (path.includes("/settings")) return "Cài đặt";
-    if (path.includes("/finance")) return "Tài chính";
-    if (path.includes("/sellers")) return "Nhà bán hàng";
+    if (path.includes("/orders")) return "Orders";
+    if (path.includes("/products")) return "Products";
+    if (path.includes("/vouchers")) return "Vouchers";
+    if (path.includes("/customers")) return "Customers";
+    if (path.includes("/categories")) return "Categories";
+    if (path.includes("/settings")) return "Settings";
+    if (path.includes("/finance")) return "Finance";
+    if (path.includes("/sellers")) return "Sellers";
     return "Dashboard";
   };
 
@@ -161,7 +177,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
     setIsProfileOpen(false);
     setToast({
       id: Date.now().toString(),
-      message: "Đang đăng xuất...",
+      message: "Logging out...",
       type: "info",
     });
 
@@ -214,14 +230,19 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
             {getPageTitle(pathname)}
           </h1>
           <span className="text-[13px] font-medium text-slate-400 mt-0.5">
-            Chủ Nhật, 15 tháng 2, 2026
+            {new Date().toLocaleDateString("vi-VN", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
           </span>
         </div>
 
         {isFinancePage && (
           <div className="hidden xl:flex items-center gap-2 ml-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/60 px-2 py-2">
             <span className="px-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
-              Điều phối
+              Coordination
             </span>
             {financeQuickLinks.map((item) => {
               const Icon = item.icon;
@@ -250,7 +271,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
           </span>
           <input
             type="text"
-            placeholder="Tìm kiếm..."
+            placeholder="Search..."
             className="w-64 pl-12 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800 border-0 rounded-2xl text-[14px] text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:bg-white dark:focus:bg-slate-700 transition-all duration-300"
           />
         </div>
@@ -321,7 +342,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
               />
             </div>
             <span className="text-[14px] font-bold text-slate-800 dark:text-slate-200">
-              Admin User
+              {adminUser?.fullName || adminUser?.name || "Admin User"}
             </span>
             <ChevronDown
               size={16}
@@ -333,10 +354,10 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
             <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50 overflow-hidden">
               <div className="px-5 py-3">
                 <p className="text-[15px] font-black text-slate-800 dark:text-white">
-                  Tài khoản của tôi
+                  My account
                 </p>
                 <p className="text-[11px] font-medium text-slate-400">
-                  admin@staygo.com
+                  {adminUser?.email || "Admin account"}
                 </p>
               </div>
 
@@ -348,7 +369,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-[14px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors border-0 bg-transparent text-left"
                 >
                   <User size={18} />
-                  Hồ sơ
+                  File
                 </button>
 
                 <button
@@ -356,14 +377,14 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-[14px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors border-0 bg-transparent text-left"
                 >
                   <SettingsIcon size={18} />
-                  Cài đặt
+                  Settings
                 </button>
 
                 <button
                   onClick={() => {
                     setToast({
                       id: Date.now().toString(),
-                      message: "Tính năng Lịch sử hoạt động sẽ sớm ra mắt.",
+                      message: "The Activity History feature will be launching soon..",
                       type: "info",
                     });
                     setIsProfileOpen(false);
@@ -371,7 +392,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-[14px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-colors border-0 bg-transparent text-left"
                 >
                   <History size={18} />
-                  Lịch sử hoạt động
+                  Activity History
                 </button>
               </div>
 
@@ -383,7 +404,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-[14px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors border-0 bg-transparent text-left"
                 >
                   <LogOut size={18} />
-                  Đăng xuất
+                  Logout
                 </button>
               </div>
             </div>

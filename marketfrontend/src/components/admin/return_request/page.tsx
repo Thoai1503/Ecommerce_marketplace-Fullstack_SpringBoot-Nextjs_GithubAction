@@ -5,6 +5,7 @@ import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import { useToast } from "@/context/ToastContext";
 import EmptyState from "@/components/ui/EmptyState";
 import ErrorState from "@/components/ui/ErrorState";
+import Pagination from "@/components/ui/Pagination";
 import { Skeleton } from "@/components/ui/Skeleton";
 import {
   AlertTriangle,
@@ -42,60 +43,62 @@ const STATUS_CONFIG: Record<
   }
 > = {
   PENDING_APPROVAL: {
-    label: "Chờ phê duyệt",
+    label: "Wait for approval",
     color: "text-amber-700",
     bgColor: "bg-amber-100",
     icon: <Clock3 size={12} />,
   },
   APPROVED: {
-    label: "Đã phê duyệt",
+    label: "Approved",
     color: "text-blue-700",
     bgColor: "bg-blue-100",
     icon: <CheckCircle2 size={12} />,
   },
   REJECTED: {
-    label: "Đã từ chối",
+    label: "Rejected",
     color: "text-rose-700",
     bgColor: "bg-rose-100",
     icon: <XCircle size={12} />,
   },
   SHIPPING: {
-    label: "Đang vận chuyển",
+    label: "Shipping requested",
     color: "text-violet-700",
     bgColor: "bg-violet-100",
     icon: <Truck size={12} />,
   },
   RECEIVED: {
-    label: "Đã nhận hàng trả",
+    label: "Received at warehouse",
     color: "text-cyan-700",
     bgColor: "bg-cyan-100",
     icon: <Package size={12} />,
   },
   REFUNDED: {
-    label: "Đã hoàn tiền",
+    label: "Refunded",
     color: "text-emerald-700",
     bgColor: "bg-emerald-100",
     icon: <Wallet size={12} />,
   },
   INSPECTION_PASSED: {
-    label: "Kiểm tra đạt",
+    label: "Inspection passed",
     color: "text-green-700",
     bgColor: "bg-green-100",
     icon: <ShieldCheck size={12} />,
   },
   INSPECTION_FAILED: {
-    label: "Kiểm tra không đạt",
+    label: "Inspection failed",
     color: "text-orange-700",
     bgColor: "bg-orange-100",
     icon: <AlertTriangle size={12} />,
   },
   CANCELED: {
-    label: "Đã hủy",
+    label: "Canceled",
     color: "text-slate-700",
     bgColor: "bg-slate-100",
     icon: <XCircle size={12} />,
   },
 };
+
+const REQUESTS_PER_PAGE = 10;
 
 const currency = (value: number) => `${value.toLocaleString("vi-VN")}₫`;
 
@@ -146,8 +149,8 @@ const getShipmentLabel = (request: ReturnRequestAdmin) =>
   textOrEmpty(request.shipmentTrackingNumber) ||
   textOrEmpty(request.orderTrackingNumber) ||
   (request.orderShipmentId
-    ? `Kiện #${request.orderShipmentId}`
-    : "Chưa có mã kiện");
+    ? `Sue #${request.orderShipmentId}`
+    : "No case code yet");
 
 const getCustomerLabel = (request: ReturnRequestAdmin) =>
   textOrEmpty(request.customerName) || `KH #${request.customerId}`;
@@ -159,7 +162,7 @@ const getItemLabel = (item: ReturnRequestAdmin["items"][number]) =>
   textOrEmpty(item.productName) || `Order Item #${item.orderItemId}`;
 
 const getPrimaryItemLabel = (request: ReturnRequestAdmin) =>
-  request.items?.[0] ? getItemLabel(request.items[0]) : "Chưa có sản phẩm";
+  request.items?.[0] ? getItemLabel(request.items[0]) : "There are no products yet";
 
 const isVideoAttachment = (attachment: ReturnRequestAttachmentAdmin) =>
   attachment.fileType?.toLowerCase().startsWith("video/") ||
@@ -220,7 +223,7 @@ function ReturnRequestDetailModal({
         <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-md px-6 py-5 border-b border-slate-100 flex items-start justify-between gap-4 rounded-t-[28px]">
           <div>
             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
-              Yêu cầu trả hàng hoàn tiền
+              Request a return and refund.
             </p>
             <h3 className="text-2xl font-black text-slate-800 mt-1">
               {formatRequestCode(request.id)}
@@ -233,7 +236,7 @@ function ReturnRequestDetailModal({
                 {statusConfig.label}
               </span>
               <span className="text-xs text-slate-500 font-medium">
-                Tạo lúc {new Date(request.createdAt).toLocaleString("vi-VN")}
+                Created at {new Date(request.createdAt).toLocaleString("vi-VN")}
               </span>
             </div>
             <div className="flex items-center gap-2 mt-4 flex-wrap">
@@ -242,14 +245,14 @@ function ReturnRequestDetailModal({
                 disabled={actionLoading || request.status === "APPROVED"}
                 className="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 disabled:opacity-50 border-0"
               >
-                Duyệt
+                Approve
               </button>
               <button
                 onClick={() => onStatusAction(request, "REJECTED")}
                 disabled={actionLoading || request.status === "REJECTED"}
                 className="px-3 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 disabled:opacity-50 border-0"
               >
-                Từ chối
+                Reject
               </button>
               {request.status === "INSPECTION_PASSED" && (
                 <button
@@ -257,7 +260,7 @@ function ReturnRequestDetailModal({
                   disabled={actionLoading}
                   className="px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 border-0"
                 >
-                  Hoàn tiền
+                  Refund
                 </button>
               )}
             </div>
@@ -265,7 +268,7 @@ function ReturnRequestDetailModal({
           <button
             onClick={onClose}
             className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center border-0"
-            aria-label="Đóng"
+            aria-label="Close"
           >
             <X size={18} />
           </button>
@@ -274,25 +277,25 @@ function ReturnRequestDetailModal({
         <div className="p-6 lg:p-8 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <SummaryCard
-              label="Tiền yêu cầu"
+              label="Requested Amount"
               value={currency(getRequestFinalAmount(request))}
               icon={<Banknote className="text-green-600" size={20} />}
               color="bg-green-50 text-green-600"
             />
             <SummaryCard
-              label="Đã hoàn"
+              label="Refunded Amount"
               value={currency(request.refundedAmount)}
               icon={<Wallet className="text-blue-600" size={20} />}
               color="bg-blue-50 text-blue-600"
             />
             <SummaryCard
-              label="Số lượng"
+              label="Requested Quantity"
               value={request.quantity}
               icon={<Package className="text-violet-600" size={20} />}
               color="bg-violet-50 text-violet-600"
             />
             <SummaryCard
-              label="Tệp đính kèm"
+              label="Attachments"
               value={request.attachments?.length || 0}
               icon={<ImageIcon className="text-amber-600" size={20} />}
               color="bg-amber-50 text-amber-600"
@@ -302,12 +305,12 @@ function ReturnRequestDetailModal({
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 bg-slate-50 rounded-3xl p-5 border border-slate-200">
               <h4 className="text-sm font-black text-slate-800 uppercase tracking-wide mb-4">
-                Thông tin chính
+                Key information
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div className="bg-white rounded-2xl p-4 border border-slate-100">
                   <p className="text-xs font-bold text-slate-400 uppercase">
-                    Mã yêu cầu
+                    Request code
                   </p>
                   <p className="text-sm font-mono font-black text-slate-800 mt-1">
                     {formatRequestCode(request.id)}
@@ -315,20 +318,20 @@ function ReturnRequestDetailModal({
                 </div>
                 <div className="bg-white rounded-2xl p-4 border border-slate-100">
                   <p className="text-xs font-bold text-slate-400 uppercase">
-                    Mã đơn hàng
+                    Order code
                   </p>
                   <p className="text-sm font-black text-slate-800 mt-1">
                     {getOrderLabel(request)}
                   </p>
                   {request.orderNumber && (
                     <p className="text-xs text-slate-400 mt-1">
-                      ID đơn: #{request.orderId}
+                      ID Order: #{request.orderId}
                     </p>
                   )}
                 </div>
                 <div className="bg-white rounded-2xl p-4 border border-slate-100">
                   <p className="text-xs font-bold text-slate-400 uppercase">
-                    Mã vận đơn
+                    Shipment code
                   </p>
                   <p className="text-sm font-black text-slate-800 mt-1">
                     {getShipmentLabel(request)}
@@ -343,7 +346,7 @@ function ReturnRequestDetailModal({
                 </div>
                 <div className="bg-white rounded-2xl p-4 border border-slate-100">
                   <p className="text-xs font-bold text-slate-400 uppercase">
-                    Khách hàng
+                    Client
                   </p>
                   <p className="text-sm font-black text-slate-800 mt-1">
                     {getCustomerLabel(request)}
@@ -372,22 +375,22 @@ function ReturnRequestDetailModal({
               </div>
               <div className="bg-white rounded-2xl p-4 border border-slate-100 mt-4">
                 <p className="text-xs font-bold text-slate-400 uppercase mb-2">
-                  Lý do trả hàng
+                  Reason for return
                 </p>
                 <p className="text-sm text-slate-700 leading-6">
-                  {request.reason || "Không có mô tả"}
+                  {request.reason || "No description available"}
                 </p>
               </div>
             </div>
 
             <div className="bg-slate-50 rounded-3xl p-5 border border-slate-200">
               <h4 className="text-sm font-black text-slate-800 uppercase tracking-wide mb-4">
-                Mốc thời gian
+                Timeline
               </h4>
               <div className="space-y-3 text-sm">
                 <div className="bg-white rounded-2xl p-4 border border-slate-100">
                   <p className="text-xs font-bold text-slate-400 uppercase">
-                    Tạo lúc
+                    Created at
                   </p>
                   <p className="font-bold text-slate-800 mt-1">
                     {new Date(request.createdAt).toLocaleString("vi-VN")}
@@ -395,12 +398,12 @@ function ReturnRequestDetailModal({
                 </div>
                 <div className="bg-white rounded-2xl p-4 border border-slate-100">
                   <p className="text-xs font-bold text-slate-400 uppercase">
-                    Cập nhật lần cuối
+                    Last updated
                   </p>
                   <p className="font-bold text-slate-800 mt-1">
                     {request.updatedAt
                       ? new Date(request.updatedAt).toLocaleString("vi-VN")
-                      : "Chưa cập nhật"}
+                      : "Not updated"}
                   </p>
                 </div>
               </div>
@@ -410,7 +413,7 @@ function ReturnRequestDetailModal({
           <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100">
               <h4 className="font-black text-slate-800">
-                Danh sách sản phẩm yêu cầu hoàn
+                Product list for return
               </h4>
             </div>
             <div className="divide-y divide-slate-100">
@@ -444,38 +447,38 @@ function ReturnRequestDetailModal({
                     </div>
                     <div className="flex items-center gap-3 flex-wrap text-xs font-bold">
                       <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700">
-                        SL trả: {item.quantity}
+                        Quantity paid: {item.quantity}
                       </span>
                       {!!item.orderQuantity && (
                         <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700">
-                          Đã mua: {item.orderQuantity}
+                          Purchased: {item.orderQuantity}
                         </span>
                       )}
                       {!!item.price && (
                         <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700">
-                          Giá: {currency(item.price)}
+                          Price: {currency(item.price)}
                         </span>
                       )}
                       {!!item.totalPrice && (
                         <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700">
-                          Tổng dòng: {currency(item.totalPrice)}
+                          Total: {currency(item.totalPrice)}
                         </span>
                       )}
                       <span className="px-3 py-1 rounded-xl bg-blue-50 text-blue-700">
                         Item #{item.orderItemId}
                       </span>
                       <span className="px-3 py-1 rounded-xl bg-amber-50 text-amber-700">
-                        Yêu cầu: {currency(getItemFinalAmount(item))}
+                        Request: {currency(getItemFinalAmount(item))}
                       </span>
                       <span className="px-3 py-1 rounded-xl bg-green-50 text-green-700">
-                        Đã hoàn: {currency(item.refundedAmount)}
+                        Refunded: {currency(item.refundedAmount)}
                       </span>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="px-5 py-8 text-sm text-slate-400">
-                  Không có item đính kèm.
+                  No items attached.
                 </div>
               )}
             </div>
@@ -484,7 +487,7 @@ function ReturnRequestDetailModal({
           <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100">
               <h4 className="font-black text-slate-800">
-                Hình ảnh / Video đính kèm
+               Image / Video Attachments
               </h4>
             </div>
             <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -519,7 +522,7 @@ function ReturnRequestDetailModal({
                         <span>{attachment.fileType}</span>
                       </div>
                       <p className="text-sm font-medium text-slate-700 line-clamp-2">
-                        {attachment.description || "Không có mô tả"}
+                        {attachment.description || "No description available"}
                       </p>
                       <a
                         href={attachment.fileUrl}
@@ -527,14 +530,14 @@ function ReturnRequestDetailModal({
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
                       >
-                        <Eye size={12} /> Xem tệp gốc
+                        <Eye size={12} /> View original file
                       </a>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="text-sm text-slate-400">
-                  Không có tệp đính kèm.
+                  No attachments available.
                 </div>
               )}
             </div>
@@ -556,6 +559,7 @@ export default function ReturnRequestsPage() {
   const [customerFilter, setCustomerFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [selectedRequest, setSelectedRequest] =
     useState<ReturnRequestAdmin | null>(null);
@@ -642,6 +646,28 @@ export default function ReturnRequestsPage() {
     endDate,
   ]);
 
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredRequests.length / REQUESTS_PER_PAGE),
+  );
+  const paginatedRequests = useMemo(() => {
+    const firstRequestIndex = (currentPage - 1) * REQUESTS_PER_PAGE;
+    return filteredRequests.slice(
+      firstRequestIndex,
+      firstRequestIndex + REQUESTS_PER_PAGE,
+    );
+  }, [currentPage, filteredRequests]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, shopFilter, customerFilter, startDate, endDate]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const handleStatusAction = async (
     request: ReturnRequestAdmin,
     nextStatus: ReturnRequestStatusAdmin,
@@ -659,11 +685,11 @@ export default function ReturnRequestsPage() {
       );
       setSelectedRequest((prev) => (prev?.id === request.id ? updated : prev));
       toast.success(
-        `Đã cập nhật trạng thái sang ${STATUS_CONFIG[nextStatus]?.label || nextStatus}`,
+        `Status has been updated to ${STATUS_CONFIG[nextStatus]?.label || nextStatus}`,
       );
     } catch (error) {
       console.error("Failed to update return request status:", error);
-      toast.error("Không thể cập nhật trạng thái yêu cầu.");
+      toast.error("Failed to update return request status.");
     } finally {
       setActionLoadingId(null);
     }
@@ -695,42 +721,41 @@ export default function ReturnRequestsPage() {
 
       <Breadcrumbs
         items={[
-          { label: "Quản lý đơn hàng", path: "/admin/orders" },
-          { label: "Trả hàng hoàn tiền" },
+          { label: "Order Management", path: "/admin/orders" },
+          { label: "Return Requests" },
         ]}
       />
 
       <div>
         <h1 className="text-2xl font-black text-slate-800">
-          Trả hàng hoàn tiền
+          Return Requests
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Hiển thị toàn bộ dữ liệu từ endpoint /api/refunds, bao gồm item hoàn
-          trả và tệp đính kèm.
+          Displaying item return requests, returned products, and attached files.
         </p>
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <SummaryCard
-          label="Tổng yêu cầu"
+          label="Total Requests"
           value={stats.total}
           icon={<Package size={20} className="text-blue-600" />}
           color="bg-blue-50 text-blue-600"
         />
         <SummaryCard
-          label="Chờ phê duyệt"
+          label="Pending Approval"
           value={stats.pending}
           icon={<Clock3 size={20} className="text-amber-600" />}
           color="bg-amber-50 text-amber-600"
         />
         <SummaryCard
-          label="Đã hoàn tiền"
+          label="Refunded"
           value={stats.refunded}
           icon={<Wallet size={20} className="text-emerald-600" />}
           color="bg-emerald-50 text-emerald-600"
         />
         <SummaryCard
-          label="Tổng tiền yêu cầu"
+          label="Total Request Amount"
           value={currency(stats.amount)}
           icon={<Banknote size={20} className="text-violet-600" />}
           color="bg-violet-50 text-violet-600"
@@ -741,11 +766,10 @@ export default function ReturnRequestsPage() {
         <div className="p-5 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           <div>
             <h3 className="text-lg font-black text-slate-800">
-              Danh sách yêu cầu
+              Return Requests
             </h3>
             <p className="text-xs text-slate-500 font-medium mt-1">
-              Đang hiển thị {filteredRequests.length} / {requests.length} yêu
-              cầu
+              Displaying {filteredRequests.length} / {requests.length} requests
             </p>
           </div>
 
@@ -758,7 +782,7 @@ export default function ReturnRequestsPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Tìm theo mã yêu cầu, mã đơn, khách hàng, lý do..."
+                placeholder="Search by request ID, order ID, customer, reason..."
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/5 text-sm font-medium"
               />
             </div>
@@ -771,7 +795,7 @@ export default function ReturnRequestsPage() {
                 {statusOptions.map((status) => (
                   <option key={status} value={status}>
                     {status === "ALL"
-                      ? "Tất cả trạng thái"
+                      ? "All Statuses"
                       : STATUS_CONFIG[status]?.label || status}
                   </option>
                 ))}
@@ -779,13 +803,13 @@ export default function ReturnRequestsPage() {
               <input
                 value={shopFilter}
                 onChange={(e) => setShopFilter(e.target.value)}
-                placeholder="Lọc Shop ID"
+                placeholder="Filter Shop ID"
                 className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none w-full md:w-36"
               />
               <input
                 value={customerFilter}
                 onChange={(e) => setCustomerFilter(e.target.value)}
-                placeholder="Lọc KH ID"
+                placeholder="Filter Customer ID"
                 className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none w-full md:w-36"
               />
               <input
@@ -804,7 +828,7 @@ export default function ReturnRequestsPage() {
                 onClick={loadRequests}
                 className="px-4 py-3 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-900 border-0 flex items-center gap-2 justify-center"
               >
-                <RefreshCcw size={16} /> Làm mới
+                <RefreshCcw size={16} /> Refresh
               </button>
             </div>
           </div>
@@ -830,15 +854,15 @@ export default function ReturnRequestsPage() {
           <div className="p-16">
             <ErrorState
               type="error"
-              actionLabel="Tải lại"
+              actionLabel="Reload"
               onAction={loadRequests}
             />
           </div>
         ) : filteredRequests.length === 0 ? (
           <EmptyState
-            title="Không có yêu cầu trả hàng hoàn tiền"
-            description="Thử đổi bộ lọc hoặc từ khóa tìm kiếm để xem dữ liệu khác."
-            actionLabel="Xóa bộ lọc"
+            title="No return requests found"
+            description="Try adjusting the filters or search terms to see other data."
+            actionLabel="Clear Filters"
             onAction={() => {
               setSearch("");
               setStatusFilter("ALL");
@@ -852,7 +876,7 @@ export default function ReturnRequestsPage() {
         ) : (
           <>
             <div className="md:hidden flex flex-col divide-y divide-slate-100">
-              {filteredRequests.map((request) => {
+              {paginatedRequests.map((request) => {
                 const statusConfig = STATUS_CONFIG[request.status] || {
                   label: request.status,
                   color: "text-slate-700",
@@ -873,8 +897,8 @@ export default function ReturnRequestsPage() {
                         <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-1">
                           <Package size={11} />
                           <span className="line-clamp-1">
-                            {request.items?.length || 0} sản phẩm •{" "}
-                            {request.attachments?.length || 0} tệp •{" "}
+                            {request.items?.length || 0} products •{" "}
+                            {request.attachments?.length || 0} files •{" "}
                             {getPrimaryItemLabel(request)}
                           </span>
                         </div>
@@ -890,7 +914,7 @@ export default function ReturnRequestsPage() {
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
                         <p className="text-[10px] font-bold text-slate-400 uppercase">
-                          Khách hàng / Shop
+                          Customer / Shop
                         </p>
                         <p className="font-black text-slate-800 mt-1">
                           {getCustomerLabel(request)}
@@ -901,7 +925,7 @@ export default function ReturnRequestsPage() {
                       </div>
                       <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
                         <p className="text-[10px] font-bold text-slate-400 uppercase">
-                          Tiền yêu cầu
+                          Requested Amount
                         </p>
                         <p className="font-black text-slate-800 mt-1">
                           {currency(getRequestFinalAmount(request))}
@@ -911,10 +935,10 @@ export default function ReturnRequestsPage() {
 
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
-                        Lý do
+                        Reason
                       </p>
                       <p className="text-sm text-slate-700">
-                        {request.reason || "Không có mô tả"}
+                        {request.reason || "No description available"}
                       </p>
                     </div>
 
@@ -933,13 +957,13 @@ export default function ReturnRequestsPage() {
                           }
                           className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold border-0 disabled:opacity-50"
                         >
-                          Duyệt
+                          Browse
                         </button>
                         <button
                           onClick={() => setSelectedRequest(request)}
                           className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold border-0"
                         >
-                          Chi tiết
+                          Detail
                         </button>
                       </div>
                     </div>
@@ -948,38 +972,48 @@ export default function ReturnRequestsPage() {
               })}
             </div>
 
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full min-w-[1180px] text-sm">
+            <div className="hidden md:block overflow-hidden">
+              <table className="w-full table-fixed text-sm">
+                <colgroup>
+                  <col className="w-[8%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[13%]" />
+                </colgroup>
                 <thead className="bg-slate-50/70 text-slate-500 border-b border-slate-100">
                   <tr>
-                    <th className="text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest">
-                      Yêu cầu
+                    <th className="text-left px-3 py-4 text-[10px] font-black uppercase tracking-widest">
+                     Request
                     </th>
-                    <th className="text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest">
-                      Đơn hàng
+                    <th className="text-left px-3 py-4 text-[10px] font-black uppercase tracking-widest">
+                      Order
                     </th>
-                    <th className="text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest">
-                      Khách / Shop
+                    <th className="text-left px-3 py-4 text-[10px] font-black uppercase tracking-widest">
+                      Customer / Shop
                     </th>
-                    <th className="text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest">
-                      Lý do
+                    <th className="text-left px-3 py-4 text-[10px] font-black uppercase tracking-widest">
+                      Reason
                     </th>
-                    <th className="text-center px-5 py-4 text-[10px] font-black uppercase tracking-widest">
-                      Sản phẩm / Tệp
+                    <th className="text-center px-3 py-4 text-[10px] font-black uppercase tracking-widest">
+                      Products / Files
                     </th>
-                    <th className="text-right px-5 py-4 text-[10px] font-black uppercase tracking-widest">
-                      Số tiền
+                    <th className="text-right px-3 py-4 text-[10px] font-black uppercase tracking-widest">
+                      Requested Amount
                     </th>
-                    <th className="text-center px-5 py-4 text-[10px] font-black uppercase tracking-widest">
-                      Trạng thái
+                    <th className="text-center px-3 py-4 text-[10px] font-black uppercase tracking-widest">
+                     Status
                     </th>
-                    <th className="text-right px-5 py-4 text-[10px] font-black uppercase tracking-widest">
-                      Hành động
+                    <th className="text-right px-3 py-4 text-[10px] font-black uppercase tracking-widest">
+                      Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredRequests.map((request) => {
+                  {paginatedRequests.map((request) => {
                     const statusConfig = STATUS_CONFIG[request.status] || {
                       label: request.status,
                       color: "text-slate-700",
@@ -992,7 +1026,7 @@ export default function ReturnRequestsPage() {
                         key={request.id}
                         className="hover:bg-slate-50/70 transition-colors"
                       >
-                        <td className="px-5 py-4">
+                        <td className="px-3 py-4">
                           <div>
                             <p className="font-mono font-black text-slate-800">
                               {formatRequestCode(request.id)}
@@ -1004,57 +1038,57 @@ export default function ReturnRequestsPage() {
                             </p>
                           </div>
                         </td>
-                        <td className="px-5 py-4">
-                          <div>
-                            <p className="font-bold text-slate-800">
+                        <td className="px-3 py-4">
+                          <div className="min-w-0">
+                            <p className="truncate font-bold text-slate-800">
                               {getOrderLabel(request)}
                             </p>
-                            <p className="text-xs text-slate-500 mt-1">
+                            <p className="truncate text-xs text-slate-500 mt-1">
                               {getShipmentLabel(request)}
                             </p>
                             {request.carrierName && (
-                              <p className="text-[11px] text-slate-400 mt-1">
+                              <p className="truncate text-[11px] text-slate-400 mt-1">
                                 {request.carrierName}
                               </p>
                             )}
                           </div>
                         </td>
-                        <td className="px-5 py-4">
-                          <div>
-                            <p className="font-bold text-slate-800">
+                        <td className="px-3 py-4">
+                          <div className="min-w-0">
+                            <p className="truncate font-bold text-slate-800">
                               {getCustomerLabel(request)}
                             </p>
-                            <p className="text-xs text-slate-500 mt-1">
+                            <p className="truncate text-xs text-slate-500 mt-1">
                               {getShopLabel(request)}
                             </p>
                             {request.customerEmail && (
-                              <p className="text-[11px] text-slate-400 mt-1 max-w-[180px] truncate">
+                              <p className="truncate text-[11px] text-slate-400 mt-1">
                                 {request.customerEmail}
                               </p>
                             )}
                           </div>
                         </td>
-                        <td className="px-5 py-4 max-w-[260px]">
+                        <td className="px-3 py-4">
                           <p className="text-sm text-slate-700 line-clamp-2">
-                            {request.reason || "Không có mô tả"}
+                            {request.reason || "No description available"}
                           </p>
                         </td>
-                        <td className="px-5 py-4 text-center">
-                          <div className="inline-flex flex-col items-center gap-1 text-xs font-bold">
-                            <p className="max-w-[190px] truncate text-slate-700">
+                        <td className="px-3 py-4 text-center">
+                          <div className="flex min-w-0 flex-col items-center gap-1 text-xs font-bold">
+                            <p className="w-full truncate text-slate-700">
                               {getPrimaryItemLabel(request)}
                             </p>
-                            <div className="inline-flex gap-1">
+                            <div className="flex flex-wrap justify-center gap-1">
                               <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
-                                {request.items?.length || 0} sản phẩm
+                                {request.items?.length || 0} products
                               </span>
                               <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700">
-                                {request.attachments?.length || 0} tệp
+                                {request.attachments?.length || 0} files
                               </span>
                             </div>
                           </div>
                         </td>
-                        <td className="px-5 py-4 text-right">
+                        <td className="px-3 py-4 text-right">
                           <div>
                             <p className="font-black text-slate-800">
                               {getRequestFinalAmount(request) > 0
@@ -1062,20 +1096,20 @@ export default function ReturnRequestsPage() {
                                 : `Khách trả thêm: ${currency(-getRequestFinalAmount(request))}`}
                             </p>
                             <p className="text-xs text-slate-500 mt-1">
-                              Đã hoàn: {currency(request.refundedAmount)}
+                              Refunded: {currency(request.refundedAmount)}
                             </p>
                           </div>
                         </td>
-                        <td className="px-5 py-4 text-center">
+                        <td className="px-3 py-4 text-center">
                           <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold ${statusConfig.bgColor} ${statusConfig.color}`}
+                            className={`inline-flex max-w-full items-center justify-center gap-1 px-2.5 py-1 text-center text-[10px] font-bold leading-4 rounded-lg ${statusConfig.bgColor} ${statusConfig.color}`}
                           >
                             {statusConfig.icon}
                             {statusConfig.label}
                           </span>
                         </td>
-                        <td className="px-5 py-4 text-right">
-                          <div className="inline-flex items-center gap-2">
+                        <td className="px-3 py-4 text-right">
+                          <div className="flex flex-wrap justify-end gap-2">
                             <button
                               onClick={() =>
                                 handleStatusAction(request, "APPROVED")
@@ -1086,7 +1120,7 @@ export default function ReturnRequestsPage() {
                               }
                               className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-100 border-0 disabled:opacity-50"
                             >
-                              Duyệt
+                              Approve
                             </button>
                             <button
                               onClick={() =>
@@ -1098,7 +1132,7 @@ export default function ReturnRequestsPage() {
                               }
                               className="inline-flex items-center gap-2 px-3 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold hover:bg-rose-100 border-0 disabled:opacity-50"
                             >
-                              Từ chối
+                              Reject
                             </button>
                             {request.status === "INSPECTION_PASSED" && (
                               <button
@@ -1108,14 +1142,14 @@ export default function ReturnRequestsPage() {
                                 disabled={actionLoadingId === request.id}
                                 className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold hover:bg-emerald-100 border-0 disabled:opacity-50"
                               >
-                                Hoàn tiền
+                                Refund
                               </button>
                             )}
                             <button
                               onClick={() => setSelectedRequest(request)}
                               className="inline-flex items-center gap-2 px-3 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 border-0"
                             >
-                              <Eye size={14} /> Chi tiết
+                              <Eye size={14} /> Details
                             </button>
                           </div>
                         </td>
@@ -1125,6 +1159,13 @@ export default function ReturnRequestsPage() {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredRequests.length}
+              itemsPerPage={REQUESTS_PER_PAGE}
+              onPageChange={setCurrentPage}
+            />
           </>
         )}
       </div>

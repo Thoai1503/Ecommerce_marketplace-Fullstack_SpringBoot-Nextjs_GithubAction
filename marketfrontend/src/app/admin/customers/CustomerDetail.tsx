@@ -59,14 +59,14 @@ const AICustomerInsights = ({ customer, onAction }: { customer: Customer, onActi
       let actionLabel = '';
       
       if (churnProbability > 70) {
-        strategy = 'Khách hàng có nguy cơ rời bỏ cao. Cần kích hoạt lại ngay.';
-        actionLabel = 'Gửi Email Win-back (-15%)';
+        strategy = 'Customers are at high risk of abandoning the service. They need to be reactivated immediately.';
+        actionLabel = 'Send Win-back Email (-15%)';
       } else if (customer.totalSpent > 10000000) {
-        strategy = 'Khách hàng VIP tiềm năng. Có thể upsell các sản phẩm cao cấp.';
-        actionLabel = 'Mời vào nhóm Private VIP';
+        strategy = 'Potential VIP customer. May be suitable for upselling premium products.';
+        actionLabel = 'Invite to Private VIP Group';
       } else {
-        strategy = 'Khách hàng ổn định. Nên duy trì tương tác định kỳ.';
-        actionLabel = 'Gửi thông báo hàng mới';
+        strategy = 'Stable customer. Should maintain regular engagement.';
+        actionLabel = 'Send New Product Announcement';
       }
 
       setInsights({
@@ -111,13 +111,13 @@ const AICustomerInsights = ({ customer, onAction }: { customer: Customer, onActi
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
                <div className="flex items-center gap-2 mb-2">
                   <Activity size={16} className={insights.churnProbability > 50 ? 'text-red-400' : 'text-green-400'} />
-                  <p className="text-xs font-bold text-indigo-200 uppercase">Rủi ro rời bỏ (Churn)</p>
+                  <p className="text-xs font-bold text-indigo-200 uppercase">Churn Risk</p>
                </div>
                <div className="flex items-end gap-2">
                   <span className={`text-3xl font-black ${insights.churnProbability > 50 ? 'text-red-300' : 'text-green-300'}`}>
                     {insights.churnProbability}%
                   </span>
-                  <span className="text-xs font-medium text-white/60 mb-1.5">xác suất</span>
+                  <span className="text-xs font-medium text-white/60 mb-1.5">probability</span>
                </div>
                {/* Progress Bar */}
                <div className="w-full h-1.5 bg-black/20 rounded-full mt-3 overflow-hidden">
@@ -132,7 +132,7 @@ const AICustomerInsights = ({ customer, onAction }: { customer: Customer, onActi
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
                <div className="flex items-center gap-2 mb-2">
                   <Target size={16} className="text-blue-300" />
-                  <p className="text-xs font-bold text-indigo-200 uppercase">Dự báo LTV (1 năm)</p>
+                  <p className="text-xs font-bold text-indigo-200 uppercase">LTV Forecast (1 year)</p>
                </div>
                <div className="flex flex-col">
                   <span className="text-2xl font-black text-white tracking-tight">
@@ -140,7 +140,7 @@ const AICustomerInsights = ({ customer, onAction }: { customer: Customer, onActi
                   </span>
                   <div className="flex items-center gap-1 mt-1">
                      <TrendingUp size={12} className="text-green-400" />
-                     <span className="text-[10px] font-bold text-green-400">+25% tiềm năng</span>
+                     <span className="text-[10px] font-bold text-green-400">+25% potential</span>
                   </div>
                </div>
             </div>
@@ -161,7 +161,7 @@ const AICustomerInsights = ({ customer, onAction }: { customer: Customer, onActi
              </div>
              
              <button 
-                onClick={() => onAction(`Đã thực hiện: ${insights.actionLabel}`)}
+                onClick={() => onAction(`Completed: ${insights.actionLabel}`)}
                 className="w-full py-2.5 bg-white text-indigo-900 rounded-lg text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-50 transition-colors shadow-lg shadow-indigo-900/20 mt-1"
              >
                 {insights.actionLabel} <ArrowRight size={14} />
@@ -235,7 +235,7 @@ export default function CustomerDetail() {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
   const memberDuration = diffDays > 365 
     ? `${Math.floor(diffDays / 365)} năm` 
-    : `${diffDays} ngày`;
+    : `${diffDays} day`;
 
   const statusConfig = CustomerStatusConfig[customer.status];
 
@@ -287,13 +287,13 @@ export default function CustomerDetail() {
              onClick={() => setIsDeleteModalOpen(true)}
              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-50 transition-all shadow-sm"
            >
-             <Trash2 size={18} /> Xóa
+             <Trash2 size={18} /> Delete
            </button>
            <button 
-             onClick={() => setToast({ message: "Tính năng tạo đơn hàng sẽ sớm ra mắt (Phase 2)", type: "info" })}
+             onClick={() => setToast({ message: "The order creation feature will be launched soon (Phase 2)", type: "info" })}
              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 border-0"
            >
-             <Plus size={18} /> Tạo đơn hàng
+             <Plus size={18} /> Create Order
            </button>
         </div>
       </div>
@@ -386,7 +386,7 @@ export default function CustomerDetail() {
              </div>
              <div className="flex items-center justify-between mb-4 relative z-10">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <StickyNote size={14} /> Ghi chú nội bộ
+                  <StickyNote size={14} /> Internal notes
                 </h3>
                 {!isEditingNote && (
                   <button onClick={() => setIsEditingNote(true)} className="text-xs font-bold text-blue-600 hover:underline">Sửa</button>
@@ -399,18 +399,18 @@ export default function CustomerDetail() {
                    value={note}
                    onChange={(e) => setNote(e.target.value)}
                    className="w-full p-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-amber-50/50 min-h-[100px]"
-                   placeholder="Nhập ghi chú về khách hàng (Sở thích, lưu ý giao hàng)..."
+                   placeholder="Enter notes about the customer (Preferences, delivery notes)..."
                  />
                  <div className="flex gap-2 justify-end">
-                   <button onClick={() => setIsEditingNote(false)} className="px-3 py-1.5 text-xs font-bold text-slate-500">Hủy</button>
+                   <button onClick={() => setIsEditingNote(false)} className="px-3 py-1.5 text-xs font-bold text-slate-500">Cancel</button>
                    <button onClick={handleSaveNote} className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm border-0">
-                     <Save size={12} /> Lưu
+                     <Save size={12} /> Save
                    </button>
                  </div>
                </div>
              ) : (
                <div className={`text-sm p-4 rounded-xl border relative z-10 ${note ? 'bg-amber-50 border-amber-100 text-amber-900' : 'bg-slate-50 border-slate-100 text-slate-400 italic'}`}>
-                 {note || "Chưa có ghi chú."}
+                 {note || "No notes yet."}
                </div>
              )}
           </div>
@@ -418,8 +418,8 @@ export default function CustomerDetail() {
           {/* 4. Addresses */}
           <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-6">
              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Sổ địa chỉ ({customer.addresses?.length || 0})</h3>
-                <button className="text-xs font-bold text-blue-600 hover:underline">+ Thêm mới</button>
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Address book ({customer.addresses?.length || 0})</h3>
+                <button className="text-xs font-bold text-blue-600 hover:underline">+ Add New</button>
              </div>
              
              <div className="space-y-3">
@@ -434,7 +434,7 @@ export default function CustomerDetail() {
                              <div className="flex items-center justify-between mb-1">
                                <p className="text-xs text-slate-500 font-bold uppercase">{addr.city}</p>
                                {addr.isDefault && (
-                                  <span className="text-[9px] font-black uppercase tracking-wider text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Mặc định</span>
+                                  <span className="text-[9px] font-black uppercase tracking-wider text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Default</span>
                                )}
                              </div>
                              <p className="text-sm font-bold text-slate-800 leading-snug">{addr.fullAddress}</p>
@@ -445,7 +445,7 @@ export default function CustomerDetail() {
                 ) : (
                    <div className="text-center py-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
                       <MapPin className="mx-auto text-slate-300 mb-2" size={24} />
-                      <p className="text-xs text-slate-400 font-medium">Chưa có địa chỉ nào.</p>
+                      <p className="text-xs text-slate-400 font-medium">No addresses yet.</p>
                    </div>
                 )}
              </div>
@@ -466,14 +466,14 @@ export default function CustomerDetail() {
                    <ShoppingBag size={24} />
                 </div>
                 <span className="text-3xl font-black text-slate-800 tracking-tight">{customer.totalOrders}</span>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wide mt-1">Tổng đơn hàng</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wide mt-1">Total Orders</span>
              </div>
              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center text-center group hover:border-green-300 transition-all hover:shadow-md">
                 <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                    <CreditCard size={24} />
                 </div>
                 <span className="text-3xl font-black text-slate-800 tracking-tight">{customer.totalSpent.toLocaleString()}₫</span>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wide mt-1">Tổng chi tiêu</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wide mt-1">Total Spent</span>
              </div>
              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center text-center group hover:border-purple-300 transition-all hover:shadow-md">
                 <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
@@ -482,7 +482,7 @@ export default function CustomerDetail() {
                 <span className="text-3xl font-black text-slate-800 tracking-tight">
                   {customer.totalOrders > 0 ? (customer.totalSpent / customer.totalOrders).toLocaleString() : 0}₫
                 </span>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wide mt-1">Giá trị trung bình</span>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wide mt-1">Average Value</span>
              </div>
           </div>
 
@@ -491,19 +491,19 @@ export default function CustomerDetail() {
              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Clock size={18} /></div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Lịch sử mua hàng</h3>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Order History</h3>
                 </div>
-                <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">{orders.length} đơn</span>
+                <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">{orders.length} orders</span>
              </div>
              
              <div className="overflow-x-auto flex-1">
                 <table className="w-full text-left border-collapse">
                    <thead>
                       <tr className="bg-slate-50/50 border-b border-slate-100 text-left">
-                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-8">Mã đơn</th>
-                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Tổng tiền</th>
-                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng thái</th>
-                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Ngày đặt</th>
+                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-8">Order ID</th>
+                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total Amount</th>
+                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                         <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right pr-8">Order Date</th>
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-50">
@@ -535,7 +535,7 @@ export default function CustomerDetail() {
                          <tr>
                             <td colSpan={4} className="px-6 py-20 text-center text-slate-400 text-sm flex flex-col items-center justify-center">
                                <ShoppingBag size={40} className="mb-3 opacity-20" />
-                               Chưa có đơn hàng nào.
+                               No orders found.
                             </td>
                          </tr>
                       )}

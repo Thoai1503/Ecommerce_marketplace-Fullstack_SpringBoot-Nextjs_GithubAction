@@ -641,7 +641,13 @@ public class ProductRepository implements IRepositories<Product> {
 				""";
 
 		List<Map<String, Object>> products = query(sql, id);
-		return products.isEmpty() ? null : products.get(0);
+		if (products.isEmpty()) {
+			return null;
+		}
+
+		Map<String, Object> product = products.get(0);
+		product.put("attributes", ProductAttributeRepository.Instance().GetByProductId(id));
+		return product;
 	}
 
 	public boolean UpdateAdminProductActive(int id, boolean isActive, String reason) {
