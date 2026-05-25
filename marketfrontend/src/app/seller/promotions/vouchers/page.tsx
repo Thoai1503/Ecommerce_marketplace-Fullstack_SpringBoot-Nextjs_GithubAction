@@ -465,6 +465,15 @@ const buildShopVoucherPayload = (
   };
 };
 
+const getSaveErrorMessage = (error: any, fallback: string) => {
+  const responseData = error?.response?.data;
+  if (typeof responseData === "string" && responseData.trim()) {
+    return responseData;
+  }
+
+  return responseData?.message || error?.message || fallback;
+};
+
 function AlertBanner({
   variant,
   message,
@@ -2696,10 +2705,18 @@ const Page = () => {
 
 
   const handleCreateShopVoucher = async () => {
+    const shopId = Number(shop?.id || 0);
+    if (!shopId) {
+      const message = "Shop information is not ready yet. Please wait a moment and try again.";
+      setSaveError(message);
+      window.alert(message);
+      return;
+    }
+
     try {
       setSaveError(null);
       const payload = {
-        ...buildShopVoucherPayload(shopVoucherForm, shop?.id),
+        ...buildShopVoucherPayload(shopVoucherForm, shopId),
         createdBy: userId ?? null,
       };
 
@@ -2720,16 +2737,24 @@ const Page = () => {
       setEditingVoucherId(null);
       setEditingVoucherType(null);
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Unable to save voucher to the database.";
+      const message = getSaveErrorMessage(
+        error,
+        "Unable to save voucher to the database.",
+      );
       setSaveError(message);
       window.alert(message);
     }
   };
 
   const handleCreateProductVoucher = async () => {
+    const shopId = Number(shop?.id || 0);
+    if (!shopId) {
+      const message = "Shop information is not ready yet. Please wait a moment and try again.";
+      setSaveError(message);
+      window.alert(message);
+      return;
+    }
+
     if (productVoucherForm.selectedProductIds.length === 0) {
       const message = "Please select at least one product.";
       setSaveError(message);
@@ -2740,7 +2765,7 @@ const Page = () => {
     try {
       setSaveError(null);
       const payload = {
-        ...buildShopVoucherPayload(productVoucherForm, shop?.id),
+        ...buildShopVoucherPayload(productVoucherForm, shopId),
         createdBy: userId ?? null,
       };
 
@@ -2780,16 +2805,24 @@ const Page = () => {
       setEditingVoucherId(null);
       setEditingVoucherType(null);
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Unable to save product-specific voucher.";
+      const message = getSaveErrorMessage(
+        error,
+        "Unable to save product-specific voucher.",
+      );
       setSaveError(message);
       window.alert(message);
     }
   };
 
   const handleCreateCategoryVoucher = async () => {
+    const shopId = Number(shop?.id || 0);
+    if (!shopId) {
+      const message = "Shop information is not ready yet. Please wait a moment and try again.";
+      setSaveError(message);
+      window.alert(message);
+      return;
+    }
+
     if (categoryVoucherForm.selectedCategoryIds.length === 0) {
       const message = "Please select at least one category.";
       setSaveError(message);
@@ -2800,7 +2833,7 @@ const Page = () => {
     try {
       setSaveError(null);
       const payload = {
-        ...buildShopVoucherPayload(categoryVoucherForm, shop?.id),
+        ...buildShopVoucherPayload(categoryVoucherForm, shopId),
         createdBy: userId ?? null,
       };
 
@@ -2840,10 +2873,10 @@ const Page = () => {
       setEditingVoucherId(null);
       setEditingVoucherType(null);
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Unable to save category-specific voucher.";
+      const message = getSaveErrorMessage(
+        error,
+        "Unable to save category-specific voucher.",
+      );
       setSaveError(message);
       window.alert(message);
     }

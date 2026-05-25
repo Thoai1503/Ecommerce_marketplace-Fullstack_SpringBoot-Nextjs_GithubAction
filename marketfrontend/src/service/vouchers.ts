@@ -1,4 +1,4 @@
-import axios from "axios";
+import http from "@/lib/http";
 import {
   AdminVoucher,
   VoucherCampaign,
@@ -10,19 +10,18 @@ import {
   VoucherSegmentRule,
   VoucherStatus,
 } from "@/types";
-import { API_URL } from "@/helper/api";
 
-const API = `${API_URL}/api/vouchers`;
+const API = "/api/vouchers";
 
 // ================= GET ALL =================
 export const getVouchers = async (): Promise<AdminVoucher[]> => {
-  const res = await axios.get(API);
+  const res = await http.get(API);
   return res.data;
 };
 
 // ================= GET BY ID =================
 export const getVoucherById = async (id: string): Promise<AdminVoucher> => {
-  const res = await axios.get(`${API_URL}/api/vouchers/${id}`);
+  const res = await http.get(`/api/vouchers/${id}`);
   return res.data;
 };
 
@@ -30,7 +29,7 @@ export const getVoucherById = async (id: string): Promise<AdminVoucher> => {
 export const createVoucher = async (
   data: Partial<AdminVoucher>,
 ): Promise<AdminVoucher> => {
-  const res = await axios.post(`${API_URL}/api/vouchers`, data);
+  const res = await http.post("/api/vouchers", data);
   return res.data;
 };
 
@@ -39,13 +38,13 @@ export const updateVoucher = async (
   id: string,
   data: Partial<AdminVoucher>,
 ): Promise<AdminVoucher> => {
-  const res = await axios.put(`${API_URL}/api/vouchers/${id}`, data);
+  const res = await http.put(`/api/vouchers/${id}`, data);
   return res.data;
 };
 
 // ================= DELETE =================
 export const deleteVoucher = async (id: string): Promise<boolean> => {
-  await axios.delete(`${API_URL}/api/vouchers/${id}`);
+  await http.delete(`/api/vouchers/${id}`);
   return true;
 };
 
@@ -54,13 +53,13 @@ export const updateVoucherStatus = async (
   id: string,
   status: VoucherStatus,
 ): Promise<AdminVoucher> => {
-  const res = await axios.put(`${API_URL}/api/vouchers/${id}`, { status });
+  const res = await http.put(`/api/vouchers/${id}`, { status });
   return res.data;
 };
 
 // ================= CAMPAIGNS (TẠM MOCK hoặc API sau) =================
 export const getVoucherCampaigns = async (): Promise<VoucherCampaign[]> => {
-  const res = await axios.get(`${API_URL}/api/vouchercampaigns`);
+  const res = await http.get("/api/vouchercampaigns");
   return res.data;
 };
 
@@ -141,8 +140,8 @@ export const getVoucherRules = async (
   voucherId: string,
 ): Promise<VoucherRulesPayload> => {
   const [scopeRes, segmentRes] = await Promise.all([
-    axios.get(`${API_URL}/api/voucher-scope-rules/voucher/${voucherId}`),
-    axios.get(`${API_URL}/api/voucher-segment-rules/voucher/${voucherId}`),
+    http.get(`/api/voucher-scope-rules/voucher/${voucherId}`),
+    http.get(`/api/voucher-segment-rules/voucher/${voucherId}`),
   ]);
 
   return {
@@ -159,16 +158,16 @@ export const saveVoucherRules = async (
   voucherId: string,
   payload: VoucherRulesPayload,
 ): Promise<VoucherRulesPayload> => {
-  await axios.delete(`${API_URL}/api/voucher-scope-rules/voucher/${voucherId}`);
+  await http.delete(`/api/voucher-scope-rules/voucher/${voucherId}`);
 
-  const currentSegments = await axios.get(
-    `${API_URL}/api/voucher-segment-rules/voucher/${voucherId}`,
+  const currentSegments = await http.get(
+    `/api/voucher-segment-rules/voucher/${voucherId}`,
   );
 
   if (Array.isArray(currentSegments.data)) {
     await Promise.all(
       currentSegments.data.map((rule: any) =>
-        axios.delete(`${API_URL}/api/voucher-segment-rules/${rule.id}`),
+        http.delete(`/api/voucher-segment-rules/${rule.id}`),
       ),
     );
   }
@@ -176,9 +175,9 @@ export const saveVoucherRules = async (
   const [scopeRules, segmentRules] = await Promise.all([
     Promise.all(
       payload.scopeRules.map((rule) =>
-        axios
+        http
           .post(
-            `${API_URL}/api/voucher-scope-rules`,
+            "/api/voucher-scope-rules",
             toScopeApiPayload(voucherId, rule),
           )
           .then((res) => normalizeScopeRule(res.data)),
@@ -186,9 +185,9 @@ export const saveVoucherRules = async (
     ),
     Promise.all(
       payload.segmentRules.map((rule) =>
-        axios
+        http
           .post(
-            `${API_URL}/api/voucher-segment-rules`,
+            "/api/voucher-segment-rules",
             toSegmentApiPayload(voucherId, rule),
           )
           .then((res) => normalizeSegmentRule(res.data)),
@@ -206,7 +205,7 @@ export const saveVoucherRules = async (
 export const getVoucherRedemptions = async (
   voucherId: string,
 ): Promise<VoucherRedemptionEvent[]> => {
-  const res = await axios.get(`${API_URL}/api/voucher-redemptions`);
+  const res = await http.get("/api/voucher-redemptions");
   const rows = Array.isArray(res.data) ? res.data : [];
 
   return rows
@@ -228,6 +227,6 @@ export const getVoucherAuditLogs = async (
   return [];
 };
 export const getBrands = async (): Promise<any[]> => {
-  const res = await axios.get(`${API_URL}/api/brands`);
+  const res = await http.get("/api/brands");
   return res.data;
 };
