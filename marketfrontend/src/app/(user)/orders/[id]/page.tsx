@@ -608,6 +608,9 @@ export default function UserOrderDetailPage() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessState, setAccessState] = useState<
+    "ok" | "unauthenticated" | "forbidden"
+  >("ok");
   const [adjustmentActionStatus, setAdjustmentActionStatus] = useState<
     Record<string, "idle" | "pending" | "accepted" | "rejected">
   >({});
@@ -1490,6 +1493,16 @@ export default function UserOrderDetailPage() {
 
     async function loadOrder() {
       setLoading(true);
+      setAccessState("ok");
+
+      if (!userId) {
+        if (!mounted) return;
+        setOrder(null);
+        setAccessState("unauthenticated");
+        setLoading(false);
+        return;
+      }
+
       try {
         const baseOrder = await getFirstSuccess<any>([`/api/orders/${id}`]);
 
@@ -1501,6 +1514,25 @@ export default function UserOrderDetailPage() {
         }
 
         const orderData = baseOrder?.order ?? baseOrder;
+        const orderOwnerId = pickText(
+          orderData?.customerId,
+          orderData?.customer_id,
+          orderData?.userId,
+          orderData?.user_id,
+          orderData?.accountId,
+          orderData?.account_id,
+        );
+
+        if (
+          orderOwnerId &&
+          String(orderOwnerId).trim() !== String(userId).trim()
+        ) {
+          if (!mounted) return;
+          setOrder(null);
+          setAccessState("forbidden");
+          setLoading(false);
+          return;
+        }
 
         const rawItems =
           (await getFirstSuccess<any[]>([`/api/orders/${id}/items`])) ||
@@ -1798,7 +1830,7 @@ export default function UserOrderDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [id]);
+  }, [id, userId]);
 
   const statusChipClass = useMemo(() => {
     if (!order) return "bg-slate-100 text-slate-600";
@@ -1820,6 +1852,42 @@ export default function UserOrderDetailPage() {
         <p className="mt-3 text-secondary fw-semibold mb-0">
           Dang tai chi tiet don hang...
         </p>
+      </div>
+    );
+  }
+
+  if (accessState === "unauthenticated") {
+    return (
+      <div className="container-xl py-5 text-center">
+        <h2 className="fw-bold mb-2">Ban can dang nhap</h2>
+        <p className="text-secondary mb-4">
+          Vui long dang nhap de xem chi tiet don hang cua ban.
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push("/login")}
+          className="btn btn-primary px-4"
+        >
+          Dang nhap
+        </button>
+      </div>
+    );
+  }
+
+  if (accessState === "forbidden") {
+    return (
+      <div className="container-xl py-5 text-center">
+        <h2 className="fw-bold mb-2">Khong co quyen truy cap don hang nay</h2>
+        <p className="text-secondary mb-4">
+          Don hang nay khong thuoc tai khoan dang dang nhap.
+        </p>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="btn btn-primary px-4"
+        >
+          Quay lai
+        </button>
       </div>
     );
   }
