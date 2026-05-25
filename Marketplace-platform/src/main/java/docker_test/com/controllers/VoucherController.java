@@ -16,6 +16,7 @@ import docker_test.com.models.voucher.Voucher;
 import docker_test.com.repository.NotificationRepository;
 import docker_test.com.repository.ShopRepository;
 import docker_test.com.repository.VoucherRepository;
+import docker_test.com.services.JwtService;
 import docker_test.com.utils.VoucherAuthorization;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -25,12 +26,17 @@ public class VoucherController {
 	private final VoucherRepository repo = VoucherRepository.Instance();
 	private final NotificationRepository notificationRepository = NotificationRepository.Instance();
 	private final ShopRepository shopRepository = ShopRepository.Instance();
+	private final JwtService jwtService;
+
+	public VoucherController(JwtService jwtService) {
+		this.jwtService = jwtService;
+	}
 
 	// ================= CREATE =================
 	@PostMapping
 	public ResponseEntity<?> create(@RequestBody Voucher v, HttpServletRequest request) {
 		try {
-			var authUser = VoucherAuthorization.getAuthUser(request);
+			var authUser = VoucherAuthorization.getAuthUser(request, jwtService);
 			if (!VoucherAuthorization.canManageVoucher(v, authUser)) {
 				return ResponseEntity.status(403).body("You do not have permission to create this voucher");
 			}
@@ -88,7 +94,7 @@ public class VoucherController {
 				return ResponseEntity.notFound().build();
 			}
 
-			var authUser = VoucherAuthorization.getAuthUser(request);
+			var authUser = VoucherAuthorization.getAuthUser(request, jwtService);
 			if (!VoucherAuthorization.canManageVoucher(existing, authUser)) {
 				return ResponseEntity.status(403).body("You do not have permission to update this voucher");
 			}
@@ -121,7 +127,7 @@ public class VoucherController {
 				return ResponseEntity.notFound().build();
 			}
 
-			var authUser = VoucherAuthorization.getAuthUser(request);
+			var authUser = VoucherAuthorization.getAuthUser(request, jwtService);
 			if (!VoucherAuthorization.canManageVoucher(existing, authUser)) {
 				return ResponseEntity.status(403).body("You do not have permission to delete this voucher");
 			}

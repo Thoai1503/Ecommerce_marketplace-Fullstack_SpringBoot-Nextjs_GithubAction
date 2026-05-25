@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import docker_test.com.models.voucher.VoucherUserSegmentRule;
 import docker_test.com.repository.VoucherUserSegmentRuleRepository;
+import docker_test.com.services.JwtService;
 import docker_test.com.utils.VoucherAuthorization;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -15,13 +16,18 @@ import jakarta.servlet.http.HttpServletRequest;
 public class VoucherUserSegmentRuleController {
 
 	private final VoucherUserSegmentRuleRepository repo = VoucherUserSegmentRuleRepository.Instance();
+	private final JwtService jwtService;
+
+	public VoucherUserSegmentRuleController(JwtService jwtService) {
+		this.jwtService = jwtService;
+	}
 
 	@PostMapping
 	public ResponseEntity<?> create(@RequestBody VoucherUserSegmentRule rule, HttpServletRequest request) {
 		try {
 			if (!VoucherAuthorization.canManageVoucher(
 					rule.getVoucherId(),
-					VoucherAuthorization.getAuthUser(request))) {
+					VoucherAuthorization.getAuthUser(request, jwtService))) {
 				return ResponseEntity.status(403).body("You do not have permission to create rules for this voucher");
 			}
 
@@ -42,7 +48,7 @@ public class VoucherUserSegmentRuleController {
 
 			if (!VoucherAuthorization.canManageVoucher(
 					existing.getVoucherId(),
-					VoucherAuthorization.getAuthUser(request))) {
+					VoucherAuthorization.getAuthUser(request, jwtService))) {
 				return ResponseEntity.status(403).body("You do not have permission to update rules for this voucher");
 			}
 
@@ -65,7 +71,7 @@ public class VoucherUserSegmentRuleController {
 
 		if (!VoucherAuthorization.canManageVoucher(
 				existing.getVoucherId(),
-				VoucherAuthorization.getAuthUser(request))) {
+				VoucherAuthorization.getAuthUser(request, jwtService))) {
 			return ResponseEntity.status(403).body("You do not have permission to delete rules for this voucher");
 		}
 

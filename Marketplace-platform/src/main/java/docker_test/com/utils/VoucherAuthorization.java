@@ -4,6 +4,8 @@ import docker_test.com.dto.AuthenticatedUser;
 import docker_test.com.models.voucher.Voucher;
 import docker_test.com.repository.ShopRepository;
 import docker_test.com.repository.VoucherRepository;
+import docker_test.com.services.JwtService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 
 public final class VoucherAuthorization {
@@ -14,8 +16,49 @@ public final class VoucherAuthorization {
     }
 
     public static AuthenticatedUser getAuthUser(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+
         Object authUser = request.getAttribute("authUser");
         return authUser instanceof AuthenticatedUser user ? user : null;
+    }
+
+    public static AuthenticatedUser getAuthUser(HttpServletRequest request, JwtService jwtService) {
+        AuthenticatedUser attributeUser = getAuthUser(request);
+        if (attributeUser != null || request == null || jwtService == null) {
+            return attributeUser;
+        }
+
+        String token = jwtService.resolveBearerToken(request.getHeader("Authorization"));
+        if (token == null) {
+            token = resolveCookieToken(request);
+        }
+
+        if (token == null) {
+            return null;
+        }
+
+        try {
+            return jwtService.parseAccessToken(token);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private static String resolveCookieToken(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+
+        for (Cookie cookie : cookies) {
+            if ("token".equals(cookie.getName()) && cookie.getValue() != null && !cookie.getValue().isBlank()) {
+                return cookie.getValue();
+            }
+        }
+
+        return null;
     }
 
     public static Voucher getVoucher(Long voucherId) {
