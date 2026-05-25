@@ -105,7 +105,8 @@ public class RefundRequestService {
 	
 	@Transactional
 	public ReturnRequest getRefundRequestsByOrderShipmentId(Long orderShipmentId) {
-		ReturnRequest request = refundRequestRepository.findByOrderShipmentId(orderShipmentId);
+		ReturnRequest request = refundRequestRepository.findByOrderShipmentIdAndStatusNot(orderShipmentId, ReturnRequestStatus.CANCELLED);
+				
 		enrichReturnRequest(request);
 		return request;
 	}
