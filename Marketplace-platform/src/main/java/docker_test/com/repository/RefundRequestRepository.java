@@ -20,18 +20,23 @@ import jakarta.persistence.LockModeType;
 public interface RefundRequestRepository extends org.springframework.data.jpa.repository.JpaRepository<ReturnRequest, Long> {
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("select rr from ReturnRequest rr where rr.id = :id")
+	@Query("select rr from ReturnRequest rr where rr.id = :id  and rr.status not in ('CANCELLED')")
 	Optional<ReturnRequest> findByIdForUpdate(Long id);
 
 	ReturnRequest findByOrderShipmentId(Long orderShipmentId);
 
+	// find by order shipment id and status not in cancelled	
+	
+	ReturnRequest findByOrderShipmentIdAndStatusNot(Long orderShipmentId, ReturnRequestStatus status);
+	
+	
 	@Query("""
 			select distinct rr
 			from ReturnRequest rr
 			where exists (
 				select 1
 				from ReturnRequestAttachment ra
-				where ra.returnRequestId = rr.id
+				where ra.returnRequestId = rr.id  
 			)
 			""")
 	List<ReturnRequest> findAllWithAttachments();

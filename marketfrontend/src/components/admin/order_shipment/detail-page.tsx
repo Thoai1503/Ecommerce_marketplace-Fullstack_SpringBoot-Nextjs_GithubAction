@@ -287,13 +287,8 @@ export default function AdminOrderShipmentDetailPage() {
 
   const displayStatus = shipment?.shippingStatus ?? shipment?.shipping_status;
   const displayTotal =
-    shipment?.totalAfterVoucher ??
-    shipment?.total_after_voucher ??
-    shipment?.total_after_discount ??
-    shipment?.totalAmount ??
-    shipment?.total_amount ??
-    shipment?.order?.finalAmount ??
-    0;
+    (shipment?.subtotal ?? 0) - (shipment?.totalAfterVoucher ?? 0);
+  0;
   const refundedAmount = Number(returnRequest?.refundedAmount ?? 0);
   const platformVoucherClawbackAmount = Number(
     returnRequest?.platformVoucherClawbackAmount ??
@@ -314,7 +309,7 @@ export default function AdminOrderShipmentDetailPage() {
     isFirstShopVoucherInvalidation ||
     Boolean(returnRequest?.showShopVoucherInvalidationSignal);
 
-  const { data: platformDiscountFromRedemption } = useQuery<number>({
+  const { data: platformDiscountFromRedemption } = useQuery<any>({
     queryKey: [
       "PLATFORM_VOUCHER_DISCOUNT_APPLIED",
       returnRequest?.orderId,
@@ -326,17 +321,17 @@ export default function AdminOrderShipmentDetailPage() {
         Number(returnRequest?.orderId),
       ),
   });
+  console.log("platformDiscountFromRedemption", platformDiscountFromRedemption);
 
   const platformVouvherRedemptionAmount = isFirstShopVoucherInvalidation;
 
   const platformVoucherDisplayAmount = isFirstShopVoucherInvalidation
     ? Number(platformDiscountFromRedemption ?? 0)
     : platformVoucherClawbackAmount;
-  const finalPayoutValue = Math.max(
-    0,
-    displayTotal - refundedAmount - voucherClawbackAmount,
-  );
-
+  const finalPayoutValue =
+    (shipment?.totalAfterVoucher ?? 0) -
+    refundedAmount -
+    (platformDiscountFromRedemption?.discountAmountApplied ?? 0);
   const normalizedShipmentStatus = (displayStatus || "").toUpperCase();
   const normalizedReturnStatus = (returnRequest?.status || "").toUpperCase();
   const hasReturnRequest = !!lastReturnRequestId;
@@ -495,8 +490,7 @@ export default function AdminOrderShipmentDetailPage() {
               <span className="font-semibold text-red-600">
                 -{" "}
                 {formatMoney(
-                  (shipment.totalAmount ?? 0) -
-                    (shipment.totalAfterVoucher ?? 0),
+                  (shipment.subtotal ?? 0) - (shipment.totalAfterVoucher ?? 0),
                 )}{" "}
                 đ
               </span>
@@ -504,7 +498,7 @@ export default function AdminOrderShipmentDetailPage() {
             <p className="pt-1 text-base">
               Total:{" "}
               <span className="font-black text-emerald-700">
-                {formatMoney(displayTotal)} đ
+                {formatMoney(shipment.totalAfterVoucher ?? 0)} đ
               </span>
             </p>
             <p className="text-base">
@@ -626,28 +620,32 @@ export default function AdminOrderShipmentDetailPage() {
                   {formatMoney(returnRequest.refundedAmount)} đ
                 </p>
               </div>
-              <div className="rounded-xl border border-slate-200 p-3">
-                <p className="text-xs text-slate-500 inline-flex items-center gap-1">
-                  <ReceiptText size={12} />
-                  Voucher sàn
-                </p>
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${showShopVoucherInvalidationSignal ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}
-                  >
-                    {showShopVoucherInvalidationSignal
-                      ? "MAT HIEU LUC"
-                      : "CON HIEU LUC"}
-                  </span>
-                  {showShopVoucherInvalidationSignal ? (
-                    <span className="font-semibold text-red-700">
-                      - {formatMoney(platformVoucherDisplayAmount)} đ
+              {showShopVoucherInvalidationSignal && (
+                <div className="rounded-xl border border-slate-200 p-3">
+                  <p className="text-xs text-slate-500 inline-flex items-center gap-1">
+                    <ReceiptText size={12} />
+                    Voucher sàn
+                  </p>
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${platformDiscountFromRedemption ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}
+                    >
+                      {showShopVoucherInvalidationSignal
+                        ? "MAT HIEU LUC"
+                        : "CON HIEU LUC"}
                     </span>
-                  ) : (
-                    <span className="font-semibold text-slate-800">0 đ</span>
-                  )}
+                    {showShopVoucherInvalidationSignal ? (
+                      <span className="font-semibold text-red-700">
+                        -{" "}
+                        {platformDiscountFromRedemption?.discountAmountApplied}{" "}
+                        đ
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-slate-800">0 đ</span>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
               {/* <div className="rounded-xl border border-slate-200 p-3">
                 <p className="text-xs text-slate-500 inline-flex items-center gap-1">
                   <ReceiptText size={12} />

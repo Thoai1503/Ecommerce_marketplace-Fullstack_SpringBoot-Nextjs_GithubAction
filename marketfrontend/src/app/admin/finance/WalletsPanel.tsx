@@ -38,6 +38,7 @@ export default function WalletsPanel() {
   const initialPartnerId = Number(partnerParam);
   const initialAmount = Number(amountParam);
   const initialSourceId = Number(sourceIdParam);
+  const isDebitRequested = Number.isFinite(initialAmount) && initialAmount < 0;
 
   const [userIdInput, setUserIdInput] = useState(
     Number.isFinite(initialPartnerId) && initialPartnerId > 0
@@ -51,7 +52,9 @@ export default function WalletsPanel() {
   );
   const payoutAmount = useMemo(
     () =>
-      Number.isFinite(initialAmount) && initialAmount > 0 ? initialAmount : 0,
+      Number.isFinite(initialAmount) && initialAmount !== 0
+        ? Math.abs(initialAmount)
+        : 0,
     [initialAmount],
   );
   const payoutTransactionType = useMemo(
@@ -319,10 +322,12 @@ export default function WalletsPanel() {
 
     setIsProcessingDebit(true);
     setCreditMessage("");
+    const debitAmount =
+      isDebitRequested && payoutAmount > 0 ? payoutAmount : 50000;
     try {
       await http.post("/api/wallets/debit", {
         walletId: wallet.id,
-        amount: 50000,
+        amount: debitAmount,
         feeAmount: 0,
         transactionType: "MANUAL_ADJUSTMENT",
         sourceType: "ADMIN_MANUAL",
@@ -345,7 +350,8 @@ export default function WalletsPanel() {
     isProcessingCredit ||
     !resolvedUserId ||
     isCheckingShipmentPayout ||
-    isCreditBlockedByShipmentPayout;
+    isCreditBlockedByShipmentPayout ||
+    isDebitRequested;
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -359,16 +365,30 @@ export default function WalletsPanel() {
       </div>
 
       {(partnerParam || amountParam) && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-sm text-emerald-800">
+        <div
+          className={`rounded-2xl p-4 text-sm ${
+            isDebitRequested
+              ? "bg-red-50 border border-red-200 text-red-700"
+              : "bg-emerald-50 border border-emerald-200 text-emerald-800"
+          }`}
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <p className="text-xs uppercase tracking-wider font-bold text-emerald-600">
+              <p
+                className={`text-xs uppercase tracking-wider font-bold ${
+                  isDebitRequested ? "text-red-600" : "text-emerald-600"
+                }`}
+              >
                 Partner
               </p>
               <p className="font-black text-lg">{partnerParam || "-"}</p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wider font-bold text-emerald-600">
+              <p
+                className={`text-xs uppercase tracking-wider font-bold ${
+                  isDebitRequested ? "text-red-600" : "text-emerald-600"
+                }`}
+              >
                 Amount
               </p>
               <p className="font-black text-lg">
@@ -409,7 +429,11 @@ export default function WalletsPanel() {
           disabled={isProcessingDebit || !resolvedUserId || !wallet?.id}
           className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-bold disabled:opacity-60"
         >
-          {isProcessingDebit ? "Đang Debit..." : "- Debit 50,000"}
+          {isProcessingDebit
+            ? "Đang Debit..."
+            : isDebitRequested
+              ? `- Debit ${payoutAmount > 0 ? currency(payoutAmount) : ""}`
+              : "- Debit 50,000"}
         </button>
       </div>
 
@@ -430,7 +454,7 @@ export default function WalletsPanel() {
       )}
 
       {creditMessage && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-3 text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-3 text-sm">
           {creditMessage}
         </div>
       )}
