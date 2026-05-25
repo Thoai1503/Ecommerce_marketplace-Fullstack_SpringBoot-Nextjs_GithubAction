@@ -19,35 +19,35 @@ import Breadcrumbs from '@/components/ui/Breadcrumbs';
 // Synced StatusConfig with ProductsPage
 const StatusConfig: Record<ProductStatus, { label: string; color: string; bgColor: string; borderColor: string; icon: any }> = {
   PENDING: { 
-    label: 'Chờ duyệt', 
+    label: 'Waiting for approval', 
     color: 'text-amber-700', 
     bgColor: 'bg-amber-100', 
     borderColor: 'border-amber-200',
     icon: <AlertCircle size={14} /> 
   },
   APPROVED: { 
-    label: 'Đang bán', 
+    label: 'On sale', 
     color: 'text-emerald-700', 
     bgColor: 'bg-emerald-100', 
     borderColor: 'border-emerald-200',
     icon: <CheckCircle size={14} /> 
   },
   REJECTED: { 
-    label: 'Từ chối', 
+    label: 'Rejected', 
     color: 'text-rose-700', 
     bgColor: 'bg-rose-100', 
     borderColor: 'border-rose-200',
     icon: <XCircle size={14} /> 
   },
   DRAFT: { 
-    label: 'Nháp', 
+    label: 'Draft', 
     color: 'text-slate-600', 
     bgColor: 'bg-slate-100', 
     borderColor: 'border-slate-200',
     icon: <Edit3 size={14} /> 
   },
   HIDDEN: { 
-    label: 'Đang ẩn', 
+    label: 'Hidden', 
     color: 'text-indigo-600', 
     bgColor: 'bg-indigo-100', 
     borderColor: 'border-indigo-200',
@@ -95,12 +95,12 @@ export default function ProductDetail() {
     return (
       <div className="p-20 text-center flex flex-col items-center">
         <div className="text-6xl mb-4">📦</div>
-        <h3 className="text-xl font-bold text-slate-800">Không tìm thấy sản phẩm</h3>
+        <h3 className="text-xl font-bold text-slate-800">Product not found</h3>
         <button
           onClick={() => router.push('/admin/products')}
           className="mt-4 text-blue-600 hover:underline"
         >
-          Quay lại danh sách
+          Back to list
         </button>
       </div>
     );
@@ -110,29 +110,29 @@ export default function ProductDetail() {
   const shouldTruncateDescription = product.description && product.description.length > 300;
 
   const handleApprove = async () => {
-    if (confirm("Xác nhận duyệt sản phẩm này?")) {
+    if (confirm("Confirm approval of this product?")) {
       await approveProduct(product.id);
-      success("Đã duyệt sản phẩm thành công!");
+      success("Product approved successfully!");
     }
   };
 
   const handleConfirmReject = async (reason: string) => {
     try {
       await rejectProduct({ id: product.id, reason });
-      info("Đã từ chối sản phẩm!");
+      info("Product rejected successfully!");
       setIsRejectModalOpen(false);
     } catch(err) {
-      error("Lỗi khi từ chối sản phẩm.");
+      error("Error occurred while rejecting the product.");
     }
   };
 
   const handleConfirmDelete = async () => {
     try {
       await deleteProducts([product.id]);
-      success("Đã xóa sản phẩm thành công!");
+      success("Product deleted successfully!");
       setTimeout(() => router.push('/admin/products'), 1000);
     } catch (err) {
-      error("Lỗi khi xóa sản phẩm.");
+      error("Error occurred while deleting the product.");
     }
   };
 
@@ -222,13 +222,13 @@ export default function ProductDetail() {
                  <Box size={14} /> {product.stock} sp
               </span>
               <span className="flex items-center gap-1.5 font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
-                 <BarChart3 size={14} /> Đã bán {product.soldCount.toLocaleString('vi-VN')}
+                 <BarChart3 size={14} /> Sold {product.soldCount.toLocaleString('vi-VN')}
               </span>
             </div>
           </div>
         </div>
         
-        {/* Actions Buttons */}
+        {/* Actions Buttons
         <div className="flex items-center gap-3">
           <button 
             onClick={() => router.push(`/admin/products/${product.id}/edit`)}
@@ -242,7 +242,7 @@ export default function ProductDetail() {
           >
             <Trash2 size={18} /> <span className="hidden sm:inline">Xóa</span>
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Main Grid Layout */}
@@ -254,7 +254,7 @@ export default function ProductDetail() {
           {/* SECTION 1: Media / Images Gallery (Moved to Top) */}
           <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-8">
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-              <ImageIcon size={18} /> Hình ảnh sản phẩm
+              <ImageIcon size={18} /> Product images
             </h3>
             
             {product.images && product.images.length > 0 ? (
@@ -330,7 +330,7 @@ export default function ProductDetail() {
             ) : (
               <div className="py-12 text-center flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                 <ImageIcon size={48} className="mb-3 opacity-50" />
-                <p className="text-sm font-medium">Chưa có hình ảnh nào.</p>
+                <p className="text-sm font-medium">No images are available yet.</p>
               </div>
             )}
           </div>
@@ -338,7 +338,7 @@ export default function ProductDetail() {
           {/* SECTION 2: General Information */}
           <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-8">
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-              <Layers size={18} /> Thông tin chi tiết
+              <Layers size={18} /> Detailed information
             </h3>
             
             <div className="space-y-6">
@@ -347,7 +347,7 @@ export default function ProductDetail() {
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Mô tả sản phẩm</label>
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 relative group">
                   <div className={`text-slate-600 text-sm leading-relaxed whitespace-pre-line transition-all duration-300 ${!isDescriptionExpanded && shouldTruncateDescription ? 'max-h-[150px] overflow-hidden' : ''}`}>
-                    {product.description || "Chưa có mô tả."}
+                    {product.description || "No description available."}
                   </div>
                   
                   {/* Gradient Overlay when collapsed */}
@@ -361,9 +361,9 @@ export default function ProductDetail() {
                       className="mt-3 flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline transition-all relative z-10"
                     >
                       {isDescriptionExpanded ? (
-                        <>Thu gọn <ChevronUp size={14} /></>
+                        <>Collapse <ChevronUp size={14} /></>
                       ) : (
-                        <>Xem thêm mô tả <ChevronDown size={14} /></>
+                        <>View more description <ChevronDown size={14} /></>
                       )}
                     </button>
                   )}
@@ -372,7 +372,7 @@ export default function ProductDetail() {
 
               {/* Attributes Grid */}
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">Thuộc tính</label>
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">Attributes</label>
                 {product.attributes && Object.keys(product.attributes).length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {Object.entries(product.attributes).map(([key, value]) => (
@@ -383,7 +383,7 @@ export default function ProductDetail() {
                     ))}
                   </div>
                 ) : (
-                   <p className="text-sm text-slate-400 italic">Không có thuộc tính nào.</p>
+                   <p className="text-sm text-slate-400 italic">No attributes available.</p>
                 )}
               </div>
             </div>
@@ -397,22 +397,22 @@ export default function ProductDetail() {
           {!product.isActive && (
             <div className="bg-amber-50 rounded-[24px] border border-amber-200 p-6 animate-in slide-in-from-top-4">
               <h3 className="text-xs font-black text-amber-800 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                <AlertCircle size={14} /> Cần phê duyệt
+                <AlertCircle size={14} /> Need Approval
               </h3>
-              <p className="text-sm text-amber-700 mb-4">Sản phẩm này đang chờ duyệt để được đăng bán công khai.</p>
+              <p className="text-sm text-amber-700 mb-4">This product is pending approval for public sale.</p>
               
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={handleApprove}
                   className="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2"
                 >
-                  <CheckCircle size={18} /> Duyệt ngay
+                  <CheckCircle size={18} /> Approve Now
                 </button>
                 <button 
                   onClick={() => setIsRejectModalOpen(true)}
                   className="w-full py-3 bg-white border border-amber-200 hover:bg-red-50 hover:text-red-600 text-amber-800 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
                 >
-                  <XCircle size={18} /> Từ chối
+                  <XCircle size={18} /> Reject
                 </button>
               </div>
             </div>
@@ -420,7 +420,7 @@ export default function ProductDetail() {
 
           {/* Pricing & Stock Summary */}
           <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-6">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Tổng quan</h3>
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Overview</h3>
             
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors">
@@ -428,7 +428,7 @@ export default function ProductDetail() {
                     <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
                       <DollarSign size={20} />
                     </div>
-                    <span className="text-sm font-bold text-slate-600">Giá bán</span>
+                    <span className="text-sm font-bold text-slate-600">Selling Price</span>
                  </div>
                  <span className="text-lg font-black text-slate-800">{product.price.toLocaleString()}₫</span>
               </div>
@@ -438,7 +438,7 @@ export default function ProductDetail() {
                     <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center">
                       <Box size={20} />
                     </div>
-                    <span className="text-sm font-bold text-slate-600">Kho hàng</span>
+                    <span className="text-sm font-bold text-slate-600">Stock</span>
                  </div>
                  <span className="text-lg font-black text-slate-800">{product.stock}</span>
               </div>
@@ -448,14 +448,14 @@ export default function ProductDetail() {
                     <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center">
                       <BarChart3 size={20} />
                     </div>
-                    <span className="text-sm font-bold text-slate-600">Đã bán</span>
+                    <span className="text-sm font-bold text-slate-600">Sold</span>
                  </div>
                  <span className="text-lg font-black text-slate-800">{product.soldCount.toLocaleString('vi-VN')}</span>
               </div>
               
               <div className="pt-4 border-t border-slate-50">
                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold text-slate-400 uppercase">Ngày tạo</span>
+                    <span className="font-bold text-slate-400 uppercase">Created Date</span>
                     <span className="font-bold text-slate-700">{new Date(product.createdAt).toLocaleDateString('vi-VN')}</span>
                  </div>
               </div>
@@ -466,7 +466,7 @@ export default function ProductDetail() {
           {product.status === 'REJECTED' && product.rejectReason && (
               <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
                 <p className="text-xs font-bold text-red-800 uppercase mb-2 flex items-center gap-2">
-                   <AlertCircle size={14} /> Lý do từ chối
+                   <AlertCircle size={14} /> Reason for Rejection
                 </p>
                 <p className="text-sm text-red-600 bg-white p-3 rounded-xl border border-red-100">{product.rejectReason}</p>
               </div>
@@ -474,17 +474,17 @@ export default function ProductDetail() {
 
           {/* Organization & Seller Card */}
           <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm p-6">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Thông tin khác</h3>
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Other Information</h3>
             
             <div className="space-y-5">
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Nhà bán hàng</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Seller</p>
                 <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
                    <img src={product.sellerAvatar} alt="" className="w-10 h-10 rounded-full border border-slate-200" />
                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-slate-800 truncate">{product.sellerName}</p>
-                      <p className="truncate text-xs text-slate-500">{product.sellerEmail || 'Chưa có email'}</p>
-                      <p className="truncate text-xs text-slate-500">{product.sellerPhone || 'Chưa có SĐT'}</p>
+                      <p className="truncate text-xs text-slate-500">{product.sellerEmail || 'No email available'}</p>
+                      <p className="truncate text-xs text-slate-500">{product.sellerPhone || 'No phone number available'}</p>
                    </div>
                    
                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -499,7 +499,7 @@ export default function ProductDetail() {
               </div>
 
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Danh mục</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Category</p>
                 <div className="flex items-center gap-2">
                    <span className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-slate-200 flex items-center gap-2">
                       <Layers size={14} />

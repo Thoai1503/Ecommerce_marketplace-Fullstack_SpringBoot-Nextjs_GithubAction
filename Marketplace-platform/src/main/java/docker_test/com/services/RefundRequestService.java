@@ -45,6 +45,13 @@ import jakarta.transaction.Transactional;
 @Service
 public class RefundRequestService {
 
+	private static final List<ReturnRequestStatus> OPEN_RETURN_REQUEST_STATUSES = List.of(
+			ReturnRequestStatus.PENDING_APPROVAL,
+			ReturnRequestStatus.APPROVED,
+			ReturnRequestStatus.SHIPPING,
+			ReturnRequestStatus.RECEIVED,
+			ReturnRequestStatus.INSPECTION_PASSED);
+
 	private final RefundRequestRepository refundRequestRepository;
 	private final ReturnReqestItemRepositrory returnReqestItemRepositrory;
 	private final ReturnRequestAttachmentService returnRequestAttachmentService;
@@ -150,6 +157,8 @@ public class RefundRequestService {
 	}
 
 	public Map<String, Object> previewRefundRequest(RefundRequestDTO refundRequestDTO) {
+		rejectItemsWithOpenReturnRequests(refundRequestDTO);
+
 		RefundCalculation calculation = calculateRefund(refundRequestDTO);
 		return Map.of(
 				"requestedAmount", calculation.refundAmount(),
@@ -180,6 +189,8 @@ public class RefundRequestService {
 	
 	@Transactional
 	private ReturnRequest persistRefundRequest(RefundRequestDTO refundRequestDTO) {
+		rejectItemsWithOpenReturnRequests(refundRequestDTO);
+
 		RefundCalculation calculation = calculateRefund(refundRequestDTO);
 		refundRequestDTO.setRequestedAmount(calculation.refundAmount());
 		refundRequestDTO.setQuantity(
@@ -219,6 +230,27 @@ public class RefundRequestService {
 		applyCalculationMetadata(savedRefundRequest, calculation);
 		
 		return savedRefundRequest;
+	}
+
+	private void rejectItemsWithOpenReturnRequests(RefundRequestDTO refundRequestDTO) {
+		if (refundRequestDTO == null || refundRequestDTO.getItems() == null
+				|| refundRequestDTO.getItems().isEmpty()) {
+			return;
+		}
+
+		List<Long> orderItemIds = new ArrayList<>(
+				normalizeRequestedQuantities(refundRequestDTO.getItems()).keySet());
+		if (orderItemIds.isEmpty()) {
+			return;
+		}
+
+		List<Long> duplicateOrderItemIds = returnReqestItemRepositrory.findOrderItemIdsWithStatuses(
+				orderItemIds,
+				OPEN_RETURN_REQUEST_STATUSES);
+		if (!duplicateOrderItemIds.isEmpty()) {
+			throw new IllegalArgumentException(
+					"Món hàng đã có yêu cầu đổi trả đang xử lý. Vui lòng chờ yêu cầu hiện tại hoàn tất trước khi tạo yêu cầu mới.");
+		}
 	}
 
 	private RefundCalculation calculateRefund(RefundRequestDTO refundRequestDTO) {
@@ -1168,7 +1200,7 @@ public class RefundRequestService {
 	private List<ReturnRequest> prepareReturnRequests(List<ReturnRequest> requests, boolean includeVoucherSignals) {
 		List<ReturnRequest> filteredRequests = requests.stream()
 				.filter(Objects::nonNull)
-				.filter(request -> request.getAttachments() != null && !request.getAttachments().isEmpty())
+				.filter(request -> request.getItems() != null && !request.getItems().isEmpty())
 				.toList();
 
 		enrichReturnRequests(filteredRequests, includeVoucherSignals);

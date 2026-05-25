@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useProducts } from '@/hooks/admin/useProducts';
 import { useToast } from '@/context/ToastContext';
 import {
-  Search, Plus, Filter, Trash2, Edit3, Eye, CheckCircle, XCircle,
+  Search, Filter, Edit3, Eye, CheckCircle, XCircle,
   AlertCircle, Package, ArrowUpDown, Power
 } from 'lucide-react';
 import { Product, ProductStatus } from '@/types';
@@ -14,8 +14,6 @@ import { TableRowSkeleton } from '@/components/ui/Skeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import ErrorState from '@/components/ui/ErrorState';
 import RejectProductModal from '@/components/admin/products/RejectProductModal';
-import ConfirmationModal from '@/components/ui/ConfirmationModal';
-import Breadcrumbs from '@/components/ui/Breadcrumbs';
 import Pagination from '@/components/ui/Pagination';
 
 import {
@@ -31,62 +29,42 @@ import {
 } from '@tanstack/react-table';
 
 const StatusConfig: Record<ProductStatus, { label: string; color: string; bgColor: string; borderColor: string; icon: any }> = {
-  PENDING: { label: 'Chờ duyệt', color: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200', icon: <AlertCircle size={14} /> },
-  APPROVED: { label: 'Đang bán', color: 'text-emerald-700', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200', icon: <CheckCircle size={14} /> },
-  REJECTED: { label: 'Từ chối', color: 'text-rose-700', bgColor: 'bg-rose-50', borderColor: 'border-rose-200', icon: <XCircle size={14} /> },
-  DRAFT: { label: 'Nháp', color: 'text-slate-600', bgColor: 'bg-slate-100', borderColor: 'border-slate-200', icon: <Edit3 size={14} /> },
-  HIDDEN: { label: 'Đang ẩn', color: 'text-indigo-700', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200', icon: <Package size={14} /> },
+  PENDING: { label: 'Waiting for approval', color: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200', icon: <AlertCircle size={14} /> },
+  APPROVED: { label: 'On Sale', color: 'text-emerald-700', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200', icon: <CheckCircle size={14} /> },
+  REJECTED: { label: 'Rejected', color: 'text-rose-700', bgColor: 'bg-rose-50', borderColor: 'border-rose-200', icon: <XCircle size={14} /> },
+  DRAFT: { label: 'Draft', color: 'text-slate-600', bgColor: 'bg-slate-100', borderColor: 'border-slate-200', icon: <Edit3 size={14} /> },
+  HIDDEN: { label: 'Hidden', color: 'text-indigo-700', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200', icon: <Package size={14} /> },
 };
 
 export default function ProductsPage() {
   const router = useRouter();
-  const { products, isLoading, isError, refetch, deleteProducts, approveProduct, rejectProduct, updateProductActive } = useProducts();
+  const { products, isLoading, isError, refetch, approveProduct, rejectProduct, updateProductActive } = useProducts();
   const toast = useToast();
 
   // --- Table State ---
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
-  const [rowSelection, setRowSelection] = useState({});
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
 
   // --- Modal States ---
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [productToReject, setProductToReject] = useState<{ id: string; name: string } | null>(null);
-  
-  // Unified Delete Modal State
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; ids: string[]; name?: string }>({ isOpen: false, ids: [] });
 
   // --- Handlers ---
   const handleApprove = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     try {
         await approveProduct(id);
-        toast.success('Đã duyệt sản phẩm thành công!');
-    } catch(e) { toast.error('Lỗi khi duyệt sản phẩm.'); }
+        toast.success('Product approved successfully!');
+    } catch(e) { toast.error('Error occurred while approving the product.'); }
   };
 
   const handleToggleActive = async (e: React.MouseEvent, id: string, current: boolean) => {
     e.stopPropagation();
     const nextActive = !current;
     await updateProductActive({ id, isActive: nextActive });
-    toast.success(nextActive ? 'Đã bật sản phẩm.' : 'Đã tắt sản phẩm.');
-  };
-
-  const openDeleteModal = (ids: string[], name?: string) => {
-    setDeleteModal({ isOpen: true, ids, name });
-  };
-
-  const handleConfirmDelete = async () => {
-    if (deleteModal.ids.length === 0) return;
-    try {
-      await deleteProducts(deleteModal.ids);
-      toast.success(`Đã xóa ${deleteModal.ids.length} sản phẩm`);
-      setDeleteModal({ isOpen: false, ids: [] });
-      setRowSelection({});
-    } catch (e) {
-      toast.error('Lỗi khi xóa sản phẩm.');
-    }
+    toast.success(nextActive ? 'Product enabled.' : 'The product has been turned off.');
   };
 
   const resetFilters = () => {
@@ -98,28 +76,8 @@ export default function ProductsPage() {
   const columnHelper = createColumnHelper<Product>();
 
   const columns = useMemo(() => [
-    columnHelper.display({
-      id: 'select',
-      header: ({ table }) => (
-        <input
-          type="checkbox"
-          checked={table.getIsAllPageRowsSelected()}
-          onChange={table.getToggleAllPageRowsSelectedHandler()}
-          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-        />
-      ),
-      cell: ({ row }) => (
-        <input
-          type="checkbox"
-          checked={row.getIsSelected()}
-          onChange={row.getToggleSelectedHandler()}
-          onClick={(e) => e.stopPropagation()}
-          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-        />
-      ),
-    }),
     columnHelper.accessor('name', {
-      header: 'Thông tin sản phẩm',
+      header: 'Product Information',
       cell: ({ row }) => (
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
@@ -138,7 +96,7 @@ export default function ProductsPage() {
       ),
     }),
     columnHelper.accessor('price', {
-      header: 'Giá bán',
+      header: 'Selling Price',
       cell: ({ getValue }) => <span className="font-black text-slate-800 text-sm">{getValue().toLocaleString()}₫</span>,
     }),
     columnHelper.accessor(
@@ -149,14 +107,14 @@ export default function ProductsPage() {
         cell: ({ row }) => (
           <div className="min-w-[190px] max-w-[240px]">
             <p className="truncate text-sm font-bold text-slate-700">{row.original.sellerName}</p>
-            <p className="truncate text-xs text-slate-500">{row.original.sellerEmail || 'Chưa có email'}</p>
-            <p className="truncate text-xs text-slate-500">{row.original.sellerPhone || 'Chưa có SĐT'}</p>
+            <p className="truncate text-xs text-slate-500">{row.original.sellerEmail || 'No email available'}</p>
+            <p className="truncate text-xs text-slate-500">{row.original.sellerPhone || 'No phone number available'}</p>
           </div>
         ),
       }
     ),
     columnHelper.accessor('stock', {
-      header: 'Kho hàng',
+      header: 'Inventory',
       cell: ({ getValue }) => {
         const stock = getValue();
         return (
@@ -170,7 +128,7 @@ export default function ProductsPage() {
       }
     }),
     columnHelper.accessor('soldCount', {
-      header: 'Đã bán',
+      header: 'Sold',
       cell: ({ getValue }) => (
         <span className="inline-flex min-w-16 justify-center rounded-lg bg-blue-50 px-3 py-1 text-sm font-black text-blue-700">
           {getValue().toLocaleString('vi-VN')}
@@ -178,7 +136,7 @@ export default function ProductsPage() {
       ),
     }),
     columnHelper.accessor('status', {
-      header: 'Trạng thái',
+      header: 'Status',
       cell: ({ getValue }) => {
         const status = getValue();
         const config = StatusConfig[status];
@@ -191,13 +149,13 @@ export default function ProductsPage() {
     }),
     columnHelper.display({
       id: 'actions',
-      header: 'Hành động',
+      header: 'Actions',
       cell: ({ row }) => (
         <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
            <button
              onClick={() => router.push(`/admin/products/${row.original.id}`)}
              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-             title="Xem chi tiết"
+             title="View Details"
            >
              <Eye size={16} />
            </button>
@@ -208,9 +166,7 @@ export default function ProductsPage() {
              </>
            ) : (
              <>
-               <button onClick={() => router.push(`/admin/products/${row.original.id}/edit`)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Edit3 size={16} /></button>
                <button onClick={(e) => handleToggleActive(e, row.original.id, row.original.isActive)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg"><Power size={16} /></button>
-               <button onClick={(e) => { e.stopPropagation(); openDeleteModal([row.original.id], row.original.name); }} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16} /></button>
              </>
            )}
         </div>
@@ -221,11 +177,10 @@ export default function ProductsPage() {
   const table = useReactTable({
     data: products,
     columns,
-    state: { sorting, columnFilters, globalFilter, rowSelection, pagination },
+    state: { sorting, columnFilters, globalFilter, pagination },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
-    onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -233,8 +188,6 @@ export default function ProductsPage() {
     getSortedRowModel: getSortedRowModel(),
     autoResetPageIndex: false,
   });
-
-  const selectedIds = Object.keys(rowSelection);
 
   return (
     <div className="p-6 lg:p-8 animate-in fade-in duration-500 space-y-6">
@@ -245,36 +198,18 @@ export default function ProductsPage() {
         onConfirm={async (reason) => {
            if(productToReject) {
              await rejectProduct({id: productToReject.id, reason});
-             toast.success('Đã từ chối sản phẩm.');
+             toast.success('Product rejected.');
            }
            setIsRejectModalOpen(false);
         }}
         productName={productToReject?.name || ''}
       />
 
-      <ConfirmationModal 
-        isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false, ids: [] })}
-        onConfirm={handleConfirmDelete}
-        title="Xác nhận xóa?"
-        description={`Bạn có chắc chắn muốn xóa ${deleteModal.ids.length > 1 ? `${deleteModal.ids.length} sản phẩm` : `sản phẩm "${deleteModal.name}"`} không? Hành động này không thể hoàn tác.`}
-        confirmLabel="Xóa ngay"
-        variant="danger"
-      />
-
-      <Breadcrumbs items={[{ label: 'Products' }]} />
-
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">📦 Quản lý Sản phẩm</h1>
-          <p className="text-sm text-slate-500 font-medium">Kiểm duyệt và quản lý toàn bộ sản phẩm.</p>
+          <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">📦 Management Products</h1>
+          <p className="text-sm text-slate-500 font-medium">Review and manage all products.</p>
         </div>
-        <button 
-          onClick={() => router.push('/admin/products/new')} 
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition-all border-0"
-        >
-          <Plus size={20} /> Thêm sản phẩm
-        </button>
       </div>
 
       <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[600px]">
@@ -286,7 +221,7 @@ export default function ProductsPage() {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                   type="text"
-                  placeholder="Tìm sản phẩm, SKU, email hoặc SĐT shop..."
+                  placeholder="Search products, SKU, email or shop phone..."
                   value={globalFilter ?? ''}
                   onChange={(e) => setGlobalFilter(e.target.value)}
                   className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/5 text-sm font-medium"
@@ -300,7 +235,7 @@ export default function ProductsPage() {
                    onChange={(e) => table.getColumn('status')?.setFilterValue(e.target.value === 'ALL' ? undefined : e.target.value)}
                    className="pl-4 pr-10 py-3 bg-white border rounded-xl text-sm font-bold text-slate-600 focus:outline-none focus:ring-4 focus:ring-blue-500/5 cursor-pointer appearance-none"
                  >
-                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="ALL">All status</option>
                     {Object.entries(StatusConfig).map(([k, v]) => (
                        <option key={k} value={k}>{v.label}</option>
                     ))}
@@ -309,17 +244,6 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            {selectedIds.length > 0 && (
-              <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
-                <span className="text-sm font-bold text-slate-500">Đã chọn {selectedIds.length}</span>
-                <button 
-                  onClick={() => openDeleteModal(products.filter((_, i) => Object.keys(rowSelection).includes(i.toString())).map(p => p.id))}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-all border-0"
-                >
-                  <Trash2 size={14} /> Xóa
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -346,16 +270,16 @@ export default function ProductsPage() {
               ) : isError ? (
                  <tr>
                     <td colSpan={columns.length} className="py-20">
-                       <ErrorState type="error" actionLabel="Thử lại" onAction={() => refetch()} />
+                       <ErrorState type="error" actionLabel="Retry" onAction={() => refetch()} />
                     </td>
                  </tr>
               ) : products.length === 0 ? (
                  <tr>
                     <td colSpan={columns.length}>
                        <EmptyState 
-                          title="Chưa có sản phẩm nào" 
-                          description="Bắt đầu kinh doanh bằng cách thêm sản phẩm đầu tiên của bạn."
-                          actionLabel="Thêm sản phẩm mới"
+                          title="No products yet." 
+                          description="Get started by adding your first product."
+                          actionLabel="Add New Product"
                           onAction={() => router.push('/admin/products/new')}
                           type="data"
                        />
@@ -365,9 +289,9 @@ export default function ProductsPage() {
                  <tr>
                     <td colSpan={columns.length}>
                        <EmptyState 
-                          title="Không tìm thấy kết quả" 
-                          description="Không có sản phẩm nào phù hợp với bộ lọc hiện tại."
-                          actionLabel="Xóa bộ lọc"
+                          title="No results found." 
+                          description="No products match the current filters."
+                          actionLabel="Clear Filters"
                           onAction={resetFilters}
                           type="search"
                        />

@@ -65,6 +65,71 @@ const getApprovalStatus = (isActive: boolean, rejectReason: string): ProductStat
 
 const buildProductCode = (id: string) => `PRD-${id.padStart(4, '0')}`;
 
+const getAdminProductAttributeName = (attribute: Record<string, unknown>) =>
+  toText(
+    attribute.attributeName ??
+      attribute.attribute_name ??
+      attribute.name ??
+      `Attribute #${toText(attribute.attributeId ?? attribute.attribute_id ?? attribute.id)}`,
+  ).trim();
+
+const getAdminProductAttributeValue = (attribute: Record<string, unknown>) => {
+  const value = toText(
+    attribute.attributeValue ??
+      attribute.attribute_value ??
+      attribute.value ??
+      attribute.valueText ??
+      attribute.value_text ??
+      attribute.valueNumber ??
+      attribute.value_number ??
+      attribute.valueDate ??
+      attribute.value_date,
+  ).trim();
+  const unit = toText(attribute.unitSymbol ?? attribute.unit_symbol).trim();
+
+  if (!value || !unit || value.toLowerCase().includes(unit.toLowerCase())) {
+    return value;
+  }
+
+  return `${value} ${unit}`;
+};
+
+const getAdminProductAttributes = (rawAttributes: unknown) => {
+  if (Array.isArray(rawAttributes)) {
+    const attributes = rawAttributes.reduce<Record<string, string>>((result, rawAttribute) => {
+      if (!rawAttribute || typeof rawAttribute !== 'object' || Array.isArray(rawAttribute)) {
+        return result;
+      }
+
+      const attribute = rawAttribute as Record<string, unknown>;
+      const name = getAdminProductAttributeName(attribute);
+      if (name) {
+        result[name] = getAdminProductAttributeValue(attribute) || '-';
+      }
+      return result;
+    }, {});
+
+    return Object.keys(attributes).length > 0 ? attributes : undefined;
+  }
+
+  if (!rawAttributes || typeof rawAttributes !== 'object') {
+    return undefined;
+  }
+
+  const attributes = Object.entries(rawAttributes as Record<string, unknown>).reduce<Record<string, string>>(
+    (result, [name, value]) => {
+      const displayName = name.trim();
+      if (displayName) {
+        result[displayName] = toText(value, '-');
+      }
+      return result;
+    },
+    {},
+  );
+
+  return Object.keys(attributes).length > 0 ? attributes : undefined;
+};
+
 const mapAdminProduct = (raw: Record<string, unknown>): Product => {
   const id = toText(raw.id);
   const images = getImageUrls(raw.images);
@@ -90,6 +155,7 @@ const mapAdminProduct = (raw: Record<string, unknown>): Product => {
     sellerAvatar: toText(raw.shop_logo, FALLBACK_SELLER_AVATAR),
     sellerEmail: toText(raw.shop_email) || undefined,
     sellerPhone: toText(raw.shop_phone) || undefined,
+    attributes: getAdminProductAttributes(raw.attributes),
     createdAt: toText(raw.created_at, new Date(0).toISOString()),
     rejectReason: rejectReason || undefined,
     soldCount: toNumber(raw.sold_count),

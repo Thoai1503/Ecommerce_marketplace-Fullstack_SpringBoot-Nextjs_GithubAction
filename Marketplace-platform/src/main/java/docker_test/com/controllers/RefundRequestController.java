@@ -191,6 +191,8 @@ public class RefundRequestController {
 		try {
 			var refundRequest = refundRequestService.createRefundRequest(refundRequestDTO);
 			return ResponseEntity.ok(refundRequest);
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.badRequest().body(e.getMessage());
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating refund request: " + e.getMessage());
 		}

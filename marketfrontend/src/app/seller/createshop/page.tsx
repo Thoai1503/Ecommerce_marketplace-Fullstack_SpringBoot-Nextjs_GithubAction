@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getAllProvinces, getDistricts, getWards } from "@/services/addressAPI";
 import { District, Province, Ward } from "@/validators/addressAPIModel";
 import { useSellerAuth } from "@/context/SellerAuthContext";
+import { refreshAccessToken } from "@/lib/authSession";
 
 type User = {
   id: number;
@@ -69,7 +70,32 @@ const clearSellerRegistrationDraft = () => {
   ].forEach((key) => localStorage.removeItem(key));
 };
 
+const promoteStoredUserToSeller = () => {
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        ...storedUser,
+        userType: "both",
+        role: "seller",
+      }),
+    );
+  } catch {
+    return;
+  }
+};
+
 const getShopId = (shop: any) => Number(shop?.id ?? shop?.shop_id ?? 0);
+
+const readOptionalJson = async (response: Response) => {
+  const text = await response.text();
+
+  if (!text.trim()) return null;
+
+  return JSON.parse(text);
+};
 
 const getShopOnboardingStep = (shop: any) => {
   if (shop?.onboarding_step === null || shop?.onboarding_step === undefined) {
@@ -93,7 +119,7 @@ const verifyShopOnboardingStep = async (
 
   if (!res.ok) return false;
 
-  const shop = await res.json();
+  const shop = await readOptionalJson(res);
   return Number(shop?.onboarding_step) === onboardingStep;
 };
 
@@ -345,7 +371,9 @@ export default function ShopInfoPage() {
 
         if (!shopRes.ok) return;
 
-        const shopData = await shopRes.json();
+        const shopData = await readOptionalJson(shopRes);
+        if (!shopData) return;
+
         const existingShopId = getShopId(shopData);
         if (existingShopId > 0) {
           setShopId(existingShopId);
@@ -679,7 +707,7 @@ export default function ShopInfoPage() {
     });
 
     if (checkRes.ok) {
-      const checkData = await checkRes.json();
+      const checkData = await readOptionalJson(checkRes);
       const checkedShop = checkData?.shop;
       const checkedShopId = getShopId(checkedShop);
 
@@ -693,7 +721,9 @@ export default function ShopInfoPage() {
     });
 
     if (shopRes.ok) {
-      const shopData = await shopRes.json();
+      const shopData = await readOptionalJson(shopRes);
+      if (!shopData) return null;
+
       const existingShopId = getShopId(shopData);
 
       if (existingShopId > 0) {
@@ -919,7 +949,7 @@ export default function ShopInfoPage() {
         return;
       }
 
-      const shop = await shopRes.json();
+      const shop = await readOptionalJson(shopRes);
       if (isShopComplete(shop)) {
         clearSellerRegistrationDraft();
         router.push("/seller");
@@ -1111,6 +1141,26 @@ export default function ShopInfoPage() {
       }
 
       await updateShopOnboardingStep(4, currentShopId);
+
+      const verifyRes = await fetch(`${API_URL}/shops/${currentShopId}/verify`, {
+        method: "PATCH",
+      });
+
+      if (!verifyRes.ok) {
+        const errorText = await verifyRes.text();
+        console.log("VERIFY SHOP ERROR:", errorText);
+        alert("Cập nhật quyền seller thất bại: " + errorText);
+        return;
+      }
+
+      promoteStoredUserToSeller();
+
+      const refreshedToken = await refreshAccessToken();
+      if (!refreshedToken) {
+        alert("Shop đã tạo xong. Vui lòng đăng nhập lại để vào kênh người bán.");
+        return;
+      }
+
       clearSellerRegistrationDraft();
       setStep(4);
     } catch (err) {

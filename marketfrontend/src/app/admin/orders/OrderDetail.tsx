@@ -3,26 +3,17 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getOrderById } from "../../../service/orders";
-import { Order, OrderStatus, ItemStatus } from "../../../types/index";
+import { Order, ItemStatus } from "../../../types/index";
 import {
   ChevronLeft,
   Package,
   User,
-  History,
   MapPin,
   Printer,
   Sparkles,
   FileText,
-  Clock,
   CreditCard,
   ShieldCheck,
-  TrendingUp,
-  XCircle,
-  Pencil,
-  Box,
-  CheckCircle2,
-  AlertTriangle,
-  Truck,
   Check,
   BrainCircuit,
   Lightbulb,
@@ -31,8 +22,6 @@ import {
   Gift,
   ArrowRight,
 } from "lucide-react";
-import UpdateStatusModal from "../../../components/admin/orders/UpdateStatusModal";
-import EditItemsModal from "../../../components/admin/orders/EditItemsModal";
 import ShipmentCard from "../../../components/admin/orders/ShipmentCard";
 import ToastComponent, { ToastType } from "../../../components/ui/Toast";
 
@@ -63,27 +52,27 @@ const AIInsightCard = ({
 
       let riskScore = 5;
       let riskLevel = "LOW";
-      let persona = "👑 Khách hàng tiềm năng";
-      let tags = ["Thích công nghệ", "Thanh toán online"];
+      let persona = "👑 Potential customers";
+      let tags = ["Likes technology", "Online payments"];
       let actionType = "LOYALTY"; // LOYALTY | RISK | VERIFY
-      let nextAction = "Gửi email cảm ơn và tặng mã giảm giá 5% cho đơn sau.";
-      let actionLabel = "Gửi Voucher";
+      let nextAction = "Send a thank-you email and offer a 5% discount code for your next order.";
+      let actionLabel = "Send Voucher";
 
       if (order.paymentStatus === "UNPAID" && isHighValue) {
         riskScore = 65;
         riskLevel = "MEDIUM";
         actionType = "VERIFY";
         nextAction =
-          "Đơn trị giá cao chưa thanh toán. Nên gọi điện xác nhận địa chỉ trước khi giao.";
-        actionLabel = "Gọi xác nhận";
-        persona = "⚠️ Cần chú ý";
+          "High-value order not paid. Should call to confirm address before shipping.";
+        actionLabel = "Call to Verify";
+        persona = "⚠️ Needs Attention";
       } else if (isHighValue) {
         riskScore = 10;
-        persona = "💎 Khách hàng VIP";
+        persona = "💎 Potential VIP Customer";
         actionType = "LOYALTY";
         nextAction =
-          "Khách chi tiêu lớn. Đề xuất tặng voucher phụ kiện 10% để giữ chân.";
-        actionLabel = "Tặng Voucher VIP";
+          "Potential high-value customer. Consider offering a 10% discount to retain them.";
+        actionLabel = "Offer VIP Discount";
       }
 
       setAnalysis({
@@ -133,16 +122,16 @@ const AIInsightCard = ({
               </div>
               <div>
                 <p className="text-[10px] font-bold text-slate-500 uppercase">
-                  Rủi ro đơn hàng
+                  Order Risk
                 </p>
                 <p
                   className={`text-sm font-black ${analysis.riskLevel === "LOW" ? "text-green-700" : analysis.riskLevel === "MEDIUM" ? "text-amber-700" : "text-red-700"}`}
                 >
                   {analysis.riskLevel === "LOW"
-                    ? "An toàn (Safe)"
+                    ? "Safe (Low)"
                     : analysis.riskLevel === "MEDIUM"
-                      ? "Cần lưu ý (Medium)"
-                      : "Rủi ro cao (High)"}
+                      ? "Needs Attention (Medium)"
+                      : "High Risk (High)"}
                 </p>
               </div>
             </div>
@@ -158,7 +147,7 @@ const AIInsightCard = ({
           {/* Customer Persona */}
           <div>
             <p className="text-[10px] font-bold text-slate-500 uppercase mb-2 flex items-center gap-1">
-              <Fingerprint size={12} /> Chân dung khách hàng
+              <Fingerprint size={12} /> Customer Persona
             </p>
             <div className="flex flex-wrap gap-2">
               <span className="px-2.5 py-1 bg-white border border-purple-100 text-purple-700 text-xs font-bold rounded-lg shadow-sm">
@@ -215,9 +204,6 @@ export default function OrderDetailsPage() {
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditItemsOpen, setIsEditItemsOpen] = useState(false);
-  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [toast, setToast] = useState<{
     message: string;
     type: ToastType;
@@ -237,41 +223,19 @@ export default function OrderDetailsPage() {
     fetchOrder();
   }, [fetchOrder]);
 
-  const toggleSelectItem = (itemId: string) => {
-    setSelectedItemIds((prev) =>
-      prev.includes(itemId)
-        ? prev.filter((id) => id !== itemId)
-        : [...prev, itemId],
-    );
-  };
-
-  const toggleSelectAll = () => {
-    if (!order?.items) return;
-    if (selectedItemIds.length === order.items.length) {
-      setSelectedItemIds([]);
-    } else {
-      setSelectedItemIds(order.items.map((item) => item.id));
-    }
-  };
-
   if (loading)
     return (
       <div className="p-20 flex flex-col items-center justify-center min-h-[60vh]">
         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="font-bold text-slate-400">Đang tải...</p>
+        <p className="font-bold text-slate-400">Loading...</p>
       </div>
     );
   if (!order)
     return (
       <div className="p-20 text-center text-red-500 font-bold">
-        Không tìm thấy đơn hàng.
+        Order not found.
       </div>
     );
-
-  const isAllSelected =
-    order.items &&
-    order.items.length > 0 &&
-    selectedItemIds.length === order.items.length;
 
   return (
     <div className="p-6 lg:p-8 animate-in fade-in duration-500 space-y-8 max-w-[1200px] mx-auto pb-20">
@@ -293,7 +257,7 @@ export default function OrderDetailsPage() {
           </button>
           <div>
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">
-              Chi tiết {order.orderCode}
+              Order Details {order.orderCode}
             </h2>
             <div className="flex items-center gap-3 mt-1">
               <span
@@ -318,13 +282,7 @@ export default function OrderDetailsPage() {
             onClick={() => window.print()}
             className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all border-0 shadow-sm no-print"
           >
-            <Printer size={18} /> In hóa đơn
-          </button>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg border-0 no-print"
-          >
-            <TrendingUp size={18} /> Update Status
+            <Printer size={18} /> Print invoice
           </button>
         </div>
       </div>
@@ -338,7 +296,7 @@ export default function OrderDetailsPage() {
         {/* Order Level Timeline */}
         <div className="mb-8 pb-8 border-b border-slate-100">
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">
-            Tổng quát đơn hàng:
+            Order Overview:
           </p>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 relative">
             <div className="absolute top-4 left-4 md:left-0 md:right-0 md:h-[2px] bg-slate-100 -z-0 hidden md:block"></div>
@@ -395,7 +353,7 @@ export default function OrderDetailsPage() {
         {order.shipments && order.shipments.length > 0 && (
           <div>
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">
-              Timeline kiện hàng:
+              Timeline of shipments:
             </p>
             <div className="space-y-4">
               {order.shipments.map((shipment) => {
@@ -497,36 +455,15 @@ export default function OrderDetailsPage() {
         <div className="lg:col-span-2 space-y-8">
           {/* 3. Products Table */}
           <div className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">
-                  Products:
-                </h3>
-                {selectedItemIds.length > 0 && (
-                  <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
-                    Đã chọn {selectedItemIds.length}
-                  </span>
-                )}
-              </div>
-              <button
-                onClick={() => setIsEditItemsOpen(true)}
-                className="p-2 hover:bg-slate-50 rounded-xl text-blue-600 transition-all border-0 bg-transparent no-print"
-              >
-                <Pencil size={18} />
-              </button>
+            <div className="p-6 border-b border-slate-100">
+              <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">
+                Products:
+              </h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="px-6 py-4 w-12 text-center">
-                      <input
-                        type="checkbox"
-                        checked={isAllSelected}
-                        onChange={toggleSelectAll}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                      />
-                    </th>
                     <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                       Product Name
                     </th>
@@ -545,16 +482,8 @@ export default function OrderDetailsPage() {
                   {order.items?.map((item) => (
                     <tr
                       key={item.id}
-                      className={`hover:bg-slate-50/30 transition-colors ${selectedItemIds.includes(item.id) ? "bg-blue-50/30" : ""}`}
+                      className="hover:bg-slate-50/30 transition-colors"
                     >
-                      <td className="px-6 py-5 text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedItemIds.includes(item.id)}
-                          onChange={() => toggleSelectItem(item.id)}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                        />
-                      </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-4">
                           <img
@@ -590,10 +519,10 @@ export default function OrderDetailsPage() {
                   {(!order.items || order.items.length === 0) && (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={4}
                         className="px-6 py-8 text-center text-slate-400 text-sm"
                       >
-                        Chưa có sản phẩm nào trong đơn hàng.
+                        There are no products in the order yet.
                       </td>
                     </tr>
                   )}
@@ -607,20 +536,13 @@ export default function OrderDetailsPage() {
             <div className="space-y-6">
               <div>
                 <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
-                  📦 Kiện hàng & Vận chuyển ({order.shipments.length}):
+                  📦 Shipments & Shipping ({order.shipments.length}):
                 </h3>
                 <div className="space-y-4">
                   {order.shipments.map((shipment) => (
                     <ShipmentCard
                       key={shipment.id}
                       shipment={shipment}
-                      onStatusUpdate={(id) => {
-                        setToast({
-                          message: `Cập nhật kiện hàng ${id}`,
-                          type: "info",
-                        });
-                        // TODO: Implement shipment status update modal
-                      }}
                     />
                   ))}
                 </div>
@@ -764,40 +686,8 @@ export default function OrderDetailsPage() {
             </div>
           </div>
 
-          {/* 7. Actions */}
-          <div className="bg-slate-900 rounded-[32px] p-6 shadow-xl space-y-3 no-print">
-            <h3 className="text-xs font-black text-white/40 uppercase tracking-[0.2em] mb-4">
-              Actions:
-            </h3>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all border-0 shadow-lg shadow-blue-600/20"
-            >
-              Update Status
-            </button>
-            <button className="w-full py-3.5 bg-white/10 hover:bg-red-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all border-0">
-              Cancel Order
-            </button>
-            <button className="w-full py-3.5 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all border-0 opacity-50 cursor-not-allowed">
-              Refund (Phase 2)
-            </button>
-          </div>
         </div>
       </div>
-
-      <UpdateStatusModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        order={order}
-      />
-      {isEditItemsOpen && (
-        <EditItemsModal
-          isOpen={isEditItemsOpen}
-          onClose={() => setIsEditItemsOpen(false)}
-          order={order}
-          onSuccess={fetchOrder}
-        />
-      )}
 
       <style>{`
         @media print {

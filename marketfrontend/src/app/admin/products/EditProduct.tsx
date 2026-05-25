@@ -15,16 +15,16 @@ import Breadcrumbs from '@/components/ui/Breadcrumbs';
 
 // --- ZOD SCHEMA ---
 const productSchema = z.object({
-  name: z.string().min(3, "Tên sản phẩm phải có ít nhất 3 ký tự."),
-  sku: z.string().min(1, "Mã SKU là bắt buộc.").transform(v => v.toUpperCase()),
+  name: z.string().min(3, "The product name must have at least 3 characters."),
+  sku: z.string().min(1, "SKU is required.").transform(v => v.toUpperCase()),
   description: z.string().optional(),
-  price: z.number().min(1000, "Giá phải lớn hơn 1.000₫"),
+  price: z.number().min(1000, "Price must be greater than 1,000₫"),
   originalPrice: z.number().optional(),
-  stock: z.number().min(0, "Tồn kho không được âm"),
-  category: z.string().min(1, "Vui lòng chọn danh mục."),
+  stock: z.number().min(0, "Stock cannot be negative."),
+  category: z.string().min(1, "Please select a category."),
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'HIDDEN']),
   attributes: z.record(z.string(), z.string()).optional(),
-  images: z.array(z.string()).min(1, "Cần ít nhất 1 hình ảnh sản phẩm."),
+  images: z.array(z.string()).min(1, "At least 1 product image is required."),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -54,7 +54,7 @@ export default function EditProductPage() {
       price: 0,
       originalPrice: 0,
       stock: 0,
-      category: 'Điện thoại',
+      category: 'Electronics',
       status: 'PENDING',
       attributes: {},
       images: [],
@@ -87,7 +87,7 @@ export default function EditProductPage() {
         status: product.status,
         attributes: (product.attributes && Object.keys(product.attributes).length > 0) 
           ? product.attributes 
-          : { 'Thương hiệu': '', 'Xuất xứ': '' },
+          : { 'Brand': '', 'Origin': '' },
         images: product.images,
       });
     }
@@ -107,7 +107,7 @@ export default function EditProductPage() {
   const onSubmit = async (data: ProductFormValues) => {
     console.log("Valid Submission:", data);
     // In real app: await updateProduct(id, data);
-    success("Đã cập nhật sản phẩm thành công!");
+    success("Product updated successfully!");
     setTimeout(() => router.push('/admin/products'), 1000);
   };
 
@@ -132,7 +132,7 @@ export default function EditProductPage() {
       const newImageUrls = Array.from(files).map((file: File) => URL.createObjectURL(file));
       setValue('images', [...watchedImages, ...newImageUrls], { shouldDirty: true, shouldValidate: true });
       if (fileInputRef.current) fileInputRef.current.value = '';
-      info(`Đã thêm ${files.length} ảnh mới`);
+      info(`Added ${files.length} new images. Don't forget to save changes!`);
     }
   };
 
@@ -144,7 +144,7 @@ export default function EditProductPage() {
   // AI Feature
   const handleGenerateDescription = () => {
     if (!watchedName) {
-      warning("Vui lòng nhập tên sản phẩm trước.");
+      warning("Please enter the product name first.");
       return;
     }
 
@@ -154,17 +154,17 @@ export default function EditProductPage() {
         .map(([k, v]) => `${k}: ${v}`)
         .join(', ');
       
-      const generatedText = `✨ Trải nghiệm tuyệt vời cùng ${watchedName}!\n\n` +
-      `Sản phẩm thuộc dòng ${watchedCategory} cao cấp, được thiết kế tinh xảo. ` +
-      `${watchedName} nổi bật với hiệu năng vượt trội.\n\n` +
-      `🌟 Điểm nổi bật:\n` +
-      (attrsText ? `• ${attrsText.replace(/, /g, '\n• ')}\n` : `• Chất lượng đảm bảo chính hãng\n• Thiết kế hiện đại\n`) +
-      `• Giá trị vượt trội: ${Number(watchedPrice).toLocaleString()}₫\n` +
-      `\nMua ngay hôm nay!`;
+      const generatedText = `✨ Great Experience with ${watchedName}!\n\n` +
+      `Product from the premium ${watchedCategory} line, designed with precision. ` +
+      `${watchedName} stands out with its outstanding performance.\n\n` +
+      `🌟 Key Features:\n` +
+      (attrsText ? `• ${attrsText.replace(/, /g, '\n• ')}\n` : `• High-quality and authentic\n• Modern design\n`) +
+      `• Superior Value: ${Number(watchedPrice).toLocaleString()}₫\n` +
+      `\nBuy now!`;
 
       setValue('description', generatedText, { shouldDirty: true });
       setIsGeneratingDesc(false);
-      success("Đã tạo nội dung xong!");
+      success("Content generated successfully!");
     }, 1500);
   };
 

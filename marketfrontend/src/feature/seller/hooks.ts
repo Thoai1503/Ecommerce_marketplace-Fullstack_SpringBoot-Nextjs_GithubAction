@@ -20,6 +20,11 @@ import { message, UploadFile, UploadProps } from "antd";
 import { useSellerAuth } from "@/context/SellerAuthContext";
 import { IProductVariant } from "@/validators/productVariant";
 
+const toFiniteNumber = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 export interface ProductAttributeSelection {
   attributeValueId?: number | null;
   unitId?: number | null;
@@ -218,7 +223,7 @@ export const useAddProductSeller = (
         product_id: data.id,
         variant_name: data.product_name,
         sku: `SKU-${data.id}`,
-        price: data.original_price || 0,
+        price: toFiniteNumber(data.price),
         stock_quantity: data.stock_quantity || 0,
         weight: data.weight || 0,
         height: data.height || 0,

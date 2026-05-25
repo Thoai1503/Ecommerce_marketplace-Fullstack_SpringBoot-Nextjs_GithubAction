@@ -874,10 +874,13 @@ const AddProductForm: React.FC = () => {
                             value={product.price}
                             onChange={(event) => {
                               const { value, name } = event.target;
+                              const price = Number(value);
                               setProduct((prev: any) => ({
                                 ...prev,
                                 [name]: value,
-                                original_price: product.price,
+                                original_price: Number.isFinite(price)
+                                  ? price
+                                  : 0,
                               }));
                             }}
                           />

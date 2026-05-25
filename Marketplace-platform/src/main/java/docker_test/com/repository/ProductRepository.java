@@ -273,14 +273,52 @@ public class ProductRepository implements IRepositories<Product> {
 
 	@Override
 	public List<Product> GetAll() {
+		return getAll(false, null, null, null);
+	}
+
+	public List<Product> GetAllByVerifiedShops() {
+		return getAll(true, null, null, null);
+	}
+
+	public List<Product> GetAllByVerifiedShops(int limit, int offset, Integer excludeShopId) {
+		return getAll(true, limit, offset, excludeShopId);
+	}
+
+	private List<Product> getAll(boolean verifiedShopOnly, Integer limit, Integer offset, Integer excludeShopId) {
 		System.out.print("Get all..");
 		List<Product> list = new ArrayList<Product>();
-		String sql = "SELECT \r\n" + "    p.*,\r\n" + "    pi.image_url\r\n" + "FROM product p\r\n"
-				+ "LEFT JOIN product_image pi ON p.id = pi.product_id \r\n" + "    AND pi.id = (\r\n"
+		List<Object> params = new ArrayList<>();
+		StringBuilder sql = new StringBuilder("SELECT \r\n" + "    p.*,\r\n" + "    pi.image_url\r\n"
+				+ "FROM product p\r\n");
+
+		if (verifiedShopOnly) {
+			sql.append("INNER JOIN shop s ON p.shop_id = s.id AND s.is_verified = 1\r\n");
+		}
+
+		sql.append("LEFT JOIN product_image pi ON p.id = pi.product_id \r\n" + "    AND pi.id = (\r\n"
 				+ "        SELECT MIN(id) \r\n" + "        FROM product_image \r\n"
-				+ "        WHERE product_id = p.id\r\n" + "    )";
+				+ "        WHERE product_id = p.id\r\n" + "    )");
+
+		if (verifiedShopOnly) {
+			sql.append("\r\nWHERE p.is_active = 1");
+			if (excludeShopId != null && excludeShopId > 0) {
+				sql.append("\r\n  AND p.shop_id <> ?");
+				params.add(excludeShopId);
+			}
+			sql.append("\r\nORDER BY p.created_at DESC, p.id DESC");
+		}
+
+		if (limit != null && limit > 0) {
+			sql.append("\r\nLIMIT ? OFFSET ?");
+			params.add(limit);
+			params.add(Math.max(0, offset == null ? 0 : offset));
+		}
+
 		System.out.print("GetAll..");
-		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql.toString())) {
+			for (int i = 0; i < params.size(); i++) {
+				ps.setObject(i + 1, params.get(i));
+			}
 
 			ResultSet rs = ps.executeQuery();
 			while (rs.next()) {
@@ -641,7 +679,13 @@ public class ProductRepository implements IRepositories<Product> {
 				""";
 
 		List<Map<String, Object>> products = query(sql, id);
-		return products.isEmpty() ? null : products.get(0);
+		if (products.isEmpty()) {
+			return null;
+		}
+
+		Map<String, Object> product = products.get(0);
+		product.put("attributes", ProductAttributeRepository.Instance().GetByProductId(id));
+		return product;
 	}
 
 	public boolean UpdateAdminProductActive(int id, boolean isActive, String reason) {
