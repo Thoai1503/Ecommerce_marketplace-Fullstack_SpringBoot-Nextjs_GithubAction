@@ -816,7 +816,7 @@ export default function SellerReturnRefundCancelPage() {
   } = useQuery<ReturnRequestAdmin[]>({
     queryKey: ["seller", "return-requests", shopId],
     enabled: shopId > 0,
-    queryFn: () => getSellerReturnRequests(shopId),
+    queryFn: async () => (await getSellerReturnRequests(shopId)).data,
   });
 
   const filteredRequests = useMemo(() => {

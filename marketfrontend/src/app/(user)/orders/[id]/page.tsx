@@ -1089,9 +1089,9 @@ export default function UserOrderDetailPage() {
 
   const handleSubmitReturnRequest = async () => {
     if (!activeReturnShipment) return;
+
     const shipmentId = activeReturnShipment.id;
     const draft = returnRequestDrafts[shipmentId];
-    console.log("Submitting return request with draft:", draft);
     const selectedItems = activeReturnShipment.items
       .filter((item) => !!draft?.selectedItemIds?.[item.id])
       .map((item) => {
@@ -1105,7 +1105,6 @@ export default function UserOrderDetailPage() {
           quantity: safeQty,
         };
       });
-    console.log("Selected items for return:", selectedItems);
     const reason = String(draft?.reason || "").trim();
 
     if (!selectedItems.length) {
@@ -1155,44 +1154,7 @@ export default function UserOrderDetailPage() {
       (sum, item) => sum + getReturnItemPaidAmount(item, item.quantity),
       0,
     );
-    // alert(
-    //   `Total quantity: ${totalQuantity}, Total requested amount: ${totalRequestedAmount}`,
-    // );
-    // alert("selectedItems data: " + JSON.stringify(selectedItems, null, 2));
-    alert("shipmentId: " + shipmentId);
 
-    const formData = new FormData();
-    formData.append("orderId", id);
-    formData.append("shopId", String(activeReturnShipment.shop_id));
-    formData.append("customerId", String(userId));
-    formData.append("reason", reason);
-    formData.append("orderShipmentId", String(shipmentId));
-    formData.append("quantity", String(totalQuantity));
-    formData.append("requestedAmount", String(totalRequestedAmount));
-    formData.append(
-      "items",
-      JSON.stringify(
-        selectedItems.map((item) => ({
-          orderItemId: item.id,
-          quantity: item.quantity,
-          orderShipmentId: shipmentId,
-          requestedAmount: Number(item.price || 0) * Number(item.quantity || 0),
-        })),
-      ),
-    );
-
-    (draft?.files || []).forEach((file) => {
-      formData.append("files", file);
-      formData.append(
-        "descriptions",
-        `Evidence for order item issue - ${file.name}`,
-      );
-    });
-    // alert(
-    //   "FormData for return request: " +
-    //     JSON.stringify(Object.fromEntries(formData.entries()), null, 2),
-    // );
-    // return;
     const requestItems = selectedItems.map((item) => ({
       orderItemId: item.id,
       quantity: item.quantity,
@@ -1201,72 +1163,73 @@ export default function UserOrderDetailPage() {
     }));
 
     let submittedByApi = false;
+    let createdReturnRequestId = 0;
     try {
-      const previewResponse = await fetch(`${API_URL}/api/refunds/preview`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: Number(id),
-          shopId: activeReturnShipment.shop_id,
-          customerId: userId,
-          reason,
-          orderShipmentId: shipmentId,
-          quantity: totalQuantity,
-          requestedAmount: totalRequestedAmount,
-          items: requestItems,
-        }),
-      });
-      const previewText = await previewResponse.text();
-      const previewPayload = previewText
-        ? (() => {
-            try {
-              return JSON.parse(previewText);
-            } catch {
-              return { message: previewText };
-            }
-          })()
-        : {};
+      // const previewResponse = await fetch(`${API_URL}/api/refunds/preview`, {
+      //   method: "POST",
+      //   credentials: "include",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({
+      //     orderId: Number(id),
+      //     shopId: activeReturnShipment.shop_id,
+      //     customerId: userId,
+      //     reason,
+      //     orderShipmentId: shipmentId,
+      //     quantity: totalQuantity,
+      //     requestedAmount: totalRequestedAmount,
+      //     items: requestItems,
+      //   }),
+      // });
+      // const previewText = await previewResponse.text();
+      // const previewPayload = previewText
+      //   ? (() => {
+      //       try {
+      //         return JSON.parse(previewText);
+      //       } catch {
+      //         return { message: previewText };
+      //       }
+      //     })()
+      //   : {};
 
-      if (!previewResponse.ok) {
-        const previewError =
-          previewPayload?.message ||
-          (typeof previewPayload === "string"
-            ? previewPayload
-            : JSON.stringify(previewPayload));
-        throw new Error(
-          previewError || "Khong the tinh truoc yeu cau tra hang.",
-        );
-      }
+      // if (!previewResponse.ok) {
+      //   const previewError =
+      //     previewPayload?.message ||
+      //     (typeof previewPayload === "string"
+      //       ? previewPayload
+      //       : JSON.stringify(previewPayload));
+      //   throw new Error(
+      //     previewError || "Khong the tinh truoc yeu cau tra hang.",
+      //   );
+      // }
 
-      const previewRefundAmount = asNumber(
-        previewPayload?.requestedAmount ?? previewPayload?.requested_amount,
-        totalRequestedAmount,
-      );
-      const previewMessage = String(
-        previewPayload?.refundMessage ?? previewPayload?.refund_message ?? "",
-      );
-      const confirmMessage =
-        previewMessage ||
-        (previewRefundAmount <= 0
-          ? "Bạn sẽ không được hoàn tiền cho yêu cầu này. Bạn có muốn gửi yêu cầu trả hàng không?"
-          : `Số tiền dự kiến hoàn là ${formatMoney(
-              previewRefundAmount,
-            )}. Bạn có muốn gửi yêu cầu trả hàng không?`);
+      // const previewRefundAmount = asNumber(
+      //   previewPayload?.requestedAmount ?? previewPayload?.requested_amount,
+      //   totalRequestedAmount,
+      // );
+      // const previewMessage = String(
+      //   previewPayload?.refundMessage ?? previewPayload?.refund_message ?? "",
+      // );
+      // const confirmMessage =
+      //   previewMessage ||
+      //   (previewRefundAmount <= 0
+      //     ? "Bạn sẽ không được hoàn tiền cho yêu cầu này. Bạn có muốn gửi yêu cầu trả hàng không?"
+      //     : `Số tiền dự kiến hoàn là ${formatMoney(
+      //         previewRefundAmount,
+      //       )}. Bạn có muốn gửi yêu cầu trả hàng không?`);
 
-      if (
-        !window.confirm(`${confirmMessage}\n\nChọn OK để gửi, Cancel để hủy.`)
-      ) {
-        setReturnActionStatus((prev) => ({
-          ...prev,
-          [shipmentId]: "idle",
-        }));
-        setReturnActionMessage((prev) => ({
-          ...prev,
-          [shipmentId]: "Đã hủy gửi yêu cầu trả hàng.",
-        }));
-        return;
-      }
+      // if (
+      //   !window.confirm(`${confirmMessage}\n\nChọn OK để gửi, Cancel để hủy.`)
+      // ) {
+      //   setReturnActionStatus((prev) => ({
+      //     ...prev,
+      //     [shipmentId]: "idle",
+      //   }));
+      //   setReturnActionMessage((prev) => ({
+      //     ...prev,
+      //     [shipmentId]: "Đã hủy gửi yêu cầu trả hàng.",
+      //   }));
+      //   return;
+      // }
 
       const formData = new FormData();
       formData.append("orderId", id);
@@ -1275,7 +1238,7 @@ export default function UserOrderDetailPage() {
       formData.append("reason", reason);
       formData.append("orderShipmentId", String(shipmentId));
       formData.append("quantity", String(totalQuantity));
-      formData.append("requestedAmount", String(totalRequestedAmount));
+      formData.append("requestedAmount", "0");
       formData.append("items", JSON.stringify(requestItems));
 
       (draft?.files || []).forEach((file) => {
@@ -1286,7 +1249,6 @@ export default function UserOrderDetailPage() {
         );
       });
 
-      console.log("Submitting return request to API with formData:", formData);
       const response = await fetch(`${API_URL}/api/refunds/multipart`, {
         method: "POST",
         credentials: "include",
@@ -1304,62 +1266,144 @@ export default function UserOrderDetailPage() {
           })()
         : {};
 
-      submittedByApi = response.ok;
       console.log("API response for return request submission:", {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
         body: responsePayload,
       });
-      let errorMessage = "Gui yeu cau that bai. Vui long thu lai.";
-      if (!submittedByApi) {
+
+      if (!response.ok) {
         const errorBody =
           typeof responsePayload === "string"
             ? responsePayload
             : responsePayload?.message || JSON.stringify(responsePayload);
-        if (errorBody?.trim()) {
-          errorMessage = errorBody;
-        }
+        throw new Error(
+          errorBody?.trim() || "Gui yeu cau that bai. Vui long thu lai.",
+        );
       }
 
-      const confirmedRefundAmount = asNumber(
-        responsePayload?.requestedAmount ?? responsePayload?.requested_amount,
+      createdReturnRequestId = asNumber(
+        responsePayload?.id ?? responsePayload?.returnRequestId,
+        0,
+      );
+      if (createdReturnRequestId <= 0) {
+        throw new Error(
+          "Da tao yeu cau tra hang nhung khong nhan duoc ma yeu cau.",
+        );
+      }
+
+      const calculationResponse = await fetch(
+        `${API_URL}/api/refunds/${createdReturnRequestId}/calculate-final-price`,
+        {
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+
+      const calculationText = await calculationResponse.text();
+      const calculationPayload = calculationText
+        ? (() => {
+            try {
+              return JSON.parse(calculationText);
+            } catch {
+              return calculationText;
+            }
+          })()
+        : null;
+
+      if (!calculationResponse.ok) {
+        const calculationError =
+          typeof calculationPayload === "string"
+            ? calculationPayload
+            : calculationPayload?.message || JSON.stringify(calculationPayload);
+        throw new Error(
+          calculationError?.trim() ||
+            "Da tao yeu cau nhung khong tinh duoc so tien hoan cuoi cung.",
+        );
+      }
+
+      const calculatedFinalAmount = asNumber(
+        typeof calculationPayload === "number"
+          ? calculationPayload
+          : (calculationPayload?.requestedAmount ??
+              calculationPayload?.requested_amount ??
+              calculationPayload),
         totalRequestedAmount,
       );
-      const refundMessage = String(
-        responsePayload?.refundMessage ?? responsePayload?.refund_message ?? "",
+
+      const updateAmountResponse = await fetch(
+        `${API_URL}/api/refunds/${createdReturnRequestId}/requested-amount?requestedAmount=${encodeURIComponent(
+          String(calculatedFinalAmount),
+        )}`,
+        {
+          method: "PATCH",
+          credentials: "include",
+        },
+      );
+
+      const updateAmountText = await updateAmountResponse.text();
+      const updateAmountPayload = updateAmountText
+        ? (() => {
+            try {
+              return JSON.parse(updateAmountText);
+            } catch {
+              return { message: updateAmountText };
+            }
+          })()
+        : {};
+
+      if (!updateAmountResponse.ok) {
+        const updateAmountError =
+          typeof updateAmountPayload === "string"
+            ? updateAmountPayload
+            : updateAmountPayload?.message ||
+              JSON.stringify(updateAmountPayload);
+        throw new Error(
+          updateAmountError?.trim() ||
+            "Da tao yeu cau nhung khong cap nhat duoc so tien hoan cuoi cung.",
+        );
+      }
+
+      submittedByApi = true;
+      const persistedRequestedAmount = asNumber(
+        updateAmountPayload?.requestedAmount ??
+          updateAmountPayload?.requested_amount,
+        calculatedFinalAmount,
       );
       const successMessage =
-        refundMessage ||
-        (confirmedRefundAmount <= 0
-          ? "Bạn sẽ không được hoàn tiền cho yêu cầu này vì voucher không còn đủ điều kiện sau khi trả hàng."
-          : `Yeu cau tra hang hoan tien da duoc gui. So tien du kien hoan: ${formatMoney(
-              confirmedRefundAmount,
-            )}.`);
-      const actionMessage = submittedByApi ? successMessage : errorMessage;
+        persistedRequestedAmount <= 0
+          ? "Yeu cau tra hang hoan tien da duoc gui. So tien hoan cuoi cung la 0d."
+          : `Yeu cau tra hang hoan tien da duoc gui. So tien hoan cuoi cung: ${formatMoney(
+              persistedRequestedAmount,
+            )}.`;
 
       setReturnActionMessage((prev) => ({
         ...prev,
-        [shipmentId]: actionMessage,
+        [shipmentId]: successMessage,
       }));
-      alert(actionMessage);
     } catch (error) {
       console.error("Submit return request failed:", error);
-      const submitErrorMessage =
+      const fallbackErrorMessage =
+        createdReturnRequestId > 0
+          ? "Yeu cau tra hang da duoc tao, nhung khong hoan tat buoc cap nhat so tien hoan. Vui long kiem tra lai chi tiet yeu cau."
+          : "Gui yeu cau that bai. Vui long thu lai.";
+      const errorMessage =
         error instanceof Error && error.message.trim()
           ? error.message
-          : "Gui yeu cau that bai. Vui long thu lai.";
-      alert(submitErrorMessage);
+          : fallbackErrorMessage;
       setReturnActionMessage((prev) => ({
         ...prev,
-        [shipmentId]: submitErrorMessage,
+        [shipmentId]: errorMessage,
       }));
+      alert(errorMessage);
     } finally {
       setReturnActionStatus((prev) => ({
         ...prev,
-        [shipmentId]: submittedByApi ? "submitted" : "idle",
+        [shipmentId]:
+          submittedByApi || createdReturnRequestId > 0 ? "submitted" : "idle",
       }));
-      if (submittedByApi) {
+      if (submittedByApi || createdReturnRequestId > 0) {
         closeReturnModal();
       }
     }

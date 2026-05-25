@@ -164,7 +164,8 @@ export default function Sidebar() {
         ),
         submenu: [
           { label: "Doanh Thu", href: "/seller/finance/revenue" },
-          { label: "Số Dư TK Shopee", href: "/seller/finance/balance" },
+          { label: "Số Dư TK Shopee", href: "/seller/finance/wallet" },
+          { label: "Ví Seller", href: "/seller/finance/wallet" },
           { label: "Báo Cáo Tài Chính", href: "/seller/finance/reports" },
         ],
       },

@@ -14,6 +14,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -74,11 +76,13 @@ public class ReturnRequest {
     
     @JsonManagedReference("return-request-items")
     @OneToMany(mappedBy = "returnRequest", fetch = jakarta.persistence.FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Fetch(FetchMode.SUBSELECT)
     @Builder.Default
     private List<ReturnRequestItem> items = new java.util.ArrayList<>();
     
     @JsonManagedReference("return-request-attachments")
     @OneToMany(mappedBy = "returnRequest", fetch = jakarta.persistence.FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Fetch(FetchMode.SUBSELECT)
     @Builder.Default
     private List<ReturnRequestAttachment> attachments = new java.util.ArrayList<>();
     
@@ -88,6 +92,9 @@ public class ReturnRequest {
 
     @Transient
     private double voucherClawbackAmount;
+
+    @Transient
+    private double platformVoucherClawbackAmount;
 
     @Transient
     private double remainingPayableAmount;
@@ -100,6 +107,15 @@ public class ReturnRequest {
 
     @Transient
     private String refundMessage;
+
+    @Transient
+    private boolean shopVoucherInvalidated;
+
+    @Transient
+    private boolean firstShopVoucherInvalidation;
+
+    @Transient
+    private boolean showShopVoucherInvalidationSignal;
 
     @Transient
     private double finalRequestedAmount;

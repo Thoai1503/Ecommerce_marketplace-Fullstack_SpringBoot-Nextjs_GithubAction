@@ -1,11 +1,10 @@
 "use client";
 import { useSellerAuth } from "@/context/SellerAuthContext";
-import { useOrderPage } from "@/feature/admin/hooks/useOrderPage";
 import { OrderShipments } from "@/types/data/OrderShipment";
-import { IOrder } from "@/validators/order";
 import { IOrderShipment } from "@/validators/orderShipment";
 import { convertAddressToNames } from "@/services/addressService";
 import { useQuery } from "@tanstack/react-query";
+import Pagination from "@/components/ui/Pagination";
 import {
   AlertTriangle,
   CheckCircle,
@@ -22,7 +21,6 @@ import {
 } from "lucide-react";
 import React, { useState, useMemo, useEffect } from "react";
 import { useOrderShipmentFilter } from "@/hooks/seller/useOrderShipmentFilter";
-import { useRouter } from "next/navigation";
 
 type PendingShipmentOrder = {
   shipmentId: number;
@@ -712,28 +710,51 @@ const page = () => {
 
     updatePage,
     isHydrated,
-    clearFilters,
   } = useOrderShipmentFilter();
-  const router = useRouter();
 
-  const [allOrderShipments, setAllOrderShipments] = useState<IOrderShipment[]>(
-    [],
-  );
   console.log("Shop Data in Order Page:", JSON.stringify(shopData, null, 2));
   OrderShipments.setup({ path: "/seller/order-shipment" });
-  const { data: orderShipments, refetch } = useQuery({
+  const { data: shipmentResponse, refetch } = useQuery({
     ...OrderShipments.getByShopId(shopData?.id || 0, apiParams),
     enabled: !!shopData?.id && isHydrated,
   });
 
-  useEffect(() => {
-    if (orderShipments && allOrderShipments.length === 0) {
-      setAllOrderShipments(orderShipments);
-    }
-  }, [orderShipments, allOrderShipments.length]);
+  const orderShipments = (shipmentResponse?.data || []) as IOrderShipment[];
+  const totalRecords = Number(shipmentResponse?.meta?.total || 0);
+  const perPage = Number(
+    shipmentResponse?.meta?.perPage || filters.pageSize || 10,
+  );
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalRecords / Math.max(1, perPage)),
+  );
 
-  console.log("Order Shipments Data:", JSON.stringify(orderShipments, null, 2));
-  const { shop, orders: mockOrders } = useOrderPage();
+  const statusStats = useMemo(() => {
+    const stats: Record<string, number> = {
+      ALL: totalRecords,
+    };
+    for (const [key, value] of Object.entries(
+      shipmentResponse?.statusStats || {},
+    )) {
+      stats[String(key || "").toUpperCase()] = Number(value || 0);
+    }
+    return stats;
+  }, [shipmentResponse, totalRecords]);
+
+  const pendingPaymentCount = useMemo(
+    () =>
+      orderShipments.filter(
+        (shipment: any) =>
+          String(shipment?.order?.paymentStatus || "").toUpperCase() ===
+          "PENDING",
+      ).length,
+    [orderShipments],
+  );
+
+  console.log(
+    "Order Shipments Data:",
+    JSON.stringify(shipmentResponse, null, 2),
+  );
 
   // Combine API data (top) + Mock data (bottom)
   const combinedOrders = useMemo(() => {
@@ -756,17 +777,26 @@ const page = () => {
         _source: "api",
       })) ?? [];
 
-    const mockOrders_ = mockOrders.map((order: any) => ({
-      ...order,
-      _source: "mock",
-    }));
+    return [...apiOrders];
+  }, [orderShipments]);
 
-    return [
-      ...apiOrders,
-      //, ...mockOrders_
-    ];
-  }, [orderShipments, mockOrders]);
-  const [activeTab, setActiveTab] = useState("all");
+  const activeTab = useMemo(() => {
+    if (filters.paymentStatus === "PENDING") return "waiting-for-payment";
+    switch ((filters.status || "ALL").toUpperCase()) {
+      case "CONFIRMED":
+        return "waiting-for-shipping";
+      case "IN_TRANSIT":
+        return "shipped";
+      case "DELIVERED":
+        return "delivered";
+      case "CANCELED":
+      case "CANCELLED":
+        return "cancelled";
+      default:
+        return "all";
+    }
+  }, [filters.status, filters.paymentStatus]);
+
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(
     new Set(),
   );
@@ -961,8 +991,8 @@ const page = () => {
                   : "text-dark"
               } border-0 border-bottom-3`}
               onClick={() => {
-                router.push("/seller/orders?status=ALL");
-                setActiveTab("all");
+                updateFilters("status", "ALL");
+                updateFilters("paymentStatus", "ALL");
               }}
             >
               Tất cả
@@ -976,18 +1006,13 @@ const page = () => {
                   : "text-dark"
               } border-0 border-bottom-3`}
               onClick={() => {
-                router.push("/seller/orders?paymentStatus=PENDING");
-                setActiveTab("waiting-for-payment");
+                updateFilters("status", "ALL");
+                updateFilters("paymentStatus", "PENDING");
               }}
             >
               Chờ thanh toán{" "}
               <span className="badge bg-danger rounded-circle ms-1">
-                {
-                  allOrderShipments?.filter(
-                    (shipment: any) =>
-                      shipment.order.paymentStatus === "PENDING",
-                  ).length
-                }
+                {pendingPaymentCount}
               </span>
             </button>
           </li>
@@ -999,17 +1024,13 @@ const page = () => {
                   : "text-dark"
               } border-0 border-bottom-3`}
               onClick={() => {
-                router.push("/seller/orders?status=CONFIRMED");
-                setActiveTab("waiting-for-shipping");
+                updateFilters("status", "CONFIRMED" as any);
+                updateFilters("paymentStatus", "ALL");
               }}
             >
               Chờ gửi hàng{" "}
               <span className="badge bg-danger rounded-circle ms-1">
-                {
-                  allOrderShipments?.filter(
-                    (shipment: any) => shipment.shippingStatus === "CONFIRMED",
-                  ).length
-                }
+                {statusStats.CONFIRMED || 0}
               </span>
             </button>
           </li>
@@ -1020,7 +1041,10 @@ const page = () => {
                   ? "active border-danger text-danger"
                   : "text-dark"
               } border-0 border-bottom-3`}
-              onClick={() => setActiveTab("shipped")}
+              onClick={() => {
+                updateFilters("status", "IN_TRANSIT");
+                updateFilters("paymentStatus", "ALL");
+              }}
             >
               Đã gửi hàng
             </button>
@@ -1032,7 +1056,10 @@ const page = () => {
                   ? "active border-danger text-danger"
                   : "text-dark"
               } border-0 border-bottom-3`}
-              onClick={() => setActiveTab("delivered")}
+              onClick={() => {
+                updateFilters("status", "DELIVERED");
+                updateFilters("paymentStatus", "ALL");
+              }}
             >
               Đã giao
             </button>
@@ -1044,7 +1071,10 @@ const page = () => {
                   ? "active border-danger text-danger"
                   : "text-dark"
               } border-0 border-bottom-3`}
-              onClick={() => setActiveTab("cancelled")}
+              onClick={() => {
+                updateFilters("status", "CANCELED" as any);
+                updateFilters("paymentStatus", "ALL");
+              }}
             >
               Đã hủy
             </button>
@@ -1060,6 +1090,8 @@ const page = () => {
               type="text"
               className="form-control"
               placeholder="Tìm Mã đơn hàng, Tên khách hàng"
+              value={filters.search}
+              onChange={(e) => updateFilters("search", e.target.value)}
             />
           </div>
           <div className="col-md-3">
@@ -1067,20 +1099,33 @@ const page = () => {
               type="date"
               className="form-control"
               placeholder="Chọn ngày"
+              value={filters.startDate}
+              onChange={(e) => updateFilters("startDate", e.target.value)}
             />
           </div>
           <div className="col-md-3">
-            <select className="form-select">
-              <option>Trạng thái đơn</option>
-              <option>Chờ thanh toán</option>
-              <option>Chờ gửi hàng</option>
-              <option>Đã gửi hàng</option>
-              <option>Đã giao</option>
-              <option>Đã hủy</option>
+            <select
+              className="form-select"
+              value={filters.status}
+              onChange={(e) =>
+                updateFilters("status", e.target.value as typeof filters.status)
+              }
+            >
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="PENDING">Chờ xác nhận</option>
+              <option value="CONFIRMED">Chờ gửi hàng</option>
+              <option value="IN_TRANSIT">Đang vận chuyển</option>
+              <option value="DELIVERED">Đã giao</option>
+              <option value="CANCELED">Đã hủy</option>
             </select>
           </div>
           <div className="col-md-2">
-            <button className="btn btn-outline-danger w-100">Áp dụng</button>
+            <button
+              className="btn btn-outline-danger w-100"
+              onClick={() => refetch()}
+            >
+              Áp dụng
+            </button>
           </div>
         </div>
       </div>
@@ -1088,7 +1133,7 @@ const page = () => {
       {/* Order Count */}
       <div className="bg-white mx-3 p-3 border-bottom d-flex justify-content-between align-items-center">
         <div>
-          <span className="fw-bold">{combinedOrders.length} Đơn hàng</span>
+          <span className="fw-bold">{totalRecords} Đơn hàng</span>
         </div>
         <div className="d-flex gap-2">
           <button className="btn btn-sm btn-outline-secondary">
@@ -1370,6 +1415,16 @@ const page = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="bg-white mx-3 mb-3">
+        <Pagination
+          currentPage={filters.page}
+          totalPages={totalPages}
+          onPageChange={updatePage}
+          totalItems={totalRecords}
+          itemsPerPage={perPage}
+        />
       </div>
 
       {pendingShipmentOrder && (

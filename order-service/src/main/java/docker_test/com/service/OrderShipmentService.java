@@ -1,6 +1,7 @@
 package docker_test.com.service;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -9,6 +10,10 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -118,6 +123,7 @@ public class OrderShipmentService {
                 row.getOrderId(),
                 row.getShopId(),
                 row.getShopName(),
+				row.getShopUserId(),
                 row.getShippingFee(),
                 Long.valueOf(row.getTotalAmount().longValue()),
                 Long.valueOf(row.getSubtotal().longValue()),
@@ -127,6 +133,7 @@ public class OrderShipmentService {
                 row.getTrackingNumber(), 
                 row.getShippingStatus(),
                 shipment.getBusinessStatus(),
+                shipment.getPayoutSettled(),
                 shipment.getAdjustmentRequired(),
                 shipment.getLatestAdjustmentRequestId(),
                 shipment.getReturnStatusSummary(),
@@ -138,6 +145,7 @@ public class OrderShipmentService {
                         row.getShippingFee(),
                         row.getDiscountAmount(),
                         row.getFinalAmount(),
+                        row.getVoucherId(),
                         row.getPaymentMethod(),
                         row.getPaymentStatus(),
                         row.getOrderStatus()
@@ -158,17 +166,19 @@ public class OrderShipmentService {
     
 
         @Transactional(readOnly = true)
-    public List<OrderShipmentByShopResponseDTO> getShipmentsByShopId(Long shopId,String status, int page, int size, String sortBy, String sortOrder, String search,String paymentStatus) {
-        	
-        List<OrderShipmentWithOrderAndRecipientProjection> rows = orderShipmentRepository.findShipmentDetailsByShopId(shopId,status, paymentStatus);
-        System.out.println("Fetched " + rows.size() + " shipments for shopId: " + shopId);
-        System.out.println("Total amount of first shipment: " + (rows.isEmpty() ? "N/A" : rows.get(0).getTotalAmount()));
+        public Map<String, Object> getShipmentsByShopId(Long shopId,String status, int page, int size, String sortBy, String sortOrder, String search,String paymentStatus) {
+		Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size));
+                Page<OrderShipmentWithOrderAndRecipientProjection> rows = orderShipmentRepository.findShipmentDetailsByShopId(shopId,status, paymentStatus, pageable);
+                List<OrderShipmentByShopResponseDTO> shipments = mapRowsToShipmentByShopResponse(rows.getContent());
 
-        return mapRowsToShipmentByShopResponse(rows);
+		Map<String, Long> statusStats = toStatusStats(
+				orderShipmentRepository.countShipmentStatsByShopId(shopId, status, paymentStatus));
+
+		return buildPaginatedResponse(shipments, rows.getTotalElements(), pageable, statusStats);
     }
 
     @Transactional(readOnly = true)
-    public List<OrderShipmentByShopResponseDTO> getAllShipments(
+    public Map<String, Object> getAllShipments(
             String status,
             int page,
             int size,
@@ -177,10 +187,15 @@ public class OrderShipmentService {
             String search,
             String paymentStatus
     ) {
-        List<OrderShipmentWithOrderAndRecipientProjection> rows = orderShipmentRepository
-                .findShipmentDetailsAll(status, paymentStatus, search);
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size));
+        Page<OrderShipmentWithOrderAndRecipientProjection> rows = orderShipmentRepository
+                .findShipmentDetailsAll(status, paymentStatus, search, pageable);
 
-        return mapRowsToShipmentByShopResponse(rows);
+        List<OrderShipmentByShopResponseDTO> shipments = mapRowsToShipmentByShopResponse(rows.getContent());
+        Map<String, Long> statusStats = toStatusStats(
+                orderShipmentRepository.countShipmentStatsAll(status, paymentStatus, search));
+
+        return buildPaginatedResponse(shipments, rows.getTotalElements(), pageable, statusStats);
     }
 
     private List<OrderShipmentByShopResponseDTO> mapRowsToShipmentByShopResponse(
@@ -223,6 +238,7 @@ public class OrderShipmentService {
                         row.getOrderId(),
                         row.getShopId(),
                         row.getShopName(),
+					row.getShopUserId(),
                         row.getShippingFee(),
                   Long.valueOf(row.getTotalAmount().longValue()),
                    Long.valueOf(row.getSubtotal().longValue()),
@@ -230,6 +246,7 @@ public class OrderShipmentService {
                         row.getCarrierName(),
                         row.getTrackingNumber(), 
                         row.getShippingStatus(),
+                        row.getPayoutSettled(),
                         row.getLastReturnRequestId(),
                         new OrderShipmentByShopResponseDTO.OrderInfoDTO(
                                 row.getOrderNumber(),
@@ -256,6 +273,38 @@ public class OrderShipmentService {
                 ))
                 .toList();
     }
+
+        private Map<String, Object> buildPaginatedResponse(
+                        List<OrderShipmentByShopResponseDTO> data,
+                        long total,
+                        Pageable pageable,
+                        Map<String, Long> statusStats) {
+                Map<String, Object> response = new LinkedHashMap<>();
+                Map<String, Object> meta = new LinkedHashMap<>();
+                meta.put("page", pageable.getPageNumber() + 1);
+                meta.put("total", total);
+                meta.put("perPage", pageable.getPageSize());
+                response.put("data", data);
+                response.put("meta", meta);
+                response.put("statusStats", statusStats);
+                return response;
+        }
+
+        private Map<String, Long> toStatusStats(List<Object[]> rows) {
+                Map<String, Long> stats = new LinkedHashMap<>();
+                if (rows == null) {
+                        return stats;
+                }
+                for (Object[] row : rows) {
+                        if (row == null || row.length < 2 || row[0] == null) {
+                                continue;
+                        }
+                        String key = String.valueOf(row[0]);
+                        Long total = row[1] == null ? 0L : ((Number) row[1]).longValue();
+                        stats.put(key, total);
+                }
+                return stats;
+        }
 
     @Transactional
     public ConfirmPackagedResponseDTO confirmPackagedAndRequestLogistics(Long shipmentId) {

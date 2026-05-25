@@ -2,11 +2,14 @@ package docker_test.com.dto;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public record OrderShipmentByShopResponseDTO(
         Long shipmentId,
         Long orderId,
         Long shopId,
         String shopName,
+        Long shopUserId,
         Long shippingFee,
         Long totalAmount,
         Long subtotal,
@@ -14,6 +17,7 @@ public record OrderShipmentByShopResponseDTO(
         String carrierName,
         String trackingNumber,
         String shippingStatus,
+        @JsonProperty("is_payout_settled") Boolean payoutSettled,
         Long lastReturnRequestId,
         OrderInfoDTO order,
         RecipientInfoDTO recipient,

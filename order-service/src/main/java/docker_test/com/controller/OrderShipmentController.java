@@ -1,6 +1,7 @@
 package docker_test.com.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,7 +35,7 @@ public class OrderShipmentController {
 	}
 
 	@GetMapping
-	public ResponseEntity<List<OrderShipmentByShopResponseDTO>> getAllShipments(
+	public ResponseEntity<Map<String, Object>> getAllShipments(
 			@RequestParam(defaultValue = "ALL") String status,
 			@RequestParam(defaultValue = "ALL") String paymentStatus,
 			@RequestParam(defaultValue = "1") int page,
@@ -47,7 +48,7 @@ public class OrderShipmentController {
 	}
 
 	@GetMapping("/shop/{shopId}")
-	public ResponseEntity<List<OrderShipmentByShopResponseDTO>> getShipmentsByShopId(@PathVariable Long shopId,
+	public ResponseEntity<Map<String, Object>> getShipmentsByShopId(@PathVariable Long shopId,
 			@RequestParam(defaultValue = "ALL") String status,
 			@RequestParam(defaultValue = "ALL") String paymentStatus,
 			@RequestParam(defaultValue = "1") int page,

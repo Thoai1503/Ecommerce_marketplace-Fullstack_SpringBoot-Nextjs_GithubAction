@@ -516,6 +516,8 @@ export interface PaymentWalletAdmin {
   lockedBalance: number;
   currency: string;
   isActive: boolean;
+  status?: "ACTIVE" | "SUSPENDED" | "CLOSED";
+  walletStatus?: "ACTIVE" | "SUSPENDED" | "CLOSED";
   createdAt: string;
   updatedAt: string;
 }

@@ -2,6 +2,7 @@ import { IOrderShipment } from "@/validators/orderShipment";
 import { Model } from "../core/model";
 import { ObjectsFactory } from "../core/objectFactory";
 import { API_URL } from "@/helper/api";
+import type { IPaginateResponse } from "../core/api";
 
 const modelConfig = {
   path: "/api/order-shipments",
@@ -58,13 +59,47 @@ export class OrderShipments extends Model {
         shopId,
         JSON.stringify(filters ?? {}),
       ],
-      queryFn: (): Promise<IOrderShipment[]> =>
+      queryFn: async (): Promise<{
+        data: IOrderShipment[];
+        meta: IPaginateResponse<IOrderShipment>["meta"];
+        statusStats: Record<string, number>;
+      }> =>
         this.api
-          .get<IOrderShipment[]>({
+          .get<
+            | IOrderShipment[]
+            | {
+                data?: IOrderShipment[];
+                meta?: IPaginateResponse<IOrderShipment>["meta"];
+                statusStats?: Record<string, number>;
+              }
+          >({
             url: `${API_URL}/api/orders/shipments/shop/${shopId}${params.toString() ? `?${params.toString()}` : ""}`,
             //params: filterParams,
           })
-          .then((r) => r.data),
+          .then((r) => {
+            const payload = r.data;
+            if (Array.isArray(payload)) {
+              return {
+                data: payload,
+                meta: {
+                  page: filters?.page || 1,
+                  total: payload.length,
+                  perPage: filters?.pageSize || 10,
+                },
+                statusStats: {},
+              };
+            }
+
+            return {
+              data: payload?.data || [],
+              meta: payload?.meta || {
+                page: filters?.page || 1,
+                total: 0,
+                perPage: filters?.pageSize || 10,
+              },
+              statusStats: payload?.statusStats || {},
+            };
+          }),
     };
   }
 
@@ -104,12 +139,28 @@ export class OrderShipments extends Model {
 
     return {
       queryKey: [this.queryKeys.findAll, JSON.stringify(filters ?? {})],
-      queryFn: (): Promise<IOrderShipment[]> =>
+      queryFn: async (): Promise<{
+        data: IOrderShipment[];
+        meta: IPaginateResponse<IOrderShipment>["meta"];
+        statusStats: Record<string, number>;
+      }> =>
         this.api
-          .get<IOrderShipment[]>({
+          .get<{
+            data: IOrderShipment[];
+            meta: IPaginateResponse<IOrderShipment>["meta"];
+            statusStats?: Record<string, number>;
+          }>({
             url: `${API_URL}/api/orders/shipments${params.toString() ? `?${params.toString()}` : ""}`,
           })
-          .then((r) => r.data),
+          .then((r) => ({
+            data: r.data?.data || [],
+            meta: r.data?.meta || {
+              page: 1,
+              total: 0,
+              perPage: filters?.pageSize || 10,
+            },
+            statusStats: r.data?.statusStats || {},
+          })),
     };
   }
 
