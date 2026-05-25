@@ -142,10 +142,16 @@ export interface OrderShipmentFilters {
   status:
     | "ALL"
     | "PENDING"
+    | "CONFIRMED"
+    | "PICKED_UP"
     | "IN_TRANSIT"
     | "OUT_FOR_DELIVERY"
     | "DELIVERED"
-    | "COMPLETED";
+    | "COMPLETED"
+    | "FAILED"
+    | "RETURNED"
+    | "CANCELED"
+    | "CANCELLED";
   search: string;
   startDate: string;
   endDate: string;

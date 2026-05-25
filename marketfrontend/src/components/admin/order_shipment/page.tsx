@@ -180,28 +180,24 @@ export default function AdminOrderShipmentPage() {
       paymentStatus: paymentFilter,
       search: searchTerm.trim() || undefined,
       sortOrder: "desc",
-      page: 1,
-      pageSize: 1000,
+      page: currentPage,
+      pageSize: ITEMS_PER_PAGE,
     }),
   });
 
-  const shipments = (data || []) as IOrderShipment[];
-
+  const shipments = (data?.data || []) as IOrderShipment[];
+  const totalRecords = data?.meta?.total || 0;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalRecords / (data?.meta?.perPage || ITEMS_PER_PAGE)),
+  );
   const statusStats = useMemo(() => {
-    const base: Record<string, number> = { ALL: shipments.length };
-    for (const shipment of shipments) {
-      const key = normalizeStatus(shipment.shipping_status) || "UNKNOWN";
-      base[key] = (base[key] || 0) + 1;
+    const base: Record<string, number> = { ALL: totalRecords };
+    for (const [key, value] of Object.entries(data?.statusStats || {})) {
+      base[normalizeStatus(key)] = value;
     }
     return base;
-  }, [shipments]);
-
-  const pagedShipments = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return shipments.slice(start, start + ITEMS_PER_PAGE);
-  }, [shipments, currentPage]);
-
-  const totalPages = Math.max(1, Math.ceil(shipments.length / ITEMS_PER_PAGE));
+  }, [data, totalRecords]);
 
   const toggleExpand = (shipmentId: number) => {
     setExpandedShipmentIds((prev) => {
@@ -339,7 +335,7 @@ export default function AdminOrderShipmentPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pagedShipments.map((shipment) => {
+                  {shipments.map((shipment) => {
                     const expanded = expandedShipmentIds.has(
                       shipment.shipmentId,
                     );
@@ -533,7 +529,7 @@ export default function AdminOrderShipmentPage() {
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={setCurrentPage}
-                totalItems={shipments.length}
+                totalItems={totalRecords}
                 itemsPerPage={ITEMS_PER_PAGE}
               />
             </div>

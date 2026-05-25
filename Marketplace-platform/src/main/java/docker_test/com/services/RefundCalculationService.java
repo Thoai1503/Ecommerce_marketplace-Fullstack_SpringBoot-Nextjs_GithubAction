@@ -205,7 +205,13 @@ public class RefundCalculationService {
 				returnAmount =
 						money(result.getItems().stream()
 								.filter(item -> item.getCurrentReturnQuantity() > 0)
-								.mapToDouble(item -> item.getCurrentReturnQuantity()*item.getPrice()).sum());
+								.mapToDouble(item -> item.getCurrentReturnQuantity()*item.getPrice()).sum())
+						- money(voucherRedemptions.stream().mapToDouble(
+								vr-> vr.getDiscountAmountApplied().doubleValue()).sum())
+						
+						
+						
+						;
 			} else if (!isEligibleForPlatformVoucher && !isHaveNotEligibleShopVoucher) {
 				returnAmount =  (money(result.getCurrentPaidAmount() - newPaidResult));
 			} else if (isEligibleForPlatformVoucher && isHaveNotEligibleShopVoucher) {

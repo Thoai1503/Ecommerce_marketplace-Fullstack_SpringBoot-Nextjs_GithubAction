@@ -15,6 +15,9 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -100,6 +103,52 @@ public class RefundRequestService {
 		return request;
 	}
 
+	@Transactional
+	public Map<String, Object> getAllPaged(
+			String status,
+			String search,
+			Long shopId,
+			Long customerId,
+			LocalDateTime startDate,
+			LocalDateTime endDateExclusive,
+			int page,
+			int size) {
+		Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size));
+		Page<ReturnRequest> result = refundRequestRepository.findAllWithAttachmentsPaged(
+				normalizeFilter(status),
+				normalizeFilter(search),
+				shopId,
+				customerId,
+				startDate,
+				endDateExclusive,
+				pageable);
+		List<ReturnRequest> requests = prepareReturnRequests(result.getContent(), false);
+		return buildPagedResponse(requests, result.getTotalElements(), pageable, buildStats(status, search, shopId, customerId, startDate, endDateExclusive));
+	}
+
+	@Transactional
+	public Map<String, Object> getByShopIdPaged(
+			Long shopId,
+			String status,
+			String search,
+			Long customerId,
+			LocalDateTime startDate,
+			LocalDateTime endDateExclusive,
+			int page,
+			int size) {
+		Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size));
+		Page<ReturnRequest> result = refundRequestRepository.findByShopIdWithAttachmentsPaged(
+				shopId,
+				normalizeFilter(status),
+				normalizeFilter(search),
+				customerId,
+				startDate,
+				endDateExclusive,
+				pageable);
+		List<ReturnRequest> requests = prepareReturnRequests(result.getContent(), false);
+		return buildPagedResponse(requests, result.getTotalElements(), pageable, buildStats(status, search, shopId, customerId, startDate, endDateExclusive));
+	}
+
 	public Map<String, Object> previewRefundRequest(RefundRequestDTO refundRequestDTO) {
 		RefundCalculation calculation = calculateRefund(refundRequestDTO);
 		return Map.of(
@@ -173,6 +222,18 @@ public class RefundRequestService {
 	}
 
 	private RefundCalculation calculateRefund(RefundRequestDTO refundRequestDTO) {
+		return calculateRefund(refundRequestDTO, refundRequestDTO == null ? null : refundRequestDTO.getReturnRequestId());
+	}
+
+	private RefundCalculation calculateRefund(RefundRequestDTO refundRequestDTO, Long excludedReturnRequestId) {
+		return calculateRefund(refundRequestDTO, excludedReturnRequestId, null, null);
+	}
+
+	private RefundCalculation calculateRefund(
+			RefundRequestDTO refundRequestDTO,
+			Long excludedReturnRequestId,
+			LocalDateTime requestCreatedAtCutoff,
+			Long requestIdCutoff) {
 		if (refundRequestDTO.getOrderId() == null || refundRequestDTO.getItems() == null
 				|| refundRequestDTO.getItems().isEmpty()) {
 			double fallbackAmount = money(refundRequestDTO.getRequestedAmount());
@@ -185,7 +246,9 @@ public class RefundRequestService {
 					0.0,
 					Map.of(),
 					Map.of(),
-					null);
+					null,
+					false,
+					false);
 		}
 
 		List<OrderItemSnapshot> orderItems = findOrderItems(refundRequestDTO.getOrderId());
@@ -195,7 +258,11 @@ public class RefundRequestService {
 
 		Map<Long, OrderItemSnapshot> itemById = orderItems.stream()
 				.collect(Collectors.toMap(OrderItemSnapshot::orderItemId, item -> item));
-		Map<Long, Integer> previousReturnQty = findPreviousReturnQuantities(refundRequestDTO.getOrderId());
+		Map<Long, Integer> previousReturnQty = findPreviousReturnQuantities(
+				refundRequestDTO.getOrderId(),
+				excludedReturnRequestId,
+				requestCreatedAtCutoff,
+				requestIdCutoff);
 		Map<Long, Integer> requestedQty = normalizeRequestedQuantities(refundRequestDTO.getItems());
 		Map<Long, Integer> acceptedQty = new LinkedHashMap<>();
 
@@ -217,7 +284,11 @@ public class RefundRequestService {
 			throw new IllegalArgumentException("There are no longer valid quantities to create a return request.");
 		}
 
-		double previousRefundAmount = findPreviousRefundAmount(refundRequestDTO.getOrderId());
+		double previousRefundAmount = findPreviousRefundAmount(
+				refundRequestDTO.getOrderId(),
+				excludedReturnRequestId,
+				requestCreatedAtCutoff,
+				requestIdCutoff);
 		double originalProductPayable = orderItems.stream()
 				.mapToDouble(this::netAfterAllVouchers)
 				.sum();
@@ -264,7 +335,8 @@ public class RefundRequestService {
 						remainingItems));
 		double remainingShopVoucherDiscount = remainingItems.stream()
 				.mapToDouble(RemainingItem::shopVoucherDiscountAmount)
-				.sum();
+				.sum();	
+		
 		double remainingPlatformVoucherBase = remainingItems.stream()
 				.mapToDouble(RemainingItem::amountAfterShopVoucher)
 				.sum();
@@ -272,16 +344,23 @@ public class RefundRequestService {
 				remainingShopVoucherDiscount - safe(shopRecalculated.getShopVoucherDiscount())));
 		double remainingPayable = money(remainingAfterPlatformLayer + shopVoucherClawback);
 		double remainingPlatformCommission = shopRecalculated.getPlatformCommissionAmount();
-		boolean platformVoucherInvalidated = remainingPlatformVoucherBase > 0.0
-				&& hasMissingAppliedVoucher(voucherSelection.platformVoucherIds(), platformRecalculated);
-		boolean shopVoucherInvalidated = remainingShopVoucherDiscount > 0.0
-				&& hasMissingAppliedVoucher(shopVoucherIds(voucherSelection), shopRecalculated);
+		List<Long> platformVoucherIds = voucherSelection.platformVoucherIds();
+		List<Long> shopVoucherIds = shopVoucherIds(voucherSelection);
+		boolean platformVoucherInvalidated = !platformVoucherIds.isEmpty()
+				&& hasMissingAppliedVoucher(platformVoucherIds, platformRecalculated);
+		boolean shopVoucherInvalidated = !shopVoucherIds.isEmpty()
+				&& hasMissingAppliedVoucher(shopVoucherIds, shopRecalculated);
 		boolean voucherInvalidated = platformVoucherInvalidated || shopVoucherInvalidated;
+		double platformVoucherAppliedAmount = platformVoucherInvalidated
+				? findPlatformVoucherAppliedAmount(refundRequestDTO.getOrderId())
+				: 0.0;
 		double refundAmount = voucherInvalidated
 				? signedMoney(originalProductPayable - remainingPayable - previousRefundAmount)
 				: money(returnedPaidAmount);
 		double voucherClawback = voucherInvalidated
-				? money(Math.max(0.0, returnedAfterShopVoucherAmount - refundAmount))
+				? money(platformVoucherAppliedAmount > 0.0
+						? platformVoucherAppliedAmount
+						: Math.max(0.0, returnedAfterShopVoucherAmount - refundAmount))
 				: 0.0;
 		double finalRemainingPayable = voucherInvalidated
 				? remainingPayable
@@ -305,7 +384,9 @@ public class RefundRequestService {
 				platformCommissionAdjustment,
 				acceptedQty,
 				refundByOrderItemId,
-				message);
+				message,
+				platformVoucherInvalidated,
+				shopVoucherInvalidated);
 	}
 	
 	private ReturnShipment buildLogisticPayload(ReturnRequest savedRefundRequest,Long returnRequestID) {
@@ -602,20 +683,46 @@ public class RefundRequestService {
 		return items;
 	}
 
-	private Map<Long, Integer> findPreviousReturnQuantities(Long orderId) {
-		String sql = """
+	private Map<Long, Integer> findPreviousReturnQuantities(
+			Long orderId,
+			Long excludedReturnRequestId,
+			LocalDateTime requestCreatedAtCutoff,
+			Long requestIdCutoff) {
+		StringBuilder sql = new StringBuilder("""
 				SELECT rri.order_item_id, COALESCE(SUM(rri.quantity), 0) AS returned_quantity
 				FROM return_request_item rri
 				JOIN return_request rr ON rr.id = rri.return_request_id
 				WHERE rr.order_id = ?
 				  AND UPPER(rr.status) NOT IN ('REJECTED', 'CANCELED', 'CANCELLED',"PENDING_APPROVAL")
-				GROUP BY rri.order_item_id
-				""";
+				""");
+		if (excludedReturnRequestId != null) {
+			sql.append(" AND rr.id <> ?");
+		}
+		if (requestIdCutoff != null) {
+			if (requestCreatedAtCutoff != null) {
+				sql.append(" AND (rr.created_at IS NULL OR rr.created_at < ? OR (rr.created_at = ? AND rr.id <= ?))");
+			} else {
+				sql.append(" AND rr.id <= ?");
+			}
+		}
+		sql.append(" GROUP BY rri.order_item_id");
 
 		Map<Long, Integer> result = new HashMap<>();
 		try (Connection con = DBConnection.getConn();
-				PreparedStatement ps = con.prepareStatement(sql)) {
-			ps.setLong(1, orderId);
+				PreparedStatement ps = con.prepareStatement(sql.toString())) {
+			int parameterIndex = 1;
+			ps.setLong(parameterIndex++, orderId);
+			if (excludedReturnRequestId != null) {
+				ps.setLong(parameterIndex++, excludedReturnRequestId);
+			}
+			if (requestIdCutoff != null && requestCreatedAtCutoff != null) {
+				java.sql.Timestamp cutoffTs = java.sql.Timestamp.valueOf(requestCreatedAtCutoff);
+				ps.setTimestamp(parameterIndex++, cutoffTs);
+				ps.setTimestamp(parameterIndex++, cutoffTs);
+				ps.setLong(parameterIndex++, requestIdCutoff);
+			} else if (requestIdCutoff != null) {
+				ps.setLong(parameterIndex++, requestIdCutoff);
+			}
 			ResultSet rs = ps.executeQuery();
 			while (rs.next()) {
 				result.put(rs.getLong("order_item_id"), Math.max(0, rs.getInt("returned_quantity")));
@@ -626,17 +733,43 @@ public class RefundRequestService {
 		return result;
 	}
 
-	private double findPreviousRefundAmount(Long orderId) {
-		String sql = """
+	private double findPreviousRefundAmount(
+			Long orderId,
+			Long excludedReturnRequestId,
+			LocalDateTime requestCreatedAtCutoff,
+			Long requestIdCutoff) {
+		StringBuilder sql = new StringBuilder("""
 				SELECT COALESCE(SUM(requested_amount), 0) AS refunded_amount
 				FROM return_request
 				WHERE order_id = ?
 				  AND UPPER(status) NOT IN ('REJECTED', 'CANCELED', 'CANCELLED',"PENDING_APPROVAL")
-				""";
+				""");
+		if (excludedReturnRequestId != null) {
+			sql.append(" AND id <> ?");
+		}
+		if (requestIdCutoff != null) {
+			if (requestCreatedAtCutoff != null) {
+				sql.append(" AND (created_at IS NULL OR created_at < ? OR (created_at = ? AND id <= ?))");
+			} else {
+				sql.append(" AND id <= ?");
+			}
+		}
 
 		try (Connection con = DBConnection.getConn();
-				PreparedStatement ps = con.prepareStatement(sql)) {
-			ps.setLong(1, orderId);
+				PreparedStatement ps = con.prepareStatement(sql.toString())) {
+			int parameterIndex = 1;
+			ps.setLong(parameterIndex++, orderId);
+			if (excludedReturnRequestId != null) {
+				ps.setLong(parameterIndex++, excludedReturnRequestId);
+			}
+			if (requestIdCutoff != null && requestCreatedAtCutoff != null) {
+				java.sql.Timestamp cutoffTs = java.sql.Timestamp.valueOf(requestCreatedAtCutoff);
+				ps.setTimestamp(parameterIndex++, cutoffTs);
+				ps.setTimestamp(parameterIndex++, cutoffTs);
+				ps.setLong(parameterIndex++, requestIdCutoff);
+			} else if (requestIdCutoff != null) {
+				ps.setLong(parameterIndex++, requestIdCutoff);
+			}
 			ResultSet rs = ps.executeQuery();
 			return rs.next() ? signedMoney(rs.getDouble("refunded_amount")) : 0.0;
 		} catch (Exception e) {
@@ -656,7 +789,7 @@ public class RefundRequestService {
 				LEFT JOIN voucher_redemption_item vri ON vri.voucher_redemption_id = vr.id
 				LEFT JOIN order_item oi ON oi.id = vri.order_item_id
 				WHERE vr.order_id = ?
-				  AND UPPER(COALESCE(vr.status, 'SUCCESS')) = 'SUCCESS'
+				  AND UPPER(COALESCE(vr.status, 'SUCCESS')) NOT IN ('FAILED', 'CANCELED', 'CANCELLED')
 				""";
 
 		Map<String, List<Long>> shopVoucherIdsByShop = new LinkedHashMap<>();
@@ -672,17 +805,18 @@ public class RefundRequestService {
 				}
 
 				String issuerType = normalize(rs.getString("issuer_type"));
-				if ("SHOP".equals(issuerType)) {
+				Long rowShopId = getLong(rs, "shop_id");
+				if (issuerType.contains("SHOP") || rowShopId != null) {
 					Long shopId = getLong(rs, "issuer_id");
 					if (shopId == null || shopId <= 0) {
-						shopId = getLong(rs, "shop_id");
+						shopId = rowShopId;
 					}
 					if (shopId != null && shopId > 0) {
 						shopVoucherIdsByShop
 								.computeIfAbsent(String.valueOf(shopId), ignored -> new ArrayList<>())
 								.add(voucherId);
 					}
-				} else if ("PLATFORM".equals(issuerType)) {
+				} else if (issuerType.contains("PLATFORM")) {
 					if (!platformVoucherIds.contains(voucherId)) {
 						platformVoucherIds.add(voucherId);
 					}
@@ -694,6 +828,28 @@ public class RefundRequestService {
 
 		shopVoucherIdsByShop.replaceAll((shopId, voucherIds) -> voucherIds.stream().distinct().toList());
 		return new VoucherSelection(shopVoucherIdsByShop, platformVoucherIds);
+	}
+
+	private double findPlatformVoucherAppliedAmount(Long orderId) {
+		String sql = """
+				SELECT COALESCE(vr.discount_amount_applied, 0) AS discount_amount_applied
+				FROM orders o
+				LEFT JOIN voucher_redemption vr
+					ON vr.order_id = o.id
+					AND vr.voucher_id = o.voucher_id
+					AND UPPER(COALESCE(vr.status, 'SUCCESS')) = 'SUCCESS'
+				WHERE o.id = ?
+				LIMIT 1
+				""";
+
+		try (Connection con = DBConnection.getConn();
+				PreparedStatement ps = con.prepareStatement(sql)) {
+			ps.setLong(1, orderId);
+			ResultSet rs = ps.executeQuery();
+			return rs.next() ? signedMoney(rs.getDouble("discount_amount_applied")) : 0.0;
+		} catch (Exception e) {
+			throw new RuntimeException("Unable to read platform voucher discount amount.", e);
+		}
 	}
 
 	private double netAfterAllVouchers(OrderItemSnapshot item) {
@@ -770,19 +926,139 @@ public class RefundRequestService {
 		recipientDTO.setWard(address.getWard());
 		return recipientDTO;
 	}
+
+	private RefundRequestDTO toRefundRequestDTO(ReturnRequest request) {
+		RefundRequestDTO dto = new RefundRequestDTO();
+		dto.setReturnRequestId(request.getId());
+		dto.setOrderId(request.getOrderId());
+		dto.setShopId(request.getShopId());
+		dto.setCustomerId(request.getCustomerId());
+		dto.setReason(request.getReason());
+		dto.setOrderShipmentId(request.getOrderShipmentId());
+		dto.setQuantity(request.getQuantity());
+		dto.setRequestedAmount(request.getRequestedAmount());
+		dto.setItems(request.getItems() == null
+				? List.of()
+				: request.getItems().stream().map(this::toRequestItemDTO).toList());
+		return dto;
+	}
+
+	private RequestItemDTO toRequestItemDTO(ReturnRequestItem item) {
+		RequestItemDTO dto = new RequestItemDTO();
+		dto.setOrderItemId(item.getOrderItemId());
+		dto.setQuantity(item.getQuantity());
+		dto.setRequestedAmount(item.getRequestedAmount());
+		dto.setPrice(item.getPrice());
+		dto.setProductName(item.getProductName());
+		return dto;
+	}
+
+	private RefundCalculation resolveRefundCalculationForRequest(ReturnRequest request) {
+		if (request == null || request.getId() == null || request.getOrderId() == null
+				|| request.getItems() == null || request.getItems().isEmpty()) {
+			return null;
+		}
+
+		RefundRequestDTO dto = toRefundRequestDTO(request);
+		return calculateRefund(dto, request.getId(), request.getCreatedAt(), request.getId());
+	}
+
+	private void applyVoucherSignals(ReturnRequest request) {
+		if (request == null) {
+			return;
+		}
+
+		initializeReturnRequestDetails(request);
+
+		RefundCalculation calculation = resolveRefundCalculationForRequest(request);
+		if (calculation == null) {
+			request.setVoucherClawbackAmount(0.0);
+			request.setShopVoucherInvalidated(false);
+			request.setFirstShopVoucherInvalidation(false);
+			request.setShowShopVoucherInvalidationSignal(false);
+			return;
+		}
+
+		request.setVoucherClawbackAmount(calculation.voucherClawbackAmount());
+		request.setShopVoucherInvalidated(calculation.shopVoucherInvalidated());
+
+		ShopVoucherInvalidationSignal signal = resolveShopVoucherInvalidationSignal(
+				request,
+				calculation.shopVoucherInvalidated());
+		request.setFirstShopVoucherInvalidation(signal.firstInvalidation());
+		request.setShowShopVoucherInvalidationSignal(signal.showSignal());
+	}
+
+	private ShopVoucherInvalidationSignal resolveShopVoucherInvalidationSignal(
+			ReturnRequest request,
+			boolean currentRequestInvalidatesShopVoucher) {
+		if (request == null || request.getId() == null || request.getOrderId() == null
+				|| !currentRequestInvalidatesShopVoucher) {
+			return new ShopVoucherInvalidationSignal(false, false);
+		}
+
+		List<ReturnRequest> orderRequests = refundRequestRepository.findByOrderId(request.getOrderId());
+		if (orderRequests == null || orderRequests.isEmpty()) {
+			return new ShopVoucherInvalidationSignal(true, true);
+		}
+
+		Long firstInvalidatingRequestId = orderRequests.stream()
+				.filter(Objects::nonNull)
+				.filter(item -> item.getId() != null)
+				.filter(item -> !isIgnoredReturnStatus(item.getStatus()))
+				.sorted((left, right) -> {
+					LocalDateTime leftCreatedAt = left.getCreatedAt() == null ? LocalDateTime.MIN : left.getCreatedAt();
+					LocalDateTime rightCreatedAt = right.getCreatedAt() == null ? LocalDateTime.MIN : right.getCreatedAt();
+					int compareCreatedAt = leftCreatedAt.compareTo(rightCreatedAt);
+					if (compareCreatedAt != 0) {
+						return compareCreatedAt;
+					}
+					return left.getId().compareTo(right.getId());
+				})
+				.filter(candidate -> {
+					initializeReturnRequestDetails(candidate);
+					RefundCalculation candidateCalculation = resolveRefundCalculationForRequest(candidate);
+					return candidateCalculation != null && candidateCalculation.shopVoucherInvalidated();
+				})
+				.map(ReturnRequest::getId)
+				.findFirst()
+				.orElse(null);
+
+		boolean firstInvalidation = firstInvalidatingRequestId != null
+				&& firstInvalidatingRequestId.equals(request.getId());
+		return new ShopVoucherInvalidationSignal(firstInvalidation, firstInvalidation);
+	}
+
+	private boolean isIgnoredReturnStatus(ReturnRequestStatus status) {
+		if (status == null) {
+			return false;
+		}
+		String normalized = status.name().toUpperCase(Locale.ROOT);
+		return "REJECTED".equals(normalized)
+				|| "CANCELED".equals(normalized)
+				|| "CANCELLED".equals(normalized);
+	}
+
+	private double resolveVoucherClawbackAmount(ReturnRequest request) {
+		if (request == null || request.getId() == null || request.getOrderId() == null
+				|| request.getItems() == null || request.getItems().isEmpty()) {
+			return 0.0;
+		}
+
+		RefundRequestDTO dto = toRefundRequestDTO(request);
+		return calculateRefund(dto, request.getId()).voucherClawbackAmount();
+	}
 	 
 	@Transactional
 	public List<ReturnRequest> getAll() {
-		List<ReturnRequest> requests = refundRequestRepository.findAll();
-		logReturnRequestItems(requests);
-		return prepareReturnRequests(requests);
+		List<ReturnRequest> requests = refundRequestRepository.findAllWithAttachments();
+		return prepareReturnRequests(requests, false);
 	}
 
 	@Transactional
 	public List<ReturnRequest> getByShopId(Long shopId) {
-		List<ReturnRequest> requests = refundRequestRepository.findByShopId(shopId);
-		logReturnRequestItems(requests);
-		return prepareReturnRequests(requests);
+		List<ReturnRequest> requests = refundRequestRepository.findByShopIdWithAttachments(shopId);
+		return prepareReturnRequests(requests, false);
 	}
 	
 	@Transactional
@@ -794,6 +1070,77 @@ public class RefundRequestService {
 
 	public RefundCalculationResultDTO getRefundCalculation(Long id) {
 		return refundCalculationService.calculateByReturnRequestId(id);
+	}
+
+	private Map<String, Object> buildPagedResponse(
+			List<ReturnRequest> requests,
+			long total,
+			Pageable pageable,
+			Map<String, Object> stats) {
+		Map<String, Object> response = new LinkedHashMap<>();
+		Map<String, Object> meta = new LinkedHashMap<>();
+		meta.put("page", pageable.getPageNumber() + 1);
+		meta.put("total", total);
+		meta.put("perPage", pageable.getPageSize());
+		response.put("data", requests);
+		response.put("meta", meta);
+		response.put("stats", stats);
+		return response;
+	}
+
+	private Map<String, Object> buildStats(
+			String status,
+			String search,
+			Long shopId,
+			Long customerId,
+			LocalDateTime startDate,
+			LocalDateTime endDateExclusive) {
+		List<Object[]> rows = shopId == null
+				? refundRequestRepository.countAllWithAttachmentsStats(
+						normalizeFilter(status),
+						normalizeFilter(search),
+						shopId,
+						customerId,
+						startDate,
+						endDateExclusive)
+				: refundRequestRepository.countAllWithAttachmentsStats(
+						normalizeFilter(status),
+						normalizeFilter(search),
+						shopId,
+						customerId,
+						startDate,
+						endDateExclusive);
+
+		long total = 0L;
+		double amount = 0.0;
+		Map<String, Long> byStatus = new LinkedHashMap<>();
+		if (rows != null) {
+			for (Object[] row : rows) {
+				if (row == null || row.length < 3 || row[0] == null) continue;
+				String key = String.valueOf(row[0]);
+				long count = row[1] == null ? 0L : ((Number) row[1]).longValue();
+				double sum = row[2] == null ? 0.0 : ((Number) row[2]).doubleValue();
+				byStatus.put(key, count);
+				total += count;
+				amount += sum;
+			}
+		}
+
+		Map<String, Object> stats = new LinkedHashMap<>();
+		stats.put("total", total);
+		stats.put("pending", byStatus.getOrDefault("PENDING_APPROVAL", 0L));
+		stats.put("refunded", byStatus.getOrDefault("REFUNDED", 0L));
+		stats.put("amount", amount);
+		stats.put("byStatus", byStatus);
+		return stats;
+	}
+
+	private String normalizeFilter(String value) {
+		if (value == null) {
+			return null;
+		}
+		String trimmed = value.trim();
+		return trimmed.isEmpty() ? null : trimmed;
 	}
 
 	private void initializeReturnRequestDetails(ReturnRequest request) {
@@ -818,13 +1165,13 @@ public class RefundRequestService {
 		});
 	}
 
-	private List<ReturnRequest> prepareReturnRequests(List<ReturnRequest> requests) {
+	private List<ReturnRequest> prepareReturnRequests(List<ReturnRequest> requests, boolean includeVoucherSignals) {
 		List<ReturnRequest> filteredRequests = requests.stream()
 				.filter(Objects::nonNull)
 				.filter(request -> request.getAttachments() != null && !request.getAttachments().isEmpty())
 				.toList();
 
-		enrichReturnRequests(filteredRequests);
+		enrichReturnRequests(filteredRequests, includeVoucherSignals);
 		return filteredRequests;
 	}
 
@@ -832,15 +1179,18 @@ public class RefundRequestService {
 		if (request == null) {
 			return;
 		}
-		enrichReturnRequests(List.of(request));
+		enrichReturnRequests(List.of(request), true);
 	}
 
-	private void enrichReturnRequests(List<ReturnRequest> requests) {
+	private void enrichReturnRequests(List<ReturnRequest> requests, boolean includeVoucherSignals) {
 		if (requests == null || requests.isEmpty()) {
 			return;
 		}
 
 		requests.forEach(this::initializeReturnRequestDetails);
+		if (includeVoucherSignals) {
+			requests.forEach(this::applyVoucherSignals);
+		}
 		Map<Long, ReturnRequest> requestById = requests.stream()
 				.filter(request -> request.getId() != null)
 				.collect(Collectors.toMap(
@@ -1230,6 +1580,22 @@ public class RefundRequestService {
 		return savedRequest;
 	}
 
+	@Transactional
+	public ReturnRequest updateRequestedAmount(Long id, Double requestedAmount) {
+		if (requestedAmount == null) {
+			throw new IllegalArgumentException("requestedAmount khong hop le");
+		}
+
+		ReturnRequest request = refundRequestRepository.findByIdForUpdate(id).orElse(null);
+		if (request == null) {
+			return null;
+		}
+
+		request.setRequestedAmount(requestedAmount);
+		request.setUpdatedAt(LocalDateTime.now());
+		return refundRequestRepository.save(request);
+	}
+
 	private void applyApprovedAmountToItems(ReturnRequest request, double approvedAmount) {
 		if (request.getItems() == null || request.getItems().isEmpty()) {
 			return;
@@ -1329,7 +1695,14 @@ public class RefundRequestService {
 			double platformCommissionAdjustmentAmount,
 			Map<Long, Integer> acceptedQuantities,
 			Map<Long, Double> refundByOrderItemId,
-			String message) {
+			String message,
+			boolean platformVoucherInvalidated,
+			boolean shopVoucherInvalidated) {
+	}
+
+	private record ShopVoucherInvalidationSignal(
+			boolean firstInvalidation,
+			boolean showSignal) {
 	}
 
 	private void setFieldValue(Object target, String fieldName, Object value) {

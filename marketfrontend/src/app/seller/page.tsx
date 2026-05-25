@@ -8,18 +8,18 @@ const DashboardPage: React.FC = () => {
   const shopName = shop?.shop_name || "linhkiendientudy123";
   const shopInitial = shopName.charAt(0).toUpperCase();
   const todoStats = [
-    { value: 0, label: "Waiting for Delivery" },
-    { value: 0, label: "Processed" },
-    { value: 0, label: "Returns/Refunds/Cancellations" },
+    { value: 2, label: "Waiting for Delivery" },
+    { value: 3, label: "Processed" },
+    { value: 1, label: "Returns/Refunds/Cancellations" },
     { value: 7, label: "Temporarily Blocked Products", highlight: true },
     { value: 0, label: "Participating in Cheap Auctions" },
   ];
 
   const salesStats = [
-    { label: "Sales", value: "đ0", change: "0,00%", icon: "?" },
+    { label: "Sales", value: "đ398.000", change: "0,00%", icon: "?" },
     { label: "Hits", value: "0", change: "0,00%", icon: "?" },
-    { label: "Product Clicks", value: "0", change: "0,00%", icon: "?" },
-    { label: "Orders", value: "0", change: "0,00%", icon: "?" },
+    { label: "Product Clicks", value: "10", change: "0,00%", icon: "?" },
+    { label: "Orders", value: "2", change: "0,00%", icon: "?" },
     {
       label: "Order Conversion Rate",
       value: "0,00%",

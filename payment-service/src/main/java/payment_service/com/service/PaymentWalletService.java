@@ -23,7 +23,7 @@ public class PaymentWalletService {
                     .balance(0L)
                     .lockedBalance(0L)
                     .currency("VND")
-                    .isActive(true)
+                    .status(PaymentWalletStatus.ACTIVE)
                     .build();
                 return walletRepository.save(wallet);
             });

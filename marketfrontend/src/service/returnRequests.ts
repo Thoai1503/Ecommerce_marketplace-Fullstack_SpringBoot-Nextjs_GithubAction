@@ -1,5 +1,23 @@
 import http from "@/lib/http";
 
+const asNumberOrNull = (value: unknown): number | null => {
+  if (value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const asBooleanOrNull = (value: unknown): boolean | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") return true;
+    if (normalized === "false" || normalized === "0") return false;
+  }
+  return null;
+};
+
 export type ReturnRequestStatusAdmin =
   | "PENDING_APPROVAL"
   | "APPROVED"
@@ -96,6 +114,11 @@ export interface ReturnRequestAdmin {
   approvedAmount?: number | null;
   finalRequestedAmount?: number | null;
   refundedAmount: number;
+  voucherClawbackAmount?: number | null;
+  platformVoucherClawbackAmount?: number | null;
+  shopVoucherInvalidated?: boolean | null;
+  firstShopVoucherInvalidation?: boolean | null;
+  showShopVoucherInvalidationSignal?: boolean | null;
   orderNumber?: string | null;
   orderTrackingNumber?: string | null;
   shipmentTrackingNumber?: string | null;
@@ -116,18 +139,181 @@ export interface ReturnRequestAdmin {
   timeline?: ReturnRequestTimelineAdmin[];
 }
 
-export const getAdminReturnRequests = async (): Promise<
-  ReturnRequestAdmin[]
-> => {
-  const { data } = await http.get("/api/refunds");
-  return Array.isArray(data) ? data : [];
+export interface ReturnRequestListResponse {
+  data: ReturnRequestAdmin[];
+  meta: {
+    page: number;
+    total: number;
+    perPage: number;
+  };
+  stats: {
+    total: number;
+    pending: number;
+    refunded: number;
+    amount: number;
+    byStatus?: Record<string, number>;
+  };
+}
+
+const normalizeReturnRequest = (raw: any): ReturnRequestAdmin => {
+  const voucherClawbackAmount =
+    asNumberOrNull(
+      raw?.voucherClawbackAmount ?? raw?.voucher_clawback_amount,
+    ) ?? 0;
+  const platformVoucherClawbackAmount =
+    asNumberOrNull(
+      raw?.platformVoucherClawbackAmount ??
+        raw?.platform_voucher_clawback_amount,
+    ) ?? null;
+
+  return {
+    ...raw,
+    voucherClawbackAmount,
+    platformVoucherClawbackAmount,
+    shopVoucherInvalidated: asBooleanOrNull(
+      raw?.shopVoucherInvalidated ?? raw?.shop_voucher_invalidated,
+    ),
+    firstShopVoucherInvalidation: asBooleanOrNull(
+      raw?.firstShopVoucherInvalidation ?? raw?.first_shop_voucher_invalidation,
+    ),
+    showShopVoucherInvalidationSignal: asBooleanOrNull(
+      raw?.showShopVoucherInvalidationSignal ??
+        raw?.show_shop_voucher_invalidation_signal,
+    ),
+  } as ReturnRequestAdmin;
+};
+
+type VoucherRedemptionByOrder = {
+  id?: number | null;
+  voucherId?: number | null;
+  discountAmountApplied?: number | null;
+};
+
+const normalizeVoucherRedemptionByOrder = (
+  raw: any,
+): VoucherRedemptionByOrder => ({
+  id: asNumberOrNull(raw?.id),
+  voucherId: asNumberOrNull(raw?.voucherId ?? raw?.voucher_id),
+  discountAmountApplied: asNumberOrNull(
+    raw?.discountAmountApplied ?? raw?.discount_amount_applied,
+  ),
+});
+
+const isPlatformVoucher = async (voucherId: number): Promise<boolean> => {
+  try {
+    const { data } = await http.get(`/api/vouchers/${voucherId}`);
+    const issuerType = String(data?.issuerType ?? data?.issuer_type ?? "")
+      .trim()
+      .toUpperCase();
+    return issuerType === "PLATFORM";
+  } catch {
+    return false;
+  }
+};
+
+export const getPlatformVoucherDiscountAppliedFromRedemption = async (
+  orderId: number,
+): Promise<any> => {
+  const { data } = await http.get(`/api/voucher-redemptions/order/${orderId}`);
+  const redemptions: VoucherRedemptionByOrder[] = Array.isArray(data)
+    ? data.map(normalizeVoucherRedemptionByOrder)
+    : [];
+
+  const sortedByNewest = [...redemptions].sort(
+    (a, b) => Number(b.id ?? 0) - Number(a.id ?? 0),
+  );
+
+  for (const redemption of sortedByNewest) {
+    const voucherId = Number(redemption.voucherId ?? 0);
+    if (voucherId <= 0) {
+      continue;
+    }
+
+    if (await isPlatformVoucher(voucherId)) {
+      return redemption;
+    }
+  }
+
+  return null;
+};
+
+export const getAdminReturnRequests = async (params?: {
+  page?: number;
+  size?: number;
+  status?: string;
+  search?: string;
+  shopId?: string;
+  customerId?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<ReturnRequestListResponse> => {
+  const query = new URLSearchParams();
+  query.set("page", String(params?.page || 1));
+  query.set("size", String(params?.size || 10));
+  if (params?.status && params.status !== "ALL")
+    query.set("status", params.status);
+  if (params?.search) query.set("search", params.search);
+  if (params?.shopId) query.set("shopId", params.shopId);
+  if (params?.customerId) query.set("customerId", params.customerId);
+  if (params?.startDate) query.set("startDate", params.startDate);
+  if (params?.endDate) query.set("endDate", params.endDate);
+
+  const { data } = await http.get(
+    `/api/refunds${query.toString() ? `?${query.toString()}` : ""}`,
+  );
+  return {
+    data: Array.isArray(data?.data)
+      ? data.data.map(normalizeReturnRequest)
+      : [],
+    meta: data?.meta || { page: 1, total: 0, perPage: params?.size || 10 },
+    stats: data?.stats || {
+      total: 0,
+      pending: 0,
+      refunded: 0,
+      amount: 0,
+      byStatus: {},
+    },
+  };
 };
 
 export const getSellerReturnRequests = async (
   shopId: number,
-): Promise<ReturnRequestAdmin[]> => {
-  const { data } = await http.get(`/api/refunds/shop/${shopId}`);
-  return Array.isArray(data) ? data : [];
+  params?: {
+    page?: number;
+    size?: number;
+    status?: string;
+    search?: string;
+    customerId?: string;
+    startDate?: string;
+    endDate?: string;
+  },
+): Promise<ReturnRequestListResponse> => {
+  const query = new URLSearchParams();
+  query.set("page", String(params?.page || 1));
+  query.set("size", String(params?.size || 10));
+  if (params?.status && params.status !== "ALL")
+    query.set("status", params.status);
+  if (params?.search) query.set("search", params.search);
+  if (params?.customerId) query.set("customerId", params.customerId);
+  if (params?.startDate) query.set("startDate", params.startDate);
+  if (params?.endDate) query.set("endDate", params.endDate);
+
+  const { data } = await http.get(
+    `/api/refunds/shop/${shopId}${query.toString() ? `?${query.toString()}` : ""}`,
+  );
+  return {
+    data: Array.isArray(data?.data)
+      ? data.data.map(normalizeReturnRequest)
+      : [],
+    meta: data?.meta || { page: 1, total: 0, perPage: params?.size || 10 },
+    stats: data?.stats || {
+      total: 0,
+      pending: 0,
+      refunded: 0,
+      amount: 0,
+      byStatus: {},
+    },
+  };
 };
 
 export const getReturnRequestById = async (
@@ -135,10 +321,10 @@ export const getReturnRequestById = async (
 ): Promise<ReturnRequestAdmin> => {
   try {
     const { data } = await http.get(`/api/refunds/${id}/detail`);
-    return data;
+    return normalizeReturnRequest(data);
   } catch {
     const { data } = await http.get(`/api/refunds/${id}`);
-    return data;
+    return normalizeReturnRequest(data);
   }
 };
 

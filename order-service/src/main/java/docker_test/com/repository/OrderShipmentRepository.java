@@ -3,6 +3,8 @@ package docker_test.com.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -25,11 +27,13 @@ public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Lo
 				os.order_id AS orderId,
 				os.shop_id AS shopId,
 				s.shop_name AS shopName,
+				s.user_id AS shopUserId,
 				os.shipping_fee AS shippingFee,
 				os.total_amount AS totalAmount,
 				os.carrier_name AS carrierName,
 				os.tracking_number AS trackingNumber,
 				os.shipping_status AS shippingStatus,
+				os.is_payout_settled AS payoutSettled,
 				os.voucher_id AS voucherId,
 				os.subtotal AS subtotal,
 				os.total_after_voucher AS totalAfterVoucher,
@@ -60,8 +64,35 @@ public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Lo
 			AND	(:paymentStatus IS NULL  OR LOWER(:paymentStatus) = 'all' OR LOWER(o.payment_status) = LOWER(:paymentStatus))
 			
 			ORDER BY os.id DESC
+			""",
+			countQuery = """
+				SELECT COUNT(*)
+				FROM order_shipment os
+				INNER JOIN orders o ON o.id = os.order_id
+				WHERE os.shop_id = :shopId
+				AND (:status IS NULL  OR LOWER(:status) = 'all' OR LOWER(os.shipping_status) = LOWER(:status))
+				AND (:paymentStatus IS NULL  OR LOWER(:paymentStatus) = 'all' OR LOWER(o.payment_status) = LOWER(:paymentStatus))
+				""",
+			nativeQuery = true)
+	Page<OrderShipmentWithOrderAndRecipientProjection> findShipmentDetailsByShopId(
+			@Param("shopId") Long shopId,
+			@Param("status") String status,
+			@Param("paymentStatus") String paymentStatus,
+			Pageable pageable);
+
+	@Query(value = """
+			SELECT UPPER(os.shipping_status) AS shippingStatus, COUNT(*) AS total
+			FROM order_shipment os
+			INNER JOIN orders o ON o.id = os.order_id
+			WHERE os.shop_id = :shopId
+			AND (:status IS NULL  OR LOWER(:status) = 'all' OR LOWER(os.shipping_status) = LOWER(:status))
+			AND (:paymentStatus IS NULL  OR LOWER(:paymentStatus) = 'all' OR LOWER(o.payment_status) = LOWER(:paymentStatus))
+			GROUP BY UPPER(os.shipping_status)
 			""", nativeQuery = true)
-	List<OrderShipmentWithOrderAndRecipientProjection> findShipmentDetailsByShopId(@Param("shopId") Long shopId, @Param("status") String status, @Param("paymentStatus") String paymentStatus);
+	List<Object[]> countShipmentStatsByShopId(
+			@Param("shopId") Long shopId,
+			@Param("status") String status,
+			@Param("paymentStatus") String paymentStatus);
 
 	@Query(value = """
 			SELECT
@@ -71,11 +102,13 @@ public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Lo
 				os.subtotal AS subtotal,
 				os.total_after_voucher AS totalAfterVoucher,
 				s.shop_name AS shopName,
+				s.user_id AS shopUserId,
 				os.shipping_fee AS shippingFee,
 				os.total_amount AS totalAmount,
 				os.carrier_name AS carrierName,
 				os.tracking_number AS trackingNumber,
 				os.shipping_status AS shippingStatus,
+				os.is_payout_settled AS payoutSettled,
 				os.last_return_request_id AS lastReturnRequestId,
 				o.order_number AS orderNumber,
 				o.user_id AS userId,
@@ -106,8 +139,46 @@ public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Lo
 				OR LOWER(COALESCE(a.recipient_name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
 			  )
 			ORDER BY os.id DESC
+			""",
+			countQuery = """
+				SELECT COUNT(*)
+				FROM order_shipment os
+				INNER JOIN orders o ON o.id = os.order_id
+				INNER JOIN address a ON a.id = o.address_id
+				LEFT JOIN shop s ON s.id = os.shop_id
+				WHERE (:status IS NULL OR LOWER(:status) = 'all' OR LOWER(os.shipping_status) = LOWER(:status))
+				  AND (:paymentStatus IS NULL OR LOWER(:paymentStatus) = 'all' OR LOWER(o.payment_status) = LOWER(:paymentStatus))
+				  AND (
+					:search IS NULL OR :search = ''
+					OR LOWER(o.order_number) LIKE LOWER(CONCAT('%', :search, '%'))
+					OR LOWER(COALESCE(os.tracking_number, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+					OR LOWER(COALESCE(a.recipient_name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+				  )
+				""",
+			nativeQuery = true)
+	Page<OrderShipmentWithOrderAndRecipientProjection> findShipmentDetailsAll(
+			@Param("status") String status,
+			@Param("paymentStatus") String paymentStatus,
+			@Param("search") String search,
+			Pageable pageable);
+
+	@Query(value = """
+			SELECT UPPER(os.shipping_status) AS shippingStatus, COUNT(*) AS total
+			FROM order_shipment os
+			INNER JOIN orders o ON o.id = os.order_id
+			INNER JOIN address a ON a.id = o.address_id
+			LEFT JOIN shop s ON s.id = os.shop_id
+			WHERE (:status IS NULL OR LOWER(:status) = 'all' OR LOWER(os.shipping_status) = LOWER(:status))
+			  AND (:paymentStatus IS NULL OR LOWER(:paymentStatus) = 'all' OR LOWER(o.payment_status) = LOWER(:paymentStatus))
+			  AND (
+				:search IS NULL OR :search = ''
+				OR LOWER(o.order_number) LIKE LOWER(CONCAT('%', :search, '%'))
+				OR LOWER(COALESCE(os.tracking_number, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+				OR LOWER(COALESCE(a.recipient_name, '')) LIKE LOWER(CONCAT('%', :search, '%'))
+			  )
+			GROUP BY UPPER(os.shipping_status)
 			""", nativeQuery = true)
-	List<OrderShipmentWithOrderAndRecipientProjection> findShipmentDetailsAll(
+	List<Object[]> countShipmentStatsAll(
 			@Param("status") String status,
 			@Param("paymentStatus") String paymentStatus,
 			@Param("search") String search);
@@ -122,16 +193,18 @@ public interface OrderShipmentRepository extends JpaRepository<OrderShipment, Lo
 				os.total_after_voucher AS totalAfterVoucher,
 				os.last_return_request_id AS lastReturnRequestId,
 				s.shop_name AS shopName,
+				s.user_id AS shopUserId,
 				os.shipping_fee AS shippingFee,
 				os.total_amount AS totalAmount,
 				os.total_after_voucher AS totalAfterVoucher,
 				os.carrier_name AS carrierName,
 				os.tracking_number AS trackingNumber,
 				os.shipping_status AS shippingStatus,
+				os.is_payout_settled AS payoutSettled,
 				o.order_number AS orderNumber,
 				o.user_id AS userId,
 				o.address_id AS addressId,
-			
+			    o.voucher_id AS voucherId,
 				o.shipping_fee AS shippingFee,
 				o.discount_amount AS discountAmount,
 				o.final_amount AS finalAmount,

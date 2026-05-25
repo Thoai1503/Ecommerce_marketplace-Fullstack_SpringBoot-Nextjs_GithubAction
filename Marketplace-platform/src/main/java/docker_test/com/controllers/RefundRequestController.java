@@ -1,8 +1,12 @@
 package docker_test.com.controllers;
 
 import java.lang.reflect.Type;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
@@ -53,20 +57,38 @@ public class RefundRequestController {
 	}
 	
 	@GetMapping("")
-	public ResponseEntity<?> getRefundRequests() {
+	public ResponseEntity getRefundRequests(
+			@RequestParam(defaultValue = "1") int page,
+			@RequestParam(defaultValue = "10") int size,
+			@RequestParam(required = false) String status,
+			@RequestParam(required = false) String search,
+			@RequestParam(required = false) Long shopId,
+			@RequestParam(required = false) Long customerId,
+			@RequestParam(required = false) String startDate,
+			@RequestParam(required = false) String endDate) {
 		try {
-			var refundRequests = refundRequestService.getAll();
-			return ResponseEntity.ok(refundRequests);
+			LocalDateTime start = parseStartDate(startDate);
+			LocalDateTime endExclusive = parseEndDateExclusive(endDate);
+			return ResponseEntity.ok(refundRequestService.getAllPaged(status, search, shopId, customerId, start, endExclusive, page, size));
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching refund requests: " + e.getMessage());
 		}
 	}
 
 	@GetMapping("/shop/{shopId}")
-	public ResponseEntity<?> getRefundRequestsByShopId(@PathVariable Long shopId) {
+	public ResponseEntity getRefundRequestsByShopId(
+			@PathVariable Long shopId,
+			@RequestParam(defaultValue = "1") int page,
+			@RequestParam(defaultValue = "10") int size,
+			@RequestParam(required = false) String status,
+			@RequestParam(required = false) String search,
+			@RequestParam(required = false) Long customerId,
+			@RequestParam(required = false) String startDate,
+			@RequestParam(required = false) String endDate) {
 		try {
-			var refundRequests = refundRequestService.getByShopId(shopId);
-			return ResponseEntity.ok(refundRequests);
+			LocalDateTime start = parseStartDate(startDate);
+			LocalDateTime endExclusive = parseEndDateExclusive(endDate);
+			return ResponseEntity.ok(refundRequestService.getByShopIdPaged(shopId, status, search, customerId, start, endExclusive, page, size));
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 					.body("Error fetching refund requests by shopId: " + e.getMessage());
@@ -133,6 +155,25 @@ public class RefundRequestController {
 		} catch (Exception e) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 					.body("Error updating refund request status: " + e.getMessage());
+		}
+	}
+
+	@PatchMapping("/{refundRequestId}/requested-amount")
+	public ResponseEntity<?> updateRefundRequestAmount(
+			@PathVariable Long refundRequestId,
+			@RequestParam("requestedAmount") Double requestedAmount) {
+		try {
+			var updated = refundRequestService.updateRequestedAmount(refundRequestId, requestedAmount);
+			if (updated == null) {
+				return ResponseEntity.status(HttpStatus.NOT_FOUND)
+						.body("Refund request not found with id: " + refundRequestId);
+			}
+			return ResponseEntity.ok(updated);
+		} catch (IllegalArgumentException ex) {
+			return ResponseEntity.badRequest().body(ex.getMessage());
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Error updating refund request amount: " + e.getMessage());
 		}
 	}
 	
@@ -206,6 +247,20 @@ public class RefundRequestController {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 					.body("Error creating refund request with attachments: " + e.getMessage());
 		}
+	}
+
+	private LocalDateTime parseStartDate(String value) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		return LocalDate.parse(value).atStartOfDay();
+	}
+
+	private LocalDateTime parseEndDateExclusive(String value) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		return LocalDate.parse(value).plusDays(1).atStartOfDay();
 	}
 
 	private Long parseLong(String rawValue, String fieldName) {

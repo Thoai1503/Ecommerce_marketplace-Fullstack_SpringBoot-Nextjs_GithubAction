@@ -3,7 +3,9 @@ package payment_service.com.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
+import payment_service.com.dto.PaymentWalletResponseDTO;
 import payment_service.com.entity.PaymentWallet;
+import payment_service.com.entity.PaymentWalletStatus;
 import payment_service.com.service.PaymentWalletService;
 import java.util.List;
 import java.util.Map;
@@ -16,9 +18,27 @@ public class PaymentWalletController {
     private final PaymentWalletService walletService;
     
     @GetMapping("/user/{userId}")
-    public ResponseEntity<PaymentWallet> getWallet(@PathVariable Long userId) {
+    public ResponseEntity<PaymentWalletResponseDTO> getWallet(@PathVariable Long userId) {
         PaymentWallet wallet = walletService.getOrCreateWallet(userId);
-        return ResponseEntity.ok(wallet);
+        return ResponseEntity.ok(toWalletResponse(wallet));
+    }
+
+    private PaymentWalletResponseDTO toWalletResponse(PaymentWallet wallet) {
+        PaymentWalletStatus status = wallet.getStatus() == null
+            ? PaymentWalletStatus.ACTIVE
+            : wallet.getStatus();
+
+        return PaymentWalletResponseDTO.builder()
+            .id(wallet.getId())
+            .userId(wallet.getUserId())
+            .balance(wallet.getBalance())
+            .lockedBalance(wallet.getLockedBalance())
+            .currency(wallet.getCurrency())
+            .isActive(status == PaymentWalletStatus.ACTIVE)
+            .status(status.name())
+            .createdAt(wallet.getCreatedAt())
+            .updatedAt(wallet.getUpdatedAt())
+            .build();
     }
     
     @PostMapping("/{userId}/credit")

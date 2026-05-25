@@ -29,9 +29,10 @@ public class PaymentWallet {
     
     @Column(length = 3, nullable = false, columnDefinition = "CHAR(3)")
     private String currency;
-    
-    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
-    private Boolean isActive;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20, columnDefinition = "ENUM('ACTIVE','SUSPENDED','CLOSED') DEFAULT 'ACTIVE'")
+    private PaymentWalletStatus status;
     
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -43,7 +44,9 @@ public class PaymentWallet {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        isActive = true;
+        if (status == null) {
+            status = PaymentWalletStatus.ACTIVE;
+        }
         balance = 0L;
         lockedBalance = 0L;
     }

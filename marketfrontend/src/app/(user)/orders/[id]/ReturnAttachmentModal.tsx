@@ -1,9 +1,10 @@
 import { API_URL } from "@/helper/api";
+import { updateReturnRequestStatus } from "@/service/returnRequests";
 import { Order } from "@/types";
 import { ReturnRequestAttachment } from "@/types/data/refund/ReuturnRequestAttachment";
 import { IReturnRequestAttachment } from "@/validators/returnRequestAttachment";
-import { useQuery } from "@tanstack/react-query";
-import { CSSProperties, useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CSSProperties, useMemo, useState } from "react";
 
 type OrderShipment = NonNullable<Order["shipments"]>[number];
 
@@ -180,6 +181,59 @@ const ReturnAttachmentModal = ({
   const effectiveReturnRequestId = Number(
     returnRequest?.id || safeReturnRequestId || 0,
   );
+  const queryClient = useQueryClient();
+  const [cancelMessage, setCancelMessage] = useState<string | null>(null);
+  const [cancelErrorMessage, setCancelErrorMessage] = useState<string | null>(
+    null,
+  );
+
+  const normalizedReturnRequestStatus = String(returnRequest?.status || "")
+    .trim()
+    .toUpperCase();
+  const isReturnRequestCancelled = ["CANCELED", "CANCELLED"].includes(
+    normalizedReturnRequestStatus,
+  );
+  const canCancelReturnRequest =
+    effectiveReturnRequestId > 0 && !isReturnRequestCancelled;
+
+  const cancelReturnRequestMutation = useMutation({
+    mutationFn: async () =>
+      updateReturnRequestStatus(effectiveReturnRequestId, "CANCELLED"),
+    onSuccess: async () => {
+      setCancelErrorMessage(null);
+      setCancelMessage("Da huy yeu cau tra hang thanh cong.");
+      await queryClient.invalidateQueries({
+        queryKey: [
+          "RETURN_REQUEST_DETAIL_QUERY",
+          safeReturnRequestId,
+          shipmentId,
+        ],
+      });
+    },
+    onError: () => {
+      setCancelMessage(null);
+      setCancelErrorMessage(
+        "Khong the huy yeu cau tra hang. Vui long thu lai.",
+      );
+    },
+  });
+
+  const handleCancelReturnRequest = () => {
+    if (!canCancelReturnRequest || cancelReturnRequestMutation.isPending) {
+      return;
+    }
+
+    const accepted = window.confirm(
+      "Ban co chac chan muon huy yeu cau tra hang?",
+    );
+    if (!accepted) {
+      return;
+    }
+
+    setCancelMessage(null);
+    setCancelErrorMessage(null);
+    cancelReturnRequestMutation.mutate();
+  };
 
   const { data: attachments = [], isLoading } = useQuery({
     queryKey: [
@@ -292,6 +346,13 @@ const ReturnAttachmentModal = ({
       justifyContent: "space-between",
       gap: 16,
     },
+    modalHeaderActions: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      flexWrap: "wrap",
+      justifyContent: "flex-end",
+    },
     modalBody: {
       padding: 22,
       overflowY: "auto",
@@ -370,15 +431,38 @@ const ReturnAttachmentModal = ({
               San pham da chon tra, ly do va hinh anh/video bang chung.
             </p>
           </div>
-          <button
-            type="button"
-            className="btn btn-light border"
-            onClick={() => setViewReturnMediaShipmentId(null)}
-          >
-            Đóng
-          </button>
+          <div style={styles.modalHeaderActions}>
+            {canCancelReturnRequest && (
+              <button
+                type="button"
+                className="btn btn-outline-danger"
+                onClick={handleCancelReturnRequest}
+                disabled={cancelReturnRequestMutation.isPending}
+              >
+                {cancelReturnRequestMutation.isPending ? "Dang huy..." : "Huy"}
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn btn-light border"
+              onClick={() => setViewReturnMediaShipmentId(null)}
+            >
+              Đóng
+            </button>
+          </div>
         </div>
         <div style={styles.modalBody}>
+          {cancelMessage && (
+            <div className="alert alert-success py-2" role="alert">
+              {cancelMessage}
+            </div>
+          )}
+          {cancelErrorMessage && (
+            <div className="alert alert-danger py-2" role="alert">
+              {cancelErrorMessage}
+            </div>
+          )}
+
           {!canLookupReturnRequest && (
             <div className="text-muted">
               Chua tim thay ma yeu cau tra hang cho kien nay.

@@ -3,11 +3,14 @@ package docker_test.com.dto;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public record OrderShipmentResponeDTO(
 		    Long shipmentId,
 	        Long orderId,
 	        Long shopId,
 	        String shopName,
+	        Long shopUserId,
 	        Long shippingFee,
 	        Long totalAmount,
 	        Long subtotal,
@@ -17,6 +20,7 @@ public record OrderShipmentResponeDTO(
 	        String trackingNumber,
 	        String shippingStatus,
 	        String businessStatus,
+	        @JsonProperty("is_payout_settled") Boolean payoutSettled,
 	        Boolean adjustmentRequired,
 	        Long latestAdjustmentRequestId,
 	        String returnStatusSummary,
@@ -33,6 +37,7 @@ public record OrderShipmentResponeDTO(
 	            Long shippingFee,
 	            Long discountAmount,
 	            Long finalAmount,
+	            Long voucherId,
 	            String paymentMethod,
 	            String paymentStatus,
 	            String orderStatus

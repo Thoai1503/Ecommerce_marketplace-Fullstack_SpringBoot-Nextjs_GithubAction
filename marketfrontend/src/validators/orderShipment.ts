@@ -57,6 +57,8 @@ export interface IOrderShipment {
   shopId?: number;
   shop_name?: string;
   shopName?: string;
+  shopUserId?: number | null;
+  shop_user_id?: number | null;
   shipping_fee: number;
   shippingFee?: number;
   subtotal: number;
@@ -70,6 +72,11 @@ export interface IOrderShipment {
   trackingNumber?: string | null;
   shipping_status: string;
   shippingStatus?: string;
+  is_payout_settled?: boolean;
+  isPayoutSettled?: boolean;
+  payoutSettled?: boolean;
+  payout_settled_at?: string | null;
+  payoutSettledAt?: string | null;
   total_after_discount?: number;
   lastReturnRequestId?: number | null;
   last_return_request_id?: number | null;

@@ -6,11 +6,14 @@ public interface OrderShipmentWithOrderAndRecipientProjection {
     Long getShipmentId();
     Long getOrderId();
     Long getShopId();
+    Long getVoucherId();
     String getShopName();
-    List<Long> getVoucherId();
+    Long getShopUserId();
+  //  List<Long> getVoucherId();
     String getCarrierName();
     String getTrackingNumber();
     String getShippingStatus();
+    Boolean getPayoutSettled();
     Double getSubtotal();
     Double getTotalAfterVoucher();
     Long getLastReturnRequestId();

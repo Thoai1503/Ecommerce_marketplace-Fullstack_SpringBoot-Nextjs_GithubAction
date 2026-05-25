@@ -76,4 +76,8 @@ public class OrderShipment {
 	    @Column(name ="return_status_summary")
  	    private String returnStatusSummary;
 
+	    @Builder.Default
+	    @Column(name = "is_payout_settled", nullable = false)
+	    private Boolean payoutSettled = false;
+
 }

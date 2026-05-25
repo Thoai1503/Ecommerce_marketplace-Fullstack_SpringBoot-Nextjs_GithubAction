@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import { useToast } from "@/context/ToastContext";
 import EmptyState from "@/components/ui/EmptyState";
@@ -31,6 +31,9 @@ import {
   ReturnRequestStatusAdmin,
   updateReturnRequestStatus,
 } from "@/service/returnRequests";
+import Pagination from "@/components/ui/Pagination";
+
+const ITEMS_PER_PAGE = 10;
 
 const STATUS_CONFIG: Record<
   string,
@@ -550,6 +553,14 @@ export default function ReturnRequestsPage() {
   const [requests, setRequests] = useState<ReturnRequestAdmin[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [serverStats, setServerStats] = useState({
+    total: 0,
+    pending: 0,
+    refunded: 0,
+    amount: 0,
+  });
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
   const [shopFilter, setShopFilter] = useState("");
@@ -560,12 +571,25 @@ export default function ReturnRequestsPage() {
   const [selectedRequest, setSelectedRequest] =
     useState<ReturnRequestAdmin | null>(null);
 
-  const loadRequests = async () => {
+  const loadRequests = async (page = currentPage) => {
     setIsLoading(true);
     setIsError(false);
     try {
-      const data = await getAdminReturnRequests();
-      setRequests(data);
+      const response = await getAdminReturnRequests({
+        page,
+        size: ITEMS_PER_PAGE,
+        status: statusFilter,
+        search: search.trim() || undefined,
+        shopId: shopFilter.trim() || undefined,
+        customerId: customerFilter.trim() || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      });
+      setRequests(response.data);
+      setTotalRecords(response.meta.total || 0);
+      setServerStats(
+        response.stats || { total: 0, pending: 0, refunded: 0, amount: 0 },
+      );
     } catch (error) {
       console.error("Failed to fetch return requests:", error);
       setIsError(true);
@@ -575,67 +599,15 @@ export default function ReturnRequestsPage() {
   };
 
   useEffect(() => {
-    loadRequests();
-  }, []);
+    setCurrentPage(1);
+  }, [statusFilter, search, shopFilter, customerFilter, startDate, endDate]);
 
-  const filteredRequests = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-    return requests
-      .filter((request) => {
-        const matchesStatus =
-          statusFilter === "ALL" || request.status === statusFilter;
-        if (!matchesStatus) return false;
-        if (shopFilter && String(request.shopId) !== shopFilter.trim())
-          return false;
-        if (
-          customerFilter &&
-          String(request.customerId) !== customerFilter.trim()
-        )
-          return false;
-
-        const createdDate = request.createdAt
-          ? request.createdAt.slice(0, 10)
-          : "";
-        if (startDate && createdDate < startDate) return false;
-        if (endDate && createdDate > endDate) return false;
-
-        if (!keyword) return true;
-
-        return [
-          formatRequestCode(request.id),
-          getOrderLabel(request),
-          getShipmentLabel(request),
-          getCustomerLabel(request),
-          getShopLabel(request),
-          String(request.orderId),
-          String(request.shopId),
-          String(request.customerId),
-          String(request.orderShipmentId || ""),
-          request.customerEmail || "",
-          request.customerPhone || "",
-          request.carrierName || "",
-          request.shippingStatus || "",
-          request.reason || "",
-          request.status,
-          ...(request.items || []).flatMap((item) => [
-            getItemLabel(item),
-            item.variantName || "",
-            String(item.orderItemId),
-          ]),
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(keyword);
-      })
-      .sort((a, b) => {
-        const left = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const right = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return right - left;
-      });
+  useEffect(() => {
+    loadRequests(currentPage);
   }, [
-    requests,
-    search,
+    currentPage,
     statusFilter,
+    search,
     shopFilter,
     customerFilter,
     startDate,
@@ -658,6 +630,7 @@ export default function ReturnRequestsPage() {
         prev.map((item) => (item.id === request.id ? updated : item)),
       );
       setSelectedRequest((prev) => (prev?.id === request.id ? updated : prev));
+      await loadRequests(currentPage);
       toast.success(
         `Đã cập nhật trạng thái sang ${STATUS_CONFIG[nextStatus]?.label || nextStatus}`,
       );
@@ -670,14 +643,10 @@ export default function ReturnRequestsPage() {
   };
 
   const stats = {
-    total: requests.length,
-    pending: requests.filter((item) => item.status === "PENDING_APPROVAL")
-      .length,
-    refunded: requests.filter((item) => item.status === "REFUNDED").length,
-    amount: requests.reduce(
-      (sum, item) => sum + getRequestFinalAmount(item),
-      0,
-    ),
+    total: serverStats.total,
+    pending: serverStats.pending,
+    refunded: serverStats.refunded,
+    amount: serverStats.amount,
   };
 
   const statusOptions = ["ALL", ...Object.keys(STATUS_CONFIG)];
@@ -744,8 +713,7 @@ export default function ReturnRequestsPage() {
               Danh sách yêu cầu
             </h3>
             <p className="text-xs text-slate-500 font-medium mt-1">
-              Đang hiển thị {filteredRequests.length} / {requests.length} yêu
-              cầu
+              Đang hiển thị {requests.length} / {totalRecords} yêu cầu
             </p>
           </div>
 
@@ -801,7 +769,7 @@ export default function ReturnRequestsPage() {
                 className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none"
               />
               <button
-                onClick={loadRequests}
+                onClick={() => loadRequests(currentPage)}
                 className="px-4 py-3 bg-slate-800 text-white rounded-xl text-sm font-bold hover:bg-slate-900 border-0 flex items-center gap-2 justify-center"
               >
                 <RefreshCcw size={16} /> Làm mới
@@ -834,7 +802,7 @@ export default function ReturnRequestsPage() {
               onAction={loadRequests}
             />
           </div>
-        ) : filteredRequests.length === 0 ? (
+        ) : requests.length === 0 ? (
           <EmptyState
             title="Không có yêu cầu trả hàng hoàn tiền"
             description="Thử đổi bộ lọc hoặc từ khóa tìm kiếm để xem dữ liệu khác."
@@ -852,7 +820,7 @@ export default function ReturnRequestsPage() {
         ) : (
           <>
             <div className="md:hidden flex flex-col divide-y divide-slate-100">
-              {filteredRequests.map((request) => {
+              {requests.map((request) => {
                 const statusConfig = STATUS_CONFIG[request.status] || {
                   label: request.status,
                   color: "text-slate-700",
@@ -979,7 +947,7 @@ export default function ReturnRequestsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredRequests.map((request) => {
+                  {requests.map((request) => {
                     const statusConfig = STATUS_CONFIG[request.status] || {
                       label: request.status,
                       color: "text-slate-700",
@@ -1125,6 +1093,14 @@ export default function ReturnRequestsPage() {
                 </tbody>
               </table>
             </div>
+
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.max(1, Math.ceil(totalRecords / ITEMS_PER_PAGE))}
+              onPageChange={setCurrentPage}
+              totalItems={totalRecords}
+              itemsPerPage={ITEMS_PER_PAGE}
+            />
           </>
         )}
       </div>

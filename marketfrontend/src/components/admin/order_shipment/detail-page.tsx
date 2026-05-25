@@ -7,8 +7,8 @@ import {
   ArrowLeft,
   BadgeDollarSign,
   CalendarClock,
-  ClipboardList,
   CreditCard,
+  HandCoins,
   Hash,
   MapPin,
   MessageSquareText,
@@ -27,6 +27,7 @@ import { OrderTableSkeleton } from "@/components/ui/Skeleton";
 import { OrderShipments } from "@/types/data/OrderShipment";
 import { API_URL } from "@/helper/api";
 import {
+  getPlatformVoucherDiscountAppliedFromRedemption,
   getReturnRequestById,
   ReturnRequestAdmin,
 } from "@/service/returnRequests";
@@ -39,6 +40,8 @@ import {
 type IOrderShipmentDetail = IOrderShipment & {
   shopName?: string;
   shop_name?: string;
+  shopUserId?: number | null;
+  shop_user_id?: number | null;
   lastReturnRequestId?: number | null;
   last_return_request_id?: number | null;
 };
@@ -65,6 +68,14 @@ const normalizeShipment = (raw: any): IOrderShipmentDetail => {
     shopId: Number(raw?.shopId ?? raw?.shop_id ?? 0),
     shopName: String(raw?.shopName ?? raw?.shop_name ?? ""),
     shop_name: String(raw?.shop_name ?? raw?.shopName ?? ""),
+    shopUserId:
+      raw?.shopUserId == null
+        ? (raw?.shop_user_id ?? null)
+        : Number(raw?.shopUserId),
+    shop_user_id:
+      raw?.shop_user_id == null
+        ? (raw?.shopUserId ?? null)
+        : Number(raw?.shop_user_id),
     shipping_fee: Number(raw?.shipping_fee ?? raw?.shippingFee ?? 0),
     shippingFee: Number(raw?.shippingFee ?? raw?.shipping_fee ?? 0),
     subtotal: Number(raw?.subtotal ?? 0),
@@ -89,6 +100,28 @@ const normalizeShipment = (raw: any): IOrderShipmentDetail => {
     trackingNumber: raw?.trackingNumber ?? raw?.tracking_number ?? null,
     shipping_status: String(raw?.shipping_status ?? raw?.shippingStatus ?? ""),
     shippingStatus: String(raw?.shippingStatus ?? raw?.shipping_status ?? ""),
+    is_payout_settled:
+      typeof raw?.is_payout_settled === "boolean"
+        ? raw.is_payout_settled
+        : Boolean(
+            raw?.is_payout_settled ??
+            raw?.isPayoutSettled ??
+            raw?.payoutSettled ??
+            false,
+          ),
+    payoutSettled:
+      typeof raw?.payoutSettled === "boolean"
+        ? raw.payoutSettled
+        : Boolean(
+            raw?.payoutSettled ??
+            raw?.is_payout_settled ??
+            raw?.isPayoutSettled ??
+            false,
+          ),
+    payout_settled_at:
+      raw?.payout_settled_at ?? raw?.payoutSettledAt ?? raw?.payout_settledAt,
+    payoutSettledAt:
+      raw?.payoutSettledAt ?? raw?.payout_settled_at ?? raw?.payout_settledAt,
     lastReturnRequestId:
       raw?.lastReturnRequestId == null
         ? (raw?.last_return_request_id ?? null)
@@ -240,6 +273,7 @@ export default function AdminOrderShipmentDetailPage() {
 
   const lastReturnRequestId =
     shipment?.lastReturnRequestId ?? shipment?.last_return_request_id ?? null;
+  const partnerUserId = shipment?.shopUserId ?? shipment?.shop_user_id ?? null;
 
   const {
     data: returnRequest,
@@ -260,6 +294,65 @@ export default function AdminOrderShipmentDetailPage() {
     shipment?.total_amount ??
     shipment?.order?.finalAmount ??
     0;
+  const refundedAmount = Number(returnRequest?.refundedAmount ?? 0);
+  const platformVoucherClawbackAmount = Number(
+    returnRequest?.platformVoucherClawbackAmount ??
+      returnRequest?.voucherClawbackAmount ??
+      0,
+  );
+  const voucherClawbackAmount = Number(
+    returnRequest?.voucherClawbackAmount ?? 0,
+  );
+  const isPlatformVoucherInvalidated = platformVoucherClawbackAmount > 0;
+  const isShopVoucherInvalidated = Boolean(
+    returnRequest?.shopVoucherInvalidated,
+  );
+  const isFirstShopVoucherInvalidation = Boolean(
+    returnRequest?.firstShopVoucherInvalidation,
+  );
+  const showShopVoucherInvalidationSignal =
+    isFirstShopVoucherInvalidation ||
+    Boolean(returnRequest?.showShopVoucherInvalidationSignal);
+
+  const { data: platformDiscountFromRedemption } = useQuery<number>({
+    queryKey: [
+      "PLATFORM_VOUCHER_DISCOUNT_APPLIED",
+      returnRequest?.orderId,
+      isFirstShopVoucherInvalidation,
+    ],
+    enabled: Boolean(returnRequest?.orderId) && isFirstShopVoucherInvalidation,
+    queryFn: () =>
+      getPlatformVoucherDiscountAppliedFromRedemption(
+        Number(returnRequest?.orderId),
+      ),
+  });
+
+  const platformVouvherRedemptionAmount = isFirstShopVoucherInvalidation;
+
+  const platformVoucherDisplayAmount = isFirstShopVoucherInvalidation
+    ? Number(platformDiscountFromRedemption ?? 0)
+    : platformVoucherClawbackAmount;
+  const finalPayoutValue = Math.max(
+    0,
+    displayTotal - refundedAmount - voucherClawbackAmount,
+  );
+
+  const normalizedShipmentStatus = (displayStatus || "").toUpperCase();
+  const normalizedReturnStatus = (returnRequest?.status || "").toUpperCase();
+  const hasReturnRequest = !!lastReturnRequestId;
+  const isShipmentCompleted = normalizedShipmentStatus === "COMPLETED";
+  const isReturnRequestRefunded = normalizedReturnStatus === "REFUNDED";
+  const isPayoutSettled =
+    shipment?.payoutSettled ?? shipment?.is_payout_settled ?? false;
+  const payoutSettledAt =
+    shipment?.payoutSettledAt ?? shipment?.payout_settled_at ?? null;
+
+  const canShowPartnerPayoutButton =
+    isShipmentCompleted &&
+    !!partnerUserId &&
+    (!hasReturnRequest || (!isReturnRequestLoading && isReturnRequestRefunded));
+
+  const canPayoutNow = canShowPartnerPayoutButton && !isPayoutSettled;
 
   if (!isValidShipmentId) {
     return (
@@ -400,13 +493,56 @@ export default function AdminOrderShipmentDetailPage() {
             <p>
               Order Discount:{" "}
               <span className="font-semibold text-red-600">
-                - {formatMoney(shipment.order?.discountAmount)} đ
+                -{" "}
+                {formatMoney(
+                  (shipment.totalAmount ?? 0) -
+                    (shipment.totalAfterVoucher ?? 0),
+                )}{" "}
+                đ
               </span>
             </p>
             <p className="pt-1 text-base">
               Total:{" "}
               <span className="font-black text-emerald-700">
                 {formatMoney(displayTotal)} đ
+              </span>
+            </p>
+            <p className="text-base">
+              Tien hoan hang:{" "}
+              <span className="font-semibold text-red-600">
+                - {formatMoney(refundedAmount)} đ
+              </span>
+            </p>
+            <p className="text-base">
+              Gia tri thanh toan cuoi cung:{" "}
+              <span className="font-black text-blue-700">
+                {formatMoney(finalPayoutValue)} đ
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+          <p className="text-sm font-black text-slate-700">
+            Trang thai tat toan
+          </p>
+          <div className="text-sm text-slate-600 space-y-2">
+            <p className="flex items-center gap-2">
+              <HandCoins size={15} /> Payout:{" "}
+              {isPayoutSettled ? (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
+                  DA TAT TOAN
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700">
+                  CHUA TAT TOAN
+                </span>
+              )}
+            </p>
+            <p className="flex items-center gap-2">
+              <CalendarClock size={15} /> Thoi gian tat toan:{" "}
+              <span className="font-semibold text-slate-800">
+                {formatDateTime(payoutSettledAt)}
               </span>
             </p>
           </div>
@@ -490,6 +626,51 @@ export default function AdminOrderShipmentDetailPage() {
                   {formatMoney(returnRequest.refundedAmount)} đ
                 </p>
               </div>
+              <div className="rounded-xl border border-slate-200 p-3">
+                <p className="text-xs text-slate-500 inline-flex items-center gap-1">
+                  <ReceiptText size={12} />
+                  Voucher sàn
+                </p>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <span
+                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${showShopVoucherInvalidationSignal ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}
+                  >
+                    {showShopVoucherInvalidationSignal
+                      ? "MAT HIEU LUC"
+                      : "CON HIEU LUC"}
+                  </span>
+                  {showShopVoucherInvalidationSignal ? (
+                    <span className="font-semibold text-red-700">
+                      - {formatMoney(platformVoucherDisplayAmount)} đ
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-slate-800">0 đ</span>
+                  )}
+                </div>
+              </div>
+              {/* <div className="rounded-xl border border-slate-200 p-3">
+                <p className="text-xs text-slate-500 inline-flex items-center gap-1">
+                  <ReceiptText size={12} />
+                  Voucher shop
+                </p>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  {showShopVoucherInvalidationSignal ? (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700">
+                      MAT HIEU LUC
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
+                      CON HIEU LUC
+                    </span>
+                  )}
+                  {isShopVoucherInvalidated &&
+                  !isFirstShopVoucherInvalidation ? (
+                    <span className="text-xs font-semibold text-slate-500">
+                      Tin hieu gan o request som hon
+                    </span>
+                  ) : null}
+                </div>
+              </div> */}
               <div className="rounded-xl border border-slate-200 p-3">
                 <p className="text-xs text-slate-500 inline-flex items-center gap-1">
                   <CalendarClock size={12} />
@@ -610,6 +791,40 @@ export default function AdminOrderShipmentDetailPage() {
           )}
         </div>
       </div>
+
+      {canShowPartnerPayoutButton ? (
+        <div className="bg-white rounded-2xl border border-emerald-200 p-4 lg:p-5">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <p className="text-sm font-black text-emerald-800 inline-flex items-center gap-2">
+                <HandCoins size={16} />
+                Dieu kien thanh toan doi tac da dat
+              </p>
+              <p className="text-xs text-emerald-700 mt-1">
+                Shipment da COMPLETED
+                {hasReturnRequest ? " va yeu cau hoan tien da REFUNDED." : "."}
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={!canPayoutNow}
+              onClick={() =>
+                router.push(
+                  `/admin/finance/wallet?amount=${encodeURIComponent(String(finalPayoutValue))}&partner=${encodeURIComponent(String(partnerUserId))}&transaction_type=${encodeURIComponent("SHOP_PAYOUT")}&source_type=${encodeURIComponent("ORDER_SHIPMENT")}&source_id=${encodeURIComponent(String(shipment.shipmentId))}`,
+                )
+              }
+              className={`inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl text-sm font-bold transition-colors ${
+                canPayoutNow
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                  : "bg-slate-200 text-slate-500 cursor-not-allowed"
+              }`}
+            >
+              <HandCoins size={16} />
+              {canPayoutNow ? "Thanh toan cho partner" : "Da tat toan"}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,7 +1,10 @@
-"use client";
-
+import { Suspense } from "react";
 import WalletsPanel from "../WalletsPanel";
 
 export default function FinanceWalletsPage() {
-  return <WalletsPanel />;
+  return (
+    <Suspense fallback={null}>
+      <WalletsPanel />
+    </Suspense>
+  );
 }
