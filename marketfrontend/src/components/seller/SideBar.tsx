@@ -3,7 +3,9 @@
 import { JSX, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { logoutAction } from "@/app/actions/auth";
 import { useSellerSideBarContext } from "@/context/SellerSideBarContext";
+import { API_URL } from "@/helper/api";
 
 interface MenuItem {
   id: string;
@@ -18,6 +20,25 @@ interface MenuItem {
   }[];
 }
 
+const clearAuthStorage = () => {
+  [
+    "user",
+    "accessToken",
+    "refreshToken",
+    "expiresAt",
+    "expiresIn",
+    "refreshExpiresAt",
+    "idleTimeoutSeconds",
+    "lastActivityAt",
+    "rememberMe",
+    "token",
+  ].forEach((key) => localStorage.removeItem(key));
+
+  ["token", "refreshToken", "role", "user"].forEach((name) => {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+  });
+};
+
 export default function Sidebar() {
   const { isOpen } = useSellerSideBarContext();
   const pathname = usePathname();
@@ -29,6 +50,21 @@ export default function Sidebar() {
         ? prev.filter((id) => id !== menuId)
         : [...prev, menuId],
     );
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      // Still clear client state if the logout request fails.
+    }
+
+    await logoutAction();
+    clearAuthStorage();
+    window.location.href = "/login";
   };
 
   const menuItems: MenuItem[] = useMemo(
@@ -199,9 +235,10 @@ export default function Sidebar() {
       className="bg-white border-end"
       style={{
         width: "250px",
-        overflowY: "auto",
+        overflow: "hidden",
         height: "100vh",
-        display: isOpen ? "block" : "none",
+        display: isOpen ? "flex" : "none",
+        flexDirection: "column",
       }}
     >
       <div className="p-3 border-bottom">
@@ -218,7 +255,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <div className="py-2">
+      <div className="py-2 flex-grow-1 overflow-auto">
         {menuItems.map((menu) => (
           <div key={menu.id} className="mt-1">
             {menu.submenu ? (
@@ -295,6 +332,35 @@ export default function Sidebar() {
             )}
           </div>
         ))}
+      </div>
+
+      <div className="border-top p-3">
+        <Link
+          href="/"
+          className="btn btn-outline-primary btn-sm d-flex align-items-center justify-content-center gap-2 fw-semibold w-100 mb-2"
+        >
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 2 8h1v6a1 1 0 0 0 1 1h3.5a.5.5 0 0 0 .5-.5V11h1v3.5a.5.5 0 0 0 .5.5H13a1 1 0 0 0 1-1V8h1a.5.5 0 0 0 .354-.854l-6-6zM13 7.5V14h-3v-3.5a.5.5 0 0 0-.5-.5h-2a.5.5 0 0 0-.5.5V14H4V7.5L8 3.207 13 7.5z" />
+          </svg>
+          Come back Buyer
+        </Link>
+        <button
+          type="button"
+          className="btn btn-outline-danger btn-sm d-flex align-items-center justify-content-center gap-2 fw-semibold w-100"
+          onClick={handleLogout}
+        >
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path
+              fillRule="evenodd"
+              d="M10 12.5a.5.5 0 0 1-.5.5h-6A1.5 1.5 0 0 1 2 11.5v-7A1.5 1.5 0 0 1 3.5 3h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .5.5h6a.5.5 0 0 1 .5.5z"
+            />
+            <path
+              fillRule="evenodd"
+              d="M11.854 8.354a.5.5 0 0 0 0-.708L9.854 5.646a.5.5 0 1 0-.708.708L10.293 7.5H5.5a.5.5 0 0 0 0 1h4.793L9.146 9.646a.5.5 0 0 0 .708.708l2-2z"
+            />
+          </svg>
+          Logout
+        </button>
       </div>
 
       <style jsx>{`

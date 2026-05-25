@@ -33,7 +33,22 @@ public class ProductController {
 	 
 	 
 	 @GetMapping("")
-	 public ResponseEntity getAll() {
+	 public ResponseEntity getAll(
+			 @RequestParam(required = false, defaultValue = "false") boolean verifiedShopOnly,
+			 @RequestParam(required = false, defaultValue = "1") Integer page,
+			 @RequestParam(required = false, defaultValue = "20") Integer limit,
+			 @RequestParam(required = false) Integer excludeShopId) {
+		 if (verifiedShopOnly) {
+			 int safePage = Math.max(1, page == null ? 1 : page);
+			 int safeLimit = Math.max(1, Math.min(limit == null ? 20 : limit, 60));
+			 var list = ((ProductRepository) repositories).GetAllByVerifiedShops(
+					 safeLimit,
+					 (safePage - 1) * safeLimit,
+					 excludeShopId);
+
+			 return ResponseEntity.ok(list);
+		 }
+
 		 var list = repositories.GetAll();
 		 //Convert the list to hashSet
 		HashSet<Product> set = new HashSet<>(list); 
