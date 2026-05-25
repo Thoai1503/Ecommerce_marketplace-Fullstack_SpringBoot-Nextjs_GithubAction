@@ -1,8 +1,11 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import AllProduct from "./AllProduct";
 import { IProduct } from "@/validators/product";
 import { INTERNAL_API } from "@/helper/api";
+import styles from "./ProductFetcher.module.css";
+
+const PAGE_SIZE = 20;
 
 function unwrapCollection(payload: any): any[] {
   if (Array.isArray(payload)) return payload;
@@ -20,28 +23,72 @@ interface ProductFetcherProps {
 
 const ProductFetcher: React.FC<ProductFetcherProps> = ({ ownShopId }) => {
   const [products, setProducts] = useState<Partial<IProduct>[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const fetchProductsPage = useCallback(async (pageToLoad: number) => {
+    const params = new URLSearchParams({
+      verifiedShopOnly: "true",
+      page: String(pageToLoad),
+      limit: String(PAGE_SIZE),
+    });
+
+    if (ownShopId) {
+      params.set("excludeShopId", String(ownShopId));
+    }
+
+    const res = await fetch(`${INTERNAL_API}/product?${params.toString()}`);
+    const productsPayload = await res.json();
+    return unwrapCollection(productsPayload) as Partial<IProduct>[];
+  }, [ownShopId]);
 
   useEffect(() => {
+    let ignore = false;
+
     const fetchProducts = async () => {
+      setLoading(true);
       try {
-        const res = await fetch(`${INTERNAL_API}/api/product`);
-        const productsPayload = await res.json();
-        const rawProducts = unwrapCollection(
-          productsPayload,
-        ) as Partial<IProduct>[];
-        const filtered = rawProducts.filter(
-          (product) => !ownShopId || Number(product.shop_id ?? 0) !== ownShopId,
-        );
-        setProducts(filtered);
+        const firstPageProducts = await fetchProductsPage(1);
+        if (ignore) return;
+
+        setProducts(firstPageProducts);
+        setPage(1);
+        setHasMore(firstPageProducts.length === PAGE_SIZE);
       } catch (e) {
+        if (ignore) return;
         setProducts([]);
+        setPage(1);
+        setHasMore(false);
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
+
     fetchProducts();
-  }, [ownShopId]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [fetchProductsPage]);
+
+  const handleSeeMore = async () => {
+    if (loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const nextProducts = await fetchProductsPage(nextPage);
+      setProducts((current) => [...current, ...nextProducts]);
+      setPage(nextPage);
+      setHasMore(nextProducts.length === PAGE_SIZE);
+    } catch (e) {
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   if (loading) {
     // Skeleton loading effect for e-commerce
@@ -140,7 +187,23 @@ const ProductFetcher: React.FC<ProductFetcherProps> = ({ ownShopId }) => {
     );
   }
 
-  return <AllProduct products={products} />;
+  return (
+    <div className={styles.productListBlock}>
+      <AllProduct products={products} />
+      {hasMore && (
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.seeMoreButton}
+            disabled={loadingMore}
+            onClick={handleSeeMore}
+          >
+            {loadingMore ? "Loading..." : "See more"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default ProductFetcher;
