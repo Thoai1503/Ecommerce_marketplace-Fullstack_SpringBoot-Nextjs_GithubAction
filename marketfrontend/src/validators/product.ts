@@ -8,6 +8,8 @@ export interface IProductAttribute {
   attributeValueId?: number | null;
   valueText?: string | null;
   valueNumber?: number | null;
+
+  shop?: any;
   valueDate?: string | null;
   unitId?: number | null;
   attributeName?: string | null;
@@ -22,6 +24,7 @@ export interface IProduct {
   shop_id: number; // instead of long
   category_id: number;
   product_name: string;
+  shop?: any;
   product_slug: string;
   image_url: string;
   images: ProductImage[] | [];

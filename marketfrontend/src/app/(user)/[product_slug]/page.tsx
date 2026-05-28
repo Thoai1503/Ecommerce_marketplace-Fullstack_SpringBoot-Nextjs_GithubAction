@@ -1,6 +1,7 @@
 // app/product/[product_slug]/page.tsx
 import ProductDetail from "@/components/client/product_detail/ProductDetail";
 import { INTERNAL_API } from "@/helper/api";
+import { Metadata } from "next";
 import { cookies } from "next/headers";
 
 interface PageProps {
@@ -19,27 +20,71 @@ async function getProduct(productId: number) {
   return res.json();
 }
 
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { product_slug } = await params;
   const match = product_slug?.match(/\.p(\d+)/);
   const productId = match ? Number(match[1]) : null;
 
   if (!productId) {
     return {
-      title: "Sản phẩm không hợp lệ",
-      description: "Không tìm thấy sản phẩm.",
+      title: "Sản phẩm không hợp lệ | NEXAMART",
+      description: "Không tìm thấy sản phẩm bạn đang tìm.",
     };
   }
 
   const data = await getProduct(productId);
+  if (!data) {
+    return {
+      title: "Sản phẩm không tồn tại | NEXAMART",
+      robots: { index: false },
+    };
+  }
+
+  const productName = data.product_name || "";
+  const description = (data.description || "").substring(0, 155);
 
   return {
-    title: data?.product_name || "Sản phẩm không tồn tại",
-    description: data?.description || "Chi tiết sản phẩm",
+    title: `${productName} | NEXAMART`,
+    description: description,
+    keywords: [
+      productName,
+      data.category_name || "",
+      "nexamart",
+      "mua sắm online",
+      "thời trang",
+    ].filter(Boolean),
+
+    alternates: {
+      canonical: `https://nexamart.duckdns.org/product/${product_slug}`, // thay domain của bạn
+    },
+
     openGraph: {
-      title: data?.product_name,
-      description: data?.description,
-      images: data?.images ? data.images.map((img: any) => img.image_url) : [],
+      title: productName,
+      description: description,
+      type: "website", // hoặc "product"
+      images:
+        data.images?.map((img: any) => ({
+          url: img.image_url,
+          width: 1200,
+          height: 630,
+          alt: productName,
+        })) || [],
+      siteName: "NEXAMART",
+      locale: "vi_VN",
+    },
+
+    twitter: {
+      card: "summary_large_image",
+      title: productName,
+      description: description,
+      images: data.images?.[0]?.image_url ? [data.images[0].image_url] : [],
+    },
+
+    robots: {
+      index: true,
+      follow: true,
     },
   };
 }
@@ -62,5 +107,5 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const role = (await cookies()).get("role")?.value;
   const userId = Number((await cookies()).get("user")?.value);
 
-  return <ProductDetail data={data} />;
+  return <ProductDetail data={data} productSlug={product_slug} />;
 }
