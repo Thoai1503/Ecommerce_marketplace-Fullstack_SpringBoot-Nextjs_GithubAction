@@ -97,7 +97,7 @@ public class UserRepository implements IRepositories<User> {
     @Override
     public List<User> GetAll() {
 
-    	String sql = "SELECT * FROM `user`";
+    	String sql = "SELECT * FROM `user` ";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql);

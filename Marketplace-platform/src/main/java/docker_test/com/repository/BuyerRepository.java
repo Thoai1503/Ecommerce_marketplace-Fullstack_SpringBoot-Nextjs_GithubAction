@@ -45,13 +45,13 @@ public class BuyerRepository extends UserRepository {
 
         String sql = """
                 SELECT
-                    u.*,
+                u.*,
                     COALESCE(order_stats.total_orders, 0) AS total_orders,
                     COALESCE(order_stats.total_spent, 0) AS total_spent,
                     order_stats.last_order_date
                 FROM `user` u
                 """ + CUSTOMER_STATS_JOIN +
-                "WHERE " + ALIASED_TYPE_CLAUSE + " ORDER BY u.created_at DESC";
+                "WHERE " + ALIASED_TYPE_CLAUSE + " ORDER BY u.created_at DESC LIMIT 20 OFFSET 45000";
 
         try (Connection con = dbConnection.getConn();
              PreparedStatement ps = con.prepareStatement(sql);
