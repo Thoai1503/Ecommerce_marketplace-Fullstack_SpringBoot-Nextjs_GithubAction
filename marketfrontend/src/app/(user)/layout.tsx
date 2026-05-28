@@ -1,4 +1,3 @@
-// @ts-expect-error - Bootstrap CSS import
 import "bootstrap/dist/css/bootstrap.min.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
