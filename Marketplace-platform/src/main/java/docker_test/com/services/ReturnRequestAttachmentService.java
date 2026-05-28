@@ -77,14 +77,14 @@ public class ReturnRequestAttachmentService {
         }
 
         // Chờ tất cả thread hoàn thành
-        for (FileThread thread : threads) {
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException("Upload bị gián đoạn", e);
-            }
-        }
+       for (FileThread thread : threads) {
+           try {
+               thread.join();
+           } catch (InterruptedException e) {
+               Thread.currentThread().interrupt();
+               throw new RuntimeException("Upload bị gián đoạn", e);
+           }
+       }
 
         // Kiểm tra lỗi từng thread
         for (int i = 0; i < threads.size(); i++) {

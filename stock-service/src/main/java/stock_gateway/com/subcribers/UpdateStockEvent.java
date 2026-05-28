@@ -30,10 +30,9 @@ public class UpdateStockEvent {
 		}
 
 		productVariantRepository.findById(event.getVariant_id()).ifPresentOrElse(variant -> {
-			int updatedStock = Math.max(variant.getStockQuantity() - event.getQuantity(), 0);
-			variant.setStockQuantity(updatedStock);
+			variant.setStockQuantity(Math.max(variant.getStockQuantity() - event.getQuantity(), 0));
 			productVariantRepository.save(variant);
-			LOGGER.info("Stock updated. variantId={}, quantity={}, newStock={}", event.getVariant_id(), event.getQuantity(), updatedStock);
+			LOGGER.info("Stock updated. variantId={}, quantity={}, newStock={}", event.getVariant_id(), event.getQuantity(), Math.max(variant.getStockQuantity() - event.getQuantity(), 0));
 		}, () -> LOGGER.warn("Variant not found for stock update. variantId={}, payload={}", event.getVariant_id(), event));
 
 	 }
