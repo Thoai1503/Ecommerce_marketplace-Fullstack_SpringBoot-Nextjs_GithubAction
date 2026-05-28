@@ -120,10 +120,11 @@ public class AuthService {
     private void addCookie(HttpServletResponse response, String name, String value, boolean httpOnly, long maxAge) {
         ResponseCookie cookie = ResponseCookie.from(name, value == null ? "" : value)
                 .httpOnly(httpOnly)
-                .secure(false)
+                .secure(true)
                 .path("/")
                 .maxAge(maxAge)
-                .sameSite("Lax")
+                .domain(".duckdns.org")
+                .sameSite("None")
                 .build();
 
         response.addHeader("Set-Cookie", cookie.toString());
