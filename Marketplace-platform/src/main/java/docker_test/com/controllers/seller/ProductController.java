@@ -42,7 +42,7 @@ public class ProductController {
 		 System.out.print("Send..");
 		 
 		 var en = repositories.Create(product);
-		 
+		  
 		 
 		 return ResponseEntity.ok(en);
 	 }
