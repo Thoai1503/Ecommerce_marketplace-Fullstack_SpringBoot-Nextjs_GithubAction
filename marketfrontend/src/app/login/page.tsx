@@ -190,7 +190,7 @@ const LoginForm = () => {
 
       // Lưu thông tin user ở client
       localStorage.setItem("user", JSON.stringify(normalizedUser));
-
+      // test
       // Đặt cookie để middleware đọc được trạng thái đăng nhập.
       document.cookie = `token=${accessToken || "logged-in"}; path=/; max-age=${
         accessCookieMaxAge
@@ -391,9 +391,7 @@ const LoginForm = () => {
 const LoginPage = () => {
   return (
     <Suspense
-      fallback={
-        <div className="p-6 text-center">Loading login page...</div>
-      }
+      fallback={<div className="p-6 text-center">Loading login page...</div>}
     >
       <LoginForm />
     </Suspense>
