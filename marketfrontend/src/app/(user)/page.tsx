@@ -28,6 +28,13 @@ export default async function Home() {
   } catch (error) {
     apiError = "Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.";
     console.error("[Home Page] Fetch /seller/product failed:", error);
+    return (
+      <>
+        <div className="alert alert-warning mt-3" role="alert">
+          {apiError}
+        </div>
+      </>
+    );
   }
 
   // const { products } = useHomePage();
