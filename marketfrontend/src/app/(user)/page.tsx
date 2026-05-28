@@ -1,27 +1,44 @@
 // app/page.tsx (hoặc components/HomePage.tsx)
 import React from "react";
 import Image from "next/image";
-import axios from "axios";
-import { API_URL, INTERNAL_API } from "@/helper/api";
+import { INTERNAL_API } from "@/helper/api";
 import { Product } from "@/validators/product";
-import { cookies } from "next/headers";
 // import { useHomePage } from "@/feature/client/hook";
 
 export const revalidate = 3; // 1 giờ
 export default async function Home() {
-  const cookieStore = await cookies();
-  const role = cookieStore.get("role")?.value;
-  console.log("Role: " + role);
-  // const res = await axios.get(`${INTERNAL_API}/seller/product`);
-  // const products = res.data as Partial<Product>[];
-  // console.log("Product: " + JSON.stringify(products));
-  const res = await fetch(`${INTERNAL_API}/seller/product`, {
-    next: { revalidate: 60 },
-  });
-  const products = (await res.json()) as Partial<Product>[];
+  let products: Partial<Product>[] = [];
+  let apiError: string | null = null;
+
+  try {
+    const res = await fetch(`${INTERNAL_API}/seller/product`, {
+      next: { revalidate: 60 },
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} - ${res.statusText}`);
+    }
+
+    const data = await res.json();
+    if (!Array.isArray(data)) {
+      throw new Error("API response is not an array");
+    }
+
+    products = data as Partial<Product>[];
+  } catch (error) {
+    apiError = "Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.";
+    console.error("[Home Page] Fetch /seller/product failed:", error);
+  }
+
   // const { products } = useHomePage();
   return (
     <div className="container-fluid px-3 px-md-4">
+      {apiError && (
+        <div className="alert alert-warning mt-3" role="alert">
+          {apiError}
+        </div>
+      )}
+
       {/* Category Icons - Horizontal Scrollable */}
       <div className="my-4">
         <div
