@@ -17,7 +17,7 @@ import docker_test.com.dto.ReturnShipmentStatusUpdatedEvent;
 
 @Configuration
 public class KafkaConsumerConfig {
-
+    // Kafka consumer configuration properties
     @Value("${spring.kafka.consumer.bootstrap-servers:${spring.kafka.bootstrap-servers:localhost:9092}}")
     private String bootstrapServers;
 
