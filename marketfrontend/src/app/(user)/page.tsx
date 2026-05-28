@@ -370,7 +370,7 @@ export default async function Home() {
                   <Image
                     src={
                       item.image_url ||
-                      "https://via.placeholder.com/400?text=No+Image"
+                      "https://res.cloudinary.com/dizx3mbgw/image/upload/v1779874743/phoneshop/products/5/content/powdpacctd0tpdlafdkt.webp"
                     }
                     alt={item.product_name || "No image"}
                     fill
