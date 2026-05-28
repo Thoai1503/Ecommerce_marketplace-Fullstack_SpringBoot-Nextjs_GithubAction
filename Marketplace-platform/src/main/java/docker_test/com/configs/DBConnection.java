@@ -55,9 +55,15 @@ public final class DBConnection {
             }
             props.load(input);
 
-            // HikariCP configuration
+                // HikariCP configuration
             HikariConfig config = new HikariConfig();
-            config.setJdbcUrl("jdbc:mysql://" + getEnvOrProp("DB_HOST", "mysql.host") + ":" + getEnvOrProp("DB_PORT", "mysql.port") + "/" + getEnvOrProp("DB_NAME", "mysql.database") + "?useSSL=true&requireSSL=true&serverTimezone=Asia/Ho_Chi_Minh");
+                String jdbcUrl = "jdbc:mysql://" + getEnvOrProp("DB_HOST", "mysql.host")
+                    + ":" + getEnvOrProp("DB_PORT", "mysql.port")
+                    + "/" + getEnvOrProp("DB_NAME", "mysql.database")
+                    + "?sslMode=REQUIRED&serverTimezone=Asia/Ho_Chi_Minh";
+                config.setJdbcUrl(jdbcUrl);
+                // Explicit driver declaration is safer when running as WAR on external Tomcat.
+                config.setDriverClassName("com.mysql.cj.jdbc.Driver");
             config.setUsername(getEnvOrProp("DB_USER", "mysql.username"));
             config.setPassword(getEnvOrProp("DB_PASSWORD", "mysql.password"));
             config.addDataSourceProperty("cachePrepStmts", "true");
