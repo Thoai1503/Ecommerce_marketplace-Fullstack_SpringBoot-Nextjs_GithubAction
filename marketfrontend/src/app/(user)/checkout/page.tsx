@@ -2666,141 +2666,167 @@ export default function CheckoutPage() {
 
     createOrder(orderPayload as any)
       .then(async (dt) => {
-        const orderId = Number(dt.id || dt.orderId || 0);
-        message.success(`Đặt hàng thành công! Mã đơn hàng: ${orderId}`);
-
-        const cleanupTasks: Promise<unknown>[] = [];
-
-        if (
-          orderId > 0 &&
-          (orderVoucherUsageDrafts.length > 0 ||
-            orderVoucherRedemptionDrafts.length > 0)
-        ) {
-          cleanupTasks.push(
-            getOrderCheckoutRefs(orderId).then((orderRefs) => {
-              const usageTasks = orderVoucherUsageDrafts.map((usage) => {
-                const orderShipmentId = orderRefs.shipmentIdByShop.get(
-                  usage.shopId,
-                );
-
-                if (!orderShipmentId) {
-                  throw new Error(
-                    `Missing shipment id for shop ${usage.shopId}`,
-                  );
-                }
-
-                return createVoucherUsageHistory({
-                  voucherId: usage.voucherId,
-                  userId: Number(userId || paymentInfo.user_id || 0),
-                  orderId,
-                  orderShipmentId,
-                  discountAmount: usage.discountAmount,
-                });
+        const isCODPayment =
+          String(paymentInfo.method || "COD").toUpperCase() === "COD";
+        const codProcessingNoticeKey = "checkout-cod-processing";
+        const codProcessingNoticeTimer = isCODPayment
+          ? window.setTimeout(() => {
+              message.open({
+                key: codProcessingNoticeKey,
+                type: "info",
+                content: "Vui lòng đợi, quá trình thanh toán đang xử lý",
+                duration: 0,
               });
+            }, 3000)
+          : null;
+        const clearCodProcessingNotice = () => {
+          if (codProcessingNoticeTimer !== null) {
+            window.clearTimeout(codProcessingNoticeTimer);
+          }
+          message.destroy(codProcessingNoticeKey);
+        };
 
-              const redemptionTasks = orderVoucherRedemptionDrafts.map(
-                async (draft) => {
-                  const redemption = await createVoucherRedemption({
-                    userVoucherId: draft.voucher.userVoucherId,
-                    voucherId: draft.voucher.id,
-                    userId: Number(userId || paymentInfo.user_id || 0),
-                    orderId,
-                    orderCode: orderRefs.orderNumber,
-                    originalShippingFee: effectiveShippingFee,
-                    originalOrderAmount: calculateSubtotal(),
-                    discountAmountApplied: draft.discountAmount,
-                    finalOrderAmount: orderFinalTotal,
-                    status: "SUCCESS",
-                  });
-                  const redemptionId = Number(redemption?.id || 0);
+        try {
+          const orderId = Number(dt.id || dt.orderId || 0);
+          message.success(`Đặt hàng thành công! Mã đơn hàng: ${orderId}`);
 
-                  if (redemptionId <= 0) {
-                    throw new Error("Missing voucher redemption id");
+          const cleanupTasks: Promise<unknown>[] = [];
+
+          if (
+            orderId > 0 &&
+            (orderVoucherUsageDrafts.length > 0 ||
+              orderVoucherRedemptionDrafts.length > 0)
+          ) {
+            cleanupTasks.push(
+              getOrderCheckoutRefs(orderId).then((orderRefs) => {
+                const usageTasks = orderVoucherUsageDrafts.map((usage) => {
+                  const orderShipmentId = orderRefs.shipmentIdByShop.get(
+                    usage.shopId,
+                  );
+
+                  if (!orderShipmentId) {
+                    throw new Error(
+                      `Missing shipment id for shop ${usage.shopId}`,
+                    );
                   }
 
-                  return Promise.all(
-                    draft.itemDiscounts.map((itemDiscount) => {
-                      const orderItemId = orderRefs.orderItemIdByKey.get(
-                        itemDiscount.itemKey,
-                      );
+                  return createVoucherUsageHistory({
+                    voucherId: usage.voucherId,
+                    userId: Number(userId || paymentInfo.user_id || 0),
+                    orderId,
+                    orderShipmentId,
+                    discountAmount: usage.discountAmount,
+                  });
+                });
 
-                      if (!orderItemId) {
-                        throw new Error(
-                          `Missing order item id for ${itemDiscount.itemKey}`,
+                const redemptionTasks = orderVoucherRedemptionDrafts.map(
+                  async (draft) => {
+                    const redemption = await createVoucherRedemption({
+                      userVoucherId: draft.voucher.userVoucherId,
+                      voucherId: draft.voucher.id,
+                      userId: Number(userId || paymentInfo.user_id || 0),
+                      orderId,
+                      orderCode: orderRefs.orderNumber,
+                      originalShippingFee: effectiveShippingFee,
+                      originalOrderAmount: calculateSubtotal(),
+                      discountAmountApplied: draft.discountAmount,
+                      finalOrderAmount: orderFinalTotal,
+                      status: "SUCCESS",
+                    });
+                    const redemptionId = Number(redemption?.id || 0);
+
+                    if (redemptionId <= 0) {
+                      throw new Error("Missing voucher redemption id");
+                    }
+
+                    return Promise.all(
+                      draft.itemDiscounts.map((itemDiscount) => {
+                        const orderItemId = orderRefs.orderItemIdByKey.get(
+                          itemDiscount.itemKey,
                         );
-                      }
 
-                      return createVoucherRedemptionItem({
-                        voucherRedemptionId: redemptionId,
-                        orderItemId,
-                        discountAmount: itemDiscount.discountAmount,
-                      });
-                    }),
-                  );
-                },
-              );
+                        if (!orderItemId) {
+                          throw new Error(
+                            `Missing order item id for ${itemDiscount.itemKey}`,
+                          );
+                        }
 
-              return Promise.all([...usageTasks, ...redemptionTasks]);
-            }),
-          );
-        }
+                        return createVoucherRedemptionItem({
+                          voucherRedemptionId: redemptionId,
+                          orderItemId,
+                          discountAmount: itemDiscount.discountAmount,
+                        });
+                      }),
+                    );
+                  },
+                );
 
-        selectedRedeemableVouchers
-          .filter((voucher) => voucher.userVoucherId)
-          .forEach((voucher) => {
-            cleanupTasks.push(
-              fetch(`${API_URL}/api/user-vouchers/${voucher.userVoucherId}`, {
-                method: "PUT",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  status: "REDEEMED",
-                  reservedOrderId: orderId,
-                  reservedAt: new Date().toISOString(),
-                  redeemedAt: new Date().toISOString(),
-                }),
-              }).then(async (res) => {
-                if (!res.ok) {
-                  const text = await res.text();
-                  throw new Error(text || "Failed to update voucher status");
-                }
+                return Promise.all([...usageTasks, ...redemptionTasks]);
               }),
             );
-          });
+          }
 
-        cleanupTasks.push(
-          Promise.all(
-            cartItems
-              .map((item) => Number(item.id || 0))
-              .filter((cartId) => cartId > 0)
-              .map((cartId) => Cart.deleteCartItem(cartId)),
-          ),
-        );
+          selectedRedeemableVouchers
+            .filter((voucher) => voucher.userVoucherId)
+            .forEach((voucher) => {
+              cleanupTasks.push(
+                fetch(`${API_URL}/api/user-vouchers/${voucher.userVoucherId}`, {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    status: "REDEEMED",
+                    reservedOrderId: orderId,
+                    reservedAt: new Date().toISOString(),
+                    redeemedAt: new Date().toISOString(),
+                  }),
+                }).then(async (res) => {
+                  if (!res.ok) {
+                    const text = await res.text();
+                    throw new Error(text || "Failed to update voucher status");
+                  }
+                }),
+              );
+            });
 
-        const cleanupResults = await Promise.allSettled(cleanupTasks);
-        const hasCleanupFailure = cleanupResults.some(
-          (result) => result.status === "rejected",
-        );
-
-        if (!hasCleanupFailure) {
-          window.dispatchEvent(new Event("cart-updated"));
-        } else {
-          console.error("Checkout cleanup failed:", cleanupResults);
-          message.warning(
-            "Đơn hàng đã tạo nhưng cập nhật voucher hoặc giỏ hàng chưa hoàn tất.",
+          cleanupTasks.push(
+            Promise.all(
+              cartItems
+                .map((item) => Number(item.id || 0))
+                .filter((cartId) => cartId > 0)
+                .map((cartId) => Cart.deleteCartItem(cartId)),
+            ),
           );
-        }
 
-        setPaymentInfo((prev: any) => ({
-          ...prev,
-          orderId,
-        }));
-        if (paymentInfo.method !== "COD") {
-          //checkOut({ ...paymentInfo, orderId: dt.id });
-          window.location.href = `${dt.paymentUrl}`; // Chuyển hướng đến cổng thanh toán VNPAY
-        } else {
-          window.location.href = `/orders/${orderId}`; // Chuyển hướng đến trang thành công sau khi đặt hàng với phương thức khác
+          const cleanupResults = await Promise.allSettled(cleanupTasks);
+          const hasCleanupFailure = cleanupResults.some(
+            (result) => result.status === "rejected",
+          );
+
+          if (!hasCleanupFailure) {
+            window.dispatchEvent(new Event("cart-updated"));
+          } else {
+            console.error("Checkout cleanup failed:", cleanupResults);
+            message.warning(
+              "Đơn hàng đã tạo nhưng cập nhật voucher hoặc giỏ hàng chưa hoàn tất.",
+            );
+          }
+
+          setPaymentInfo((prev: any) => ({
+            ...prev,
+            orderId,
+          }));
+          if (paymentInfo.method !== "COD") {
+            //checkOut({ ...paymentInfo, orderId: dt.id });
+            clearCodProcessingNotice();
+            window.location.href = `${dt.paymentUrl}`; // Chuyển hướng đến cổng thanh toán VNPAY
+          } else {
+            clearCodProcessingNotice();
+            window.location.href = `/orders/${orderId}`; // Chuyển hướng đến trang thành công sau khi đặt hàng với phương thức khác
+          }
+        } finally {
+          clearCodProcessingNotice();
         }
       })
       .catch((e: AxiosError) => {
