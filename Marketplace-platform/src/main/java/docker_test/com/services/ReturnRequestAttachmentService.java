@@ -81,7 +81,7 @@ public class ReturnRequestAttachmentService {
            try {
                thread.join();
            } catch (InterruptedException e) {
-               Thread.currentThread().interrupt();
+               Thread.currentThread()	.interrupt();
                throw new RuntimeException("Upload bị gián đoạn", e);
            }
        }
