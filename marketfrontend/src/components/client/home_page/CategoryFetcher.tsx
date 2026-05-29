@@ -44,20 +44,46 @@ const CategoryFetcher: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", gap: 16 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+          gap: 12,
+          padding: 14,
+          background: "#fff",
+          border: "1px solid #e8edf5",
+          borderRadius: 24,
+        }}
+      >
         {Array.from({ length: 6 }).map((_, idx) => (
           <div
             key={idx}
             className="skeleton-category"
-            style={{
-              width: 120,
-              height: 60,
-              borderRadius: 12,
-              background:
-                "linear-gradient(90deg, #f3f3f3 25%, #ececec 50%, #f3f3f3 75%)",
-              animation: "skeleton-loading 1.2s infinite linear alternate",
-            }}
-          />
+            style={{ padding: "8px 6px" }}
+          >
+            <div
+              style={{
+                width: 58,
+                height: 58,
+                margin: "0 auto 10px",
+                borderRadius: 12,
+                background:
+                  "linear-gradient(90deg, #f3f3f3 25%, #ececec 50%, #f3f3f3 75%)",
+                animation: "skeleton-loading 1.2s infinite linear alternate",
+              }}
+            />
+            <div
+              style={{
+                width: "84%",
+                height: 14,
+                margin: "0 auto",
+                borderRadius: 8,
+                background:
+                  "linear-gradient(90deg, #f3f3f3 25%, #ececec 50%, #f3f3f3 75%)",
+                animation: "skeleton-loading 1.2s infinite linear alternate",
+              }}
+            />
+          </div>
         ))}
         <style jsx>{`
           @keyframes skeleton-loading {
@@ -66,6 +92,20 @@ const CategoryFetcher: React.FC = () => {
             }
             100% {
               background-position: calc(200px + 100%) 0;
+            }
+          }
+
+          @media (max-width: 991px) {
+            div[style*="grid-template-columns: repeat(6"] {
+              grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            }
+          }
+
+          @media (max-width: 640px) {
+            div[style*="grid-template-columns: repeat(6"] {
+              grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+              border-radius: 18px !important;
+              padding: 10px !important;
             }
           }
         `}</style>

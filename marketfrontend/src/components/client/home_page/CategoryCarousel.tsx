@@ -14,7 +14,6 @@ type CategoryItem = {
   id: number | string;
   category_name: string;
   category_icon?: string;
-  color?: string;
 };
 
 type Props = {
@@ -58,7 +57,10 @@ export default function CategoryCarousel({ categories }: Props) {
 
   const maxStartIndex = Math.max(0, categories.length - itemsPerPage);
   const startIndex = Math.min(currentPage * itemsPerPage, maxStartIndex);
-  const visibleCategories = categories.slice(startIndex, startIndex + itemsPerPage);
+  const visibleCategories = categories.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
 
   const goPrev = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 0));
@@ -135,10 +137,7 @@ export default function CategoryCarousel({ categories }: Props) {
               className={`${styles.categoryCard} ${isDragging ? styles.draggingCard : ""}`}
               draggable={false}
             >
-              <div
-                className={styles.categoryIconWrap}
-                style={{ backgroundColor: cat.color || "#f8f9fa" }}
-              >
+              <div className={styles.categoryIconWrap}>
                 {cat.category_icon && (
                   <img
                     src={cat.category_icon}

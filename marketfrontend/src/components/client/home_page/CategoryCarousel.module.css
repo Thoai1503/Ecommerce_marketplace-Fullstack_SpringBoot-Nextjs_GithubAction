@@ -5,9 +5,9 @@
 .viewport {
   min-width: 0;
   overflow: hidden;
-  padding: 8px;
-  background: transparent;
-  border: 0;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #e8edf5;
   border-radius: 24px;
   cursor: grab;
 }
@@ -30,15 +30,14 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 18px 12px 14px;
-  background: #fff;
-  border: 1px solid #e8edf5;
-  border-radius: 10px;
+  padding: 14px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
   text-decoration: none;
   transition:
     background-color 0.2s ease,
-    transform 0.2s ease,
-    border-color 0.2s ease;
+    transform 0.2s ease;
 }
 
 .draggingCard {
@@ -46,9 +45,8 @@
 }
 
 .categoryCard:hover {
-  background: #f5f7ff;
+  background: #f8fbff;
   transform: translateY(-2px);
-  border-color: #c7d5f5;
 }
 
 .categoryIconWrap {
@@ -59,7 +57,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: #f0f4ff !important;
+  background: #fff;
   transition: transform 0.22s ease;
 }
 
@@ -153,13 +151,13 @@
   }
 
   .viewport {
-    padding: 4px;
+    padding: 10px;
     border-radius: 18px;
   }
 
   .categoryCard {
     height: 144px;
-    padding: 10px 8px;
+    padding: 8px 6px;
     border-radius: 8px;
   }
 
