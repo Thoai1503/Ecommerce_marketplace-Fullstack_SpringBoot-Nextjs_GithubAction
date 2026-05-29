@@ -374,12 +374,19 @@ export default function CheckoutOrderSummary({
             background: "rgba(15, 23, 42, 0.42)",
             zIndex: 1055,
             padding: "20px",
+            overflowY: "auto",
           }}
           onClick={() => setIsVoucherModalOpen(false)}
         >
           <div
             className="bg-white rounded-4 shadow-lg w-100"
-            style={{ maxWidth: "640px", maxHeight: "85vh" }}
+            style={{
+              maxWidth: "640px",
+              maxHeight: "calc(100vh - 40px)",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
@@ -409,8 +416,14 @@ export default function CheckoutOrderSummary({
             </div>
 
             <div
-              className="px-4 py-3 d-flex flex-column gap-3"
-              style={{ maxHeight: "52vh", overflowY: "auto" }}
+              className="px-4 py-3"
+              style={{
+                flex: "1 1 auto",
+                minHeight: 0,
+                overflowY: "auto",
+                display: "grid",
+                gap: "12px",
+              }}
             >
               {voucherLoading && (
                 <div className="text-muted small">Loading vouchers...</div>
@@ -438,14 +451,18 @@ export default function CheckoutOrderSummary({
                     <button
                       key={`checkout-voucher-${voucher.id}`}
                       type="button"
-                      className={`btn text-start border rounded-4 p-0 overflow-hidden ${
+                      className={`btn w-100 text-start border rounded-4 p-0 overflow-hidden ${
                         isSelected
                           ? "border-primary shadow-sm"
                           : "border-info-subtle"
                       }`}
+                      style={{
+                        flexShrink: 0,
+                        minHeight: "136px",
+                      }}
                       onClick={() => toggleDraftVoucher(voucher)}
                     >
-                      <div className="row g-0 align-items-stretch">
+                      <div className="row g-0 align-items-stretch h-100">
                         <div className="col-4 col-sm-3 d-flex flex-column justify-content-center text-white p-3 bg-primary">
                           <div className="fw-bold">{voucher.code}</div>
                           <div className="small mt-2">
