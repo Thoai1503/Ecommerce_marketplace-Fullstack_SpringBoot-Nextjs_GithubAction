@@ -32,7 +32,7 @@ public class SecurityConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of("http://localhost:3000","http://103.90.225.130:4000","https://nexamart.duckdns.org"));
+        config.setAllowedOrigins(List.of("http://localhost:3000","http://103.90.225.130:4000"));
         config.setAllowedMethods(List.of(
                 "GET",
                 "POST",
