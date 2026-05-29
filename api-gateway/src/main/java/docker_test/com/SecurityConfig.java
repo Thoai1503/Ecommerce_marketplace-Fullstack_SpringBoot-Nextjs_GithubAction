@@ -36,7 +36,6 @@ public class SecurityConfig {
             "http://localhost:3000",
             "http://103.90.225.130:4000",
             "https://nexamart.duckdns.org",
-            "https://thoaiprodev.duckdns.org",
             "https://*.duckdns.org"
         ));
         config.setAllowedMethods(List.of(
