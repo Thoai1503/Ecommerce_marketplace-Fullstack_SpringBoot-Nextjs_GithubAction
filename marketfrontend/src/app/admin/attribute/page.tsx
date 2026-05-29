@@ -145,7 +145,7 @@ const GlobalAttributeManager = () => {
         });
       } else {
         // CREATE
-        await fetch(API_URL, {
+        await fetch(`${API_URL}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

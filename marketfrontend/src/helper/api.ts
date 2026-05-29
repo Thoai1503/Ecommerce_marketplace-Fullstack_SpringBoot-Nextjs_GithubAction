@@ -4,7 +4,9 @@ const FALLBACK_ADDRESS_LOOKUP_API_URL = "https://provinces.open-api.vn/api/";
 
 // Browser-side base URL. Prefer explicit public env, then fall back for local dev.
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ;
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.INTERNAL_API ||
+  FALLBACK_LOCAL_API_URL;
 
 // Server-side base URL for Next server components/routes.
 export const INTERNAL_API =
