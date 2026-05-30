@@ -86,15 +86,14 @@ Dự án trình bày case study E-Commerce Platform với các nội dung chính
 - Kafka (microservices)
 - Redis
 - MySQL / SQL Server
-- Prisma / Hibernate
+- Hibernate
 
 ### Infrastructure
 
 - Docker
 - Nginx
 - Linux VPS
-- GitHub Actions / GitLab CI
-- Vercel
+- GitHub Actions 
 
 ## Hinh anh giao dien
 
