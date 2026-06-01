@@ -39,7 +39,19 @@ public class BuyerRepository extends UserRepository {
     //     Nếu đúng spec chỉ cần 'buyer', đổi lại thành "u.user_type = 'buyer'".
     private static final String TYPE_CLAUSE         = "user_type IN ('buyer', 'shipper')";
     private static final String ALIASED_TYPE_CLAUSE = "u.user_type IN ('buyer', 'shipper')";
-
+    private static final String CUSTOMER_STATS_JOIN = """
+            LEFT JOIN (
+                SELECT
+                    user_id,
+                    COUNT(*) AS total_orders,
+                    COALESCE(SUM(final_amount), 0) AS total_spent,
+                    MAX(created_at) AS last_order_date
+                FROM `orders`
+                GROUP BY user_id
+            ) order_stats ON order_stats.user_id = u.id
+            """;
+    
+    
     private BuyerRepository() { super(); }
 
     public static BuyerRepository Instance() {
@@ -61,6 +73,32 @@ public class BuyerRepository extends UserRepository {
     //                ON `user`(user_type, created_at DESC, id DESC);
     // =========================================================================
 
+    
+    public List<User> GetAllBuyers() {
+
+        String sql = """
+                SELECT
+                u.*,
+                    COALESCE(order_stats.total_orders, 0) AS total_orders,
+                    COALESCE(order_stats.total_spent, 0) AS total_spent,
+                    order_stats.last_order_date
+                FROM `user` u
+                """ + CUSTOMER_STATS_JOIN +
+                "WHERE " + ALIASED_TYPE_CLAUSE + " ORDER BY u.created_at DESC LIMIT 20 OFFSET 45000";
+
+        try (Connection con = dbConnection.getConn();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            return mapper.RowsMap(rs);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return List.of();
+    }
+    
+    
     public List<User> GetAllBuyersKeyset(Timestamp lastCreatedAt, Long lastId, int pageSize) {
 
         String sql;
