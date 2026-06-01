@@ -170,19 +170,22 @@ function SummaryCard({
   tone: string;
 }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-            {label}
-          </p>
-          <p className="mt-3 text-2xl font-black text-slate-800">{value}</p>
-          <p className="mt-2 text-sm text-slate-500">{hint}</p>
-        </div>
-        <div
-          className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tone}`}
-        >
-          {icon}
+    <div className="col-12 col-md-6 col-xl-3">
+      <div className="h-100 rounded border bg-white p-3 shadow-sm">
+        <div className="d-flex h-100 align-items-start justify-content-between gap-3">
+          <div>
+            <p className="mb-0 small fw-bold text-uppercase text-secondary">
+              {label}
+            </p>
+            <p className="mb-0 mt-2 h4 fw-bold text-dark">{value}</p>
+            <p className="mb-0 mt-2 small text-muted">{hint}</p>
+          </div>
+          <div
+            className={`d-flex flex-shrink-0 align-items-center justify-content-center rounded-circle ${tone}`}
+            style={{ width: 44, height: 44 }}
+          >
+            {icon}
+          </div>
         </div>
       </div>
     </div>
@@ -222,40 +225,53 @@ function SellerReturnRequestDetail({
   const returnTimeline = request.timeline || [];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-[28px] border border-slate-200 bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 rounded-t-[28px] border-b border-slate-100 bg-white/95 px-6 py-5 backdrop-blur">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-              Chi tiết yêu cầu
-            </p>
-            <h2 className="mt-2 text-2xl font-black text-slate-800">
-              {formatRequestCode(request.id)}
-            </h2>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-2 rounded-2xl px-3 py-1 text-xs font-bold ${status.badge}`}
-              >
-                {status.icon}
-                {status.label}
-              </span>
-              <span className="text-sm text-slate-500">
-                Tạo lúc {formatDateTime(request.createdAt)}
-              </span>
+    <div
+      className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center px-2"
+      style={{ background: "rgba(0,0,0,0.45)", zIndex: 1050 }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-3 shadow border w-100"
+        style={{ maxWidth: "1120px", maxHeight: "90vh" }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="border-bottom bg-light rounded-top px-4 py-3">
+          <div className="d-flex flex-wrap align-items-start justify-content-between gap-3">
+            <div>
+              <p className="mb-1 small fw-bold text-uppercase text-secondary">
+                Chi tiết yêu cầu
+              </p>
+              <h4 className="mb-1 fw-bold text-dark">
+                {formatRequestCode(request.id)}
+              </h4>
+              <div className="mt-3 d-flex flex-wrap align-items-center gap-2">
+                <span
+                  className={`badge d-inline-flex align-items-center gap-2 px-3 py-2 ${status.badge}`}
+                >
+                  {status.icon}
+                  {status.label}
+                </span>
+                <span className="small text-muted">
+                  Tạo lúc {formatDateTime(request.createdAt)}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50"
-          >
-            Đóng
-          </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-outline-secondary"
+            >
+              Đóng
+            </button>
+          </div>
         </div>
 
-        <div className="space-y-8 p-6 lg:p-8">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div
+          className="overflow-auto overflow-x-hidden px-4 py-3"
+          style={{ maxHeight: "calc(90vh - 76px)" }}
+        >
+          <div className="row g-3 mx-0">
             <SummaryCard
               label="Tiền yêu cầu"
               value={formatCurrency(request.requestedAmount)}
@@ -286,456 +302,505 @@ function SellerReturnRequestDetail({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <section className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
-              <h3 className="text-lg font-black text-slate-800">
-                Thông tin yêu cầu
-              </h3>
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <InfoField
-                  label="Mã yêu cầu"
-                  value={formatRequestCode(request.id)}
-                />
-                <InfoField
-                  label="Mã đơn hàng"
-                  value={
-                    normalizeText(request.orderNumber) || `#${request.orderId}`
-                  }
-                />
-                <InfoField
-                  label="Mã vận đơn"
-                  value={
-                    normalizeText(request.shipmentTrackingNumber) ||
-                    normalizeText(request.orderTrackingNumber) ||
-                    "-"
-                  }
-                />
-                <InfoField
-                  label="Khách hàng"
-                  value={
-                    normalizeText(request.customerName) ||
-                    `#${request.customerId}`
-                  }
-                />
-                <InfoField
-                  label="Email"
-                  value={normalizeText(request.customerEmail) || "-"}
-                />
-                <InfoField
-                  label="Số điện thoại"
-                  value={normalizeText(request.customerPhone) || "-"}
-                />
-                <InfoField
-                  label="Tổng số lượng"
-                  value={String(request.quantity)}
-                />
-                <InfoField
-                  label="Ngày tạo"
-                  value={formatDateTime(request.createdAt)}
-                />
-                <InfoField
-                  label="Số tiền duyệt"
-                  value={
-                    request.approvedAmount != null
-                      ? formatCurrency(Number(request.approvedAmount))
-                      : "-"
-                  }
-                />
-                <InfoField
-                  label="Số tiền đã hoàn"
-                  value={
-                    Number(request.refundedAmount || 0) > 0
-                      ? formatCurrency(Number(request.refundedAmount))
-                      : "-"
-                  }
-                />
-              </div>
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                  Lý do
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-700">
-                  {normalizeText(request.reason) ||
-                    "Người mua chưa cung cấp lý do."}
-                </p>
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-                  Return shipment
-                </p>
-
-                {!request.returnShipment ? (
-                  <p className="mt-2 text-sm text-slate-500">
-                    Chưa có dữ liệu return_shipment cho yêu cầu này.
-                  </p>
-                ) : (
-                  <>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span
-                        className={`inline-flex items-center gap-2 rounded-2xl px-3 py-1 text-xs font-bold ${returnShipmentStatusMeta.badge}`}
-                      >
-                        {returnShipmentStatusMeta.icon}
-                        {returnShipmentStatusMeta.label}
-                      </span>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <InfoField
-                        label="Mã vận đơn trả"
-                        value={
-                          normalizeText(request.returnShipment.trackingCode) ||
-                          "-"
-                        }
-                      />
-                      <InfoField
-                        label="Đơn vị vận chuyển"
-                        value={
-                          normalizeText(request.returnShipment.courierName) ||
-                          "-"
-                        }
-                      />
-                      <InfoField
-                        label="Ngày lấy hàng dự kiến"
-                        value={formatDateTime(
-                          request.returnShipment.scheduledPickupDate,
-                        )}
-                      />
-                      <InfoField
-                        label="Ngày lấy hàng thực tế"
-                        value={formatDateTime(
-                          request.returnShipment.actualPickupDate,
-                        )}
-                      />
-                      <InfoField
-                        label="Ngày giao hoàn"
-                        value={formatDateTime(
-                          request.returnShipment.deliveryDate,
-                        )}
-                      />
-                      <InfoField
-                        label="Cập nhật gần nhất"
-                        value={formatDateTime(request.returnShipment.updatedAt)}
-                      />
-                    </div>
-
-                    {(normalizeText(request.returnShipment.notes) ||
-                      normalizeText(request.returnShipment.failedReason)) && (
-                      <div className="mt-3 space-y-2">
-                        {normalizeText(request.returnShipment.notes) && (
-                          <p className="text-sm text-slate-700">
-                            <span className="font-bold">Ghi chú:</span>{" "}
-                            {request.returnShipment.notes}
-                          </p>
-                        )}
-                        {normalizeText(request.returnShipment.failedReason) && (
-                          <p className="text-sm text-rose-600">
-                            <span className="font-bold">Lý do thất bại:</span>{" "}
-                            {request.returnShipment.failedReason}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="mt-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
-                      <p className="mb-0 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                        Return shipment history
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setIsTimelineModalOpen(true)}
-                        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
-                      >
-                        Xem timeline trả hàng
-                      </button>
-                    </div>
-
-                    {returnShipmentHistory.length === 0 ? (
-                      <div className="mt-2 rounded-xl border border-dashed border-slate-200 px-3 py-3 text-sm text-slate-500">
-                        Chưa có return_shipment_history.
-                      </div>
-                    ) : (
-                      <div className="mt-2 overflow-x-auto rounded-2xl border border-slate-200">
-                        <table className="table mb-0 table-sm align-middle">
-                          <thead className="table-light">
-                            <tr>
-                              <th>Thời gian</th>
-                              <th>Trạng thái</th>
-                              <th>Mô tả</th>
-                              <th>Vị trí</th>
-                              <th>Nguồn</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {returnShipmentHistory.map((entry, index) => (
-                              <tr
-                                key={`${request.id}-shipment-history-${entry.id ?? index}`}
-                              >
-                                <td>
-                                  {formatDateTime(
-                                    entry.timestamp || entry.createdAt,
-                                  )}
-                                </td>
-                                <td>
-                                  <span className="badge bg-slate-100 text-slate-700">
-                                    {normalizeText(entry.status) || "-"}
-                                  </span>
-                                </td>
-                                <td>
-                                  {normalizeText(entry.description) || "-"}
-                                </td>
-                                <td>{normalizeText(entry.location) || "-"}</td>
-                                <td>{normalizeText(entry.source) || "-"}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-3">
-                {request.status === "PENDING_APPROVAL" && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onApprove(
-                        request.id,
-                        Number(request.requestedAmount || 0),
-                      )
-                    }
-                    disabled={isApproving}
-                    className="rounded-2xl bg-success px-4 py-3 text-sm font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isApproving ? "Đang chấp nhận..." : "Chấp nhận yêu cầu"}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onOpenShipment(request.orderShipmentId)}
-                  disabled={!request.orderShipmentId}
-                  className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                >
-                  Xem chi tiết vận đơn
-                </button>
-                {canMarkInspectionPassed && (
-                  <button
-                    type="button"
-                    onClick={() => onMarkInspectionPassed(request.id)}
-                    disabled={isMarkingInspection}
-                    className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isMarkingInspection
-                      ? "Đang cập nhật..."
-                      : "Đã nhận và kiểm tra đầy đủ"}
-                  </button>
-                )}
-              </div>
-            </section>
-
-            <section className="rounded-3xl border border-slate-200 bg-white p-5">
-              <h3 className="text-lg font-black text-slate-800">
-                Sản phẩm trả hàng
-              </h3>
-              <div className="mt-4 space-y-4">
-                {(request.items || []).length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
-                    Chưa có chi tiết sản phẩm trong yêu cầu này.
+          <div className="row g-4 mt-1 mx-0">
+            <div className="col-12 col-xl-7">
+              <section className="rounded border bg-white h-100 shadow-sm overflow-hidden">
+                <div className="bg-light px-3 py-2 border-bottom small fw-semibold text-secondary">
+                  Thông tin yêu cầu
+                </div>
+                <div className="p-3">
+                  <div className="row g-3 mx-0">
+                    <InfoField
+                      label="Mã yêu cầu"
+                      value={formatRequestCode(request.id)}
+                    />
+                    <InfoField
+                      label="Mã đơn hàng"
+                      value={
+                        normalizeText(request.orderNumber) ||
+                        `#${request.orderId}`
+                      }
+                    />
+                    <InfoField
+                      label="Mã vận đơn"
+                      value={
+                        normalizeText(request.shipmentTrackingNumber) ||
+                        normalizeText(request.orderTrackingNumber) ||
+                        "-"
+                      }
+                    />
+                    <InfoField
+                      label="Khách hàng"
+                      value={
+                        normalizeText(request.customerName) ||
+                        `#${request.customerId}`
+                      }
+                    />
+                    <InfoField
+                      label="Email"
+                      value={normalizeText(request.customerEmail) || "-"}
+                    />
+                    <InfoField
+                      label="Số điện thoại"
+                      value={normalizeText(request.customerPhone) || "-"}
+                    />
+                    <InfoField
+                      label="Tổng số lượng"
+                      value={String(request.quantity)}
+                    />
+                    <InfoField
+                      label="Ngày tạo"
+                      value={formatDateTime(request.createdAt)}
+                    />
+                    <InfoField
+                      label="Số tiền duyệt"
+                      value={
+                        request.approvedAmount != null
+                          ? formatCurrency(Number(request.approvedAmount))
+                          : "-"
+                      }
+                    />
+                    <InfoField
+                      label="Số tiền đã hoàn"
+                      value={
+                        Number(request.refundedAmount || 0) > 0
+                          ? formatCurrency(Number(request.refundedAmount))
+                          : "-"
+                      }
+                    />
                   </div>
-                ) : (
-                  request.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-2xl border border-slate-200 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="font-bold text-slate-800">
-                            {normalizeText(item.productName) ||
-                              `Order Item #${item.orderItemId}`}
-                          </p>
-                          <p className="mt-1 text-sm text-slate-500">
-                            {normalizeText(item.variantName) ||
-                              "Không có phân loại"}
-                          </p>
-                        </div>
-                        <span className="rounded-xl bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
-                          x{item.quantity}
-                        </span>
-                      </div>
-                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                        <MiniMetric
-                          label="Đơn giá"
-                          value={formatCurrency(Number(item.price || 0))}
-                        />
-                        <MiniMetric
-                          label="Tổng"
-                          value={formatCurrency(Number(item.totalPrice || 0))}
-                        />
-                        <MiniMetric
-                          label="Yêu cầu"
-                          value={formatCurrency(
-                            Number(item.requestedAmount || 0),
-                          )}
-                        />
-                        <MiniMetric
-                          label="Đã hoàn"
-                          value={formatCurrency(
-                            Number(item.refundedAmount || 0),
-                          )}
-                        />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-          </div>
+                  <div className="rounded border bg-light px-3 py-3 mt-3">
+                    <p className="mb-0 small fw-semibold text-secondary">
+                      Lý do
+                    </p>
+                    <p className="mb-0 mt-2 small text-dark">
+                      {normalizeText(request.reason) ||
+                        "Người mua chưa cung cấp lý do."}
+                    </p>
+                  </div>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-5">
-            <h3 className="text-lg font-black text-slate-800">Tệp đính kèm</h3>
-            {(request.attachments || []).length === 0 ? (
-              <div className="mt-4 rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-sm text-slate-500">
-                Người mua chưa gửi ảnh hoặc video minh chứng.
-              </div>
-            ) : (
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {request.attachments.map((attachment) => (
-                  <a
-                    key={attachment.id}
-                    href={attachment.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 transition hover:-translate-y-1 hover:shadow-md"
-                  >
-                    <div className="flex aspect-[4/3] items-center justify-center bg-slate-100 text-slate-400">
-                      {isImageAttachment(attachment) ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={attachment.fileUrl}
-                          alt={
-                            attachment.description ||
-                            `Attachment ${attachment.id}`
-                          }
-                          className="h-full w-full object-cover"
-                        />
+                  <div className="rounded border bg-white mt-3 overflow-hidden">
+                    <div className="bg-light px-3 py-2 border-bottom small fw-semibold text-secondary d-flex align-items-center justify-content-between gap-2">
+                      <span>Return shipment</span>
+                      {request.returnShipment ? (
+                        <span
+                          className={`badge d-inline-flex align-items-center gap-2 px-3 py-2 ${returnShipmentStatusMeta.badge}`}
+                        >
+                          {returnShipmentStatusMeta.icon}
+                          {returnShipmentStatusMeta.label}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="p-3">
+                      <p className="mb-0 d-none text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                        Return shipment
+                      </p>
+
+                      {!request.returnShipment ? (
+                        <p className="mb-0 small text-muted">
+                          Chưa có dữ liệu return_shipment cho yêu cầu này.
+                        </p>
                       ) : (
-                        <ImageIcon size={36} />
+                        <>
+                          <div className="row g-3 mx-0">
+                            <InfoField
+                              label="Mã vận đơn trả"
+                              value={
+                                normalizeText(
+                                  request.returnShipment.trackingCode,
+                                ) || "-"
+                              }
+                            />
+                            <InfoField
+                              label="Đơn vị vận chuyển"
+                              value={
+                                normalizeText(
+                                  request.returnShipment.courierName,
+                                ) || "-"
+                              }
+                            />
+                            <InfoField
+                              label="Ngày lấy hàng dự kiến"
+                              value={formatDateTime(
+                                request.returnShipment.scheduledPickupDate,
+                              )}
+                            />
+                            <InfoField
+                              label="Ngày lấy hàng thực tế"
+                              value={formatDateTime(
+                                request.returnShipment.actualPickupDate,
+                              )}
+                            />
+                            <InfoField
+                              label="Ngày giao hoàn"
+                              value={formatDateTime(
+                                request.returnShipment.deliveryDate,
+                              )}
+                            />
+                            <InfoField
+                              label="Cập nhật gần nhất"
+                              value={formatDateTime(
+                                request.returnShipment.updatedAt,
+                              )}
+                            />
+                          </div>
+
+                          {(normalizeText(request.returnShipment.notes) ||
+                            normalizeText(
+                              request.returnShipment.failedReason,
+                            )) && (
+                            <div className="mt-3 d-flex flex-column gap-2">
+                              {normalizeText(request.returnShipment.notes) && (
+                                <p className="mb-0 small text-dark">
+                                  <span className="fw-semibold">Ghi chú:</span>{" "}
+                                  {request.returnShipment.notes}
+                                </p>
+                              )}
+                              {normalizeText(
+                                request.returnShipment.failedReason,
+                              ) && (
+                                <p className="mb-0 small text-danger">
+                                  <span className="fw-semibold">
+                                    Lý do thất bại:
+                                  </span>{" "}
+                                  {request.returnShipment.failedReason}
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="mt-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <p className="mb-0 small fw-semibold text-secondary">
+                              Return shipment history
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setIsTimelineModalOpen(true)}
+                              className="btn btn-sm btn-outline-secondary"
+                            >
+                              Xem timeline trả hàng
+                            </button>
+                          </div>
+
+                          {returnShipmentHistory.length === 0 ? (
+                            <div className="mt-2 rounded border border-dashed px-3 py-3 small text-muted bg-light">
+                              Chưa có return_shipment_history.
+                            </div>
+                          ) : (
+                            <div className="mt-2 table-responsive rounded border bg-white">
+                              <table className="table mb-0 table-sm align-middle">
+                                <thead className="table-light">
+                                  <tr>
+                                    <th>Thời gian</th>
+                                    <th>Trạng thái</th>
+                                    <th>Mô tả</th>
+                                    <th>Vị trí</th>
+                                    <th>Nguồn</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {returnShipmentHistory.map((entry, index) => (
+                                    <tr
+                                      key={`${request.id}-shipment-history-${entry.id ?? index}`}
+                                    >
+                                      <td>
+                                        {formatDateTime(
+                                          entry.timestamp || entry.createdAt,
+                                        )}
+                                      </td>
+                                      <td>
+                                        <span className="badge bg-light text-dark border">
+                                          {normalizeText(entry.status) || "-"}
+                                        </span>
+                                      </td>
+                                      <td>
+                                        {normalizeText(entry.description) ||
+                                          "-"}
+                                      </td>
+                                      <td>
+                                        {normalizeText(entry.location) || "-"}
+                                      </td>
+                                      <td>
+                                        {normalizeText(entry.source) || "-"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
-                    <div className="p-4">
-                      <p className="line-clamp-1 text-sm font-bold text-slate-800">
-                        {attachment.description || `Tệp #${attachment.id}`}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {attachment.fileType || "Không rõ loại tệp"}
-                      </p>
+                  </div>
+
+                  <div className="d-flex flex-wrap gap-2 mt-3">
+                    {request.status === "PENDING_APPROVAL" && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onApprove(
+                            request.id,
+                            Number(request.requestedAmount || 0),
+                          )
+                        }
+                        disabled={isApproving}
+                        className="btn btn-success"
+                      >
+                        {isApproving
+                          ? "Đang chấp nhận..."
+                          : "Chấp nhận yêu cầu"}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onOpenShipment(request.orderShipmentId)}
+                      disabled={!request.orderShipmentId}
+                      className="btn btn-dark"
+                    >
+                      Xem chi tiết vận đơn
+                    </button>
+                    {canMarkInspectionPassed && (
+                      <button
+                        type="button"
+                        onClick={() => onMarkInspectionPassed(request.id)}
+                        disabled={isMarkingInspection}
+                        className="btn btn-success"
+                      >
+                        {isMarkingInspection
+                          ? "Đang cập nhật..."
+                          : "Đã nhận và kiểm tra đầy đủ"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div className="col-12 col-xl-5">
+              <section className="rounded border bg-white shadow-sm h-100 overflow-hidden">
+                <div className="bg-light px-3 py-2 border-bottom small fw-semibold text-secondary">
+                  Sản phẩm trả hàng
+                </div>
+                <div className="p-3 d-flex flex-column gap-3">
+                  {(request.items || []).length === 0 ? (
+                    <div className="rounded border border-dashed px-4 py-4 small text-muted bg-light text-center">
+                      Chưa có chi tiết sản phẩm trong yêu cầu này.
                     </div>
-                  </a>
-                ))}
-              </div>
-            )}
+                  ) : (
+                    request.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded border p-3 bg-white"
+                      >
+                        <div className="d-flex align-items-start justify-content-between gap-3">
+                          <div>
+                            <p className="mb-0 fw-semibold text-dark">
+                              {normalizeText(item.productName) ||
+                                `Order Item #${item.orderItemId}`}
+                            </p>
+                            <p className="mb-0 mt-1 small text-muted">
+                              {normalizeText(item.variantName) ||
+                                "Không có phân loại"}
+                            </p>
+                          </div>
+                          <span className="badge bg-light text-dark border">
+                            x{item.quantity}
+                          </span>
+                        </div>
+                        <div className="row g-3 mt-1 mx-0 text-sm">
+                          <MiniMetric
+                            label="Đơn giá"
+                            value={formatCurrency(Number(item.price || 0))}
+                          />
+                          <MiniMetric
+                            label="Tổng"
+                            value={formatCurrency(Number(item.totalPrice || 0))}
+                          />
+                          <MiniMetric
+                            label="Yêu cầu"
+                            value={formatCurrency(
+                              Number(item.requestedAmount || 0),
+                            )}
+                          />
+                          <MiniMetric
+                            label="Đã hoàn"
+                            value={formatCurrency(
+                              Number(item.refundedAmount || 0),
+                            )}
+                          />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <section className="rounded border bg-white shadow-sm mt-4 overflow-hidden">
+            <div className="bg-light px-3 py-2 border-bottom small fw-semibold text-secondary">
+              Tệp đính kèm
+            </div>
+            <div className="p-3">
+              {(request.attachments || []).length === 0 ? (
+                <div className="rounded border border-dashed px-4 py-4 small text-muted bg-light text-center">
+                  Người mua chưa gửi ảnh hoặc video minh chứng.
+                </div>
+              ) : (
+                <div className="row g-3 mx-0">
+                  {request.attachments.map((attachment) => (
+                    <a
+                      key={attachment.id}
+                      href={attachment.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="col-12 col-md-6 col-xl-4 text-decoration-none"
+                    >
+                      <div className="h-100 overflow-hidden rounded border bg-white shadow-sm">
+                        <div
+                          className="d-flex"
+                          style={{
+                            aspectRatio: "4 / 3",
+                            background: "#f1f5f9",
+                          }}
+                        >
+                          <div className="d-flex w-100 align-items-center justify-content-center text-slate-400">
+                            {isImageAttachment(attachment) ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={attachment.fileUrl}
+                                alt={
+                                  attachment.description ||
+                                  `Attachment ${attachment.id}`
+                                }
+                                className="h-100 w-100"
+                                style={{ objectFit: "cover" }}
+                              />
+                            ) : (
+                              <ImageIcon size={36} />
+                            )}
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <p className="mb-0 fw-semibold text-dark small">
+                            {attachment.description || `Tệp #${attachment.id}`}
+                          </p>
+                          <p className="mb-0 mt-1 small text-muted">
+                            {attachment.fileType || "Không rõ loại tệp"}
+                          </p>
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
         </div>
       </div>
 
       {isTimelineModalOpen && (
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 p-4"
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center px-2"
+          style={{ background: "rgba(0,0,0,0.45)", zIndex: 1050 }}
           onClick={() => setIsTimelineModalOpen(false)}
         >
           <div
-            className="max-h-[86vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl"
+            className="bg-white rounded-3 shadow border w-100"
+            style={{ maxWidth: "1040px", maxHeight: "88vh" }}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="mb-4 d-flex align-items-start justify-content-between gap-3">
+            <div className="border-bottom bg-light rounded-top px-4 py-3 d-flex align-items-start justify-content-between gap-3">
               <div>
-                <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+                <p className="mb-1 small fw-bold text-uppercase text-secondary">
                   Timeline trả hàng
                 </p>
-                <h3 className="mb-0 text-xl font-black text-slate-800">
+                <h5 className="mb-0 fw-bold text-dark">
                   {formatRequestCode(request.id)}
-                </h3>
+                </h5>
               </div>
               <button
                 type="button"
                 onClick={() => setIsTimelineModalOpen(false)}
-                className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50"
+                className="btn btn-outline-secondary btn-sm"
               >
                 Đóng
               </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <section className="rounded-2xl border border-slate-200 p-4">
-                <h4 className="mb-3 text-sm font-black uppercase tracking-[0.16em] text-slate-500">
-                  return_shipment_history
-                </h4>
-                {returnShipmentHistory.length === 0 ? (
-                  <p className="mb-0 text-sm text-slate-500">
-                    Chưa có dữ liệu.
-                  </p>
-                ) : (
-                  <ul className="mb-0 d-flex flex-column gap-3 list-unstyled">
-                    {returnShipmentHistory.map((entry, index) => (
-                      <li
-                        key={`${request.id}-timeline-history-${entry.id ?? index}`}
-                        className="rounded-xl border border-slate-200 p-3"
-                      >
-                        <p className="mb-1 text-xs text-slate-500">
-                          {formatDateTime(entry.timestamp || entry.createdAt)}
-                        </p>
-                        <p className="mb-1 text-sm font-bold text-slate-800">
-                          {normalizeText(entry.status) || "-"}
-                        </p>
-                        <p className="mb-1 text-sm text-slate-700">
-                          {normalizeText(entry.description) || "Không có mô tả"}
-                        </p>
-                        <p className="mb-0 text-xs text-slate-500">
-                          {normalizeText(entry.location) || "-"} |{" "}
-                          {normalizeText(entry.source) || "-"}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
+            <div
+              className="row g-3 mx-0 p-3 overflow-auto overflow-x-hidden"
+              style={{ maxHeight: "calc(88vh - 76px)" }}
+            >
+              <div className="col-12 col-lg-6">
+                <section className="rounded border bg-white p-3 h-100">
+                  <h4 className="mb-3 small fw-semibold text-secondary">
+                    return_shipment_history
+                  </h4>
+                  {returnShipmentHistory.length === 0 ? (
+                    <p className="mb-0 small text-muted">Chưa có dữ liệu.</p>
+                  ) : (
+                    <ul className="mb-0 d-flex flex-column gap-3 list-unstyled">
+                      {returnShipmentHistory.map((entry, index) => (
+                        <li
+                          key={`${request.id}-timeline-history-${entry.id ?? index}`}
+                          className="rounded border p-3 bg-light"
+                        >
+                          <p className="mb-1 small text-muted">
+                            {formatDateTime(entry.timestamp || entry.createdAt)}
+                          </p>
+                          <p className="mb-1 small fw-semibold text-dark">
+                            {normalizeText(entry.status) || "-"}
+                          </p>
+                          <p className="mb-1 small text-dark">
+                            {normalizeText(entry.description) ||
+                              "Không có mô tả"}
+                          </p>
+                          <p className="mb-0 small text-muted">
+                            {normalizeText(entry.location) || "-"} |{" "}
+                            {normalizeText(entry.source) || "-"}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </div>
 
-              <section className="rounded-2xl border border-slate-200 p-4">
-                <h4 className="mb-3 text-sm font-black uppercase tracking-[0.16em] text-slate-500">
-                  return_request_timeline
-                </h4>
-                {returnTimeline.length === 0 ? (
-                  <p className="mb-0 text-sm text-slate-500">
-                    Chưa có dữ liệu.
-                  </p>
-                ) : (
-                  <ul className="mb-0 d-flex flex-column gap-3 list-unstyled">
-                    {returnTimeline.map((entry, index) => (
-                      <li
-                        key={`${request.id}-timeline-request-${entry.id ?? index}`}
-                        className="rounded-xl border border-slate-200 p-3"
-                      >
-                        <p className="mb-1 text-xs text-slate-500">
-                          {formatDateTime(entry.timestamp)}
-                        </p>
-                        <p className="mb-1 text-sm font-bold text-slate-800">
-                          {normalizeText(entry.eventType) || "EVENT"}
-                        </p>
-                        <p className="mb-1 text-sm text-slate-700">
-                          {normalizeText(entry.eventDetails) ||
-                            "Không có chi tiết"}
-                        </p>
-                        <p className="mb-0 text-xs text-slate-500">
-                          Actor: {normalizeText(entry.actorType) || "SYSTEM"}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
+              <div className="col-12 col-lg-6">
+                <section className="rounded border bg-white p-3 h-100">
+                  <h4 className="mb-3 small fw-semibold text-secondary">
+                    return_request_timeline
+                  </h4>
+                  {returnTimeline.length === 0 ? (
+                    <p className="mb-0 small text-muted">Chưa có dữ liệu.</p>
+                  ) : (
+                    <ul className="mb-0 d-flex flex-column gap-3 list-unstyled">
+                      {returnTimeline.map((entry, index) => (
+                        <li
+                          key={`${request.id}-timeline-request-${entry.id ?? index}`}
+                          className="rounded border p-3 bg-light"
+                        >
+                          <p className="mb-1 small text-muted">
+                            {formatDateTime(entry.timestamp)}
+                          </p>
+                          <p className="mb-1 small fw-semibold text-dark">
+                            {normalizeText(entry.eventType) || "EVENT"}
+                          </p>
+                          <p className="mb-1 small text-dark">
+                            {normalizeText(entry.eventDetails) ||
+                              "Không có chi tiết"}
+                          </p>
+                          <p className="mb-0 small text-muted">
+                            Actor: {normalizeText(entry.actorType) || "SYSTEM"}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </div>
             </div>
           </div>
         </div>
@@ -746,24 +811,24 @@ function SellerReturnRequestDetail({
 
 function InfoField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
-        {label}
-      </p>
-      <p className="mt-2 break-words text-sm font-semibold text-slate-800">
-        {value}
-      </p>
+    <div className="col-12 col-md-6">
+      <div className="rounded border bg-white p-3 h-100">
+        <p className="mb-0 small fw-semibold text-secondary">{label}</p>
+        <p className="mb-0 mt-2 small fw-semibold text-dark break-words">
+          {value}
+        </p>
+      </div>
     </div>
   );
 }
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-slate-50 px-3 py-3">
-      <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
-        {label}
-      </p>
-      <p className="mt-2 text-sm font-bold text-slate-800">{value}</p>
+    <div className="col-6 col-md-3">
+      <div className="rounded border bg-light px-3 py-3 h-100">
+        <p className="mb-0 small fw-semibold text-secondary">{label}</p>
+        <p className="mb-0 mt-2 small fw-bold text-dark">{value}</p>
+      </div>
     </div>
   );
 }

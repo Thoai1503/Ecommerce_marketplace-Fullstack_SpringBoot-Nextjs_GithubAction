@@ -316,6 +316,7 @@ const ReturnAttachmentModal = ({
   const displayRequestedAmount =
     returnRequest?.requestedAmount ??
     selectedReturnItems.reduce((sum, item) => sum + item.estimatedAmount, 0);
+  const isAdditionalPaymentRequired = Number(displayRequestedAmount) < 0;
 
   const styles: Record<string, CSSProperties> = {
     modalBackdrop: {
@@ -505,6 +506,15 @@ const ReturnAttachmentModal = ({
                     >
                       {formatMoney(displayRequestedAmount)}
                     </p>
+                    {isAdditionalPaymentRequired && (
+                      <p
+                        className="mb-0 mt-1 text-danger"
+                        style={{ fontSize: 12, maxWidth: 320 }}
+                      >
+                        Vì yêu cầu trả hàng của bạn làm mất hiệu voucher nên bạn
+                        phải trả thêm số tiền trên
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

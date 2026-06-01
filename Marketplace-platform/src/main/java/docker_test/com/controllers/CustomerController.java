@@ -32,7 +32,8 @@ public class CustomerController {
     public ResponseEntity<?> getAll() {
 
         var buyers = buyerRepository.GetAllBuyers();
-        buyers.forEach(u -> u.setPasswordHash(null));
+     //  var buyers = buyerRepository.GetAllBuyersKeyset(null, null, 10);
+    	buyers.forEach(u -> u.setPasswordHash(null));
         return ResponseEntity.ok(buyers);
     }
 
