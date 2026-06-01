@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,6 +21,7 @@ public class ReturnRequestAttachmentService {
     private final ReturnRequestAttachmentRepository returnRequestAttachmentRepository;
     private final RefundRequestRepository refundRequestRepository;
     private final CloudinaryService cloudinaryService;
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ReturnRequestAttachmentService.class);	
 
     public ReturnRequestAttachmentService(
             ReturnRequestAttachmentRepository returnRequestAttachmentRepository,
@@ -50,52 +52,48 @@ public class ReturnRequestAttachmentService {
         }
     }
 
-    public List<ReturnRequestAttachment> createAttachments(
-            Long returnRequestId,
-            List<MultipartFile> files,
-            List<String> descriptions) {
-        if (files == null || files.isEmpty()) {
-            return List.of();
-        }
+   public List<ReturnRequestAttachment> createAttachments(
+        Long returnRequestId,
+        List<MultipartFile> files,
+        List<String> descriptions) {
+    if (files == null || files.isEmpty()) {
+        return List.of();
+    }
+    validateReturnRequest(returnRequestId);
+    for (MultipartFile file : files) {
+        validateAttachmentFile(file);
+    }
 
-        validateReturnRequest(returnRequestId);
-
-        for (MultipartFile file : files) {
-            validateAttachmentFile(file);
-        }
-
-        // Tạo 1 thread cho mỗi file
+    // Chạy toàn bộ logic upload ngầm, không block thread hiện tại
+    CompletableFuture.runAsync(() -> {
         List<FileThread> threads = new ArrayList<>();
         for (int i = 0; i < files.size(); i++) {
             String description = (descriptions != null && i < descriptions.size()) ? descriptions.get(i) : null;
             threads.add(new FileThread(files.get(i), description, cloudinaryService));
         }
 
-        // Khởi động tất cả thread song song
         for (FileThread thread : threads) {
             thread.start();
         }
 
-        // Chờ tất cả thread hoàn thành
-       for (FileThread thread : threads) {
-           try {
-               thread.join();
-           } catch (InterruptedException e) {
-               Thread.currentThread()	.interrupt();
-               throw new RuntimeException("Upload bị gián đoạn", e);
-           }
-       }
-
-        // Kiểm tra lỗi từng thread
-        for (int i = 0; i < threads.size(); i++) {
-            if (threads.get(i).hasError()) {
-                Exception ex = threads.get(i).getException();
-                throw new RuntimeException(
-                        "Upload attachment lên Cloudinary thất bại (file " + (i + 1) + "): " + ex.getMessage(), ex);
+        for (FileThread thread : threads) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Upload bị gián đoạn", e);
+                return;
             }
         }
 
-        // Build danh sách attachment từ kết quả upload
+        for (int i = 0; i < threads.size(); i++) {
+            if (threads.get(i).hasError()) {
+                Exception ex = threads.get(i).getException();
+                log.error("Upload attachment thất bại (file {}): {}", i + 1, ex.getMessage(), ex);
+                return;
+            }
+        }
+
         List<ReturnRequestAttachment> attachments = new ArrayList<>();
         for (FileThread thread : threads) {
             Map<String, Object> uploadResult = thread.getUploadResult();
@@ -107,8 +105,11 @@ public class ReturnRequestAttachmentService {
             attachments.add(attachment);
         }
 
-        return returnRequestAttachmentRepository.saveAll(attachments);
-    }
+        returnRequestAttachmentRepository.saveAll(attachments);
+    });
+
+    return List.of(); // Trả về ngay, không chờ upload
+}
 
     public ReturnRequestAttachment createAttachment(Long returnRequestId, ReturnRequestAttachmentDTO dto) {
         validateReturnRequest(returnRequestId);
