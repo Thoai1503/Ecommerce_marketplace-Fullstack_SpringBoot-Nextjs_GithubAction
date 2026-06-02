@@ -3,7 +3,8 @@
 import { Timeline } from "@/components/Timeline";
 import { ShipmentStatus } from "@/lib/api";
 import { useShipmentTimeline, useTracking } from "@/lib/hooks";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const statusLabels: Record<ShipmentStatus, string> = {
   PENDING: "Đang chờ xử lý",
@@ -37,8 +38,22 @@ function statusBadge(status: ShipmentStatus) {
 }
 
 export default function TrackingPage() {
+  const searchParams = useSearchParams();
   const [trackingCode, setTrackingCode] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const trackingCodeFromQuery = searchParams.get("trackingCode")?.trim() ?? "";
+
+  useEffect(() => {
+    if (!trackingCodeFromQuery) {
+      return;
+    }
+
+    setTrackingCode((prev) =>
+      prev === trackingCodeFromQuery ? prev : trackingCodeFromQuery,
+    );
+    setSubmitted(true);
+  }, [trackingCodeFromQuery]);
+
   const { data, isFetching, isError, error, refetch } =
     useTracking(trackingCode);
   const { data: timelineData, isFetching: isTimelineFetching } =
