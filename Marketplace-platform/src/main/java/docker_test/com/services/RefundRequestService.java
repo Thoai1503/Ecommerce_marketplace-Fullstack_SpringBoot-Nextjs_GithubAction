@@ -179,7 +179,7 @@ public class RefundRequestService {
 		ReturnRequest savedRefundRequest = persistRefundRequest(refundRequestDTO);
 
 		if (files != null && !files.isEmpty()) {
-			returnRequestAttachmentService.createAttachments2(savedRefundRequest.getId(), files, descriptions);
+			returnRequestAttachmentService.createAttachments(savedRefundRequest.getId(), files, descriptions);
 		}
 		
 //		returnRequestToLogistic.publish(buildLogisticPayload(savedRefundRequest, refundRequestDTO));
