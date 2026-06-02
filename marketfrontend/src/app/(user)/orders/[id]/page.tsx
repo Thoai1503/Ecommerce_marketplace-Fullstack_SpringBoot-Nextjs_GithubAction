@@ -1178,7 +1178,6 @@ export default function UserOrderDetailPage() {
     }));
 
     let submittedByApi = false;
-    let createdReturnRequestId = 0;
     try {
       // const previewResponse = await fetch(`${API_URL}/api/refunds/preview`, {
       //   method: "POST",
@@ -1264,54 +1263,41 @@ export default function UserOrderDetailPage() {
         );
       });
 
-      const response = await fetch(`${API_URL}/api/refunds/multipart`, {
+      // Fire-and-forget: do not await upload API response.
+      void fetch(`${API_URL}/api/refunds/multipart`, {
         method: "POST",
         credentials: "include",
         body: formData,
-      });
+      })
+        .then(async (response) => {
+          const responseText = await response.text();
+          const responsePayload = responseText
+            ? (() => {
+                try {
+                  return JSON.parse(responseText);
+                } catch {
+                  return { message: responseText };
+                }
+              })()
+            : {};
 
-      const responseText = await response.text();
-      const responsePayload = responseText
-        ? (() => {
-            try {
-              return JSON.parse(responseText);
-            } catch {
-              return { message: responseText };
-            }
-          })()
-        : {};
+          console.log("Async API response for return request submission:", {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+            body: responsePayload,
+          });
+        })
+        .catch((error) => {
+          console.error("Async submit return request failed:", error);
+        });
 
-      console.log("API response for return request submission:", {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        body: responsePayload,
-      });
+      // Simulate waiting state for UX only.
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      if (!response.ok) {
-        const errorBody =
-          typeof responsePayload === "string"
-            ? responsePayload
-            : responsePayload?.message || JSON.stringify(responsePayload);
-        throw new Error(
-          errorBody?.trim() || "Gui yeu cau that bai. Vui long thu lai.",
-        );
-      }
-
-      createdReturnRequestId = asNumber(
-        responsePayload?.id ?? responsePayload?.returnRequestId,
-        0,
-      );
-      if (createdReturnRequestId <= 0) {
-        throw new Error(
-          "Da tao yeu cau tra hang nhung khong nhan duoc ma yeu cau.",
-        );
-      }
-
-      // Final refund amount will be calculated asynchronously on backend
-      // No need to wait for calculate-final-price or requested-amount endpoints
       submittedByApi = true;
-      const successMessage = `Yeu cau tra hang hoan tien da duoc gui thanh cong. So tien hoan se duoc cap nhat trong vong it phut.`;
+      const successMessage =
+        "Yeu cau tra hang da duoc gui. He thong dang xu ly tep dinh kem.";
 
       setReturnActionMessage((prev) => ({
         ...prev,
@@ -1319,10 +1305,7 @@ export default function UserOrderDetailPage() {
       }));
     } catch (error) {
       console.error("Submit return request failed:", error);
-      const fallbackErrorMessage =
-        createdReturnRequestId > 0
-          ? "Yeu cau tra hang da duoc tao, nhung khong hoan tat buoc cap nhat so tien hoan. Vui long kiem tra lai chi tiet yeu cau."
-          : "Gui yeu cau that bai. Vui long thu lai.";
+      const fallbackErrorMessage = "Gui yeu cau that bai. Vui long thu lai.";
       const errorMessage =
         error instanceof Error && error.message.trim()
           ? error.message
@@ -1335,10 +1318,9 @@ export default function UserOrderDetailPage() {
     } finally {
       setReturnActionStatus((prev) => ({
         ...prev,
-        [shipmentId]:
-          submittedByApi || createdReturnRequestId > 0 ? "submitted" : "idle",
+        [shipmentId]: submittedByApi ? "submitted" : "idle",
       }));
-      if (submittedByApi || createdReturnRequestId > 0) {
+      if (submittedByApi) {
         closeReturnModal();
       }
     }
