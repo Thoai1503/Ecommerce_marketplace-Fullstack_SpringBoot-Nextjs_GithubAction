@@ -179,14 +179,14 @@ public class RefundRequestService {
 		ReturnRequest savedRefundRequest = persistRefundRequest(refundRequestDTO);
 
 		if (files != null && !files.isEmpty()) {
-			returnRequestAttachmentService.createAttachments(savedRefundRequest.getId(), files, descriptions);
+			returnRequestAttachmentService.createAttachments2(savedRefundRequest.getId(), files, descriptions);
 		}
 		
 //		returnRequestToLogistic.publish(buildLogisticPayload(savedRefundRequest, refundRequestDTO));
 
 		return savedRefundRequest;
 	}
-
+ 
 	
 	@Transactional
 	private ReturnRequest persistRefundRequest(RefundRequestDTO refundRequestDTO) {

@@ -11,41 +11,114 @@ import java.util.Map;
 
 @Service
 public class CloudinaryService {
-    
+
     @Autowired
     private Cloudinary cloudinary;
-    
-    // Upload file
+
+    // =========================
+    // MultipartFile upload
+    // =========================
+
     public String uploadFile(MultipartFile file) throws IOException {
-        Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
-        return uploadResult.get("url").toString();
-    }
-    
-    // Upload với options
-    public Map<String, Object> uploadFileWithOptions(MultipartFile file, String folder) throws IOException {
-        Map<String, Object> uploadResult = cloudinary.uploader().upload(file.getBytes(), 
-            ObjectUtils.asMap(
-                "folder", folder,
-                "resource_type", "auto"
-            )
+
+        return uploadFile(
+                file.getBytes(),
+                file.getOriginalFilename()
         );
-        return uploadResult;
     }
 
-    public Map<String, Object> uploadReturnAttachment(MultipartFile file) throws IOException {
-        return cloudinary.uploader().upload(
+    // =========================
+    // byte[] upload
+    // =========================
+
+    public String uploadFile(byte[] bytes, String fileName) throws IOException {
+
+        Map<String, Object> uploadResult =
+                cloudinary.uploader().upload(
+                        bytes,
+                        ObjectUtils.asMap(
+                                "resource_type", "auto",
+                                "use_filename", true,
+                                "unique_filename", true
+                        )
+                );
+
+        return uploadResult.get("url").toString();
+    }
+
+    // =========================
+    // upload with options
+    // =========================
+
+    public Map<String, Object> uploadFileWithOptions(
+            MultipartFile file,
+            String folder
+    ) throws IOException {
+
+        return uploadFileWithOptions(
                 file.getBytes(),
+                folder,
+                file.getOriginalFilename()
+        );
+    }
+
+    public Map<String, Object> uploadFileWithOptions(
+            byte[] bytes,
+            String folder,
+            String fileName
+    ) throws IOException {
+
+        return cloudinary.uploader().upload(
+                bytes,
                 ObjectUtils.asMap(
-                        "folder", "return-request-attachments",
+                        "folder", folder,
                         "resource_type", "auto",
                         "use_filename", true,
                         "unique_filename", true
                 )
         );
     }
-    
-    // Xóa file
+
+    // =========================
+    // return attachment
+    // =========================
+
+    public Map<String, Object> uploadReturnAttachment(
+            MultipartFile file
+    ) throws IOException {
+
+        return uploadReturnAttachment(
+                file.getBytes(),
+                file.getOriginalFilename()
+        );
+    }
+
+    public Map<String, Object> uploadReturnAttachment(
+            byte[] bytes,
+            String fileName
+    ) throws IOException {
+
+        return cloudinary.uploader().upload(
+                bytes,
+                ObjectUtils.asMap(
+                        "folder", "return-request-attachments",
+                        "resource_type", "auto",
+                        "use_filename", true,
+                        "unique_filename", true,
+                        "filename_override", fileName
+                )
+        );
+    }
+
+    // =========================
+    // delete
+    // =========================
+
     public void deleteFile(String publicId) throws IOException {
-        cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+
+        cloudinary.uploader().destroy(
+                publicId,
+                ObjectUtils.emptyMap()
+        );
     }
 }
