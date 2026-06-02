@@ -383,6 +383,18 @@ const formatDate = (value: string) =>
     hour12: false,
   });
 
+const openTrackingLookup = (trackingNumber: string) => {
+  const normalized = String(trackingNumber || "").trim();
+  if (!normalized) return;
+
+  const query = encodeURIComponent(`tra cuu van don ${normalized}`);
+  window.open(
+    `https://www.google.com/search?q=${query}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+};
+
 type ReviewDraft = {
   rating: number;
   comment: string;
@@ -1296,90 +1308,10 @@ export default function UserOrderDetailPage() {
         );
       }
 
-      const calculationResponse = await fetch(
-        `${API_URL}/api/refunds/${createdReturnRequestId}/calculate-final-price`,
-        {
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-        },
-      );
-
-      const calculationText = await calculationResponse.text();
-      const calculationPayload = calculationText
-        ? (() => {
-            try {
-              return JSON.parse(calculationText);
-            } catch {
-              return calculationText;
-            }
-          })()
-        : null;
-
-      if (!calculationResponse.ok) {
-        const calculationError =
-          typeof calculationPayload === "string"
-            ? calculationPayload
-            : calculationPayload?.message || JSON.stringify(calculationPayload);
-        throw new Error(
-          calculationError?.trim() ||
-            "Da tao yeu cau nhung khong tinh duoc so tien hoan cuoi cung.",
-        );
-      }
-
-      const calculatedFinalAmount = asNumber(
-        typeof calculationPayload === "number"
-          ? calculationPayload
-          : (calculationPayload?.requestedAmount ??
-              calculationPayload?.requested_amount ??
-              calculationPayload),
-        totalRequestedAmount,
-      );
-
-      const updateAmountResponse = await fetch(
-        `${API_URL}/api/refunds/${createdReturnRequestId}/requested-amount?requestedAmount=${encodeURIComponent(
-          String(calculatedFinalAmount),
-        )}`,
-        {
-          method: "PATCH",
-          credentials: "include",
-        },
-      );
-
-      const updateAmountText = await updateAmountResponse.text();
-      const updateAmountPayload = updateAmountText
-        ? (() => {
-            try {
-              return JSON.parse(updateAmountText);
-            } catch {
-              return { message: updateAmountText };
-            }
-          })()
-        : {};
-
-      if (!updateAmountResponse.ok) {
-        const updateAmountError =
-          typeof updateAmountPayload === "string"
-            ? updateAmountPayload
-            : updateAmountPayload?.message ||
-              JSON.stringify(updateAmountPayload);
-        throw new Error(
-          updateAmountError?.trim() ||
-            "Da tao yeu cau nhung khong cap nhat duoc so tien hoan cuoi cung.",
-        );
-      }
-
+      // Final refund amount will be calculated asynchronously on backend
+      // No need to wait for calculate-final-price or requested-amount endpoints
       submittedByApi = true;
-      const persistedRequestedAmount = asNumber(
-        updateAmountPayload?.requestedAmount ??
-          updateAmountPayload?.requested_amount,
-        calculatedFinalAmount,
-      );
-      const successMessage =
-        persistedRequestedAmount <= 0
-          ? "Yeu cau tra hang hoan tien da duoc gui. So tien hoan cuoi cung la 0d."
-          : `Yeu cau tra hang hoan tien da duoc gui. So tien hoan cuoi cung: ${formatMoney(
-              persistedRequestedAmount,
-            )}.`;
+      const successMessage = `Yeu cau tra hang hoan tien da duoc gui thanh cong. So tien hoan se duoc cap nhat trong vong it phut.`;
 
       setReturnActionMessage((prev) => ({
         ...prev,
@@ -2083,6 +2015,9 @@ export default function UserOrderDetailPage() {
                             shipment.shipping_status,
                           );
                           const adjustmentRequest = shipment.adjustment_request;
+                          const trackingNumber = String(
+                            shipment.tracking_number || "",
+                          ).trim();
 
                           return (
                             <div key={shipment.id} style={styles.shipmentItem}>
@@ -2094,48 +2029,65 @@ export default function UserOrderDetailPage() {
                                   >
                                     {shipment.shopName}
                                   </p>
-                                  {adjustmentRequest && (
-                                    <span
-                                      style={{
-                                        fontSize: 10,
-                                        fontWeight: 700,
-                                        padding: "4px 8px",
-                                        borderRadius: 999,
-                                        background:
-                                          adjustmentRequest.status ===
+                                  {(trackingNumber || adjustmentRequest) && (
+                                    <div className="d-flex align-items-center gap-2 ms-auto">
+                                      {trackingNumber && (
+                                        <a
+                                          href={`http://103.90.225.130:4002/tracking?trackingCode=${trackingNumber}`}
+                                          target="_blank"
+                                          type="button"
+                                          // onClick={() =>
+                                          //   openTrackingLookup(trackingNumber)
+                                          // }
+                                          className="btn btn-outline-primary btn-sm"
+                                        >
+                                          Xem vận đơn
+                                        </a>
+                                      )}
+                                      {adjustmentRequest && (
+                                        <span
+                                          style={{
+                                            fontSize: 10,
+                                            fontWeight: 700,
+                                            padding: "4px 8px",
+                                            borderRadius: 999,
+                                            background:
+                                              adjustmentRequest.status ===
+                                              "PENDING_BUYER"
+                                                ? "#fef3c7"
+                                                : adjustmentRequest.status ===
+                                                    "ACCEPTED_BY_BUYER"
+                                                  ? "#dcfce7"
+                                                  : adjustmentRequest.status ===
+                                                      "REJECTED_BY_BUYER"
+                                                    ? "#fee2e2"
+                                                    : "#e2e8f0",
+                                            color:
+                                              adjustmentRequest.status ===
+                                              "PENDING_BUYER"
+                                                ? "#92400e"
+                                                : adjustmentRequest.status ===
+                                                    "ACCEPTED_BY_BUYER"
+                                                  ? "#166534"
+                                                  : adjustmentRequest.status ===
+                                                      "REJECTED_BY_BUYER"
+                                                    ? "#b91c1c"
+                                                    : "#475569",
+                                          }}
+                                        >
+                                          {adjustmentRequest.status ===
                                           "PENDING_BUYER"
-                                            ? "#fef3c7"
+                                            ? "Yêu cầu chỉnh sửa"
                                             : adjustmentRequest.status ===
                                                 "ACCEPTED_BY_BUYER"
-                                              ? "#dcfce7"
+                                              ? "Đã chấp nhận"
                                               : adjustmentRequest.status ===
                                                   "REJECTED_BY_BUYER"
-                                                ? "#fee2e2"
-                                                : "#e2e8f0",
-                                        color:
-                                          adjustmentRequest.status ===
-                                          "PENDING_BUYER"
-                                            ? "#92400e"
-                                            : adjustmentRequest.status ===
-                                                "ACCEPTED_BY_BUYER"
-                                              ? "#166534"
-                                              : adjustmentRequest.status ===
-                                                  "REJECTED_BY_BUYER"
-                                                ? "#b91c1c"
-                                                : "#475569",
-                                      }}
-                                    >
-                                      {adjustmentRequest.status ===
-                                      "PENDING_BUYER"
-                                        ? "Yêu cầu chỉnh sửa"
-                                        : adjustmentRequest.status ===
-                                            "ACCEPTED_BY_BUYER"
-                                          ? "Đã chấp nhận"
-                                          : adjustmentRequest.status ===
-                                              "REJECTED_BY_BUYER"
-                                            ? "Đã từ chối"
-                                            : "Đã điều chỉnh"}
-                                    </span>
+                                                ? "Đã từ chối"
+                                                : "Đã điều chỉnh"}
+                                        </span>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                                 <p
@@ -3012,8 +2964,8 @@ export default function UserOrderDetailPage() {
                       </p>
                     </div>
 
-                    <div className="d-grid gap-2">
-                      <button type="button" style={styles.btnOrder}>
+                    {/* <div className="d-grid gap-2">
+                      <a type="button" style={styles.btnOrder}>
                         <span className="d-flex align-items-center gap-2">
                           <Lock size={16} strokeWidth={2} /> THEO DOI VAN DON
                         </span>
@@ -3028,14 +2980,14 @@ export default function UserOrderDetailPage() {
                         >
                           Xem cap nhat moi nhat
                         </span>
-                      </button>
+                      </a>
 
                       <button type="button" style={styles.btnSecondary}>
                         <span className="d-inline-flex align-items-center gap-2">
                           <Headset size={14} /> Lien he ho tro
                         </span>
                       </button>
-                    </div>
+                    </div> */}
 
                     <div
                       className="d-flex align-items-center justify-content-center gap-4"

@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -181,10 +182,33 @@ public class RefundRequestService {
 		if (files != null && !files.isEmpty()) {
 			returnRequestAttachmentService.createAttachments(savedRefundRequest.getId(), files, descriptions);
 		}
+
+		// Do not block API response with heavy final amount calculation.
+		triggerAsyncFinalAmountUpdate(savedRefundRequest.getId());
 		
 //		returnRequestToLogistic.publish(buildLogisticPayload(savedRefundRequest, refundRequestDTO));
 
 		return savedRefundRequest;
+	}
+
+	private void triggerAsyncFinalAmountUpdate(Long returnRequestId) {
+		if (returnRequestId == null || returnRequestId <= 0) {
+			return;
+		}
+
+		CompletableFuture.runAsync(() -> {
+			try {
+				double finalAmount = refundCalculationService
+						.calculateSuggestedRefundAmountByReturnRequestId(returnRequestId);
+
+				refundRequestRepository.findById(returnRequestId).ifPresent(request -> {
+					request.setRequestedAmount(finalAmount);
+					refundRequestRepository.save(request);
+				});
+			} catch (Exception ex) {
+				LOGGER.error("Async final refund calculation failed for returnRequestId={}", returnRequestId, ex);
+			}
+		});
 	}
  
 	
