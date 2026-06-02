@@ -10,10 +10,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import docker_test.com.dto.ReturnRequestAttachmentDTO;
+import docker_test.com.dto.UploadFileData;
 import docker_test.com.models.refunds.ReturnRequestAttachment;
 import docker_test.com.repository.RefundRequestRepository;
 import docker_test.com.repository.ReturnRequestAttachmentRepository;
+import docker_test.com.threads.FileTestThread;
 import docker_test.com.threads.FileThread;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 @Service
 public class ReturnRequestAttachmentService {
@@ -27,10 +31,26 @@ public class ReturnRequestAttachmentService {
             ReturnRequestAttachmentRepository returnRequestAttachmentRepository,
             RefundRequestRepository refundRequestRepository,
             CloudinaryService cloudinaryService) {
+    	System.out.println("Khởi tạo ReturnRequestAttachmentService");
         this.returnRequestAttachmentRepository = returnRequestAttachmentRepository;
         this.refundRequestRepository = refundRequestRepository;
         this.cloudinaryService = cloudinaryService;
     }
+    
+    @PostConstruct
+    public void init() {
+		log.info("ReturnRequestAttachmentService đã được khởi tạo");
+	}
+    
+    public void doWork() {
+		log.info("Đang thực hiện công việc trong ReturnRequestAttachmentService");
+	}
+    
+    @PreDestroy
+    public void cleanup() {
+    			log.info("ReturnRequestAttachmentService đang được hủy, thực hiện dọn dẹp nếu cần");
+    }
+    
 
     public ReturnRequestAttachment createAttachment(Long returnRequestId, MultipartFile file, String description) {
         validateReturnRequest(returnRequestId);
@@ -110,7 +130,41 @@ public class ReturnRequestAttachmentService {
 
     return List.of(); // Trả về ngay, không chờ upload
 }
-
+   
+   public List<ReturnRequestAttachment> createAttachments2(
+		   Long returnRequestId,
+		List<MultipartFile> files,
+		List<String> descriptions) {
+	   if (files == null || files.isEmpty()) {
+	        return List.of();
+	    }
+	    validateReturnRequest(returnRequestId);
+	    for (MultipartFile file : files) {
+	        validateAttachmentFile(file);
+	    }
+	    
+	    for (int i = 0; i < files.size(); i++) {
+	        MultipartFile file = files.get(i);
+	        byte[] bytes;
+	        UploadFileData uploadFileData;
+	        try {
+	            uploadFileData = new UploadFileData(
+	                file.getBytes(),
+	                file.getOriginalFilename(),
+	                file.getContentType()
+	            );
+	        } catch (IOException e) {
+	            throw new RuntimeException(e);
+	        }
+	        String description = (descriptions != null && i < descriptions.size()) ? descriptions.get(i) : null;
+	       Thread thread = new Thread(new FileTestThread(uploadFileData.getBytes(),uploadFileData.getOriginalFilename(),uploadFileData.getContentType(), returnRequestAttachmentRepository, cloudinaryService, description, returnRequestId));
+	       thread.start();
+	    }
+	   
+	   
+	   
+	   return List.of(); 
+   }
     public ReturnRequestAttachment createAttachment(Long returnRequestId, ReturnRequestAttachmentDTO dto) {
         validateReturnRequest(returnRequestId);
         validateAttachment(dto);
