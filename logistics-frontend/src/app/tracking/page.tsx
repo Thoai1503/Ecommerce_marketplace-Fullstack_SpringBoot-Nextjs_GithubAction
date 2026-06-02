@@ -4,7 +4,7 @@ import { Timeline } from "@/components/Timeline";
 import { ShipmentStatus } from "@/lib/api";
 import { useShipmentTimeline, useTracking } from "@/lib/hooks";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 const statusLabels: Record<ShipmentStatus, string> = {
   PENDING: "Đang chờ xử lý",
@@ -37,7 +37,7 @@ function statusBadge(status: ShipmentStatus) {
   );
 }
 
-export default function TrackingPage() {
+function TrackingPageContent() {
   const searchParams = useSearchParams();
   const [trackingCode, setTrackingCode] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -203,5 +203,15 @@ export default function TrackingPage() {
         </section>
       ) : null}
     </div>
+  );
+}
+
+export default function TrackingPage() {
+  return (
+    <Suspense
+      fallback={<div className="text-sm text-zinc-500">Đang tải...</div>}
+    >
+      <TrackingPageContent />
+    </Suspense>
   );
 }

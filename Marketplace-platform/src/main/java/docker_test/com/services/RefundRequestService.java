@@ -15,6 +15,9 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 import org.slf4j.Logger;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -172,6 +175,35 @@ public class RefundRequestService {
 				"refundMessage", calculation.message() == null ? "" : calculation.message());
 	}
 	
+//	@Transactional
+//	public ReturnRequest createRefundRequestWithFiles(
+//			RefundRequestDTO refundRequestDTO,
+//			List<MultipartFile> files,
+//			List<String> descriptions) {
+//		ReturnRequest savedRefundRequest = persistRefundRequest(refundRequestDTO);
+//
+//		if (files != null && !files.isEmpty()) {
+//			// Use createAttachments2 which reads file bytes eagerly on the request thread
+//			// before spawning background upload threads, preventing OOM from reading
+//			// MultipartFile streams after the HTTP request has closed.
+//			returnRequestAttachmentService.createAttachments2(savedRefundRequest.getId(), files, descriptions);
+//		}
+//
+//		// Fire async calculation AFTER the transaction commits so the async thread
+//		// can open its own connection without competing with this one.
+//		final Long requestId = savedRefundRequest.getId();
+//		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+//			@Override
+//			public void afterCommit() {
+//				triggerAsyncFinalAmountUpdate(requestId);
+//			}
+//		});
+//		
+////		returnRequestToLogistic.publish(buildLogisticPayload(savedRefundRequest, refundRequestDTO));
+//
+//		return savedRefundRequest;
+//	}
+	
 	@Transactional
 	public ReturnRequest createRefundRequestWithFiles(
 			RefundRequestDTO refundRequestDTO,
@@ -180,7 +212,7 @@ public class RefundRequestService {
 		ReturnRequest savedRefundRequest = persistRefundRequest(refundRequestDTO);
 
 		if (files != null && !files.isEmpty()) {
-			returnRequestAttachmentService.createAttachments(savedRefundRequest.getId(), files, descriptions);
+			returnRequestAttachmentService.createAttachments2(savedRefundRequest.getId(), files, descriptions);
 		}
 
 		// Do not block API response with heavy final amount calculation.
@@ -190,6 +222,7 @@ public class RefundRequestService {
 
 		return savedRefundRequest;
 	}
+
 
 	private void triggerAsyncFinalAmountUpdate(Long returnRequestId) {
 		if (returnRequestId == null || returnRequestId <= 0) {
