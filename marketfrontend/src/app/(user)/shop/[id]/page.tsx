@@ -76,6 +76,16 @@ const getStoredLoggedInUserId = () => {
   return Number.isFinite(cookieUserId) && cookieUserId > 0 ? cookieUserId : 0;
 };
 
+const getTopSellingProducts = (products: any[], limit: number = 6) => {
+  return products
+    .sort(
+      (a: any, b: any) =>
+        Number(b.sold_count ?? b.soldCount ?? 0) -
+        Number(a.sold_count ?? a.soldCount ?? 0),
+    )
+    .slice(0, limit);
+};
+
 export default function ShopPage() {
   const params = useParams();
   const shopId = params?.id;
@@ -507,6 +517,59 @@ export default function ShopPage() {
           </div>
         </div>
       )}
+
+      {/* ===== BEST SELLING PRODUCTS ===== */}
+      {products.length > 0 && (
+        <div className="card border-0 shadow-sm rounded-4 mb-4">
+          <div className="card-body p-3">
+            <h5 className="mb-3 fw-bold">
+              <i className="bi bi-fire me-2 text-danger"></i>
+              Sản phẩm bán chạy
+            </h5>
+            <div className="row g-3">
+              {getTopSellingProducts(products, 6).map((p) => (
+                <div className="col-6 col-md-4 col-lg-2" key={p.id}>
+                  <Link
+                    href={`/${p.product_slug}.p${p.id}?id=${p.id}`}
+                    className="text-decoration-none text-dark"
+                  >
+                    <div className="card product-card-small h-100 border-0 shadow-sm">
+                      <img
+                        src={normalizeImage(p.image_url)}
+                        className="card-img-top"
+                        style={{ height: 180, objectFit: "cover" }}
+                        onError={onImgError}
+                      />
+                      <div className="card-body p-3">
+                        <div
+                          className="small text-truncate"
+                          title={p.product_name}
+                        >
+                          {p.product_name}
+                        </div>
+                        <div className="text-danger fw-bold small">
+                          {formatPrice(p.price)}
+                        </div>
+                        <div
+                          className="text-muted"
+                          style={{ fontSize: "11px" }}
+                        >
+                          <i className="bi bi-fire me-1 text-danger"></i>
+                          {Number(
+                            p.sold_count ?? p.soldCount ?? 0,
+                          ).toLocaleString()}{" "}
+                          sold
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ===== SEARCH ===== */}
       <div className="mb-4">
         <div className="search-wrapper position-relative">
@@ -832,6 +895,11 @@ export default function ShopPage() {
 
         .product-col {
           width: 20%;
+        }
+
+        .product-card-small:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
         }
 
         @media (max-width: 992px) {

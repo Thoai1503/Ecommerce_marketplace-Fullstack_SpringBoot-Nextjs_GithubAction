@@ -226,6 +226,7 @@ public class ProductRepository implements IRepositories<Product> {
 				product.setCategory_id(rs.getInt("category_id"));
 				product.setProduct_name(rs.getString("product_name"));
 				product.setProduct_slug(rs.getString("product_slug"));
+				product.setSold_count(rs.getInt("sold_count"));
 				product.setPrice(rs.getDouble("price"));
 				product.setOriginal_price(rs.getDouble("original_price"));
 				product.setDescription(rs.getString("description"));
@@ -357,6 +358,7 @@ public class ProductRepository implements IRepositories<Product> {
 				    p.price,
 				    p.original_price,
 				    p.stock_quantity,
+				    p.sold_count,
 				    p.is_active,
 				    pi.image_url,
 				    CASE
@@ -407,6 +409,7 @@ public class ProductRepository implements IRepositories<Product> {
 				product.setPrice(rs.getDouble("price"));
 				product.setOriginal_price(rs.getDouble("original_price"));
 				product.setStock_quantity(rs.getInt("stock_quantity"));
+				product.setSold_count(rs.getInt("sold_count"));
 				product.setIs_active(rs.getInt("is_active"));
 
 				String variantsJson = rs.getString("variants");
