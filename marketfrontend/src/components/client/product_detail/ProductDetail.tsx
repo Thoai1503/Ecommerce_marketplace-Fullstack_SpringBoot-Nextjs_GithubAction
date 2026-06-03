@@ -7,6 +7,7 @@ import { ICart } from "@/validators/cart";
 import { IProduct, IProductAttribute } from "@/validators/product";
 import { IProductVariant } from "@/validators/productVariant";
 import VoucherClaimButton from "@/components/client/voucher/VoucherClaimButton";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { message } from "antd";
 import Image from "next/image";
 import Link from "next/link";
@@ -157,6 +158,7 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
   const { mutate: addToCart } = useAddToCartMutation();
   const [shopProducts, setShopProducts] = useState<any[]>([]);
   const [shopVouchers, setShopVouchers] = useState<any[]>([]);
+  const [isShopSectionLoading, setIsShopSectionLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState<number | null>(null);
   const [variant, setVariant] = useState<IProductVariant | null>(null);
   const [clientProduct, setClientProduct] = useState<IProduct | null>(null);
@@ -284,12 +286,16 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
   }, [mainImage, productImages]);
 
   useEffect(() => {
-    if (!detailData?.shop_id) return;
+    if (!detailData?.shop_id) {
+      setIsShopSectionLoading(false);
+      return;
+    }
 
     const fetchData = async () => {
       const shopId = detailData.shop_id;
 
       const fallbackShop = (detailData as any)?.shop ?? null;
+      setIsShopSectionLoading(true);
 
       try {
         const shopRes = await fetch(`${API_URL}/shops/${shopId}`);
@@ -332,6 +338,8 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
       } catch (err) {
         console.error("Failed to fetch shop vouchers:", err);
         setShopVouchers([]);
+      } finally {
+        setIsShopSectionLoading(false);
       }
     };
 
@@ -789,85 +797,111 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
                         </div>
                       </div>
                       <div className="shop-header mt-4 p-4 rounded text-white">
-                        <div className="shop-header-inner">
-                          {/* LEFT */}
-                          <div className="shop-header-left d-flex align-items-center gap-3">
-                            <img
-                              src={
-                                shop?.shop_logo ||
-                                "/assets/images/avatar-shop.png"
-                              }
-                              width={70}
-                              height={70}
-                              className="rounded-circle border border-white"
-                            />
-
-                            <div>
-                              <div className="fw-bold fs-5">
-                                {shop?.shop_name || "Loading..."}
-                              </div>
-
-                              <small className="opacity-75">
-                                Online recently
-                              </small>
-                              {shopDescription && (
-                                <div className="small opacity-75 mt-1 shop-description">
-                                  {shopDescription}
+                        {isShopSectionLoading ? (
+                          <div className="shop-header-inner">
+                            <div className="shop-header-left d-flex align-items-center gap-3">
+                              <Skeleton className="shop-skeleton-avatar" />
+                              <div className="d-flex flex-column gap-2 flex-grow-1">
+                                <Skeleton className="shop-skeleton-title" />
+                                <Skeleton className="shop-skeleton-line short" />
+                                <Skeleton className="shop-skeleton-line" />
+                                <div className="d-flex gap-2 mt-1 flex-wrap">
+                                  <Skeleton className="shop-skeleton-button" />
+                                  <Skeleton className="shop-skeleton-button" />
                                 </div>
-                              )}
+                              </div>
+                            </div>
 
-                              <div className="mt-2 d-flex gap-2">
-                                <button className="btn btn-outline-light btn-sm">
-                                  💬 Chat Now
-                                </button>
+                            <div className="shop-header-right">
+                              {Array.from({ length: 4 }).map((_, index) => (
+                                <div className="shop-stat-item" key={index}>
+                                  <Skeleton className="shop-skeleton-stat-label" />
+                                  <Skeleton className="shop-skeleton-stat-value" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="shop-header-inner">
+                            {/* LEFT */}
+                            <div className="shop-header-left d-flex align-items-center gap-3">
+                              <img
+                                src={
+                                  shop?.shop_logo ||
+                                  "/assets/images/avatar-shop.png"
+                                }
+                                width={70}
+                                height={70}
+                                className="rounded-circle border border-white"
+                              />
 
-                                <button
-                                  className="btn btn-outline-light btn-sm"
-                                  onClick={() =>
-                                    (window.location.href = `/shop/${detailData.shop_id}`)
-                                  }
-                                >
-                                  🏪 View Shop
-                                </button>
+                              <div>
+                                <div className="fw-bold fs-5">
+                                  {shop?.shop_name || "Loading..."}
+                                </div>
+
+                                <small className="opacity-75">
+                                  Online recently
+                                </small>
+                                {shopDescription && (
+                                  <div className="small opacity-75 mt-1 shop-description">
+                                    {shopDescription}
+                                  </div>
+                                )}
+
+                                <div className="mt-2 d-flex gap-2">
+                                  <button className="btn btn-outline-light btn-sm">
+                                    💬 Chat Now
+                                  </button>
+
+                                  <button
+                                    className="btn btn-outline-light btn-sm"
+                                    onClick={() =>
+                                      (window.location.href = `/shop/${detailData.shop_id}`)
+                                    }
+                                  >
+                                    🏪 View Shop
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* RIGHT */}
+                            <div className="shop-header-right">
+                              <div className="shop-stat-item">
+                                <div className="small opacity-75">Products</div>
+                                <div className="stat-number">
+                                  {shopProducts.length}
+                                </div>
+                              </div>
+
+                              <div className="shop-stat-item">
+                                <div className="small opacity-75">Ratings</div>
+                                <div className="stat-number">
+                                  {shop?.rating || 0}
+                                </div>
+                              </div>
+
+                              <div className="shop-stat-item">
+                                <div className="small opacity-75">
+                                  Response Rate
+                                </div>
+                                <div className="stat-number">
+                                  {shop?.response_rate || 0}%
+                                </div>
+                              </div>
+
+                              <div className="shop-stat-item">
+                                <div className="small opacity-75">
+                                  Response Time
+                                </div>
+                                <div className="stat-number">
+                                  {shop?.response_time || 0}h
+                                </div>
                               </div>
                             </div>
                           </div>
-
-                          {/* RIGHT */}
-                          <div className="shop-header-right">
-                            <div className="shop-stat-item">
-                              <div className="small opacity-75">Products</div>
-                              <div className="stat-number">
-                                {shopProducts.length}
-                              </div>
-                            </div>
-
-                            <div className="shop-stat-item">
-                              <div className="small opacity-75">Ratings</div>
-                              <div className="stat-number">
-                                {shop?.rating || 0}
-                              </div>
-                            </div>
-
-                            <div className="shop-stat-item">
-                              <div className="small opacity-75">
-                                Response Rate
-                              </div>
-                              <div className="stat-number">
-                                {shop?.response_rate || 0}%
-                              </div>
-                            </div>
-
-                            <div className="shop-stat-item">
-                              <div className="small opacity-75">
-                                Response Time
-                              </div>
-                              <div className="stat-number">
-                                {shop?.response_time || 0}h
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                        )}
                       </div>
                       <div className="row g-4 mt-1 align-items-start">
                         <div className="col-xl-9 col-12">
@@ -1071,7 +1105,22 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
                                   Shop vouchers
                                 </h6>
 
-                                {shopVouchers.length > 0 ? (
+                                {isShopSectionLoading ? (
+                                  <div className="d-flex flex-column gap-2">
+                                    {Array.from({ length: 3 }).map(
+                                      (_, index) => (
+                                        <div
+                                          key={index}
+                                          className="shop-sidebar-voucher rounded border"
+                                        >
+                                          <Skeleton className="shop-skeleton-voucher-title" />
+                                          <Skeleton className="shop-skeleton-voucher-line" />
+                                          <Skeleton className="shop-skeleton-voucher-button mt-2" />
+                                        </div>
+                                      ),
+                                    )}
+                                  </div>
+                                ) : shopVouchers.length > 0 ? (
                                   <div className="d-flex flex-column gap-2">
                                     {shopVouchers.slice(0, 4).map((voucher) => (
                                       <div
@@ -1167,7 +1216,25 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
                                   Top sản phẩm bán chạy
                                 </h6>
 
-                                {topSellingProducts.length > 0 ? (
+                                {isShopSectionLoading ? (
+                                  <div className="d-flex flex-column gap-3">
+                                    {Array.from({ length: 4 }).map(
+                                      (_, index) => (
+                                        <div
+                                          key={index}
+                                          className="d-flex gap-2 align-items-center shop-sidebar-product"
+                                        >
+                                          <Skeleton className="shop-skeleton-product-thumb" />
+                                          <div style={{ minWidth: 0, flex: 1 }}>
+                                            <Skeleton className="shop-skeleton-product-title" />
+                                            <Skeleton className="shop-skeleton-product-line" />
+                                            <Skeleton className="shop-skeleton-product-line short" />
+                                          </div>
+                                        </div>
+                                      ),
+                                    )}
+                                  </div>
+                                ) : topSellingProducts.length > 0 ? (
                                   <div className="d-flex flex-column gap-3">
                                     {topSellingProducts.map((item) => (
                                       <Link
@@ -1313,6 +1380,82 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
 
           .shop-sidebar-product:hover {
             background: #f8fafc;
+          }
+
+          :global(.shop-skeleton-avatar) {
+            border-radius: 999px;
+            flex: 0 0 70px;
+            height: 70px;
+            width: 70px;
+          }
+
+          :global(.shop-skeleton-title) {
+            height: 22px;
+            width: 180px;
+          }
+
+          :global(.shop-skeleton-line) {
+            height: 12px;
+            width: min(100%, 280px);
+          }
+
+          :global(.shop-skeleton-line.short),
+          :global(.shop-skeleton-product-line.short) {
+            width: 120px;
+          }
+
+          :global(.shop-skeleton-button) {
+            border-radius: 999px;
+            height: 32px;
+            width: 110px;
+          }
+
+          :global(.shop-skeleton-stat-label) {
+            height: 12px;
+            margin: 0 auto 8px;
+            width: 86px;
+          }
+
+          :global(.shop-skeleton-stat-value) {
+            height: 22px;
+            margin: 0 auto;
+            width: 52px;
+          }
+
+          :global(.shop-skeleton-voucher-title) {
+            height: 14px;
+            margin-bottom: 8px;
+            width: 78px;
+          }
+
+          :global(.shop-skeleton-voucher-line) {
+            height: 12px;
+            width: 100%;
+          }
+
+          :global(.shop-skeleton-voucher-button) {
+            border-radius: 4px;
+            height: 28px;
+            width: 72px;
+          }
+
+          :global(.shop-skeleton-product-thumb) {
+            border-radius: 8px;
+            flex: 0 0 52px;
+            height: 52px;
+            width: 52px;
+          }
+
+          :global(.shop-skeleton-product-title) {
+            height: 14px;
+            margin-bottom: 8px;
+            width: 100%;
+          }
+
+          :global(.shop-skeleton-product-line) {
+            height: 12px;
+            margin-bottom: 6px;
+            width: 78%;
           }
 
           .stat-number {
