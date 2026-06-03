@@ -5,15 +5,17 @@ import org.springframework.stereotype.Component;
 
 import docker_test.com.dto.OrderItem;
 import stock_gateway.com.repository.ProductVariantRepository;
+import stock_gateway.com.service.StockService;
 
 @Component
 public class UpdateStockEvent {
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(UpdateStockEvent.class);
 
 	private final ProductVariantRepository productVariantRepository;
-
-	public UpdateStockEvent(ProductVariantRepository productVariantRepository) {
+  private final StockService stockService;
+	public UpdateStockEvent(ProductVariantRepository productVariantRepository, StockService stockService) {
 		this.productVariantRepository = productVariantRepository;
+		this.stockService = stockService;
 	}
 
     
@@ -30,8 +32,9 @@ public class UpdateStockEvent {
 		}
 
 		productVariantRepository.findById(event.getVariant_id()).ifPresentOrElse(variant -> {
-			variant.setStockQuantity(Math.max(variant.getStockQuantity() - event.getQuantity(), 0));
-			productVariantRepository.save(variant);
+//			variant.setStockQuantity(Math.max(variant.getStockQuantity() - event.getQuantity(), 0));
+//			productVariantRepository.save(variant);
+			 stockService.updateStockQuantity(event.getVariant_id(), event.getQuantity());
 			LOGGER.info("Stock updated. variantId={}, quantity={}, newStock={}", event.getVariant_id(), event.getQuantity(), Math.max(variant.getStockQuantity() - event.getQuantity(), 0));
 		}, () -> LOGGER.warn("Variant not found for stock update. variantId={}, payload={}", event.getVariant_id(), event));
 

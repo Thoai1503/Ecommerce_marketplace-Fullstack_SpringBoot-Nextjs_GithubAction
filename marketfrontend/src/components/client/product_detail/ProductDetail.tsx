@@ -6,9 +6,44 @@ import { Cart, useAddToCartMutation } from "@/types/data/Cart";
 import { ICart } from "@/validators/cart";
 import { IProduct, IProductAttribute } from "@/validators/product";
 import { IProductVariant } from "@/validators/productVariant";
+import VoucherClaimButton from "@/components/client/voucher/VoucherClaimButton";
 import { message } from "antd";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
+
+const getVoucherClaimEndTime = (voucher: any) => {
+  const claimEnd = voucher.claimEndAt ?? voucher.claim_end_at;
+  if (!claimEnd) return null;
+
+  const time = new Date(claimEnd).getTime();
+  return Number.isFinite(time) ? time : null;
+};
+
+const isVoucherClaimExpired = (voucher: any) => {
+  const claimEndTime = getVoucherClaimEndTime(voucher);
+  return claimEndTime !== null && claimEndTime < Date.now();
+};
+
+const getVisibleShopVouchers = (vouchers: any[], shopId: unknown) =>
+  vouchers
+    .filter((voucher: any) => {
+      const issuerType = String(
+        voucher.issuerType ?? voucher.issuer_type ?? "",
+      ).toUpperCase();
+      const issuerId = Number(voucher.issuerId ?? voucher.issuer_id ?? 0);
+      const status = String(voucher.status ?? "").toUpperCase();
+
+      return (
+        issuerType === "SHOP" &&
+        issuerId === Number(shopId) &&
+        ["ACTIVE", "DRAFT", "PAUSED"].includes(status) &&
+        !isVoucherClaimExpired(voucher)
+      );
+    })
+    .sort(
+      (a: any, b: any) => Number(b.priority ?? 0) - Number(a.priority ?? 0),
+    );
 
 const sanitizeProductDescription = (html?: string | null) => {
   if (!html) return "";
@@ -121,11 +156,15 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { mutate: addToCart } = useAddToCartMutation();
   const [shopProducts, setShopProducts] = useState<any[]>([]);
+  const [shopVouchers, setShopVouchers] = useState<any[]>([]);
   const [selectedVariant, setSelectedVariant] = useState<number | null>(null);
   const [variant, setVariant] = useState<IProductVariant | null>(null);
   const [clientProduct, setClientProduct] = useState<IProduct | null>(null);
   const detailData = (clientProduct ?? data) as ProductDetailPayload;
   const productId = Number(detailData?.id ?? data?.id ?? 0);
+  const soldCount = Number(
+    (detailData as any)?.sold_count ?? (detailData as any)?.soldCount ?? 0,
+  );
   const productImages = Array.isArray(detailData.images)
     ? detailData.images
     : [];
@@ -158,6 +197,14 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
     Boolean(userId) &&
     sellerOwnerUserId > 0 &&
     Number(userId) === sellerOwnerUserId;
+  const topSellingProducts = shopProducts
+    .filter((item) => Number(item?.id ?? 0) !== productId)
+    .sort(
+      (a, b) =>
+        Number(b?.sold_count ?? b?.soldCount ?? 0) -
+        Number(a?.sold_count ?? a?.soldCount ?? 0),
+    )
+    .slice(0, 5);
 
   const formatPrice = (price?: number) => {
     if (!price) return "";
@@ -271,6 +318,20 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
       } catch (err) {
         console.error("Failed to fetch shop products:", err);
         setShopProducts([]);
+      }
+
+      try {
+        const voucherRes = await fetch(`${API_URL}/api/vouchers`, {
+          cache: "no-store",
+        });
+        const voucherJson = voucherRes.ok
+          ? await readJsonResponse<any>(voucherRes)
+          : null;
+        const vouchers = Array.isArray(voucherJson) ? voucherJson : [];
+        setShopVouchers(getVisibleShopVouchers(vouchers, shopId));
+      } catch (err) {
+        console.error("Failed to fetch shop vouchers:", err);
+        setShopVouchers([]);
       }
     };
 
@@ -488,9 +549,9 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
                 <div className="col-12">
                   <div className="card">
                     <div className="card-body p-5">
-                      <div className="row">
+                      <div className="row g-4 align-items-start">
                         {/* Left - Gallery */}
-                        <div className="col-xl-6">
+                        <div className="col-xl-5 col-lg-6 col-12">
                           <div className="product" id="product">
                             <div className="position-relative overflow-hidden rounded border">
                               <Image
@@ -556,15 +617,18 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
                         </div>
 
                         {/* Right - Product Info */}
-                        <div className="col-xl-6 col-12">
-                          <div className="my-5 mx-xl-10">
+                        <div className="col-xl-7 col-lg-6 col-12">
+                          <div className="my-3 pe-xl-2">
                             <h3>{detailData.product_name}</h3>
                             <div className="mb-3">
                               <span className="me-2 text-dark fw-bold">
                                 4.4{" "}
                                 <i className="bi bi-star-fill text-success"></i>
                               </span>
-                              <span>592 Customer Reviews</span>
+                              <span className="me-2">592 Customer Reviews</span>
+                              <span className="text-muted">
+                                | Đã bán: {soldCount.toLocaleString("vi-VN")}
+                              </span>
                             </div>
                             <hr className="my-3" />
                             <div className="mb-5">
@@ -725,9 +789,9 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
                         </div>
                       </div>
                       <div className="shop-header mt-4 p-4 rounded text-white">
-                        <div className="d-flex justify-content-between align-items-center flex-wrap">
+                        <div className="shop-header-inner">
                           {/* LEFT */}
-                          <div className="d-flex align-items-center gap-3">
+                          <div className="shop-header-left d-flex align-items-center gap-3">
                             <img
                               src={
                                 shop?.shop_logo ||
@@ -770,22 +834,22 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
                           </div>
 
                           {/* RIGHT */}
-                          <div className="d-flex gap-5 text-center mt-3 mt-md-0">
-                            <div>
+                          <div className="shop-header-right">
+                            <div className="shop-stat-item">
                               <div className="small opacity-75">Products</div>
                               <div className="stat-number">
                                 {shopProducts.length}
                               </div>
                             </div>
 
-                            <div>
+                            <div className="shop-stat-item">
                               <div className="small opacity-75">Ratings</div>
                               <div className="stat-number">
                                 {shop?.rating || 0}
                               </div>
                             </div>
 
-                            <div>
+                            <div className="shop-stat-item">
                               <div className="small opacity-75">
                                 Response Rate
                               </div>
@@ -794,7 +858,7 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
                               </div>
                             </div>
 
-                            <div>
+                            <div className="shop-stat-item">
                               <div className="small opacity-75">
                                 Response Time
                               </div>
@@ -805,188 +869,350 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
                           </div>
                         </div>
                       </div>
-                      {/* Accordion */}
-                      <div className="accordion" id="ecommerceAccordion">
-                        <div className="accordion-item">
-                          <h2 className="accordion-header">
-                            <button
-                              className="accordion-button"
-                              type="button"
-                              aria-expanded="true"
-                            >
-                              Product Details
-                            </button>
-                          </h2>
-                          <div
-                            id="productDetails"
-                            className="product-details-panel"
-                          >
-                            <div className="accordion-body product-details-body">
-                              <div className="product-detail-grid">
-                                <div className="product-detail-row">
-                                  <div className="product-detail-label">
-                                    Description
-                                  </div>
-                                  <div className="product-detail-value">
-                                    {hasDescription ? (
-                                      <div
-                                        className="product-description"
-                                        dangerouslySetInnerHTML={{
-                                          __html: descriptionHtml,
-                                        }}
-                                      />
-                                    ) : (
-                                      <span className="text-muted">
-                                        Chưa có mô tả sản phẩm.
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {visibleAttributes.length > 0 ? (
-                                  visibleAttributes.map((attribute) => (
-                                    <div
-                                      className="product-detail-row"
-                                      key={attribute.id}
-                                    >
+                      <div className="row g-4 mt-1 align-items-start">
+                        <div className="col-xl-9 col-12">
+                          {/* Accordion */}
+                          <div className="accordion" id="ecommerceAccordion">
+                            <div className="accordion-item">
+                              <h2 className="accordion-header">
+                                <button
+                                  className="accordion-button"
+                                  type="button"
+                                  aria-expanded="true"
+                                >
+                                  Product Details
+                                </button>
+                              </h2>
+                              <div
+                                id="productDetails"
+                                className="product-details-panel"
+                              >
+                                <div className="accordion-body product-details-body">
+                                  <div className="product-detail-grid">
+                                    <div className="product-detail-row">
                                       <div className="product-detail-label">
-                                        {getProductAttributeName(attribute)}
+                                        Description
                                       </div>
                                       <div className="product-detail-value">
-                                        {getProductAttributeValue(attribute) ||
-                                          "-"}
+                                        {hasDescription ? (
+                                          <div
+                                            className="product-description"
+                                            dangerouslySetInnerHTML={{
+                                              __html: descriptionHtml,
+                                            }}
+                                          />
+                                        ) : (
+                                          <span className="text-muted">
+                                            Chưa có mô tả sản phẩm.
+                                          </span>
+                                        )}
                                       </div>
                                     </div>
-                                  ))
-                                ) : (
-                                  <div className="product-detail-row">
-                                    <div className="product-detail-label">
-                                      Product Attributes
-                                    </div>
-                                    <div className="product-detail-value text-muted">
-                                      Chưa có thuộc tính sản phẩm.
-                                    </div>
-                                  </div>
-                                )}
 
-                                <div className="product-detail-row">
-                                  <div className="product-detail-label">
-                                    Shop Description
-                                  </div>
-                                  <div className="product-detail-value">
-                                    {shopDescription || (
-                                      <span className="text-muted">
-                                        Chưa có mô tả shop.
-                                      </span>
+                                    {visibleAttributes.length > 0 ? (
+                                      visibleAttributes.map((attribute) => (
+                                        <div
+                                          className="product-detail-row"
+                                          key={attribute.id}
+                                        >
+                                          <div className="product-detail-label">
+                                            {getProductAttributeName(attribute)}
+                                          </div>
+                                          <div className="product-detail-value">
+                                            {getProductAttributeValue(
+                                              attribute,
+                                            ) || "-"}
+                                          </div>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <div className="product-detail-row">
+                                        <div className="product-detail-label">
+                                          Product Attributes
+                                        </div>
+                                        <div className="product-detail-value text-muted">
+                                          Chưa có thuộc tính sản phẩm.
+                                        </div>
+                                      </div>
                                     )}
+
+                                    <div className="product-detail-row">
+                                      <div className="product-detail-label">
+                                        Shop Description
+                                      </div>
+                                      <div className="product-detail-value">
+                                        {shopDescription || (
+                                          <span className="text-muted">
+                                            Chưa có mô tả shop.
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
 
-                        <div className="accordion-item">
-                          <h2 className="accordion-header">
-                            <button
-                              className="accordion-button collapsed"
-                              type="button"
-                              data-bs-toggle="collapse"
-                              data-bs-target="#specifications"
-                            >
-                              Specifications
-                            </button>
-                          </h2>
-                          <div
-                            id="specifications"
-                            className="accordion-collapse collapse"
-                            data-bs-parent="#ecommerceAccordion"
-                          >
-                            <div className="accordion-body product-details-body">
-                              <table className="table table-striped">
-                                <tbody>
-                                  <tr>
-                                    <th className="w-25">Weight</th>
-                                    <td>
-                                      {detailData.weight
-                                        ? `${detailData.weight} g`
-                                        : "-"}
-                                    </td>
-                                  </tr>
-                                  <tr>
-                                    <th>Dimensions</th>
-                                    <td>
-                                      {[
-                                        detailData.length,
-                                        detailData.width,
-                                        detailData.height,
-                                      ].every(Boolean)
-                                        ? `${detailData.length} x ${detailData.width} x ${detailData.height} cm`
-                                        : "-"}
-                                    </td>
-                                  </tr>
-                                  <tr>
-                                    <th>Stock</th>
-                                    <td>{detailData.stock_quantity ?? "-"}</td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      {/* Ratings & Reviews */}
-                      <div className="mt-5">
-                        <h3 className="mb-4">Ratings & Reviews</h3>
-
-                        <div className="row align-items-center mb-4">
-                          <div className="col-md-4 text-center mb-4 mb-md-0">
-                            <h2 className="display-3 fw-bold">4.5</h2>
-                            <div className="text-success">
-                              <i className="bi bi-star-fill"></i>
-                              <i className="bi bi-star-fill"></i>
-                              <i className="bi bi-star-fill"></i>
-                              <i className="bi bi-star-fill"></i>
-                              <i className="bi bi-star-fill"></i>
-                            </div>
-                            <p className="mb-0">595 Verified Buyers</p>
-                          </div>
-
-                          <div className="col-md-8">
-                            <div className="d-flex align-items-center mb-2">
-                              <div className="text-nowrap me-3 text-muted">
-                                5 <i className="bi bi-star-fill ms-1"></i>
-                              </div>
+                            <div className="accordion-item">
+                              <h2 className="accordion-header">
+                                <button
+                                  className="accordion-button collapsed"
+                                  type="button"
+                                  data-bs-toggle="collapse"
+                                  data-bs-target="#specifications"
+                                >
+                                  Specifications
+                                </button>
+                              </h2>
                               <div
-                                className="progress w-100"
-                                style={{ height: "6px" }}
+                                id="specifications"
+                                className="accordion-collapse collapse"
+                                data-bs-parent="#ecommerceAccordion"
                               >
-                                <div
-                                  className="progress-bar bg-success"
-                                  role="progressbar"
-                                  style={{ width: "60%" }}
-                                  aria-valuenow={60}
-                                  aria-valuemin={0}
-                                  aria-valuemax={100}
-                                ></div>
+                                <div className="accordion-body product-details-body">
+                                  <table className="table table-striped">
+                                    <tbody>
+                                      <tr>
+                                        <th className="w-25">Weight</th>
+                                        <td>
+                                          {detailData.weight
+                                            ? `${detailData.weight} g`
+                                            : "-"}
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <th>Dimensions</th>
+                                        <td>
+                                          {[
+                                            detailData.length,
+                                            detailData.width,
+                                            detailData.height,
+                                          ].every(Boolean)
+                                            ? `${detailData.length} x ${detailData.width} x ${detailData.height} cm`
+                                            : "-"}
+                                        </td>
+                                      </tr>
+                                      <tr>
+                                        <th>Stock</th>
+                                        <td>
+                                          {detailData.stock_quantity ?? "-"}
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
                               </div>
-                              <span className="text-muted ms-3">420</span>
+                            </div>
+                          </div>
+
+                          {/* Ratings & Reviews */}
+                          <div className="mt-5">
+                            <h3 className="mb-4">Ratings & Reviews</h3>
+
+                            <div className="row align-items-center mb-4">
+                              <div className="col-md-4 text-center mb-4 mb-md-0">
+                                <h2 className="display-3 fw-bold">4.5</h2>
+                                <div className="text-success">
+                                  <i className="bi bi-star-fill"></i>
+                                  <i className="bi bi-star-fill"></i>
+                                  <i className="bi bi-star-fill"></i>
+                                  <i className="bi bi-star-fill"></i>
+                                  <i className="bi bi-star-fill"></i>
+                                </div>
+                                <p className="mb-0">595 Verified Buyers</p>
+                              </div>
+
+                              <div className="col-md-8">
+                                <div className="d-flex align-items-center mb-2">
+                                  <div className="text-nowrap me-3 text-muted">
+                                    5 <i className="bi bi-star-fill ms-1"></i>
+                                  </div>
+                                  <div
+                                    className="progress w-100"
+                                    style={{ height: "6px" }}
+                                  >
+                                    <div
+                                      className="progress-bar bg-success"
+                                      role="progressbar"
+                                      style={{ width: "60%" }}
+                                      aria-valuenow={60}
+                                      aria-valuemin={0}
+                                      aria-valuemax={100}
+                                    ></div>
+                                  </div>
+                                  <span className="text-muted ms-3">420</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Sample Reviews */}
+                            <div className="border-top py-4">
+                              <span className="badge bg-light text-dark border px-3 py-2 rounded-pill mb-2">
+                                4.4{" "}
+                                <i className="bi bi-star-fill text-success"></i>
+                              </span>
+                              <p>
+                                It's awesome, I never thought about Dash UI that
+                                awesome shoes...
+                              </p>
+                              <div className="text-muted small">
+                                James Ennis{" "}
+                                <span className="ms-3">28 Nov 2023</span>
+                              </div>
                             </div>
                           </div>
                         </div>
 
-                        {/* Sample Reviews */}
-                        <div className="border-top py-4">
-                          <span className="badge bg-light text-dark border px-3 py-2 rounded-pill mb-2">
-                            4.4 <i className="bi bi-star-fill text-success"></i>
-                          </span>
-                          <p>
-                            It's awesome, I never thought about Dash UI that
-                            awesome shoes...
-                          </p>
-                          <div className="text-muted small">
-                            James Ennis{" "}
-                            <span className="ms-3">28 Nov 2023</span>
+                        <div className="col-xl-3 col-12">
+                          <div className="shop-sidebar-sticky d-flex flex-column gap-3">
+                            <div className="card border-0 shadow-sm">
+                              <div className="card-body p-3">
+                                <h6 className="fw-bold mb-3 text-danger">
+                                  Shop vouchers
+                                </h6>
+
+                                {shopVouchers.length > 0 ? (
+                                  <div className="d-flex flex-column gap-2">
+                                    {shopVouchers.slice(0, 4).map((voucher) => (
+                                      <div
+                                        key={voucher.id}
+                                        className="shop-sidebar-voucher rounded border"
+                                      >
+                                        <div className="fw-semibold text-danger small text-truncate">
+                                          {voucher.code}
+                                        </div>
+                                        <div className="small text-muted text-truncate">
+                                          Min order:{" "}
+                                          {Number(
+                                            voucher.minOrderValue ??
+                                              voucher.min_order_value ??
+                                              0,
+                                          ).toLocaleString("vi-VN")}
+                                          đ
+                                        </div>
+                                        <div className="shop-sidebar-voucher-action mt-2">
+                                          <VoucherClaimButton
+                                            voucherId={Number(voucher.id)}
+                                            voucherCode={voucher.code}
+                                            voucherStatus={voucher.status}
+                                            claimStartAt={
+                                              voucher.claimStartAt ??
+                                              voucher.claim_start_at
+                                            }
+                                            claimEndAt={
+                                              voucher.claimEndAt ??
+                                              voucher.claim_end_at
+                                            }
+                                            totalQuota={Number(
+                                              voucher.totalQuota ??
+                                                voucher.total_quota ??
+                                                0,
+                                            )}
+                                            claimedCount={Number(
+                                              voucher.claimedCount ??
+                                                voucher.claimed_count ??
+                                                0,
+                                            )}
+                                            claimLabel="Lưu"
+                                            claimedLabel="Đã lưu"
+                                            claimingLabel="Đang lưu..."
+                                            successMessage={`Voucher ${voucher.code} đã được lưu.`}
+                                            className="shop-voucher-save-button"
+                                            onClaimSuccess={async () => {
+                                              try {
+                                                const voucherRes = await fetch(
+                                                  `${API_URL}/api/vouchers`,
+                                                  { cache: "no-store" },
+                                                );
+                                                const voucherJson =
+                                                  voucherRes.ok
+                                                    ? await readJsonResponse<any>(
+                                                        voucherRes,
+                                                      )
+                                                    : null;
+                                                const vouchers = Array.isArray(
+                                                  voucherJson,
+                                                )
+                                                  ? voucherJson
+                                                  : [];
+                                                setShopVouchers(
+                                                  getVisibleShopVouchers(
+                                                    vouchers,
+                                                    detailData.shop_id,
+                                                  ),
+                                                );
+                                              } catch (error) {
+                                                console.error(
+                                                  "Failed to refresh vouchers:",
+                                                  error,
+                                                );
+                                              }
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-muted small">
+                                    Chưa có voucher khả dụng.
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="card border-0 shadow-sm">
+                              <div className="card-body p-3">
+                                <h6 className="fw-bold mb-3">
+                                  Top sản phẩm bán chạy
+                                </h6>
+
+                                {topSellingProducts.length > 0 ? (
+                                  <div className="d-flex flex-column gap-3">
+                                    {topSellingProducts.map((item) => (
+                                      <Link
+                                        key={item.id}
+                                        href={`/${item.product_slug}.p${item.id}?id=${item.id}`}
+                                        className="text-decoration-none text-dark"
+                                      >
+                                        <div className="d-flex gap-2 align-items-center shop-sidebar-product">
+                                          <img
+                                            src={
+                                              item.image_url ||
+                                              "/assets/images/ecommerce/product-1.jpg"
+                                            }
+                                            width={52}
+                                            height={52}
+                                            className="rounded border"
+                                            style={{ objectFit: "cover" }}
+                                          />
+                                          <div style={{ minWidth: 0 }}>
+                                            <div className="small fw-semibold text-truncate">
+                                              {item.product_name}
+                                            </div>
+                                            <div className="small text-danger fw-bold">
+                                              {formatPrice(item.price)}đ
+                                            </div>
+                                            <div className="small text-muted">
+                                              Đã bán:{" "}
+                                              {Number(
+                                                item.sold_count ??
+                                                  item.soldCount ??
+                                                  0,
+                                              ).toLocaleString("vi-VN")}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </Link>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-muted small">
+                                    Chưa có dữ liệu bán chạy.
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1022,8 +1248,71 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
             transition: 0.3s;
           }
 
+          .shop-header-inner {
+            align-items: center;
+            display: flex;
+            gap: 18px;
+            justify-content: space-between;
+          }
+
+          .shop-header-left {
+            flex: 0 1 42%;
+            min-width: 280px;
+          }
+
+          .shop-header-right {
+            column-gap: 18px;
+            display: grid;
+            flex: 1 1 auto;
+            grid-template-columns: repeat(4, minmax(120px, 1fr));
+            row-gap: 10px;
+            text-align: center;
+          }
+
+          .shop-stat-item {
+            min-width: 0;
+          }
+
           .shop-header:hover {
             opacity: 0.95;
+          }
+
+          .shop-sidebar-sticky {
+            position: sticky;
+            top: 80px;
+          }
+
+          .shop-sidebar-voucher {
+            background: #fff5f5;
+            border-color: #ffd6d6 !important;
+            padding: 10px;
+          }
+
+          :global(.shop-voucher-save-button) {
+            background: #d70018;
+            border: 0;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            height: 28px;
+            min-width: 70px;
+            padding: 0 10px;
+          }
+
+          :global(.shop-voucher-save-button:disabled) {
+            cursor: not-allowed;
+            opacity: 0.72;
+          }
+
+          .shop-sidebar-product {
+            border-radius: 8px;
+            padding: 6px;
+            transition: background 0.18s ease;
+          }
+
+          .shop-sidebar-product:hover {
+            background: #f8fafc;
           }
 
           .stat-number {
@@ -1105,6 +1394,38 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
             .product-detail-label {
               border-right: 0;
               border-bottom: 1px solid #dbe3ef;
+            }
+          }
+
+          @media (max-width: 1200px) {
+            .shop-header-inner {
+              align-items: flex-start;
+              flex-direction: column;
+            }
+
+            .shop-header-left {
+              flex: none;
+              min-width: 0;
+              width: 100%;
+            }
+
+            .shop-header-right {
+              grid-template-columns: repeat(2, minmax(130px, 1fr));
+              width: 100%;
+            }
+          }
+
+          @media (max-width: 576px) {
+            .shop-header-right {
+              grid-template-columns: 1fr;
+              text-align: left;
+            }
+          }
+
+          @media (max-width: 1199px) {
+            .shop-sidebar-sticky {
+              position: static;
+              top: auto;
             }
           }
         `}</style>
