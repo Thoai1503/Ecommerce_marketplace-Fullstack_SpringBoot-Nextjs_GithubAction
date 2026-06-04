@@ -10,7 +10,11 @@ import {
 } from "@tanstack/react-query";
 import { vouchersQuery } from "@/query/vouchers";
 import { useSellerAuth } from "@/context/SellerAuthContext";
-import { createVoucher, saveVoucherRules, updateVoucher } from "@/service/vouchers";
+import {
+  createVoucher,
+  saveVoucherRules,
+  updateVoucher,
+} from "@/service/vouchers";
 import { getProductByShopId } from "@/feature/admin/service";
 import { API_URL } from "@/helper/api";
 import {
@@ -23,7 +27,13 @@ import {
 import { IProduct } from "@/validators/product";
 
 type VoucherStatus = "all" | "running" | "upcoming" | "ended";
-type VoucherType = "shop" | "product" | "category" | "private" | "live" | "video";
+type VoucherType =
+  | "shop"
+  | "product"
+  | "category"
+  | "private"
+  | "live"
+  | "video";
 type DiscountKind = "FIXED" | "PERCENT" | "FREE_SHIPPING" | "GIFT_ITEM";
 
 type ShopCategoryOption = {
@@ -117,7 +127,8 @@ const mapVoucherToItem = (
     (rule) => rule.scopeType === "PRODUCT" && rule.includeExclude === "INCLUDE",
   );
   const includedCategoryRules = scopeRules.filter(
-    (rule) => rule.scopeType === "CATEGORY" && rule.includeExclude === "INCLUDE",
+    (rule) =>
+      rule.scopeType === "CATEGORY" && rule.includeExclude === "INCLUDE",
   );
   const matchedProducts = includedProductRules
     .map((rule) =>
@@ -126,7 +137,9 @@ const mapVoucherToItem = (
     .filter(Boolean);
   const matchedCategories = includedCategoryRules
     .map((rule) =>
-      categories.find((category) => Number(category.id) === Number(rule.scopeId)),
+      categories.find(
+        (category) => Number(category.id) === Number(rule.scopeId),
+      ),
     )
     .filter(Boolean);
   const isProductSpecific = includedProductRules.length > 0;
@@ -134,13 +147,15 @@ const mapVoucherToItem = (
   const applyScope = isProductSpecific
     ? matchedProducts.length > 0
       ? matchedProducts.length === 1
-        ? matchedProducts[0]?.product_name || `Product #${includedProductRules[0]?.scopeId}`
+        ? matchedProducts[0]?.product_name ||
+          `Product #${includedProductRules[0]?.scopeId}`
         : `${matchedProducts.length} selected products`
       : `${includedProductRules.length} selected products`
     : isCategorySpecific
       ? matchedCategories.length > 0
         ? matchedCategories.length === 1
-          ? matchedCategories[0]?.label || `Category #${includedCategoryRules[0]?.scopeId}`
+          ? matchedCategories[0]?.label ||
+            `Category #${includedCategoryRules[0]?.scopeId}`
           : `${matchedCategories.length} selected categories`
         : `${includedCategoryRules.length} selected categories`
       : "All products";
@@ -149,7 +164,11 @@ const mapVoucherToItem = (
     id: voucher.id,
     name: voucher.title,
     code: voucher.code,
-    status: statusFromApiToUi(voucher.status, voucher.validFrom, voucher.validTo),
+    status: statusFromApiToUi(
+      voucher.status,
+      voucher.validFrom,
+      voucher.validTo,
+    ),
     isProductSpecific,
     isCategorySpecific,
     productIds: includedProductRules.map((rule) => Number(rule.scopeId)),
@@ -158,11 +177,11 @@ const mapVoucherToItem = (
       ? "Product-specific voucher"
       : isCategorySpecific
         ? "Category-specific voucher"
-      : voucher.discountType === "FREE_SHIPPING"
-        ? "Shipping voucher"
-        : voucher.discountType === "GIFT_ITEM"
-          ? "Gift voucher"
-          : "Shop-wide voucher",
+        : voucher.discountType === "FREE_SHIPPING"
+          ? "Shipping voucher"
+          : voucher.discountType === "GIFT_ITEM"
+            ? "Gift voucher"
+            : "Shop-wide voucher",
     applyScope,
     audience: "All buyers",
     discount: formatVoucherDiscount(voucher),
@@ -175,7 +194,7 @@ const mapVoucherToItem = (
       ? "linear-gradient(135deg, #fb923c 0%, #f97316 100%)"
       : isCategorySpecific
         ? "linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)"
-      : "linear-gradient(135deg, #ee4d2d 0%, #ff8a00 100%)",
+        : "linear-gradient(135deg, #ee4d2d 0%, #ff8a00 100%)",
   };
 };
 
@@ -251,7 +270,8 @@ const creatorCards: {
   {
     key: "category",
     title: "Category-specific voucher",
-    description: "Apply this voucher to categories that already exist in your shop.",
+    description:
+      "Apply this voucher to categories that already exist in your shop.",
     icon: "C",
     accent: "#2563eb",
   },
@@ -427,7 +447,9 @@ const buildShopVoucherPayload = (
 ): Partial<AdminVoucher> => {
   const resolvedCodePrefix = shopId ? `S${shopId}` : form.codePrefix;
   const code = `${resolvedCodePrefix}${form.codeSuffix ? `-${form.codeSuffix.toUpperCase()}` : ""}`;
-
+  console.log(
+    `Claim start: ${buildDateTimeString(form.claimStartDate, form.claimStartTime)}  Claim end: ${buildDateTimeString(form.claimEndDate, form.claimEndTime)} Valid from: ${buildDateTimeString(form.validFromDate, form.validFromTime)} Valid to: ${buildDateTimeString(form.validToDate, form.validToTime)}`,
+  );
   return {
     campaignId: form.campaignId,
     code,
@@ -580,18 +602,17 @@ function ShopVoucherCreateModal({
   const isPercentDiscount = form.discountKind === "PERCENT";
   const isFreeShipping = form.discountKind === "FREE_SHIPPING";
   const isGiftItem = form.discountKind === "GIFT_ITEM";
-  const previewDiscount =
-    isFixedDiscount
-      ? form.discountValue
-        ? `₫${form.discountValue}`
-        : "₫..."
-      : isPercentDiscount
-        ? `${form.discountValue}%`
-        : isFreeShipping
-          ? "Free ship"
-          : isGiftItem
-            ? "Gift item"
-            : "N/A";
+  const previewDiscount = isFixedDiscount
+    ? form.discountValue
+      ? `₫${form.discountValue}`
+      : "₫..."
+    : isPercentDiscount
+      ? `${form.discountValue}%`
+      : isFreeShipping
+        ? "Free ship"
+        : isGiftItem
+          ? "Gift item"
+          : "N/A";
   const voucherPayload = buildShopVoucherPayload(form, shopId);
 
   return (
@@ -611,7 +632,9 @@ function ShopVoucherCreateModal({
           <div className="d-flex justify-content-between align-items-center px-4 px-lg-5 py-4 border-bottom bg-white rounded-top-4">
             <div>
               <h4 className="mb-1">
-                {isEditing ? "Edit Shop-wide Voucher" : "Create Shop-wide Voucher"}
+                {isEditing
+                  ? "Edit Shop-wide Voucher"
+                  : "Create Shop-wide Voucher"}
               </h4>
               <div className="text-muted small">
                 Configure a public voucher for all products in your shop.
@@ -765,17 +788,19 @@ function ShopVoucherCreateModal({
                               type="time"
                               className="form-control"
                               value={form.claimStartTime}
-                              onChange={(e) =>
-                                onChange("claimStartTime", e.target.value)
-                              }
+                              onChange={(e) => {
+                                console.log("claimStartTime", e.target.value);
+                                onChange("claimStartTime", e.target.value);
+                              }}
                             />
                             <input
                               type="date"
                               className="form-control"
                               value={form.claimStartDate}
-                              onChange={(e) =>
-                                onChange("claimStartDate", e.target.value)
-                              }
+                              onChange={(e) => {
+                                console.log("claimStartDate", e.target.value);
+                                onChange("claimStartDate", e.target.value);
+                              }}
                             />
                           </div>
                         </div>
@@ -979,7 +1004,9 @@ function ShopVoucherCreateModal({
 
                   {(isFreeShipping || isGiftItem) && (
                     <div className="row g-3 align-items-start mb-3">
-                      <label className="col-lg-3 col-form-label">Type note</label>
+                      <label className="col-lg-3 col-form-label">
+                        Type note
+                      </label>
                       <div className="col-lg-9">
                         <div className="alert alert-info mb-0 py-2">
                           {isFreeShipping
@@ -1132,7 +1159,9 @@ function ShopVoucherCreateModal({
                           </div>
                           <div className="col-6">
                             <div className="border rounded-3 p-2 text-center">
-                              <div className="small text-muted">Voucher code</div>
+                              <div className="small text-muted">
+                                Voucher code
+                              </div>
                               <div className="text-danger fw-bold small text-truncate">
                                 {generatedCode || "N/A"}
                               </div>
@@ -1180,8 +1209,16 @@ function ShopVoucherCreateModal({
             >
               Cancel
             </button>
-            <button className="btn btn-danger" onClick={onConfirm} disabled={isSaving}>
-              {isSaving ? "Saving..." : isEditing ? "Update voucher" : "Create voucher"}
+            <button
+              className="btn btn-danger"
+              onClick={onConfirm}
+              disabled={isSaving}
+            >
+              {isSaving
+                ? "Saving..."
+                : isEditing
+                  ? "Update voucher"
+                  : "Create voucher"}
             </button>
           </div>
         </div>
@@ -1237,18 +1274,17 @@ function ProductVoucherCreateModal({
   const selectedProducts = products.filter((product) =>
     form.selectedProductIds.includes(Number(product.id)),
   );
-  const previewDiscount =
-    isFixedDiscount
-      ? form.discountValue
-        ? `₫${form.discountValue}`
-        : "₫..."
-      : isPercentDiscount
-        ? `${form.discountValue}%`
-        : isFreeShipping
-          ? "Free ship"
-          : isGiftItem
-            ? "Gift item"
-            : "N/A";
+  const previewDiscount = isFixedDiscount
+    ? form.discountValue
+      ? `₫${form.discountValue}`
+      : "₫..."
+    : isPercentDiscount
+      ? `${form.discountValue}%`
+      : isFreeShipping
+        ? "Free ship"
+        : isGiftItem
+          ? "Gift item"
+          : "N/A";
   const voucherPayload = buildShopVoucherPayload(form, shopId);
 
   return (
@@ -1297,7 +1333,9 @@ function ProductVoucherCreateModal({
                   <h5 className="mb-4">Basic information</h5>
 
                   <div className="row g-3 align-items-start mb-3">
-                    <label className="col-lg-3 col-form-label">Voucher type</label>
+                    <label className="col-lg-3 col-form-label">
+                      Voucher type
+                    </label>
                     <div className="col-lg-9">
                       <div className="border rounded-3 px-3 py-2 d-inline-flex align-items-center gap-2 bg-white">
                         <span
@@ -1349,7 +1387,9 @@ function ProductVoucherCreateModal({
                   </div>
 
                   <div className="row g-3 align-items-start mb-3">
-                    <label className="col-lg-3 col-form-label">Voucher title</label>
+                    <label className="col-lg-3 col-form-label">
+                      Voucher title
+                    </label>
                     <div className="col-lg-9">
                       <input
                         className="form-control"
@@ -1362,20 +1402,26 @@ function ProductVoucherCreateModal({
                   </div>
 
                   <div className="row g-3 align-items-start mb-3">
-                    <label className="col-lg-3 col-form-label">Description</label>
+                    <label className="col-lg-3 col-form-label">
+                      Description
+                    </label>
                     <div className="col-lg-9">
                       <textarea
                         className="form-control"
                         rows={3}
                         value={form.description}
-                        onChange={(e) => onChange("description", e.target.value)}
+                        onChange={(e) =>
+                          onChange("description", e.target.value)
+                        }
                         placeholder="Describe the product-focused promotion"
                       />
                     </div>
                   </div>
 
                   <div className="row g-3 align-items-start mb-3">
-                    <label className="col-lg-3 col-form-label">Voucher code</label>
+                    <label className="col-lg-3 col-form-label">
+                      Voucher code
+                    </label>
                     <div className="col-lg-9">
                       <div className="input-group">
                         {resolvedCodePrefix && (
@@ -1387,7 +1433,9 @@ function ProductVoucherCreateModal({
                           className="form-control"
                           maxLength={20}
                           value={form.codeSuffix}
-                          onChange={(e) => onChange("codeSuffix", e.target.value)}
+                          onChange={(e) =>
+                            onChange("codeSuffix", e.target.value)
+                          }
                           placeholder="Enter voucher code"
                         />
                       </div>
@@ -1396,13 +1444,17 @@ function ProductVoucherCreateModal({
                           Use uppercase letters or numbers only. Current code:{" "}
                           <strong>{generatedCode || "N/A"}</strong>
                         </span>
-                        <span className="float-end">{form.codeSuffix.length}/20</span>
+                        <span className="float-end">
+                          {form.codeSuffix.length}/20
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   <div className="row g-3 align-items-start mb-3">
-                    <label className="col-lg-3 col-form-label">Claim period</label>
+                    <label className="col-lg-3 col-form-label">
+                      Claim period
+                    </label>
                     <div className="col-lg-9">
                       <div className="row g-2">
                         <div className="col-sm-6">
@@ -1450,7 +1502,9 @@ function ProductVoucherCreateModal({
                   </div>
 
                   <div className="row g-3 align-items-start">
-                    <label className="col-lg-3 col-form-label">Valid period</label>
+                    <label className="col-lg-3 col-form-label">
+                      Valid period
+                    </label>
                     <div className="col-lg-9">
                       <div className="row g-2">
                         <div className="col-sm-6">
@@ -1502,7 +1556,9 @@ function ProductVoucherCreateModal({
                   <h5 className="mb-4">Voucher setup</h5>
 
                   <div className="row g-3 align-items-center mb-3">
-                    <label className="col-lg-3 col-form-label">Discount type</label>
+                    <label className="col-lg-3 col-form-label">
+                      Discount type
+                    </label>
                     <div className="col-lg-9">
                       <div className="row g-2">
                         <div className="col-md-4">
@@ -1525,7 +1581,11 @@ function ProductVoucherCreateModal({
                         <div className="col-md-8">
                           <div className="input-group">
                             <span className="input-group-text">
-                              {isFixedDiscount ? "₫" : isPercentDiscount ? "%" : "•"}
+                              {isFixedDiscount
+                                ? "₫"
+                                : isPercentDiscount
+                                  ? "%"
+                                  : "•"}
                             </span>
                             <input
                               className="form-control"
@@ -1551,14 +1611,18 @@ function ProductVoucherCreateModal({
                   </div>
 
                   <div className="row g-3 align-items-center mb-3">
-                    <label className="col-lg-3 col-form-label">Minimum order value</label>
+                    <label className="col-lg-3 col-form-label">
+                      Minimum order value
+                    </label>
                     <div className="col-lg-9">
                       <div className="input-group">
                         <span className="input-group-text">₫</span>
                         <input
                           className="form-control"
                           value={form.minOrderValue}
-                          onChange={(e) => onChange("minOrderValue", e.target.value)}
+                          onChange={(e) =>
+                            onChange("minOrderValue", e.target.value)
+                          }
                           placeholder="Enter minimum spend"
                         />
                       </div>
@@ -1566,7 +1630,9 @@ function ProductVoucherCreateModal({
                   </div>
 
                   <div className="row g-3 align-items-center mb-3">
-                    <label className="col-lg-3 col-form-label">Max discount amount</label>
+                    <label className="col-lg-3 col-form-label">
+                      Max discount amount
+                    </label>
                     <div className="col-lg-9">
                       <div className="input-group">
                         <span className="input-group-text">₫</span>
@@ -1589,7 +1655,9 @@ function ProductVoucherCreateModal({
 
                   {(isFreeShipping || isGiftItem) && (
                     <div className="row g-3 align-items-start mb-3">
-                      <label className="col-lg-3 col-form-label">Type note</label>
+                      <label className="col-lg-3 col-form-label">
+                        Type note
+                      </label>
                       <div className="col-lg-9">
                         <div className="alert alert-info mb-0 py-2">
                           {isFreeShipping
@@ -1601,7 +1669,9 @@ function ProductVoucherCreateModal({
                   )}
 
                   <div className="row g-3 align-items-center mb-3">
-                    <label className="col-lg-3 col-form-label">Max order value</label>
+                    <label className="col-lg-3 col-form-label">
+                      Max order value
+                    </label>
                     <div className="col-lg-9">
                       <div className="input-group">
                         <span className="input-group-text">₫</span>
@@ -1618,7 +1688,9 @@ function ProductVoucherCreateModal({
                   </div>
 
                   <div className="row g-3 align-items-center mb-3">
-                    <label className="col-lg-3 col-form-label">Total max uses</label>
+                    <label className="col-lg-3 col-form-label">
+                      Total max uses
+                    </label>
                     <div className="col-lg-9">
                       <input
                         className="form-control"
@@ -1717,7 +1789,8 @@ function ProductVoucherCreateModal({
                     <div className="row g-3">
                       {products.map((product) => {
                         const productId = Number(product.id);
-                        const selected = form.selectedProductIds.includes(productId);
+                        const selected =
+                          form.selectedProductIds.includes(productId);
                         return (
                           <div className="col-md-6" key={productId}>
                             <button
@@ -1741,15 +1814,22 @@ function ProductVoucherCreateModal({
                                 />
                                 <div className="flex-grow-1">
                                   <div className="fw-semibold mb-1">
-                                    {product.product_name || `Product #${productId}`}
+                                    {product.product_name ||
+                                      `Product #${productId}`}
                                   </div>
                                   <div className="small text-muted mb-2">
                                     SKU #{productId}
                                   </div>
                                   <div className="d-flex justify-content-between small">
-                                    <span>₫{Number(product.price || 0).toLocaleString()}</span>
+                                    <span>
+                                      ₫
+                                      {Number(
+                                        product.price || 0,
+                                      ).toLocaleString()}
+                                    </span>
                                     <span className="text-muted">
-                                      Stock {Number(product.stock_quantity || 0)}
+                                      Stock{" "}
+                                      {Number(product.stock_quantity || 0)}
                                     </span>
                                   </div>
                                 </div>
@@ -1773,7 +1853,9 @@ function ProductVoucherCreateModal({
                 <div className="position-sticky" style={{ top: 16 }}>
                   <div className="bg-white border rounded-4 shadow-sm p-4 mb-3">
                     <div className="small text-muted mb-2">Preview</div>
-                    <h5 className="mb-1">{form.title || "Product voucher preview"}</h5>
+                    <h5 className="mb-1">
+                      {form.title || "Product voucher preview"}
+                    </h5>
                     <div className="text-muted small mb-3">
                       {selectedCampaign?.name || "No campaign selected"}
                     </div>
@@ -1789,8 +1871,8 @@ function ProductVoucherCreateModal({
                       </span>
                     </div>
                     <div className="small text-muted">
-                      This voucher will only be redeemable on the products selected
-                      below.
+                      This voucher will only be redeemable on the products
+                      selected below.
                     </div>
                     <div className="small text-muted mt-2">
                       Status: <strong>{form.status}</strong>
@@ -1798,9 +1880,13 @@ function ProductVoucherCreateModal({
                   </div>
 
                   <div className="bg-white border rounded-4 shadow-sm p-4">
-                    <div className="small text-muted mb-2">Selected products</div>
+                    <div className="small text-muted mb-2">
+                      Selected products
+                    </div>
                     {selectedProducts.length === 0 ? (
-                      <div className="small text-muted">No products selected yet.</div>
+                      <div className="small text-muted">
+                        No products selected yet.
+                      </div>
                     ) : (
                       <div className="d-flex flex-column gap-2">
                         {selectedProducts.slice(0, 6).map((product) => (
@@ -1848,8 +1934,16 @@ function ProductVoucherCreateModal({
             >
               Cancel
             </button>
-            <button className="btn btn-danger" onClick={onConfirm} disabled={isSaving}>
-              {isSaving ? "Saving..." : isEditing ? "Update voucher" : "Create voucher"}
+            <button
+              className="btn btn-danger"
+              onClick={onConfirm}
+              disabled={isSaving}
+            >
+              {isSaving
+                ? "Saving..."
+                : isEditing
+                  ? "Update voucher"
+                  : "Create voucher"}
             </button>
           </div>
         </div>
@@ -1903,18 +1997,17 @@ function CategoryVoucherCreateModal({
   const selectedCategories = categories.filter((category) =>
     form.selectedCategoryIds.includes(Number(category.id)),
   );
-  const previewDiscount =
-    isFixedDiscount
-      ? form.discountValue
-        ? `₫${form.discountValue}`
-        : "₫..."
-      : isPercentDiscount
-        ? `${form.discountValue}%`
-        : isFreeShipping
-          ? "Free ship"
-          : isGiftItem
-            ? "Gift item"
-            : "N/A";
+  const previewDiscount = isFixedDiscount
+    ? form.discountValue
+      ? `₫${form.discountValue}`
+      : "₫..."
+    : isPercentDiscount
+      ? `${form.discountValue}%`
+      : isFreeShipping
+        ? "Free ship"
+        : isGiftItem
+          ? "Gift item"
+          : "N/A";
   const voucherPayload = buildShopVoucherPayload(form, shopId);
 
   return (
@@ -1939,7 +2032,8 @@ function CategoryVoucherCreateModal({
                   : "Create Category-specific Voucher"}
               </h4>
               <div className="text-muted small">
-                Apply this voucher to categories that already have products in your shop.
+                Apply this voucher to categories that already have products in
+                your shop.
               </div>
             </div>
             <button className="btn btn-outline-secondary" onClick={onClose}>
@@ -1963,12 +2057,18 @@ function CategoryVoucherCreateModal({
                   <h5 className="mb-4">Basic information</h5>
 
                   <div className="row g-3 align-items-start mb-3">
-                    <label className="col-lg-3 col-form-label">Voucher type</label>
+                    <label className="col-lg-3 col-form-label">
+                      Voucher type
+                    </label>
                     <div className="col-lg-9">
                       <div className="border rounded-3 px-3 py-2 d-inline-flex align-items-center gap-2 bg-white">
                         <span
                           className="rounded-2 d-inline-flex align-items-center justify-content-center text-white fw-bold"
-                          style={{ width: 28, height: 28, background: "#2563eb" }}
+                          style={{
+                            width: 28,
+                            height: 28,
+                            background: "#2563eb",
+                          }}
                         >
                           C
                         </span>
@@ -1983,7 +2083,9 @@ function CategoryVoucherCreateModal({
                       <select
                         className="form-select"
                         value={form.campaignId ?? ""}
-                        onChange={(e) => onChange("campaignId", e.target.value || null)}
+                        onChange={(e) =>
+                          onChange("campaignId", e.target.value || null)
+                        }
                         disabled={isCampaignsLoading}
                       >
                         <option value="">
@@ -2001,7 +2103,9 @@ function CategoryVoucherCreateModal({
                   </div>
 
                   <div className="row g-3 align-items-start mb-3">
-                    <label className="col-lg-3 col-form-label">Voucher title</label>
+                    <label className="col-lg-3 col-form-label">
+                      Voucher title
+                    </label>
                     <div className="col-lg-9">
                       <input
                         className="form-control"
@@ -2014,30 +2118,40 @@ function CategoryVoucherCreateModal({
                   </div>
 
                   <div className="row g-3 align-items-start mb-3">
-                    <label className="col-lg-3 col-form-label">Description</label>
+                    <label className="col-lg-3 col-form-label">
+                      Description
+                    </label>
                     <div className="col-lg-9">
                       <textarea
                         className="form-control"
                         rows={3}
                         value={form.description}
-                        onChange={(e) => onChange("description", e.target.value)}
+                        onChange={(e) =>
+                          onChange("description", e.target.value)
+                        }
                         placeholder="Describe the category-focused promotion"
                       />
                     </div>
                   </div>
 
                   <div className="row g-3 align-items-start mb-3">
-                    <label className="col-lg-3 col-form-label">Voucher code</label>
+                    <label className="col-lg-3 col-form-label">
+                      Voucher code
+                    </label>
                     <div className="col-lg-9">
                       <div className="input-group">
                         {resolvedCodePrefix && (
-                          <span className="input-group-text bg-light">{resolvedCodePrefix}</span>
+                          <span className="input-group-text bg-light">
+                            {resolvedCodePrefix}
+                          </span>
                         )}
                         <input
                           className="form-control"
                           maxLength={20}
                           value={form.codeSuffix}
-                          onChange={(e) => onChange("codeSuffix", e.target.value)}
+                          onChange={(e) =>
+                            onChange("codeSuffix", e.target.value)
+                          }
                           placeholder="Enter voucher code"
                         />
                       </div>
@@ -2045,19 +2159,49 @@ function CategoryVoucherCreateModal({
                   </div>
 
                   <div className="row g-3 align-items-start mb-3">
-                    <label className="col-lg-3 col-form-label">Claim period</label>
+                    <label className="col-lg-3 col-form-label">
+                      Claim period
+                    </label>
                     <div className="col-lg-9">
                       <div className="row g-2">
                         <div className="col-sm-6">
                           <div className="input-group">
-                            <input type="time" className="form-control" value={form.claimStartTime} onChange={(e) => onChange("claimStartTime", e.target.value)} />
-                            <input type="date" className="form-control" value={form.claimStartDate} onChange={(e) => onChange("claimStartDate", e.target.value)} />
+                            <input
+                              type="time"
+                              className="form-control"
+                              value={form.claimStartTime}
+                              onChange={(e) =>
+                                onChange("claimStartTime", e.target.value)
+                              }
+                            />
+                            <input
+                              type="date"
+                              className="form-control"
+                              value={form.claimStartDate}
+                              onChange={(e) =>
+                                onChange("claimStartDate", e.target.value)
+                              }
+                            />
                           </div>
                         </div>
                         <div className="col-sm-6">
                           <div className="input-group">
-                            <input type="time" className="form-control" value={form.claimEndTime} onChange={(e) => onChange("claimEndTime", e.target.value)} />
-                            <input type="date" className="form-control" value={form.claimEndDate} onChange={(e) => onChange("claimEndDate", e.target.value)} />
+                            <input
+                              type="time"
+                              className="form-control"
+                              value={form.claimEndTime}
+                              onChange={(e) =>
+                                onChange("claimEndTime", e.target.value)
+                              }
+                            />
+                            <input
+                              type="date"
+                              className="form-control"
+                              value={form.claimEndDate}
+                              onChange={(e) =>
+                                onChange("claimEndDate", e.target.value)
+                              }
+                            />
                           </div>
                         </div>
                       </div>
@@ -2065,19 +2209,49 @@ function CategoryVoucherCreateModal({
                   </div>
 
                   <div className="row g-3 align-items-start">
-                    <label className="col-lg-3 col-form-label">Valid period</label>
+                    <label className="col-lg-3 col-form-label">
+                      Valid period
+                    </label>
                     <div className="col-lg-9">
                       <div className="row g-2">
                         <div className="col-sm-6">
                           <div className="input-group">
-                            <input type="time" className="form-control" value={form.validFromTime} onChange={(e) => onChange("validFromTime", e.target.value)} />
-                            <input type="date" className="form-control" value={form.validFromDate} onChange={(e) => onChange("validFromDate", e.target.value)} />
+                            <input
+                              type="time"
+                              className="form-control"
+                              value={form.validFromTime}
+                              onChange={(e) =>
+                                onChange("validFromTime", e.target.value)
+                              }
+                            />
+                            <input
+                              type="date"
+                              className="form-control"
+                              value={form.validFromDate}
+                              onChange={(e) =>
+                                onChange("validFromDate", e.target.value)
+                              }
+                            />
                           </div>
                         </div>
                         <div className="col-sm-6">
                           <div className="input-group">
-                            <input type="time" className="form-control" value={form.validToTime} onChange={(e) => onChange("validToTime", e.target.value)} />
-                            <input type="date" className="form-control" value={form.validToDate} onChange={(e) => onChange("validToDate", e.target.value)} />
+                            <input
+                              type="time"
+                              className="form-control"
+                              value={form.validToTime}
+                              onChange={(e) =>
+                                onChange("validToTime", e.target.value)
+                              }
+                            />
+                            <input
+                              type="date"
+                              className="form-control"
+                              value={form.validToDate}
+                              onChange={(e) =>
+                                onChange("validToDate", e.target.value)
+                              }
+                            />
                           </div>
                         </div>
                       </div>
@@ -2088,14 +2262,21 @@ function CategoryVoucherCreateModal({
                 <div className="bg-white border rounded-4 p-4 mb-4">
                   <h5 className="mb-4">Voucher setup</h5>
                   <div className="row g-3 align-items-center mb-3">
-                    <label className="col-lg-3 col-form-label">Discount type</label>
+                    <label className="col-lg-3 col-form-label">
+                      Discount type
+                    </label>
                     <div className="col-lg-9">
                       <div className="row g-2">
                         <div className="col-md-4">
                           <select
                             className="form-select"
                             value={form.discountKind}
-                            onChange={(e) => onChange("discountKind", e.target.value as DiscountKind)}
+                            onChange={(e) =>
+                              onChange(
+                                "discountKind",
+                                e.target.value as DiscountKind,
+                              )
+                            }
                           >
                             <option value="FIXED">Fixed amount</option>
                             <option value="PERCENT">Percentage</option>
@@ -2106,12 +2287,18 @@ function CategoryVoucherCreateModal({
                         <div className="col-md-8">
                           <div className="input-group">
                             <span className="input-group-text">
-                              {isFixedDiscount ? "₫" : isPercentDiscount ? "%" : "•"}
+                              {isFixedDiscount
+                                ? "₫"
+                                : isPercentDiscount
+                                  ? "%"
+                                  : "•"}
                             </span>
                             <input
                               className="form-control"
                               value={form.discountValue}
-                              onChange={(e) => onChange("discountValue", e.target.value)}
+                              onChange={(e) =>
+                                onChange("discountValue", e.target.value)
+                              }
                               disabled={isFreeShipping || isGiftItem}
                               placeholder={
                                 isFixedDiscount
@@ -2128,46 +2315,94 @@ function CategoryVoucherCreateModal({
                   </div>
 
                   <div className="row g-3 align-items-center mb-3">
-                    <label className="col-lg-3 col-form-label">Minimum order value</label>
+                    <label className="col-lg-3 col-form-label">
+                      Minimum order value
+                    </label>
                     <div className="col-lg-9">
                       <div className="input-group">
                         <span className="input-group-text">₫</span>
-                        <input className="form-control" value={form.minOrderValue} onChange={(e) => onChange("minOrderValue", e.target.value)} placeholder="Enter minimum spend" />
+                        <input
+                          className="form-control"
+                          value={form.minOrderValue}
+                          onChange={(e) =>
+                            onChange("minOrderValue", e.target.value)
+                          }
+                          placeholder="Enter minimum spend"
+                        />
                       </div>
                     </div>
                   </div>
 
                   <div className="row g-3 align-items-center mb-3">
-                    <label className="col-lg-3 col-form-label">Max discount amount</label>
+                    <label className="col-lg-3 col-form-label">
+                      Max discount amount
+                    </label>
                     <div className="col-lg-9">
                       <div className="input-group">
                         <span className="input-group-text">₫</span>
-                        <input className="form-control" value={form.maxDiscountAmount} onChange={(e) => onChange("maxDiscountAmount", e.target.value)} disabled={!isPercentDiscount} placeholder={isPercentDiscount ? "Cap for percentage discount" : "Not required for this discount type"} />
+                        <input
+                          className="form-control"
+                          value={form.maxDiscountAmount}
+                          onChange={(e) =>
+                            onChange("maxDiscountAmount", e.target.value)
+                          }
+                          disabled={!isPercentDiscount}
+                          placeholder={
+                            isPercentDiscount
+                              ? "Cap for percentage discount"
+                              : "Not required for this discount type"
+                          }
+                        />
                       </div>
                     </div>
                   </div>
 
                   <div className="row g-3 align-items-center mb-3">
-                    <label className="col-lg-3 col-form-label">Max order value</label>
+                    <label className="col-lg-3 col-form-label">
+                      Max order value
+                    </label>
                     <div className="col-lg-9">
                       <div className="input-group">
                         <span className="input-group-text">₫</span>
-                        <input className="form-control" value={form.maxOrderValue} onChange={(e) => onChange("maxOrderValue", e.target.value)} placeholder="Optional ceiling for eligible orders" />
+                        <input
+                          className="form-control"
+                          value={form.maxOrderValue}
+                          onChange={(e) =>
+                            onChange("maxOrderValue", e.target.value)
+                          }
+                          placeholder="Optional ceiling for eligible orders"
+                        />
                       </div>
                     </div>
                   </div>
 
                   <div className="row g-3 align-items-center mb-3">
-                    <label className="col-lg-3 col-form-label">Total max uses</label>
+                    <label className="col-lg-3 col-form-label">
+                      Total max uses
+                    </label>
                     <div className="col-lg-9">
-                      <input className="form-control" value={form.maxUses} onChange={(e) => onChange("maxUses", e.target.value)} placeholder="Total number of claims available" />
+                      <input
+                        className="form-control"
+                        value={form.maxUses}
+                        onChange={(e) => onChange("maxUses", e.target.value)}
+                        placeholder="Total number of claims available"
+                      />
                     </div>
                   </div>
 
                   <div className="row g-3 align-items-center">
-                    <label className="col-lg-3 col-form-label">Max uses per buyer</label>
+                    <label className="col-lg-3 col-form-label">
+                      Max uses per buyer
+                    </label>
                     <div className="col-lg-9">
-                      <input className="form-control" value={form.perUserLimit} onChange={(e) => onChange("perUserLimit", e.target.value)} placeholder="1" />
+                      <input
+                        className="form-control"
+                        value={form.perUserLimit}
+                        onChange={(e) =>
+                          onChange("perUserLimit", e.target.value)
+                        }
+                        placeholder="1"
+                      />
                     </div>
                   </div>
                 </div>
@@ -2177,7 +2412,13 @@ function CategoryVoucherCreateModal({
                   <div className="row g-3 align-items-start">
                     <label className="col-lg-3 col-form-label">Status</label>
                     <div className="col-lg-4">
-                      <select className="form-select" value={form.status} onChange={(e) => onChange("status", e.target.value as ApiVoucherStatus)}>
+                      <select
+                        className="form-select"
+                        value={form.status}
+                        onChange={(e) =>
+                          onChange("status", e.target.value as ApiVoucherStatus)
+                        }
+                      >
                         <option value="DRAFT">Draft</option>
                         <option value="ACTIVE">Active</option>
                         <option value="PAUSED">Paused</option>
@@ -2185,7 +2426,11 @@ function CategoryVoucherCreateModal({
                     </div>
                     <label className="col-lg-2 col-form-label">Priority</label>
                     <div className="col-lg-3">
-                      <input className="form-control" value={form.priority} onChange={(e) => onChange("priority", e.target.value)} />
+                      <input
+                        className="form-control"
+                        value={form.priority}
+                        onChange={(e) => onChange("priority", e.target.value)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -2193,14 +2438,20 @@ function CategoryVoucherCreateModal({
                 <div className="bg-white border rounded-4 p-4">
                   <div className="d-flex justify-content-between align-items-center mb-3">
                     <h5 className="mb-0">Choose categories</h5>
-                    <span className="small text-muted">{form.selectedCategoryIds.length} selected</span>
+                    <span className="small text-muted">
+                      {form.selectedCategoryIds.length} selected
+                    </span>
                   </div>
                   {categories.length === 0 ? (
-                    <div className="text-muted small">No categories available from this shop's products.</div>
+                    <div className="text-muted small">
+                      No categories available from this shop's products.
+                    </div>
                   ) : (
                     <div className="row g-3">
                       {categories.map((category) => {
-                        const selected = form.selectedCategoryIds.includes(Number(category.id));
+                        const selected = form.selectedCategoryIds.includes(
+                          Number(category.id),
+                        );
                         return (
                           <div className="col-md-6" key={category.id}>
                             <button
@@ -2212,12 +2463,20 @@ function CategoryVoucherCreateModal({
                             >
                               <div className="d-flex justify-content-between gap-3">
                                 <div className="flex-grow-1">
-                                  <div className="fw-semibold mb-1">{category.label}</div>
+                                  <div className="fw-semibold mb-1">
+                                    {category.label}
+                                  </div>
                                   <div className="small text-muted">
-                                    {category.productCount} product(s) in this category
+                                    {category.productCount} product(s) in this
+                                    category
                                   </div>
                                 </div>
-                                <input type="checkbox" className="form-check-input mt-1" checked={selected} readOnly />
+                                <input
+                                  type="checkbox"
+                                  className="form-check-input mt-1"
+                                  checked={selected}
+                                  readOnly
+                                />
                               </div>
                             </button>
                           </div>
@@ -2232,17 +2491,26 @@ function CategoryVoucherCreateModal({
                 <div className="position-sticky" style={{ top: 16 }}>
                   <div className="bg-white border rounded-4 shadow-sm p-4 mb-3">
                     <div className="small text-muted mb-2">Preview</div>
-                    <h5 className="mb-1">{form.title || "Category voucher preview"}</h5>
+                    <h5 className="mb-1">
+                      {form.title || "Category voucher preview"}
+                    </h5>
                     <div className="text-muted small mb-3">
                       {selectedCampaign?.name || "No campaign selected"}
                     </div>
                     <div className="d-flex gap-2 flex-wrap mb-3">
-                      <span className="badge text-bg-light border text-secondary">{previewDiscount}</span>
-                      <span className="badge text-bg-light border text-secondary">{generatedCode || "N/A"}</span>
-                      <span className="badge text-bg-light border text-secondary">{form.selectedCategoryIds.length} categories</span>
+                      <span className="badge text-bg-light border text-secondary">
+                        {previewDiscount}
+                      </span>
+                      <span className="badge text-bg-light border text-secondary">
+                        {generatedCode || "N/A"}
+                      </span>
+                      <span className="badge text-bg-light border text-secondary">
+                        {form.selectedCategoryIds.length} categories
+                      </span>
                     </div>
                     <div className="small text-muted">
-                      This voucher will only be redeemable for products in the categories selected below.
+                      This voucher will only be redeemable for products in the
+                      categories selected below.
                     </div>
                     <div className="small text-muted mt-2">
                       Status: <strong>{form.status}</strong>
@@ -2250,14 +2518,23 @@ function CategoryVoucherCreateModal({
                   </div>
 
                   <div className="bg-white border rounded-4 shadow-sm p-4">
-                    <div className="small text-muted mb-2">Selected categories</div>
+                    <div className="small text-muted mb-2">
+                      Selected categories
+                    </div>
                     {selectedCategories.length === 0 ? (
-                      <div className="small text-muted">No categories selected yet.</div>
+                      <div className="small text-muted">
+                        No categories selected yet.
+                      </div>
                     ) : (
                       <div className="d-flex flex-column gap-2">
                         {selectedCategories.slice(0, 6).map((category) => (
-                          <div key={category.id} className="border rounded-3 px-3 py-2 small d-flex justify-content-between align-items-center">
-                            <span className="text-truncate pe-2">{category.label}</span>
+                          <div
+                            key={category.id}
+                            className="border rounded-3 px-3 py-2 small d-flex justify-content-between align-items-center"
+                          >
+                            <span className="text-truncate pe-2">
+                              {category.label}
+                            </span>
                             <span className="text-muted">#{category.id}</span>
                           </div>
                         ))}
@@ -2267,7 +2544,13 @@ function CategoryVoucherCreateModal({
 
                   <div className="bg-light border rounded-3 p-3 mt-3">
                     <div className="small text-muted mb-2">Payload preview</div>
-                    <pre className="mb-0 small" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                    <pre
+                      className="mb-0 small"
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                      }}
+                    >
                       {JSON.stringify(voucherPayload, null, 2)}
                     </pre>
                   </div>
@@ -2277,11 +2560,23 @@ function CategoryVoucherCreateModal({
           </div>
 
           <div className="bg-white border-top px-4 px-lg-5 py-3 d-flex justify-content-end gap-2 rounded-bottom-4">
-            <button className="btn btn-outline-secondary" onClick={onClose} disabled={isSaving}>
+            <button
+              className="btn btn-outline-secondary"
+              onClick={onClose}
+              disabled={isSaving}
+            >
               Cancel
             </button>
-            <button className="btn btn-primary" onClick={onConfirm} disabled={isSaving}>
-              {isSaving ? "Saving..." : isEditing ? "Update voucher" : "Create voucher"}
+            <button
+              className="btn btn-primary"
+              onClick={onConfirm}
+              disabled={isSaving}
+            >
+              {isSaving
+                ? "Saving..."
+                : isEditing
+                  ? "Update voucher"
+                  : "Create voucher"}
             </button>
           </div>
         </div>
@@ -2315,7 +2610,10 @@ function VoucherActionModal({
         >
           <div className="d-flex justify-content-between align-items-center px-4 py-3 border-bottom">
             <h5 className="mb-0">{title}</h5>
-            <button className="btn btn-outline-secondary btn-sm" onClick={onClose}>
+            <button
+              className="btn btn-outline-secondary btn-sm"
+              onClick={onClose}
+            >
               Close
             </button>
           </div>
@@ -2351,7 +2649,9 @@ const Page = () => {
   const [productVoucherForm, setProductVoucherForm] =
     useState<ProductVoucherFormState>(() => createInitialProductVoucherForm());
   const [categoryVoucherForm, setCategoryVoucherForm] =
-    useState<CategoryVoucherFormState>(() => createInitialCategoryVoucherForm());
+    useState<CategoryVoucherFormState>(() =>
+      createInitialCategoryVoucherForm(),
+    );
   const campaignsQuery = useQuery(vouchersQuery.campaigns());
   const vouchersQueryResult = useQuery(vouchersQuery.all());
   const productsQuery = useQuery({
@@ -2385,9 +2685,7 @@ const Page = () => {
           const id = Number(category?.id || 0);
           if (!id) return acc;
           acc[id] =
-            category?.category_name ||
-            category?.name ||
-            `Category #${id}`;
+            category?.category_name || category?.name || `Category #${id}`;
           return acc;
         },
         {},
@@ -2504,7 +2802,7 @@ const Page = () => {
                 ? shopCategories.find(
                     (category) => Number(category.id) === Number(rule.scopeId),
                   )?.label || `Category #${rule.scopeId}`
-              : String(rule.scopeId),
+                : String(rule.scopeId),
         };
       }),
     };
@@ -2528,14 +2826,17 @@ const Page = () => {
         buyer: item.userName,
         orderValue: Number(item.finalOrderAmount || 0),
         discountAmount: Number(item.discountAmountApplied || 0),
-        redeemedAt: formatDateTimeRange(item.redeemedAt, item.redeemedAt).split(" - ")[0],
+        redeemedAt: formatDateTimeRange(item.redeemedAt, item.redeemedAt).split(
+          " - ",
+        )[0],
         status: item.status,
       })),
     [voucherOrdersQuery.data],
   );
   const createVoucherMutation = useMutation({
-    mutationFn: (payload: Partial<AdminVoucher> & { createdBy?: number | null }) =>
-      createVoucher(payload),
+    mutationFn: (
+      payload: Partial<AdminVoucher> & { createdBy?: number | null },
+    ) => createVoucher(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "vouchers"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "voucher-stats"] });
@@ -2589,6 +2890,7 @@ const Page = () => {
     key: K,
     value: ShopVoucherFormState[K],
   ) => {
+    console.log("Updating shop voucher form", { key, value });
     setShopVoucherForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -2690,7 +2992,8 @@ const Page = () => {
         selectedCategoryIds: sourceRules.scopeRules
           .filter(
             (rule) =>
-              rule.scopeType === "CATEGORY" && rule.includeExclude === "INCLUDE",
+              rule.scopeType === "CATEGORY" &&
+              rule.includeExclude === "INCLUDE",
           )
           .map((rule) => Number(rule.scopeId)),
       });
@@ -2703,11 +3006,11 @@ const Page = () => {
     setIsShopVoucherModalOpen(true);
   };
 
-
   const handleCreateShopVoucher = async () => {
     const shopId = Number(shop?.id || 0);
     if (!shopId) {
-      const message = "Shop information is not ready yet. Please wait a moment and try again.";
+      const message =
+        "Shop information is not ready yet. Please wait a moment and try again.";
       setSaveError(message);
       window.alert(message);
       return;
@@ -2719,6 +3022,8 @@ const Page = () => {
         ...buildShopVoucherPayload(shopVoucherForm, shopId),
         createdBy: userId ?? null,
       };
+      //  alert(JSON.stringify(payload, null, 2));
+      // return;
 
       if (editingVoucherId && editingVoucherType === "shop") {
         await updateVoucherMutation.mutateAsync({
@@ -2749,7 +3054,8 @@ const Page = () => {
   const handleCreateProductVoucher = async () => {
     const shopId = Number(shop?.id || 0);
     if (!shopId) {
-      const message = "Shop information is not ready yet. Please wait a moment and try again.";
+      const message =
+        "Shop information is not ready yet. Please wait a moment and try again.";
       setSaveError(message);
       window.alert(message);
       return;
@@ -2817,7 +3123,8 @@ const Page = () => {
   const handleCreateCategoryVoucher = async () => {
     const shopId = Number(shop?.id || 0);
     if (!shopId) {
-      const message = "Shop information is not ready yet. Please wait a moment and try again.";
+      const message =
+        "Shop information is not ready yet. Please wait a moment and try again.";
       setSaveError(message);
       window.alert(message);
       return;
@@ -2851,14 +3158,16 @@ const Page = () => {
         : (await createVoucherMutation.mutateAsync(payload)).id;
 
       const rulesPayload: VoucherRulesPayload = {
-        scopeRules: categoryVoucherForm.selectedCategoryIds.map((categoryId) => ({
-          id: "",
-          voucherId: String(voucherId),
-          scopeType: "CATEGORY",
-          scopeId: categoryId,
-          includeExclude: "INCLUDE",
-          createdAt: new Date().toISOString(),
-        })),
+        scopeRules: categoryVoucherForm.selectedCategoryIds.map(
+          (categoryId) => ({
+            id: "",
+            voucherId: String(voucherId),
+            scopeType: "CATEGORY",
+            scopeId: categoryId,
+            includeExclude: "INCLUDE",
+            createdAt: new Date().toISOString(),
+          }),
+        ),
         segmentRules: [],
       };
 
@@ -2947,7 +3256,10 @@ const Page = () => {
               <div className="mini-stat">
                 <span className="mini-stat__label">Live vouchers</span>
                 <strong>
-                  {sellerVouchers.filter((item) => item.status === "running").length}
+                  {
+                    sellerVouchers.filter((item) => item.status === "running")
+                      .length
+                  }
                 </strong>
               </div>
               <div className="mini-stat">
@@ -3184,13 +3496,14 @@ const Page = () => {
                     </td>
                   </tr>
                 ))}
-                {!vouchersQueryResult.isLoading && filteredVouchers.length === 0 && (
-                  <tr>
-                    <td colSpan={9} className="text-center text-muted py-5">
-                      No vouchers found for this shop.
-                    </td>
-                  </tr>
-                )}
+                {!vouchersQueryResult.isLoading &&
+                  filteredVouchers.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="text-center text-muted py-5">
+                        No vouchers found for this shop.
+                      </td>
+                    </tr>
+                  )}
               </tbody>
             </table>
           </div>
@@ -3272,67 +3585,69 @@ const Page = () => {
         />
       )}
 
-      {selectedDetailsVoucher && selectedDetailsRules && selectedDetailsRulesDisplay && (
-        <VoucherActionModal
-          title={`Voucher details: ${selectedDetailsVoucher.code}`}
-          onClose={() => setDetailsVoucherId(null)}
-        >
-          <div className="row g-4">
-            <div className="col-lg-6">
-              <div className="border rounded-4 p-3 h-100">
-                <h6 className="mb-3">Summary</h6>
-                <div className="small text-muted mb-2">Title</div>
-                <div className="mb-3">{selectedDetailsVoucher.title}</div>
-                <div className="small text-muted mb-2">Description</div>
-                <div className="mb-3">
-                  {selectedDetailsVoucher.description || "No description"}
+      {selectedDetailsVoucher &&
+        selectedDetailsRules &&
+        selectedDetailsRulesDisplay && (
+          <VoucherActionModal
+            title={`Voucher details: ${selectedDetailsVoucher.code}`}
+            onClose={() => setDetailsVoucherId(null)}
+          >
+            <div className="row g-4">
+              <div className="col-lg-6">
+                <div className="border rounded-4 p-3 h-100">
+                  <h6 className="mb-3">Summary</h6>
+                  <div className="small text-muted mb-2">Title</div>
+                  <div className="mb-3">{selectedDetailsVoucher.title}</div>
+                  <div className="small text-muted mb-2">Description</div>
+                  <div className="mb-3">
+                    {selectedDetailsVoucher.description || "No description"}
+                  </div>
+                  <div className="small text-muted mb-2">Voucher status</div>
+                  <div className="mb-3">{selectedDetailsVoucher.status}</div>
+                  <div className="small text-muted mb-2">Voucher type</div>
+                  <div className="mb-3">
+                    {selectedDetailsRules.scopeRules.some(
+                      (rule) =>
+                        rule.scopeType === "PRODUCT" &&
+                        rule.includeExclude === "INCLUDE",
+                    )
+                      ? "Product-specific voucher"
+                      : "Shop-wide voucher"}
+                  </div>
+                  <div className="small text-muted mb-2">Usage window</div>
+                  <div className="mb-0">
+                    {formatDateTimeRange(
+                      selectedDetailsVoucher.validFrom,
+                      selectedDetailsVoucher.validTo,
+                    )}
+                  </div>
                 </div>
-                <div className="small text-muted mb-2">Voucher status</div>
-                <div className="mb-3">{selectedDetailsVoucher.status}</div>
-                <div className="small text-muted mb-2">Voucher type</div>
-                <div className="mb-3">
-                  {selectedDetailsRules.scopeRules.some(
-                    (rule) =>
-                      rule.scopeType === "PRODUCT" &&
-                      rule.includeExclude === "INCLUDE",
-                  )
-                    ? "Product-specific voucher"
-                    : "Shop-wide voucher"}
+              </div>
+              <div className="col-lg-6">
+                <div className="border rounded-4 p-3 h-100">
+                  <h6 className="mb-3">Rules dump</h6>
+                  <pre
+                    className="mb-0 small"
+                    style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                  >
+                    {JSON.stringify(selectedDetailsRulesDisplay, null, 2)}
+                  </pre>
                 </div>
-                <div className="small text-muted mb-2">Usage window</div>
-                <div className="mb-0">
-                  {formatDateTimeRange(
-                    selectedDetailsVoucher.validFrom,
-                    selectedDetailsVoucher.validTo,
-                  )}
+              </div>
+              <div className="col-12">
+                <div className="border rounded-4 p-3">
+                  <h6 className="mb-3">Voucher payload dump</h6>
+                  <pre
+                    className="mb-0 small"
+                    style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                  >
+                    {JSON.stringify(selectedDetailsVoucher, null, 2)}
+                  </pre>
                 </div>
               </div>
             </div>
-            <div className="col-lg-6">
-              <div className="border rounded-4 p-3 h-100">
-                <h6 className="mb-3">Rules dump</h6>
-                <pre
-                  className="mb-0 small"
-                  style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-                >
-                  {JSON.stringify(selectedDetailsRulesDisplay, null, 2)}
-                </pre>
-              </div>
-            </div>
-            <div className="col-12">
-              <div className="border rounded-4 p-3">
-                <h6 className="mb-3">Voucher payload dump</h6>
-                <pre
-                  className="mb-0 small"
-                  style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-                >
-                  {JSON.stringify(selectedDetailsVoucher, null, 2)}
-                </pre>
-              </div>
-            </div>
-          </div>
-        </VoucherActionModal>
-      )}
+          </VoucherActionModal>
+        )}
 
       {selectedOrdersVoucher && selectedOrdersRules && (
         <VoucherActionModal
@@ -3390,13 +3705,14 @@ const Page = () => {
                       <td>{order.status}</td>
                     </tr>
                   ))}
-                {!voucherOrdersQuery.isLoading && voucherOrderRows.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="text-center text-muted py-4">
-                      No redemption data found for this voucher.
-                    </td>
-                  </tr>
-                )}
+                {!voucherOrdersQuery.isLoading &&
+                  voucherOrderRows.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center text-muted py-4">
+                        No redemption data found for this voucher.
+                      </td>
+                    </tr>
+                  )}
               </tbody>
             </table>
           </div>
@@ -3406,7 +3722,11 @@ const Page = () => {
       <style jsx>{`
         .voucher-hero {
           background:
-            radial-gradient(circle at top left, rgba(255, 123, 0, 0.08), transparent 30%),
+            radial-gradient(
+              circle at top left,
+              rgba(255, 123, 0, 0.08),
+              transparent 30%
+            ),
             linear-gradient(180deg, #ffffff 0%, #fff8f4 100%);
         }
 

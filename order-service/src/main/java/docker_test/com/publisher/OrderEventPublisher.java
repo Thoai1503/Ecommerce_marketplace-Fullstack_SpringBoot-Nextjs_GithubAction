@@ -20,10 +20,9 @@ public class OrderEventPublisher {
 
     @Value("${spring.kafka.topic.stock-update.name}")
     private String stockUpdateTopicName;
-
     
     private final KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate;
-   
+    
     private final KafkaTemplate<String, OrderItem> stockUpdateKafkaTemplate;
     
     public OrderEventPublisher(KafkaTemplate<String, OrderCreatedEvent> kafkaTemplate, KafkaTemplate<String, OrderItem> stockUpdateKafkaTemplate) {
