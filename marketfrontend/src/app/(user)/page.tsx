@@ -68,11 +68,17 @@ export default async function Home() {
             {[
               { image: "/image/freeship.jpg", text: "Freeship" },
               { image: "/image/flashsale.png", text: "Flash Sale" },
-              { image: "/image/mal.png", text: "Mall" },
+              //{ image: "/image/mal.png", text: "Mall" },
               {
                 image: "/image/voucher.png",
                 text: "Voucher",
                 href: "/voucher",
+              },
+              {
+                image:
+                  "https://salt.tikicdn.com/ts/tikimsp/33/a6/c9/a07fa646abd6b4a591df15852eb248f2.png",
+                text: "Deal nhãn hàng",
+                href: "#category",
               },
             ].map((item, idx) => (
               <Link

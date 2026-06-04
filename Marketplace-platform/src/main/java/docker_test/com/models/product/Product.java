@@ -21,6 +21,7 @@ public final class Product {
 	private Shop shop;
 	private List<ProductImage> images;
 	private Integer stock_quantity = null;
+
 	private Integer sold_count = null;
 	private Double rating;
 	private Integer review_count = null;

@@ -41,7 +41,7 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:103.90.225.130:29092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:103.118.28.72:29092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
