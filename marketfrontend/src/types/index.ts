@@ -200,7 +200,17 @@ export interface AdminVoucher {
   validFrom: string;
   validTo: string;
   status: VoucherStatus;
+  scopeRule?: VoucherScopeRule;
   priority: number;
+  createdAt: string;
+}
+
+export interface VoucherScopeRule {
+  id: string;
+  voucherId: string;
+  scopeType: "SHOP" | "CATEGORY" | "PRODUCT" | "BRAND" | "PAYMENT_METHOD";
+  scopeId: number;
+  includeExclude: "INCLUDE" | "EXCLUDE";
   createdAt: string;
 }
 
@@ -218,15 +228,6 @@ export type VoucherScopeType =
   | "BRAND"
   | "PAYMENT_METHOD"
   | "SHIPPING_METHOD";
-
-export interface VoucherScopeRule {
-  id: string;
-  voucherId: string;
-  scopeType: VoucherScopeType;
-  scopeId: number;
-  includeExclude: "INCLUDE" | "EXCLUDE";
-  createdAt: string;
-}
 
 export interface VoucherSegmentRule {
   id: string;

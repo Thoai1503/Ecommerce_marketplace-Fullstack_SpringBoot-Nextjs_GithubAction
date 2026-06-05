@@ -8,6 +8,7 @@ import java.util.List;
 
 import docker_test.com.mappers.IMapper;
 import docker_test.com.models.voucher.Voucher;
+import docker_test.com.models.voucher.VoucherScopeRule;
 
 public final class VoucherMapper implements IMapper<Voucher> {
 
@@ -72,8 +73,25 @@ public final class VoucherMapper implements IMapper<Voucher> {
 		v.setCreatedBy(getLong(rs, "created_by"));
 		v.setCreatedAt(getDateTime(rs, "created_at"));
 		v.setUpdatedAt(getDateTime(rs, "updated_at"));
-
+	//	VoucherScopeRule scopeRule = mapScopeRule(rs, v.getId());
+//		if (scopeRule != null) {
+//			v.addScopeRule(scopeRule);
+//		}
 		return v;
+	}
+
+	public VoucherScopeRule mapScopeRule(ResultSet rs, Long voucherId) throws SQLException {
+		String scopeType = toUpper(rs.getString("scope_type"));
+		if (scopeType == null) {
+			return null;
+		}
+
+		VoucherScopeRule scopeRule = new VoucherScopeRule();
+		scopeRule.setScopeType(scopeType);
+		scopeRule.setIncludeExclude(toUpper(rs.getString("include_exclude")));
+		scopeRule.setScopeId(getLong(rs, "scope_id"));
+		scopeRule.setVoucherId(voucherId);
+		return scopeRule;
 	}
 
 	@Override

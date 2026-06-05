@@ -18,7 +18,7 @@ public class OrderPaymentStatusSubcriber {
 	
 	@org.springframework.kafka.annotation.KafkaListener(
 			topics = "${spring.kafka.topic.payment-status:update_payment_status}",
-			groupId = "${spring.kafka.consumer.group-id.payment-status:order-service-payment-status-group}",
+			groupId = "${spring.kafka.consumer.group-id.payment-status:	}",
 			properties = {
 				"spring.json.use.type.headers=false",
 				"spring.json.value.default.type=docker_test.com.dto.PaymentStatusUpdatedEvent"
