@@ -78,7 +78,7 @@ export default async function Home() {
                 image:
                   "https://salt.tikicdn.com/ts/tikimsp/33/a6/c9/a07fa646abd6b4a591df15852eb248f2.png",
                 text: "Deal nhãn hàng",
-                href: "#category",
+                href: "/voucher?scope=BRAND",
               },
             ].map((item, idx) => (
               <Link

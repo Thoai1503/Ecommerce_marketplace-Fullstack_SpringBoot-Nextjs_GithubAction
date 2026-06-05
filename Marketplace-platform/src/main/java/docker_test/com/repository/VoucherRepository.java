@@ -2,15 +2,23 @@ package docker_test.com.repository;
 
 import java.sql.*;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import docker_test.com.configs.DBConnection;
 import docker_test.com.mappers.voucher.VoucherMapper;
 import docker_test.com.models.voucher.Voucher;
+import docker_test.com.models.voucher.VoucherScopeRule;
 
 public class VoucherRepository implements IRepositories<Voucher> {
 
 	private static VoucherRepository instance;
+	private static Logger logger = LoggerFactory.getLogger(VoucherRepository.class.getName());
 	private final DBConnection dbConnection;
 	private final VoucherMapper mapper;
 
@@ -202,15 +210,37 @@ public class VoucherRepository implements IRepositories<Voucher> {
 	@Override
 	public List<Voucher> GetAll() {
 
-		String sql = "SELECT * FROM voucher ORDER BY id DESC";
+		String sql = "SELECT v.*, vs.scope_type, vs.scope_id, vs.include_exclude FROM voucher v LEFT JOIN voucher_scope_rule vs on v.id = vs.voucher_id ORDER BY v.id DESC";
 
 		try (Connection con = dbConnection.getConn();
 				PreparedStatement ps = con.prepareStatement(sql);
 				ResultSet rs = ps.executeQuery()) {
 
-			return mapper.RowsMap(rs);
+			Map<Long, Voucher> voucherMap = new LinkedHashMap<>();
+			int rowNum = 0;
+
+			while (rs.next()) {
+				Long voucherId = rs.getLong("id");
+				Voucher voucher = voucherMap.get(voucherId);
+
+				if (voucher == null) {
+					voucher = mapper.mapRow(rs, rowNum++);
+					voucherMap.put(voucherId, voucher);
+				}
+
+				VoucherScopeRule scopeRule = mapper.mapScopeRule(rs, voucherId);
+				if (scopeRule != null && voucher.getScopeRules().stream().noneMatch(existing ->
+					Objects.equals(existing.getScopeId(), scopeRule.getScopeId())
+						&& Objects.equals(existing.getScopeType(), scopeRule.getScopeType())
+						&& Objects.equals(existing.getIncludeExclude(), scopeRule.getIncludeExclude()))) {
+					voucher.addScopeRule(scopeRule);
+				}
+			}
+
+			return List.copyOf(voucherMap.values());
 
 		} catch (Exception e) {
+			logger.error("Error getting all vouchers: " + e.getMessage(), e);
 			throw new RuntimeException("Get all vouchers failed", e);
 		}
 	}

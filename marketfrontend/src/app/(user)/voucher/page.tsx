@@ -77,6 +77,30 @@ const discountOrder = [
   "OTHER",
 ];
 
+const CATEGORY_BANNER_URL =
+  "https://res.cloudinary.com/dizx3mbgw/image/upload/v1780583956/lazada-tcbc-66-320260603151807_jo1vi4.jpg";
+
+const hasCategoryScope = (voucher: AdminVoucher) => {
+  const voucherWithScopeList = voucher as AdminVoucher & {
+    scopeRules?: Array<{
+      scopeType?: string;
+      includeExclude?: string;
+    }>;
+  };
+
+  const rules = Array.isArray(voucherWithScopeList.scopeRules)
+    ? voucherWithScopeList.scopeRules
+    : voucher.scopeRule
+      ? [voucher.scopeRule]
+      : [];
+
+  return rules.some(
+    (rule) =>
+      rule?.scopeType === "CATEGORY" &&
+      (rule?.includeExclude || "INCLUDE") !== "EXCLUDE",
+  );
+};
+
 const HeaderBanner = () => (
   <div
     className={`${styles.voucherBanner} position-relative overflow-hidden rounded-5 shadow-sm flex-grow-1 me-3`}
@@ -436,6 +460,11 @@ export default function VoucherPage() {
     });
   }, [databaseVouchers]);
 
+  const categoryVouchers = useMemo(
+    () => databaseVouchers.filter(hasCategoryScope),
+    [databaseVouchers],
+  );
+
   return (
     <div
       className="py-4 py-md-5"
@@ -703,6 +732,139 @@ export default function VoucherPage() {
               </section>
             );
           })
+        )}
+
+        {!isLoading && !hasError && databaseVouchers.length > 0 && (
+          <>
+            <section className="mb-5">
+              <div
+                className="overflow-hidden rounded-4"
+                style={{
+                  border: "1px solid rgba(233, 236, 239, 0.95)",
+                  boxShadow: "0 12px 30px rgba(16, 24, 40, 0.08)",
+                }}
+              >
+                <img
+                  src={CATEGORY_BANNER_URL}
+                  alt="Voucher category banner"
+                  className="w-100 d-block"
+                  style={{ maxHeight: "360px", objectFit: "cover" }}
+                />
+              </div>
+            </section>
+
+            <section className="mb-5">
+              <div
+                className="d-flex align-items-center justify-content-between mb-3 px-1"
+                style={{
+                  borderBottom: "1px solid rgba(220, 53, 69, 0.12)",
+                  paddingBottom: "10px",
+                }}
+              >
+                <h3
+                  className="fw-semibold mb-0"
+                  style={{ fontSize: "1.05rem", color: "#b42318" }}
+                >
+                  Vouchers cho nganh hang
+                </h3>
+                <span
+                  className="fw-medium"
+                  style={{
+                    fontSize: "0.78rem",
+                    color: "#b42318",
+                    backgroundColor: "rgba(220, 53, 69, 0.08)",
+                    borderRadius: "999px",
+                    padding: "6px 12px",
+                  }}
+                >
+                  {categoryVouchers.length} vouchers
+                </span>
+              </div>
+
+              {categoryVouchers.length === 0 ? (
+                <div className="alert alert-secondary mb-0">
+                  Chua co voucher nganh hang.
+                </div>
+              ) : (
+                <div className="row g-3">
+                  {categoryVouchers.map((voucher) => (
+                    <div
+                      key={`category-${voucher.id}`}
+                      className="col-12 col-md-6 col-xl-4"
+                    >
+                      <div
+                        className="rounded-4 bg-white h-100 p-3"
+                        style={{
+                          border: "1px solid rgba(233, 236, 239, 0.95)",
+                          boxShadow: "0 8px 20px rgba(16, 24, 40, 0.06)",
+                        }}
+                      >
+                        <div
+                          className="d-inline-flex align-items-center mb-2"
+                          style={{
+                            fontSize: "0.72rem",
+                            fontWeight: 700,
+                            color: "#b42318",
+                            backgroundColor: "#fff1f3",
+                            borderRadius: "999px",
+                            padding: "4px 10px",
+                          }}
+                        >
+                          {voucher.code}
+                        </div>
+
+                        <div
+                          className="fw-semibold"
+                          style={{ fontSize: "1rem" }}
+                        >
+                          {getVoucherHeading(voucher)}
+                        </div>
+
+                        <div
+                          className="text-muted mt-1"
+                          style={{ fontSize: "0.85rem", minHeight: "42px" }}
+                        >
+                          {getVoucherSubtext(voucher)}
+                        </div>
+
+                        <div
+                          className="d-flex align-items-center justify-content-between mt-3 pt-2"
+                          style={{
+                            borderTop: "1px dashed rgba(255, 107, 107, 0.24)",
+                          }}
+                        >
+                          <div
+                            className="text-muted"
+                            style={{ fontSize: "0.8rem" }}
+                          >
+                            Exp: {formatDate(voucher.validTo)}
+                          </div>
+
+                          <VoucherClaimButton
+                            voucherId={Number(voucher.id)}
+                            voucherCode={voucher.code}
+                            voucherStatus={voucher.status}
+                            claimStartAt={voucher.claimStartAt}
+                            claimEndAt={voucher.claimEndAt}
+                            totalQuota={voucher.totalQuota}
+                            claimedCount={voucher.claimedCount}
+                            className={`${styles.voucherSaveBtn} btn text-white fw-semibold px-3 py-1`}
+                            style={{
+                              background:
+                                "linear-gradient(135deg, #ff6b6b 0%, #e03131 100%)",
+                              borderRadius: "999px",
+                              fontSize: "0.82rem",
+                              boxShadow: "0 8px 18px rgba(224, 49, 49, 0.22)",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
         )}
       </div>
     </div>

@@ -2,6 +2,8 @@ package docker_test.com.models.voucher;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Voucher {
 
@@ -37,7 +39,10 @@ public class Voucher {
 
 	private LocalDateTime validFrom;
 	private LocalDateTime validTo;
-
+	private List<VoucherScopeRule> scopeRules;
+  
+  
+  
 	private String status; // DRAFT, ACTIVE, PAUSED...
 
 	private Integer priority;
@@ -53,6 +58,7 @@ public class Voucher {
 		this.redeemedCount = 0;
 		this.stackable = false;
 		this.priority = 0;
+		this.scopeRules = new ArrayList<>();
 	}
 
 	public Voucher(Long id, Long campaignId, String code, String title, String description, String issuerType,
@@ -94,6 +100,40 @@ public class Voucher {
 
 	public Long getId() {
 		return id;
+	}
+
+	public List<VoucherScopeRule> getScopeRules() {
+		return scopeRules;
+	}
+
+	public void setScopeRules(List<VoucherScopeRule> scopeRules) {
+		this.scopeRules = scopeRules != null ? scopeRules : new ArrayList<>();
+	}
+
+	public void addScopeRule(VoucherScopeRule scopeRule) {
+		if (scopeRule == null) {
+			return;
+		}
+		if (this.scopeRules == null) {
+			this.scopeRules = new ArrayList<>();
+		}
+		this.scopeRules.add(scopeRule);
+	}
+
+	public VoucherScopeRule getScopeRule() {
+		if (scopeRules == null || scopeRules.isEmpty()) {
+			return null;
+		}
+		return scopeRules.get(0);
+	}
+
+	public void setScopeRule(VoucherScopeRule scopeRule) {
+		if (scopeRule == null) {
+			this.scopeRules = new ArrayList<>();
+			return;
+		}
+		this.scopeRules = new ArrayList<>();
+		this.scopeRules.add(scopeRule);
 	}
 
 	public void setId(Long id) {
