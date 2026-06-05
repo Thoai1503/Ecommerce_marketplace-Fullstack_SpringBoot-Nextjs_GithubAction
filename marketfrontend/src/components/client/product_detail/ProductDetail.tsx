@@ -159,6 +159,9 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
   const [shopProducts, setShopProducts] = useState<any[]>([]);
   const [shopVouchers, setShopVouchers] = useState<any[]>([]);
   const [isShopSectionLoading, setIsShopSectionLoading] = useState(true);
+  const [isShopDetailLoading, setIsShopDetailLoading] = useState(false);
+  const [isShopProductsLoading, setIsShopProductsLoading] = useState(false);
+  const [isShopVouchersLoading, setIsShopVouchersLoading] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<number | null>(null);
   const [variant, setVariant] = useState<IProductVariant | null>(null);
   const [clientProduct, setClientProduct] = useState<IProduct | null>(null);
@@ -291,11 +294,28 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
       return;
     }
 
-    const fetchData = async () => {
-      const shopId = detailData.shop_id;
+    setIsShopSectionLoading(
+      isShopDetailLoading || isShopProductsLoading || isShopVouchersLoading,
+    );
+  }, [
+    detailData?.shop_id,
+    isShopDetailLoading,
+    isShopProductsLoading,
+    isShopVouchersLoading,
+  ]);
 
-      const fallbackShop = (detailData as any)?.shop ?? null;
-      setIsShopSectionLoading(true);
+  useEffect(() => {
+    if (!detailData?.shop_id) {
+      setShop((detailData as any)?.shop ?? null);
+      return;
+    }
+
+    let cancelled = false;
+    const shopId = detailData.shop_id;
+    const fallbackShop = (detailData as any)?.shop ?? null;
+
+    const fetchShopDetail = async () => {
+      setIsShopDetailLoading(true);
 
       try {
         const shopRes = await fetch(`${API_URL}/shops/${shopId}`);
@@ -303,11 +323,39 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
           ? await readJsonResponse<any>(shopRes)
           : null;
 
-        setShop(shopJson ?? fallbackShop);
+        if (!cancelled) {
+          setShop(shopJson ?? fallbackShop);
+        }
       } catch (err) {
         console.error("Failed to fetch shop detail:", err);
-        setShop(fallbackShop);
+        if (!cancelled) {
+          setShop(fallbackShop);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsShopDetailLoading(false);
+        }
       }
+    };
+
+    fetchShopDetail();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detailData?.shop_id]);
+
+  useEffect(() => {
+    if (!detailData?.shop_id) {
+      setShopProducts([]);
+      return;
+    }
+
+    let cancelled = false;
+    const shopId = detailData.shop_id;
+
+    const fetchShopProducts = async () => {
+      setIsShopProductsLoading(true);
 
       try {
         const prodRes = await fetch(`${API_URL}/product/shop/${shopId}`);
@@ -320,11 +368,39 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
         else if (Array.isArray(prodJson?.data)) list = prodJson.data;
         else if (Array.isArray(prodJson?.products)) list = prodJson.products;
 
-        setShopProducts(list);
+        if (!cancelled) {
+          setShopProducts(list);
+        }
       } catch (err) {
         console.error("Failed to fetch shop products:", err);
-        setShopProducts([]);
+        if (!cancelled) {
+          setShopProducts([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsShopProductsLoading(false);
+        }
       }
+    };
+
+    fetchShopProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detailData?.shop_id]);
+
+  useEffect(() => {
+    if (!detailData?.shop_id) {
+      setShopVouchers([]);
+      return;
+    }
+
+    let cancelled = false;
+    const shopId = detailData.shop_id;
+
+    const fetchShopVouchers = async () => {
+      setIsShopVouchersLoading(true);
 
       try {
         const voucherRes = await fetch(`${API_URL}/api/vouchers`, {
@@ -334,16 +410,27 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
           ? await readJsonResponse<any>(voucherRes)
           : null;
         const vouchers = Array.isArray(voucherJson) ? voucherJson : [];
-        setShopVouchers(getVisibleShopVouchers(vouchers, shopId));
+
+        if (!cancelled) {
+          setShopVouchers(getVisibleShopVouchers(vouchers, shopId));
+        }
       } catch (err) {
         console.error("Failed to fetch shop vouchers:", err);
-        setShopVouchers([]);
+        if (!cancelled) {
+          setShopVouchers([]);
+        }
       } finally {
-        setIsShopSectionLoading(false);
+        if (!cancelled) {
+          setIsShopVouchersLoading(false);
+        }
       }
     };
 
-    fetchData();
+    fetchShopVouchers();
+
+    return () => {
+      cancelled = true;
+    };
   }, [detailData?.shop_id]);
 
   const displayImage = hoveredImage || mainImage;

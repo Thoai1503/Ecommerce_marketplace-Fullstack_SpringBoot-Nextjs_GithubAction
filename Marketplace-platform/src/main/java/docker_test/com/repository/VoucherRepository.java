@@ -229,7 +229,7 @@ public class VoucherRepository implements IRepositories<Voucher> {
 				}
 
 				VoucherScopeRule scopeRule = mapper.mapScopeRule(rs, voucherId);
-				if (scopeRule != null && voucher.getScopeRules().stream().noneMatch(existing ->
+			 	if (scopeRule != null && voucher.getScopeRules().stream().noneMatch(existing ->
 					Objects.equals(existing.getScopeId(), scopeRule.getScopeId())
 						&& Objects.equals(existing.getScopeType(), scopeRule.getScopeType())
 						&& Objects.equals(existing.getIncludeExclude(), scopeRule.getIncludeExclude()))) {
