@@ -29,12 +29,12 @@ public class StockService {
 			 			// int currentStock = productVariantRepository.findById(variantId).
         	 ProductVariant variant = productVariantRepository.findByIdForUpdate(variantId).orElseThrow(() -> new RuntimeException("Variant not found for stock update. variantId=" + variantId));
         	 LOGGER.info("Reversing stock update. variantId={}, quantityToReverse={}, currentStock={}", variantId, quantity, variant.getStockQuantity());
-        	 if (variant.getStockQuantity() + quantity < 0) {
+        	 if (variant.getStockQuantity() - quantity < 0) {
 				 throw new RuntimeException("Cannot reverse stock update because it would result in negative stock. variantId=" + variantId + ", currentStock=" + variant.getStockQuantity() + ", quantityToReverse=" + quantity);
 			 }
         	 
 			 variant.setStockQuantity(variant.getStockQuantity() - quantity);
-			// productVariantRepository.save(variant);
+			// productVariantRepository.save(variant); 
 			 LOGGER.info("Saved stock update reversal ={}", productVariantRepository.save(variant));
          }
 }
