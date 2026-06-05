@@ -234,6 +234,26 @@ public class ShopRepository implements IRepositories<Shop> {
 
 		return null;
 	}
+	
+	public Shop GetById2(int id) {
+		String sql = "SELECT * FROM shop WHERE id = ? AND is_active = 1";
+
+		try (Connection con = dbConnection.getConn(); PreparedStatement ps = con.prepareStatement(sql)) {
+
+			ps.setInt(1, id);
+			ResultSet rs = ps.executeQuery();
+
+			if (rs.next()) {
+				return new ShopMapper().RowMap(rs); // ✅ map đúng
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+	
 
 	public Shop GetByUserId(long user_id) {
 		System.out.print("Get by user id");

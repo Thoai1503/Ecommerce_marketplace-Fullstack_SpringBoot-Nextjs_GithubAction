@@ -64,17 +64,18 @@ public final class DBConnection {
             config.addDataSourceProperty("prepStmtCacheSize", "250");
             config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
             config.addDataSourceProperty("serverTimezone", "Asia/Ho_Chi_Minh");
-            // Keep pool very small because this app also uses Spring's own datasource pool.
-            int maxPoolSize = getEnvInt("DB_POOL_SIZE", 2);
-            int minIdle = Math.min(getEnvInt("DB_MIN_IDLE", 1), maxPoolSize);
+            // Allow enough concurrent JDBC requests from product detail page and nested repository calls.
+            int maxPoolSize = getEnvInt("DB_POOL_SIZE", 10);
+            int minIdle = Math.min(getEnvInt("DB_MIN_IDLE", 2), maxPoolSize);
             config.setMaximumPoolSize(Math.max(1, maxPoolSize));
             config.setMinimumIdle(Math.max(0, minIdle));
-            config.setConnectionTimeout(getEnvInt("DB_CONNECTION_TIMEOUT", 15000));
+            config.setConnectionTimeout(getEnvInt("DB_CONNECTION_TIMEOUT", 30000));
             config.setIdleTimeout(getEnvInt("DB_IDLE_TIMEOUT", 30000));
             config.setMaxLifetime(getEnvInt("DB_MAX_LIFETIME", 600000));
             // Do not fail the whole app at startup if DB is temporarily saturated.
             config.setInitializationFailTimeout(-1);
             config.setConnectionTestQuery("SELECT 1");
+            config.setLeakDetectionThreshold(getEnvInt("DB_LEAK_DETECTION_MS", 20000));
             dataSource = new HikariDataSource(config);
         } catch (Exception e) {
             throw new RuntimeException("❌ Lỗi load DB config hoặc HikariCP", e);
@@ -95,8 +96,7 @@ public final class DBConnection {
             System.out.println("✅ Getting connection from HikariCP pool");
             return dataSource.getConnection();
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+            throw new IllegalStateException("Cannot get DB connection from Hikari pool", e);
         }
     }
 }
