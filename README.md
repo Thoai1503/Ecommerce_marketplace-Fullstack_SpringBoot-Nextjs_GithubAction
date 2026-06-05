@@ -21,6 +21,7 @@ Dự án trình bày case study E-Commerce Platform với các nội dung chính
 - Bài toán đồng bộ tồn kho và chống race condition.
 - Luồng mua hàng hoàn chỉnh từ voucher đến checkout.
 - Luồng xử lý đơn phía nhà bán hàng.
+- Luồng xử lý vận đơn phía logistics
 - Luồng trả hàng và hoàn tiền.
 - Theo dõi vận hành service bằng Docker stats.
 - Tổng hợp các giải pháp kỹ thuật đã áp dụng trong hệ thống.
