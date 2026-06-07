@@ -36,10 +36,12 @@ const bannerSlides: BannerSlide[] = [
   {
     eyebrow: "NEXAMART",
     title: "Discover our outstanding offers",
-    subtitle: "Selected products, convenient vouchers, and a streamlined shopping experience.",
+    subtitle:
+      "Selected products, convenient vouchers, and a streamlined shopping experience.",
     cta: "Explore now",
     href: "#suggested-products",
-    image: "/image/ecommerce.jpg",
+    image:
+      "https://res.cloudinary.com/dizx3mbgw/image/upload/v1780583956/lazada-tcbc-66-320260603151807_jo1vi4.jpg",
     badge: "Selected offers",
     metric: "Many options",
     from: "#1F5F9F",
@@ -52,7 +54,8 @@ const bannerSlides: BannerSlide[] = [
     subtitle: "Find the right shipping deals before completing your order.",
     cta: "View deals",
     href: "/voucher",
-    image: "/image/freeship.jpg",
+    image:
+      "https://salt.tikicdn.com/cache/w750/ts/tikimsp/cd/fd/05/b0fe845bfd9e238eabe3a299df39f737.png.webp",
     badge: "Transportation support",
     metric: "Easy to use",
     from: "#0f766e",
@@ -65,7 +68,8 @@ const bannerSlides: BannerSlide[] = [
     subtitle: "Choose the right vouchers to optimize your shopping costs.",
     cta: "Save vouchers",
     href: "/voucher",
-    image: "/image/voucher.png",
+    image:
+      "https://res.cloudinary.com/dizx3mbgw/image/upload/v1780744889/images_2_v32wau.jpg",
     badge: "Discount codes",
     metric: "Ready to use",
     from: "#be123c",
@@ -78,14 +82,16 @@ const sidePromos = [
   {
     title: "Endow",
     subtitle: "Notable products",
-    image: "/image/flashsale.png",
+    image:
+      "https://salt.tikicdn.com/cache/w750/ts/tikimsp/00/f7/9c/e7243acaf445971de5e6f26819aa71a0.png.webp",
     href: "#suggested-products",
     icon: ShoppingBag,
   },
   {
     title: "Voucher",
     subtitle: "Utility discount code",
-    image: "/image/voucher.png",
+    image:
+      "https://res.cloudinary.com/dizx3mbgw/image/upload/v1780744889/images_2_v32wau.jpg",
     href: "/voucher",
     icon: TicketPercent,
   },
@@ -102,7 +108,9 @@ export default function HomeHeroBanner() {
   }, []);
 
   const goPrev = useCallback(() => {
-    setActiveSlide((current) => (current - 1 + bannerSlides.length) % bannerSlides.length);
+    setActiveSlide(
+      (current) => (current - 1 + bannerSlides.length) % bannerSlides.length,
+    );
   }, []);
 
   const goNext = useCallback(() => {
@@ -130,10 +138,7 @@ export default function HomeHeroBanner() {
   };
 
   return (
-    <section
-      className={styles.bannerShell}
-      aria-label="Outstanding promotions"
-    >
+    <section className={styles.bannerShell} aria-label="Outstanding promotions">
       <div
         className={styles.mainStage}
         onPointerDown={handlePointerDown}
@@ -156,13 +161,14 @@ export default function HomeHeroBanner() {
               aria-hidden={activeSlide !== index}
               style={
                 {
-                  "--banner-from": slide.from,
-                  "--banner-to": slide.to,
-                  "--banner-accent": slide.accent,
+                  // "--banner-from": slide.from,
+                  // "--banner-to": slide.to,
+                  // "--banner-accent": slide.accent,
+                  backgroundImage: `url(${slide.image})`,
                 } as CSSProperties
               }
             >
-              <div className={styles.copy}>
+              {/* <div className={styles.copy}>
                 <span className={styles.eyebrow}>{slide.eyebrow}</span>
                 <h1 className={styles.title}>{slide.title}</h1>
                 <p className={styles.subtitle}>{slide.subtitle}</p>
@@ -190,7 +196,7 @@ export default function HomeHeroBanner() {
                   />
                 </div>
                 <div className={styles.floatBadge}>{slide.badge}</div>
-              </div>
+              </div> */}
             </article>
           ))}
         </div>
@@ -237,7 +243,12 @@ export default function HomeHeroBanner() {
           const Icon = promo.icon;
 
           return (
-            <Link key={promo.title} href={promo.href} className={styles.promoCard}>
+            <Link
+              key={promo.title}
+              href={promo.href}
+              className={styles.promoCard}
+              style={{ backgroundImage: `url(${promo.image})` }}
+            >
               <div className={styles.promoText}>
                 <span className={styles.promoIcon}>
                   <Icon size={16} aria-hidden="true" />

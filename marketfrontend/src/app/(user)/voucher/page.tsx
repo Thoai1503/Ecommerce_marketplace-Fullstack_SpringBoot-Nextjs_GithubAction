@@ -40,16 +40,19 @@ const getDiscountTypeMeta = (discountType?: string | null) => {
 const getVoucherHeading = (voucher: AdminVoucher) => {
   if (voucher.discountType === "FIXED") {
     const amount = Number(voucher.discountAmount || 0);
-    if (amount >= 1000) return `Save ${Math.round(amount / 1000)}K`;
-    return `Save ${amount}`;
+    if (amount >= 1000 && amount < 1000000)
+      return `Giảm ${Math.round(amount / 1000)}K`;
+    else if (amount >= 1000000)
+      return `Giảm ${Math.round(amount / 1000000)} triệu`;
+    return `Giảm ${amount}`;
   }
 
   if (voucher.discountType === "PERCENT") {
-    return `Save ${Number(voucher.discountPercent || 0)}%`;
+    return `Giảm ${Number(voucher.discountPercent || 0)}%`;
   }
 
   if (voucher.discountType === "FREE_SHIPPING") {
-    return "Free shipping";
+    return "Miễn phí vận chuyển";
   }
 
   return voucher.title || voucher.code;
@@ -60,12 +63,14 @@ const getVoucherSubtext = (voucher: AdminVoucher) => {
 
   const minOrder = Number(voucher.minOrderValue || 0);
   if (minOrder > 0) {
-    if (minOrder >= 1000)
-      return `For orders from ${Math.round(minOrder / 1000)}K`;
-    return `For orders from ${minOrder}`;
+    if (minOrder >= 1000 && minOrder < 1000000)
+      return `Cho đơn hàng từ ${Math.round(minOrder / 1000)}K`;
+    else if (minOrder > 1000000)
+      return `Cho đơn hàng từ ${Math.round(minOrder / 1000000)}M`;
+    return `Cho đơn hàng từ ${minOrder}`;
   }
 
-  return "Limited quantity";
+  return "Số lượng có hạn";
 };
 
 const issuerOrder = ["PLATFORM", "BRAND"];
@@ -83,6 +88,8 @@ const CATEGORY_BANNER_URL =
 const hasCategoryScope = (voucher: AdminVoucher) => {
   const voucherWithScopeList = voucher as AdminVoucher & {
     scopeRules?: Array<{
+      voucherId?: number;
+      scopeId?: number;
       scopeType?: string;
       includeExclude?: string;
     }>;
@@ -429,16 +436,35 @@ export default function VoucherPage() {
       controller.abort();
     };
   }, []);
+  const curentDate = new Date();
 
   const databaseVouchers = useMemo(
     () =>
       [...vouchers]
-        .filter((voucher) => voucher.issuerType !== "SHOP")
+        // .filter((voucher) => voucher.issuerType !== "SHOP")
+        .filter((voucher) => voucher.status === "ACTIVE")
+        .filter((voucher) => {
+          const startDate = voucher.claimStartAt
+            ? new Date(voucher.claimStartAt)
+            : null;
+          const endDate = voucher.claimEndAt
+            ? new Date(voucher.claimEndAt)
+            : null;
+          return (
+            (!startDate || startDate <= curentDate) &&
+            (!endDate || endDate >= curentDate)
+          );
+        })
         .sort((a, b) => {
           const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return bTime - aTime;
         }),
+    [vouchers],
+  );
+
+  const shopVouchers = useMemo(
+    () => vouchers.filter((voucher) => voucher.issuerType === "SHOP"),
     [vouchers],
   );
 
@@ -573,25 +599,6 @@ export default function VoucherPage() {
                                     "0 12px 30px rgba(16, 24, 40, 0.08)",
                                 }}
                               >
-                                <div
-                                  className="position-absolute rounded-circle bg-white"
-                                  style={{
-                                    width: "20px",
-                                    height: "20px",
-                                    left: "140px",
-                                    top: "-10px",
-                                  }}
-                                />
-                                <div
-                                  className="position-absolute rounded-circle bg-white"
-                                  style={{
-                                    width: "20px",
-                                    height: "20px",
-                                    left: "140px",
-                                    bottom: "-10px",
-                                  }}
-                                />
-
                                 <div className="d-flex h-100">
                                   <div
                                     className={`${styles.voucherSide} d-flex flex-column align-items-center justify-content-center text-white text-center`}
@@ -628,7 +635,7 @@ export default function VoucherPage() {
                                       Free
                                     </div>
                                     <div style={{ fontSize: "0.72rem" }}>
-                                      shipping
+                                      {voucher.title}
                                     </div>
                                   </div>
 
