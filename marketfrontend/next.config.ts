@@ -23,6 +23,22 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "c8.alamy.com", pathname: "/**" },
       { protocol: "https", hostname: "via.placeholder.com", pathname: "/**" },
       {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/dizx3mbgw/**", // cụ thể hơn cho res.cloudinary.com/dizx3mbgw
+      },
+      {
+        protocol: "https",
+        hostname: "salt.tikicdn.com",
+        pathname: "/ts/tikimsp/**", // cụ thể hơn cho salt.tikicdn.com/ts/tikimsp
+      },
+      {
+        protocol: "https",
+        hostname: "salt.tikicdn.com",
+        pathname: "/cache/**", // cụ thể hơn cho salt.tikicdn.com/cache
+      },
+
+      {
         protocol: "http",
         hostname: "res.cloudinary.com",
         pathname: "/dizx3mbgw/**",
