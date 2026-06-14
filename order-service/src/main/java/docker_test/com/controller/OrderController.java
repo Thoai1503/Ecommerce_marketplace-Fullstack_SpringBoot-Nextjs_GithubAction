@@ -2,6 +2,8 @@
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import docker_test.com.dto.AdminOrderListItemDTO;
@@ -116,10 +118,20 @@ public class OrderController {
 
 	@GetMapping("/{id}")
 	public ResponseEntity<?> getOrderById(@PathVariable Long id) {
+		 Authentication auth =
+		            SecurityContextHolder.getContext().getAuthentication();
+
 		Order order = orderRepository.findById(id).orElse(null);
 
+		
 		if (order == null) {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Order not found", "id", id));
+		}
+		if (!auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN"))) {
+			if (!order.getUserId().equals(Long.parseLong(auth.getName()))) {
+				return ResponseEntity.status(HttpStatus.FORBIDDEN)
+						.body(Map.of("message", "You do not have permission to view this order", "id", id));
+			}
 		}
 
 		List<docker_test.com.model.OrderItem> items = orderItemRepository.findByOrderId(id);

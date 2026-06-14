@@ -1,4 +1,4 @@
-package docker_test.com.controllers;
+package docker_test.com.controllers.admin;
 
 import java.util.Map;
 

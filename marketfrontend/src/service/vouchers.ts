@@ -11,7 +11,7 @@ import {
   VoucherStatus,
 } from "@/types";
 
-const API = "/api/vouchers";
+const API = "/api/admin/vouchers";
 
 // ================= GET ALL =================
 export const getVouchers = async (): Promise<AdminVoucher[]> => {
@@ -21,7 +21,7 @@ export const getVouchers = async (): Promise<AdminVoucher[]> => {
 
 // ================= GET BY ID =================
 export const getVoucherById = async (id: string): Promise<AdminVoucher> => {
-  const res = await http.get(`/api/vouchers/${id}`);
+  const res = await http.get(`${API}/${id}`);
   return res.data;
 };
 
@@ -29,7 +29,7 @@ export const getVoucherById = async (id: string): Promise<AdminVoucher> => {
 export const createVoucher = async (
   data: Partial<AdminVoucher>,
 ): Promise<AdminVoucher> => {
-  const res = await http.post("/api/vouchers", data);
+  const res = await http.post(API, data);
   return res.data;
 };
 
@@ -38,13 +38,13 @@ export const updateVoucher = async (
   id: string,
   data: Partial<AdminVoucher>,
 ): Promise<AdminVoucher> => {
-  const res = await http.put(`/api/vouchers/${id}`, data);
+  const res = await http.put(`${API}/${id}`, data);
   return res.data;
 };
 
 // ================= DELETE =================
 export const deleteVoucher = async (id: string): Promise<boolean> => {
-  await http.delete(`/api/vouchers/${id}`);
+  await http.delete(`${API}/${id}`);
   return true;
 };
 
@@ -53,7 +53,7 @@ export const updateVoucherStatus = async (
   id: string,
   status: VoucherStatus,
 ): Promise<AdminVoucher> => {
-  const res = await http.put(`/api/vouchers/${id}`, { status });
+  const res = await http.put(`${API}/${id}`, { status });
   return res.data;
 };
 
@@ -85,10 +85,8 @@ const normalizeScopeRule = (rule: any): VoucherScopeRule => ({
   voucherId: String(rule?.voucherId ?? rule?.voucher_id ?? ""),
   scopeType: rule?.scopeType ?? rule?.scope_type ?? "CATEGORY",
   scopeId: Number(rule?.scopeId ?? rule?.scope_id ?? 0),
-  includeExclude:
-    rule?.includeExclude ?? rule?.include_exclude ?? "INCLUDE",
-  createdAt:
-    rule?.createdAt ?? rule?.created_at ?? new Date().toISOString(),
+  includeExclude: rule?.includeExclude ?? rule?.include_exclude ?? "INCLUDE",
+  createdAt: rule?.createdAt ?? rule?.created_at ?? new Date().toISOString(),
 });
 
 const normalizeSegmentRule = (rule: any): VoucherSegmentRule => ({
@@ -104,11 +102,15 @@ const normalizeRedemptionEvent = (item: any): VoucherRedemptionEvent => ({
   userName:
     item?.userName ??
     item?.user_name ??
-    (item?.userId ?? item?.user_id ? `User #${item?.userId ?? item?.user_id}` : "Unknown user"),
+    ((item?.userId ?? item?.user_id)
+      ? `User #${item?.userId ?? item?.user_id}`
+      : "Unknown user"),
   orderCode:
     item?.orderCode ??
     item?.order_code ??
-    (item?.orderId ?? item?.order_id ? `Order #${item?.orderId ?? item?.order_id}` : "Unknown order"),
+    ((item?.orderId ?? item?.order_id)
+      ? `Order #${item?.orderId ?? item?.order_id}`
+      : "Unknown order"),
   discountAmountApplied: Number(
     item?.discountAmountApplied ?? item?.discount_amount_applied ?? 0,
   ),
@@ -116,10 +118,7 @@ const normalizeRedemptionEvent = (item: any): VoucherRedemptionEvent => ({
     item?.finalOrderAmount ?? item?.final_order_amount ?? 0,
   ),
   status: item?.status ?? "SUCCESS",
-  redeemedAt:
-    item?.redeemedAt ??
-    item?.redeemed_at ??
-    new Date().toISOString(),
+  redeemedAt: item?.redeemedAt ?? item?.redeemed_at ?? new Date().toISOString(),
 });
 
 const toScopeApiPayload = (voucherId: string, rule: VoucherScopeRule) => ({
@@ -176,10 +175,7 @@ export const saveVoucherRules = async (
     Promise.all(
       payload.scopeRules.map((rule) =>
         http
-          .post(
-            "/api/voucher-scope-rules",
-            toScopeApiPayload(voucherId, rule),
-          )
+          .post("/api/voucher-scope-rules", toScopeApiPayload(voucherId, rule))
           .then((res) => normalizeScopeRule(res.data)),
       ),
     ),

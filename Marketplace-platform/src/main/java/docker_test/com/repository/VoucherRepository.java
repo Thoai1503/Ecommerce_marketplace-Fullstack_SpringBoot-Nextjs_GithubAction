@@ -210,7 +210,32 @@ public class VoucherRepository implements IRepositories<Voucher> {
 	@Override
 	public List<Voucher> GetAll() {
 
-		String sql = "SELECT v.*, vs.scope_type, vs.scope_id, vs.include_exclude FROM voucher v LEFT JOIN voucher_scope_rule vs on v.id = vs.voucher_id ORDER BY v.id DESC";
+		String sql = """
+			SELECT
+				v.*,
+				vs.scope_type,
+				vs.scope_id,
+				vs.include_exclude,
+				c.id AS category_id,
+				c.parent_id AS category_parent_id,
+				c.category_name,
+				c.category_slug,
+				c.category_icon,
+				c.level AS category_level,
+				c.is_active AS category_is_active,
+				c.created_at AS category_created_at,
+				c.updated_at AS category_updated_at,
+				b.id AS brand_id,
+				b.name AS brand_name,
+				b.slug AS brand_slug,
+				b.logo AS brand_logo,
+				b.status AS brand_status
+			FROM voucher v
+			LEFT JOIN voucher_scope_rule vs ON v.id = vs.voucher_id
+			LEFT JOIN category c ON vs.scope_type = 'CATEGORY' AND vs.scope_id = c.id
+			LEFT JOIN brand b ON vs.scope_type = 'BRAND' AND vs.scope_id = b.id
+			ORDER BY v.id DESC
+			""";
 
 		try (Connection con = dbConnection.getConn();
 				PreparedStatement ps = con.prepareStatement(sql);

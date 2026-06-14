@@ -199,14 +199,10 @@ export const refreshAccessToken = async ({
   const refreshToken = getStoredRefreshToken();
 
   refreshPromise = axios
-    .post(
-      `${API_URL}/auth/refresh`,
-      refreshToken ? { refreshToken } : {},
-      {
-        withCredentials: true,
-        headers: { "Content-Type": "application/json" },
-      },
-    )
+    .post(`${API_URL}/auth/refresh`, refreshToken ? { refreshToken } : {}, {
+      withCredentials: true,
+      headers: { "Content-Type": "application/json" },
+    })
     .then((response) => storeAuthTokens(response.data))
     .catch((error: AxiosError) => {
       if (clearOnFailure) {

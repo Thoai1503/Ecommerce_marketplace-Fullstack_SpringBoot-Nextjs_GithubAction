@@ -1,9 +1,9 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export default function SortBar({ categoryId }: { categoryId: string }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const currentSort = searchParams.get("sort") || "popular";
@@ -33,60 +33,37 @@ export default function SortBar({ categoryId }: { categoryId: string }) {
   };
 
   return (
-    <div className="d-flex align-items-center gap-2 mb-3 flex-wrap">
-
+    <div className="searchToolbar">
       <span className="text-muted small">Sort by</span>
 
-      {/* PHỔ BIẾN */}
-      <button
-        className={`btn btn-sm ${
-          currentSort === "popular"
-            ? "btn-danger"
-            : "btn-outline-secondary"
-        }`}
-        onClick={() => router.push(buildUrl("popular"))}
-      >
-        Popular
-      </button>
+      {[
+        ["popular", "Relevant"],
+        ["new", "Latest"],
+        ["best", "Top Sales"],
+      ].map(([value, label]) => (
+        <Link
+          key={value}
+          href={buildUrl(value)}
+          className={`sortButton ${currentSort === value ? "sortButtonActive" : ""}`}
+        >
+          {label}
+        </Link>
+      ))}
 
-      {/* MỚI NHẤT */}
-      <button
-        className={`btn btn-sm ${
-          currentSort === "new"
-            ? "btn-danger"
-            : "btn-outline-secondary"
-        }`}
-        onClick={() => router.push(buildUrl("new"))}
+      <Link
+        href={buildUrl(undefined, currentOrder === "asc" ? "desc" : "asc")}
+        className={`sortPrice ${currentOrder ? "sortButtonActive" : ""}`}
       >
-        Latest
-      </button>
+        Price <span>⌄</span>
+      </Link>
 
-      {/* BÁN CHẠY */}
-      <button
-        className={`btn btn-sm ${
-          currentSort === "best"
-            ? "btn-danger"
-            : "btn-outline-secondary"
-        }`}
-        onClick={() => router.push(buildUrl("best"))}
-      >
-        Best Seller
-      </button>
-
-      {/* GIÁ (RIÊNG) */}
-      <select
-        className="form-select form-select-sm"
-        style={{ width: 180 }}
-        value={currentOrder}
-        onChange={(e) =>
-          router.push(buildUrl(undefined, e.target.value))
-        }
-      >
-        <option value="">Price</option>
-        <option value="asc">Price: Low → High</option>
-        <option value="desc">Price: High → Low</option>
-      </select>
-
+      <div className="pageStatus">
+        <span>1/17</span>
+        <button type="button" disabled>
+          ‹
+        </button>
+        <button type="button">›</button>
+      </div>
     </div>
   );
 }

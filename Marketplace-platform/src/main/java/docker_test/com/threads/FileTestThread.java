@@ -9,7 +9,7 @@ import docker_test.com.models.refunds.ReturnRequestAttachment;
 import docker_test.com.repository.ReturnRequestAttachmentRepository;
 import docker_test.com.services.CloudinaryService;
 
-public class FileTestThread implements  Runnable {
+public  class FileTestThread implements  Runnable {
   
 	private final ReturnRequestAttachmentRepository returnRequestAttachmentRepository;
 	private final CloudinaryService cloudinaryService;
@@ -22,7 +22,8 @@ public class FileTestThread implements  Runnable {
 
     private final String contentType;
 	private String description;
-	public FileTestThread(     byte[] fileBytes,
+	public FileTestThread(
+			byte[] fileBytes,
             String originalFilename,
             String contentType, ReturnRequestAttachmentRepository returnRequestAttachmentRepository, CloudinaryService cloudinaryService,String description,  Long returnRequestId) {
 		// TODO Auto-generated constructor stub

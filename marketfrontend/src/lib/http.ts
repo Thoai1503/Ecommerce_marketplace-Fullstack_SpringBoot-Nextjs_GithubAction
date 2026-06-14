@@ -115,8 +115,12 @@ export const http2 = async (url: string, options?: RequestInit) => {
   const res = await fetch(API_URL + url, {
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("accessToken") || ""}`,
     },
     ...options,
+  }).catch((error) => {
+    console.error("Fetch error:", error);
+    throw new Error("Network error");
   });
 
   if (!res.ok) throw new Error("API error");

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
         "cart_service.com",
         "docker_test.com"
 })
-//@EnableDiscoveryClient
+
 @RestController
 
 public class ApiGatewayApplication {

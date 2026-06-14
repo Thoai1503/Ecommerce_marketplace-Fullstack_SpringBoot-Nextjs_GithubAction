@@ -125,19 +125,10 @@ public class OrderService {
 						 });
 				 return item;
 			 }).toList());
-//            
-//		    dto.getOrders_items().stream().filter(item -> Objects.equals(item.getShop_id(), os.getShop_id())).forEach(item->{
-//		   
-//		    		     		
-//		    	orderItemRepository.save(buildItem(item, saved.getId()));
-//		    });
-//						
+
              dto.getOrders_items().stream().filter(item -> Objects.equals(item.getShop_id(), os.getShop_id())).forEach(item->{
- 		    	System.out.println("Shipment id = {}"+ orderShipment.getId());
  		    		     		item.setShipment_id(orderShipment.getId());
- 		    		     		
- 		    	
- 		    });
+ 		     });
         	System.out.println("Order shipment = {}"+ os.toString());
 		});
         
@@ -206,13 +197,10 @@ public class OrderService {
                 responseDTO.setPaymentUrl(paymentUrl);
                 return responseDTO;
             } else {
-            //	Arrays.sort(paymentUrl == null ? new String[]{} : new String[]{paymentUrl});
                 log.warn("Payment URL generation failed for orderId={}. Response: {}", saved.getId(), paymentUrl);
                 saved.setPaymentStatus("FAILED");
                 orderRepository.save(saved);
-                responseDTO.setPaymentUrl("http:103.90.225.130:4000/orders/" + saved.getId());
-                // Depending on business rules, you might want to throw an exception here to rollback the order creation
-                // throw new RuntimeException("Payment failed for orderId=" + saved.getId());
+                responseDTO.setPaymentUrl("https://nexamart.duckdns.org/orders/" + saved.getId());
             }
         }
 

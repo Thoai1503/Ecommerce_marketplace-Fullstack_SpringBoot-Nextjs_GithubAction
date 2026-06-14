@@ -44,9 +44,19 @@ export const uploadUserAvatar = async (
  * @param userId - User ID
  * @returns User object
  */
-export const getUserById = async (userId: number): Promise<User> => {
+export const getUserById = async (
+  userId: number,
+  token?: string,
+): Promise<User> => {
   return await http
-    .get(`/users/${userId}`)
+    .get(
+      `/users/${userId}`,
+      //   , {
+      //   headers: {
+      //     Authorization: `Bearer ${token}`,
+      //   },
+      // }
+    )
     .then((res) => res.data)
     .catch((error) => {
       console.error("Get user error:", error);

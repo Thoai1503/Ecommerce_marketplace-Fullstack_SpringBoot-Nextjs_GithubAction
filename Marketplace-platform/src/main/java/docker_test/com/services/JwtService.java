@@ -25,7 +25,7 @@ public class JwtService {
     private static final String ACCESS_TOKEN_TYPE = "access";
     private static final String REFRESH_TOKEN_TYPE = "refresh";
 
-    @Value("${app.jwt.secret:nexamart-local-jwt-secret-change-me}")
+    @Value("${app.jwt.secret}")
     private String secret;
 
     @Value("${app.jwt.buyer.access-token-seconds:1800}")
@@ -210,6 +210,7 @@ public class JwtService {
             throw new IllegalStateException("SHA-256 is not available", e);
         }
     }
+    
 
     private enum Role {
         ADMIN,
