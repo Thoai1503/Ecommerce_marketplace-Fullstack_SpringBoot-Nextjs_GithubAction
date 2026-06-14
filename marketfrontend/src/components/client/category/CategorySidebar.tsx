@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 
 export default function CategorySidebar({
@@ -18,6 +19,20 @@ export default function CategorySidebar({
 
   const currentChild = searchParams.get("child");
   const selectedBrands = searchParams.getAll("brand");
+  const minPrice = searchParams.get("minPrice") || "";
+  const maxPrice = searchParams.get("maxPrice") || "";
+
+  const buildCategoryHref = (childId?: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    params.delete("brand");
+
+    if (childId) params.set("child", String(childId));
+    else params.delete("child");
+
+    const query = params.toString();
+    return `/category/${currentId}${query ? `?${query}` : ""}`;
+  };
 
   // ===== BUILD URL =====
   const pushWithParams = (params: URLSearchParams) => {
@@ -57,76 +72,103 @@ export default function CategorySidebar({
     pushWithParams(params);
   };
 
+  const applyPriceRange = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+    const params = new URLSearchParams(searchParams.toString());
+    const min = String(formData.get("minPrice") || "").trim();
+    const max = String(formData.get("maxPrice") || "").trim();
+
+    if (min) params.set("minPrice", min);
+    else params.delete("minPrice");
+
+    if (max) params.set("maxPrice", max);
+    else params.delete("maxPrice");
+
+    pushWithParams(params);
+  };
+
   return (
-    <div className="card p-3">
-      {/* CATEGORY */}
-      <h6 className="fw-bold mb-3">All Categories</h6>
-
-      {/* CATEGORY CHA */}
-      <div
-        onClick={() => goCategory()}
-        className={`fw-bold d-block mb-2 cursor-pointer ${
-          !currentChild ? "text-danger" : "text-dark"
-        }`}
-      >
-        ▶ {parent?.category_name}
+    <div>
+      <div className="filterTitle">
+        <span className="filterIcon">◇</span>
+        <strong>CATEGORY FILTERS</strong>
       </div>
 
-      {/* CATEGORY CON */}
-      <div className="ps-3 mb-4">
-        {categories.map((c) => {
-          const isActive = currentChild === String(c.id);
+      <div className="filterBlock">
+        <div className="filterHeading">By Category</div>
 
-          return (
-            <div
-              key={c.id}
-              onClick={() => goCategory(c.id)}
-              className={`mb-1 cursor-pointer ${
-                isActive ? "text-danger fw-bold" : "text-dark"
-              }`}
-            >
-              {c.category_name}
-            </div>
-          );
-        })}
+        <Link
+          href={buildCategoryHref()}
+          className={`filterCategoryLink ${!currentChild ? "filterCategoryLinkActive" : ""}`}
+        >
+          {parent?.category_name || parent?.name || "All Categories"}
+        </Link>
+
+        {categories.map((c) => (
+          <Link
+            key={c.id}
+            href={buildCategoryHref(c.id)}
+            className={`filterCategoryLink ${currentChild === String(c.id) ? "filterCategoryLinkActive" : ""}`}
+          >
+            {c.category_name || c.name}
+          </Link>
+        ))}
       </div>
 
-      {/* BRAND */}
-      <h6 className="fw-bold mb-2">Brands</h6>
+      <div className="filterBlock">
+        <div className="filterHeading">Brands</div>
 
-      <div className="mb-4">
+        {brands.length === 0 && (
+          <div className="filterEmpty">No related brands</div>
+        )}
+
         {brands.map((b) => {
           const checked = selectedBrands.includes(String(b.id));
 
           return (
-            <div key={b.id} className="form-check">
+            <label key={b.id} className="filterCheck">
               <input
                 type="checkbox"
-                className="form-check-input"
                 checked={checked}
                 onChange={() => toggleBrand(b.id)}
               />
-
-              <label
-                className="form-check-label cursor-pointer"
-                onClick={() => toggleBrand(b.id)}
-              >
-                {b.name}
-              </label>
-            </div>
+              <span>{b.name}</span>
+            </label>
           );
         })}
       </div>
 
-      {/* PRICE (chưa active logic) */}
-      <h6 className="fw-bold mb-2">Price Range</h6>
+      <div className="filterBlock">
+        <div className="filterHeading">Price Range</div>
+        <form className="filterPriceForm" onSubmit={applyPriceRange}>
+          <input
+            name="minPrice"
+            type="number"
+            min="0"
+            placeholder="₫ MIN"
+            defaultValue={minPrice}
+          />
+          <input
+            name="maxPrice"
+            type="number"
+            min="0"
+            placeholder="₫ MAX"
+            defaultValue={maxPrice}
+          />
+          <button type="submit">Apply</button>
+        </form>
 
-      <div className="d-flex gap-2 mb-3">
-        <input className="form-control" placeholder="₫ FROM" />
-        <input className="form-control" placeholder="₫ TO" />
+        {(searchParams.has("child") ||
+          searchParams.has("brand") ||
+          minPrice ||
+          maxPrice) && (
+          <Link className="clearFilterLink" href={buildCategoryHref()}>
+            Clear filters
+          </Link>
+        )}
       </div>
-
-      <button className="btn btn-danger w-100">APPLY</button>
     </div>
   );
 }

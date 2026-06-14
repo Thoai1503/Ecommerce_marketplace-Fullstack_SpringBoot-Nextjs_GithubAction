@@ -38,7 +38,9 @@ export default async function UserLayout({
   return (
     <>
       <RootPrivider>
-        <UserAuthProvider role={sessionRole} user_id={id}>
+        <UserAuthProvider role={sessionRole} user_id={id}
+        token={token}
+        >
           {/* <CustomProgressBar /> */}
           {/* ================= HEADER ================= */}
           <header className="sticky-top bg-white shadow-sm">

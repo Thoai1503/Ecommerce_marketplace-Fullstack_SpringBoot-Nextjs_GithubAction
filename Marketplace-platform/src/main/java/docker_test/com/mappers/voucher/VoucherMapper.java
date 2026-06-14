@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import docker_test.com.mappers.IMapper;
+import docker_test.com.models.Brand;
+import docker_test.com.models.Category;
 import docker_test.com.models.voucher.Voucher;
 import docker_test.com.models.voucher.VoucherScopeRule;
 
@@ -91,6 +93,15 @@ public final class VoucherMapper implements IMapper<Voucher> {
 		scopeRule.setIncludeExclude(toUpper(rs.getString("include_exclude")));
 		scopeRule.setScopeId(getLong(rs, "scope_id"));
 		scopeRule.setVoucherId(voucherId);
+
+		if (scopeRule.getScopeId() != null) {
+			if ("CATEGORY".equals(scopeType)) {
+				scopeRule.setCategory(mapCategory(rs));
+			} else if ("BRAND".equals(scopeType)) {
+				scopeRule.setBrand(mapBrand(rs));
+			}
+		}
+
 		return scopeRule;
 	}
 
@@ -132,5 +143,39 @@ public final class VoucherMapper implements IMapper<Voucher> {
 
 	private String toUpper(String val) {
 		return val != null ? val.toUpperCase() : null;
+	}
+
+	private Category mapCategory(ResultSet rs) throws SQLException {
+		Object categoryId = rs.getObject("category_id");
+		if (categoryId == null) {
+			return null;
+		}
+
+		Category category = new Category();
+		category.setId(((Number) categoryId).intValue());
+		category.setParent_id(getInteger(rs, "category_parent_id"));
+		category.setCategory_name(rs.getString("category_name"));
+		category.setCategory_slug(rs.getString("category_slug"));
+		category.setCategory_icon(rs.getString("category_icon"));
+		category.setLevel(getInteger(rs, "category_level"));
+	//	category.setIs_active(getInteger(rs, "category_is_active"));
+		category.setCreated_at(getDateTime(rs, "category_created_at"));
+		category.setUpdated_at(getDateTime(rs, "category_updated_at"));
+		return category;
+	}
+
+	private Brand mapBrand(ResultSet rs) throws SQLException {
+		Object brandId = rs.getObject("brand_id");
+		if (brandId == null) {
+			return null;
+		}
+
+		Brand brand = new Brand();
+		brand.setId(((Number) brandId).intValue());
+		brand.setName(rs.getString("brand_name"));
+		brand.setSlug(rs.getString("brand_slug"));
+		brand.setLogo(rs.getString("brand_logo"));
+		brand.setStatus(getInteger(rs, "brand_status"));
+		return brand;
 	}
 }

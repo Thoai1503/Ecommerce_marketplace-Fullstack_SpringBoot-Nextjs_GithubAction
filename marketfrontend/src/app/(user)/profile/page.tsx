@@ -44,14 +44,16 @@ const getVoucherValue = (voucher: OwnedVoucher) => {
 };
 
 const normalizeVoucherStatus = (value?: string | null) =>
-  String(value ?? "").trim().toUpperCase();
+  String(value ?? "")
+    .trim()
+    .toUpperCase();
 
 const isClaimedUnusedVoucher = (voucher: OwnedVoucher) =>
   normalizeVoucherStatus(voucher.status) === "CLAIMED";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
-  const { setRoles } = useUserAuth();
+  const { setRoles, token } = useUserAuth();
   const [loading, setLoading] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -95,7 +97,7 @@ export default function ProfilePage() {
     }
     const parsedUser = JSON.parse(raw);
     setUser(parsedUser);
-    
+
     // 🔒 Nếu đã có data trong DB (từ session trước) thì khóa
     const wasSaved = parsedUser.gender || parsedUser.dateOfBirth;
     setHasSavedToDb(!!wasSaved);
@@ -154,7 +156,9 @@ export default function ProfilePage() {
 
         const mappedVouchers: Array<OwnedVoucher | null> = userVouchers.map(
           (item: any) => {
-            const voucher = voucherMap.get(Number(item.voucherId ?? item.voucher_id));
+            const voucher = voucherMap.get(
+              Number(item.voucherId ?? item.voucher_id),
+            );
             if (!voucher) return null;
 
             return {
@@ -205,7 +209,8 @@ export default function ProfilePage() {
 
   // 🔒 Khóa khi đã lưu vào DB (sau khi submit thành công)
   const isGenderLocked = hasSavedToDb && !!user.gender && user.gender !== "";
-  const isDobLocked = hasSavedToDb && !!user.dateOfBirth && user.dateOfBirth !== "";
+  const isDobLocked =
+    hasSavedToDb && !!user.dateOfBirth && user.dateOfBirth !== "";
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -279,10 +284,15 @@ export default function ProfilePage() {
           const json = JSON.parse(msg);
           msg = json.message || json.error || msg;
         } catch {}
-        
+
         // 🔍 Kiểm tra lỗi trùng số điện thoại
         const lowerMsg = msg.toLowerCase();
-        if (lowerMsg.includes("phone") && (lowerMsg.includes("exist") || lowerMsg.includes("duplicate") || lowerMsg.includes("taken"))) {
+        if (
+          lowerMsg.includes("phone") &&
+          (lowerMsg.includes("exist") ||
+            lowerMsg.includes("duplicate") ||
+            lowerMsg.includes("taken"))
+        ) {
           alert("Số điện thoại đã được sử dụng bởi tài khoản khác");
         } else {
           alert(msg || "Cập nhật thất bại");
@@ -468,7 +478,10 @@ export default function ProfilePage() {
           ) : (
             <div className="row g-3">
               {ownedVouchers.map((voucher) => (
-                <div key={`${voucher.id}-${voucher.claimedAt}`} className="col-12 col-md-6">
+                <div
+                  key={`${voucher.id}-${voucher.claimedAt}`}
+                  className="col-12 col-md-6"
+                >
                   <div
                     className="border rounded-4 p-3 h-100"
                     style={{
@@ -482,7 +495,9 @@ export default function ProfilePage() {
                         <div className="small text-danger fw-bold mb-1">
                           {voucher.code}
                         </div>
-                        <div className="fw-bold">{getVoucherValue(voucher)}</div>
+                        <div className="fw-bold">
+                          {getVoucherValue(voucher)}
+                        </div>
                       </div>
                       <span className="badge rounded-pill text-bg-light">
                         {voucher.status}

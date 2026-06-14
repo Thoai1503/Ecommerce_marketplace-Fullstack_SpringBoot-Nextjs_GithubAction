@@ -15,6 +15,7 @@ async function getProduct(productId: number) {
     next: { revalidate: 1800 }, // Cache 30 phút - bạn có thể chỉnh
     // cache: "no-store" // chỉ dùng nếu muốn luôn fresh
   });
+  console.log(`Status code from API for product ${productId}:`, res.status);
 
   if (!res.ok) return null;
   return res.json();
@@ -34,6 +35,7 @@ export async function generateMetadata({
     };
   }
 
+  console.log("Generating metadata for product with ID:", productId);
   const data = await getProduct(productId);
   if (!data) {
     return {
@@ -98,14 +100,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
     return <h1>Sản phẩm không hợp lệ</h1>;
   }
 
+  console.log("Fetching product with ID:", productId);
   const data = await getProduct(productId);
-
+  console.log("Fetched product data:", data);
   if (!data) {
     return <h1>Không tìm thấy sản phẩm hoặc có lỗi khi tải dữ liệu.</h1>;
   }
 
   const role = (await cookies()).get("role")?.value;
   const userId = Number((await cookies()).get("user")?.value);
+
+  console.log("User role:", role, "User ID:", userId);
 
   return <ProductDetail data={data} productSlug={product_slug} />;
 }

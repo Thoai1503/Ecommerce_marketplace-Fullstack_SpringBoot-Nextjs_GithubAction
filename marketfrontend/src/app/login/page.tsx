@@ -157,7 +157,7 @@ const LoginForm = () => {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/users/login`, {
+      const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

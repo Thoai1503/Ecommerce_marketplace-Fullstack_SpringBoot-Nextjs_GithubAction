@@ -2,6 +2,9 @@ package docker_test.com.models.voucher;
 
 import java.time.LocalDateTime;
 
+import docker_test.com.models.Brand;
+import docker_test.com.models.Category;
+
 public class VoucherScopeRule {
 
 	private Long id;
@@ -9,6 +12,8 @@ public class VoucherScopeRule {
 	private String scopeType;
 	private Long scopeId;
 	private String includeExclude;
+	private Category category;
+	private Brand brand;
 	private LocalDateTime createdAt;
 
 	// ===== Constructor =====
@@ -65,6 +70,22 @@ public class VoucherScopeRule {
 
 	public void setIncludeExclude(String includeExclude) {
 		this.includeExclude = includeExclude;
+	}
+
+	public Category getCategory() {
+		return category;
+	}
+
+	public void setCategory(Category category) {
+		this.category = category;
+	}
+
+	public Brand getBrand() {
+		return brand;
+	}
+
+	public void setBrand(Brand brand) {
+		this.brand = brand;
 	}
 
 	public LocalDateTime getCreatedAt() {

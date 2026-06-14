@@ -6,6 +6,7 @@ import { API_URL } from "@/helper/api";
 import { AdminVoucher } from "@/types";
 import VoucherClaimButton from "@/components/client/voucher/VoucherClaimButton";
 import styles from "./page.module.css";
+import VouucherIssuerSection from "./VouucherIssuerSection";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "No limit";
@@ -85,6 +86,9 @@ const discountOrder = [
 const CATEGORY_BANNER_URL =
   "https://res.cloudinary.com/dizx3mbgw/image/upload/v1780583956/lazada-tcbc-66-320260603151807_jo1vi4.jpg";
 
+const BRAND_BANNER_URL =
+  "https://res.cloudinary.com/dizx3mbgw/image/upload/v1780584007/nike-voucher-banner-1920x600_kyh8lq.jpg";
+
 const hasCategoryScope = (voucher: AdminVoucher) => {
   const voucherWithScopeList = voucher as AdminVoucher & {
     scopeRules?: Array<{
@@ -108,174 +112,47 @@ const hasCategoryScope = (voucher: AdminVoucher) => {
   );
 };
 
+const hasBrandScope = (voucher: AdminVoucher) => {
+  const voucherWithScopeList = voucher as AdminVoucher & {
+    scopeRules?: Array<{
+      voucherId?: number;
+      scopeId?: number;
+      scopeType?: string;
+      includeExclude?: string;
+    }>;
+  };
+
+  const rules = Array.isArray(voucherWithScopeList.scopeRules)
+    ? voucherWithScopeList.scopeRules
+    : voucher.scopeRule
+      ? [voucher.scopeRule]
+      : [];
+
+  return rules.some(
+    (rule) =>
+      rule?.scopeType === "BRAND" &&
+      (rule?.includeExclude || "INCLUDE") !== "EXCLUDE",
+  );
+};
+
 const HeaderBanner = () => (
-  <div
-    className={`${styles.voucherBanner} position-relative overflow-hidden rounded-5 shadow-sm flex-grow-1 me-3`}
-    style={{
-      minHeight: "206px",
-      background:
-        "radial-gradient(circle at 12% 18%, rgba(255,255,255,0.42), transparent 18%), radial-gradient(circle at 88% 22%, rgba(255,255,255,0.18), transparent 16%), linear-gradient(180deg, #b9ecff 0%, #5dd3ff 22%, #1296ff 55%, #2d49ee 80%, #28138d 100%)",
-      border: "1px solid rgba(117, 210, 255, 0.95)",
-      boxShadow: "0 24px 54px rgba(37, 80, 200, 0.2)",
-    }}
-  >
+  <section className="mb-5">
     <div
-      className="position-absolute"
+      className="overflow-hidden rounded-4"
       style={{
-        inset: "16px 22px auto 22px",
-        height: "48px",
-        borderRadius: "999px",
-        background:
-          "linear-gradient(180deg, rgba(255,221,118,1) 0%, rgba(255,153,24,1) 100%)",
-        border: "2px solid rgba(255, 212, 98, 0.96)",
-        boxShadow: "inset 0 -6px 0 rgba(181, 88, 0, 0.26)",
-      }}
-    />
-    <div
-      className="position-absolute start-50 translate-middle-x text-center text-white fw-bold"
-      style={{
-        top: "23px",
-        fontSize: "clamp(0.92rem, 1.35vw, 1.22rem)",
-        letterSpacing: "0.18em",
-        textTransform: "uppercase",
-        textShadow: "0 3px 0 rgba(132, 49, 0, 0.38)",
+        border: "1px solid rgba(233, 236, 239, 0.95)",
+        boxShadow: "0 12px 30px rgba(16, 24, 40, 0.08)",
       }}
     >
-      Exclusive For
+      <img
+        src={`https://www.finviet.com.vn/wp-content/uploads/2025/04/LICH-SAN-T4-2025-1024x536-1.png`}
+        alt="Voucher category banner"
+        className="w-300 d-block"
+        width={1400}
+        style={{ maxHeight: "360px", objectFit: "cover" }}
+      />
     </div>
-
-    <div
-      className="position-absolute start-50 translate-middle-x"
-      style={{
-        top: "70px",
-        width: "88%",
-        minHeight: "92px",
-        borderRadius: "30px",
-        background:
-          "linear-gradient(180deg, rgba(91,230,255,0.98) 0%, rgba(24,136,255,0.98) 52%, rgba(23,74,228,1) 100%)",
-        border: "3px solid rgba(144, 240, 255, 0.98)",
-        boxShadow:
-          "inset 0 -8px 0 rgba(10, 39, 162, 0.3), 0 12px 26px rgba(22, 71, 220, 0.22)",
-      }}
-    />
-    <div
-      className="position-absolute start-50 translate-middle-x"
-      style={{
-        top: "82px",
-        width: "82%",
-        height: "14px",
-        borderRadius: "999px",
-        background:
-          "linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0))",
-      }}
-    />
-    <div
-      className="position-absolute start-50 translate-middle-x text-center fw-bold"
-      style={{
-        top: "103px",
-        width: "82%",
-        color: "#fff37a",
-        fontSize: "clamp(1.18rem, 2.7vw, 2.95rem)",
-        lineHeight: 1,
-        letterSpacing: "0.03em",
-        textTransform: "uppercase",
-        textShadow: "3px 3px 0 #2750d9, 0 0 18px rgba(255,255,255,0.16)",
-      }}
-    >
-      Loyal Customers
-    </div>
-    <div
-      className="position-absolute text-white fw-semibold"
-      style={{
-        top: "147px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        fontSize: "0.82rem",
-        letterSpacing: "0.08em",
-        textTransform: "uppercase",
-        opacity: 0.92,
-      }}
-    >
-      Best Voucher Picks This Week
-    </div>
-
-    <div
-      className="position-absolute"
-      style={{
-        left: "26px",
-        bottom: "34px",
-        width: "66px",
-        height: "66px",
-        borderRadius: "22px",
-        transform: "rotate(-10deg)",
-        background: "linear-gradient(180deg, #ff9cf4 0%, #b54cff 100%)",
-        boxShadow: "0 14px 20px rgba(121, 38, 170, 0.3)",
-      }}
-    />
-    <div
-      className="position-absolute"
-      style={{
-        left: "62px",
-        bottom: "48px",
-        width: "56px",
-        height: "56px",
-        borderRadius: "16px",
-        transform: "rotate(12deg)",
-        background: "linear-gradient(180deg, #ffa5ff 0%, #c26bff 100%)",
-        boxShadow: "0 12px 18px rgba(121, 38, 170, 0.26)",
-      }}
-    />
-    <div
-      className="position-absolute"
-      style={{
-        left: "94px",
-        top: "34px",
-        width: "12px",
-        height: "12px",
-        borderRadius: "50%",
-        background: "#ffe066",
-        boxShadow:
-          "22px 10px 0 #ffe066, 8px 24px 0 #fff0a8, -10px 18px 0 #ffd43b",
-      }}
-    />
-    <div
-      className="position-absolute"
-      style={{
-        right: "34px",
-        top: "42px",
-        width: "94px",
-        height: "94px",
-        borderRadius: "50%",
-        background:
-          "radial-gradient(circle at 35% 35%, #d9f7ff 0%, #90ddff 38%, #379fff 72%, #1862d6 100%)",
-        boxShadow: "0 18px 26px rgba(43, 84, 198, 0.24)",
-      }}
-    />
-    <div
-      className="position-absolute"
-      style={{
-        right: "18px",
-        top: "72px",
-        width: "24px",
-        height: "24px",
-        borderRadius: "10px",
-        transform: "rotate(16deg)",
-        background: "linear-gradient(180deg, #ffe58f 0%, #ffd43b 100%)",
-        boxShadow: "0 10px 14px rgba(170, 125, 0, 0.2)",
-      }}
-    />
-    <div
-      className="position-absolute"
-      style={{
-        right: "0",
-        left: "0",
-        bottom: "0",
-        height: "36px",
-        background: "linear-gradient(180deg, #4020ff 0%, #2612aa 100%)",
-        borderTop: "4px solid #2fd1ff",
-      }}
-    />
-  </div>
+  </section>
 );
 
 const VoucherSkeletonList = () => {
@@ -288,7 +165,7 @@ const VoucherSkeletonList = () => {
       <div
         className="d-flex align-items-center justify-content-between mb-3 px-1"
         style={{
-          borderBottom: "1px solid rgba(220, 53, 69, 0.12)",
+          borderBottom: "1px solid  rgba(53, 162, 220, 0.12)",
           paddingBottom: "10px",
         }}
       >
@@ -330,7 +207,7 @@ const VoucherSkeletonList = () => {
                     width: "135px",
                     minWidth: "135px",
                     background:
-                      "linear-gradient(135deg, #ffd0d0 0%, #ffc9b2 100%)",
+                      "linear-gradient(135deg, rgba(21, 112, 239, 0.16) 0%, rgba(21, 112, 239, 0.24) 100%)",
                     padding: "18px 10px",
                   }}
                 >
@@ -368,7 +245,7 @@ const VoucherSkeletonList = () => {
                   <div
                     className="d-flex align-items-end justify-content-between mt-4 pt-3"
                     style={{
-                      borderTop: "1px dashed rgba(255, 107, 107, 0.24)",
+                      borderTop: "1px dashed rgba(53, 162, 220, 0.24)",
                     }}
                   >
                     <div
@@ -410,6 +287,7 @@ export default function VoucherPage() {
         const res = await fetch(`${API_URL}/api/vouchers`, {
           cache: "no-store",
           signal: controller.signal,
+          //    credentials: "include",
         });
 
         if (!res.ok) {
@@ -490,7 +368,10 @@ export default function VoucherPage() {
     () => databaseVouchers.filter(hasCategoryScope),
     [databaseVouchers],
   );
-
+  const brandVouchers = useMemo(
+    () => databaseVouchers.filter(hasBrandScope),
+    [databaseVouchers],
+  );
   return (
     <div
       className="py-4 py-md-5"
@@ -503,9 +384,176 @@ export default function VoucherPage() {
       <div className="container" style={{ maxWidth: "1440px" }}>
         <div className="d-flex align-items-center justify-content-between mb-4">
           <HeaderBanner />
-          <Link href="/" className="btn btn-outline-secondary btn-sm">
+          {/* <Link href="/" className="btn btn-outline-secondary btn-sm">
             Back
-          </Link>
+          </Link> */}
+        </div>
+        <div
+          className={`${styles.voucherBanner} position-relative overflow-hidden rounded-5 shadow-sm flex-grow-1 me-3`}
+          style={{
+            minHeight: "206px",
+            background:
+              "radial-gradient(circle at 12% 18%, rgba(255,255,255,0.42), transparent 18%), radial-gradient(circle at 88% 22%, rgba(255,255,255,0.18), transparent 16%), linear-gradient(180deg, #b9ecff 0%, #5dd3ff 22%, #1296ff 55%, #2d49ee 80%, #28138d 100%)",
+            border: "1px solid rgba(117, 210, 255, 0.95)",
+            boxShadow: "0 24px 54px rgba(37, 80, 200, 0.2)",
+          }}
+        >
+          <div
+            className="position-absolute"
+            style={{
+              inset: "16px 22px auto 22px",
+              height: "48px",
+              borderRadius: "999px",
+              background:
+                "linear-gradient(180deg, rgba(255,221,118,1) 0%, rgba(255,153,24,1) 100%)",
+              border: "2px solid rgba(255, 212, 98, 0.96)",
+              boxShadow: "inset 0 -6px 0 rgba(181, 88, 0, 0.26)",
+            }}
+          />
+          <div
+            className="position-absolute start-50 translate-middle-x text-center text-white fw-bold"
+            style={{
+              top: "23px",
+              fontSize: "clamp(0.92rem, 1.35vw, 1.22rem)",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              textShadow: "0 3px 0 rgba(132, 49, 0, 0.38)",
+            }}
+          >
+            Exclusive For
+          </div>
+
+          <div
+            className="position-absolute start-50 translate-middle-x"
+            style={{
+              top: "70px",
+              width: "88%",
+              minHeight: "92px",
+              borderRadius: "30px",
+              background:
+                "linear-gradient(180deg, rgba(91,230,255,0.98) 0%, rgba(24,136,255,0.98) 52%, rgba(23,74,228,1) 100%)",
+              border: "3px solid rgba(144, 240, 255, 0.98)",
+              boxShadow:
+                "inset 0 -8px 0 rgba(10, 39, 162, 0.3), 0 12px 26px rgba(22, 71, 220, 0.22)",
+            }}
+          />
+          <div
+            className="position-absolute start-50 translate-middle-x"
+            style={{
+              top: "82px",
+              width: "82%",
+              height: "14px",
+              borderRadius: "999px",
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0))",
+            }}
+          />
+          <div
+            className="position-absolute start-50 translate-middle-x text-center fw-bold"
+            style={{
+              top: "103px",
+              width: "82%",
+              color: "#fff37a",
+              fontSize: "clamp(1.18rem, 2.7vw, 2.95rem)",
+              lineHeight: 1,
+              letterSpacing: "0.03em",
+              textTransform: "uppercase",
+              textShadow: "3px 3px 0 #2750d9, 0 0 18px rgba(255,255,255,0.16)",
+            }}
+          >
+            Loyal Customers
+          </div>
+          <div
+            className="position-absolute text-white fw-semibold"
+            style={{
+              top: "147px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              fontSize: "0.82rem",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              opacity: 0.92,
+            }}
+          >
+            Best Voucher Picks This Week
+          </div>
+
+          <div
+            className="position-absolute"
+            style={{
+              left: "26px",
+              bottom: "34px",
+              width: "66px",
+              height: "66px",
+              borderRadius: "22px",
+              transform: "rotate(-10deg)",
+              background: "linear-gradient(180deg, #ff9cf4 0%, #b54cff 100%)",
+              boxShadow: "0 14px 20px rgba(121, 38, 170, 0.3)",
+            }}
+          />
+          <div
+            className="position-absolute"
+            style={{
+              left: "62px",
+              bottom: "48px",
+              width: "56px",
+              height: "56px",
+              borderRadius: "16px",
+              transform: "rotate(12deg)",
+              background: "linear-gradient(180deg, #ffa5ff 0%, #c26bff 100%)",
+              boxShadow: "0 12px 18px rgba(121, 38, 170, 0.26)",
+            }}
+          />
+          <div
+            className="position-absolute"
+            style={{
+              left: "94px",
+              top: "34px",
+              width: "12px",
+              height: "12px",
+              borderRadius: "50%",
+              background: "#ffe066",
+              boxShadow:
+                "22px 10px 0 #ffe066, 8px 24px 0 #fff0a8, -10px 18px 0 #ffd43b",
+            }}
+          />
+          <div
+            className="position-absolute"
+            style={{
+              right: "34px",
+              top: "42px",
+              width: "94px",
+              height: "94px",
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle at 35% 35%, #d9f7ff 0%, #90ddff 38%, #379fff 72%, #1862d6 100%)",
+              boxShadow: "0 18px 26px rgba(43, 84, 198, 0.24)",
+            }}
+          />
+          <div
+            className="position-absolute"
+            style={{
+              right: "18px",
+              top: "72px",
+              width: "24px",
+              height: "24px",
+              borderRadius: "10px",
+              transform: "rotate(16deg)",
+              background: "linear-gradient(180deg, #ffe58f 0%, #ffd43b 100%)",
+              boxShadow: "0 10px 14px rgba(170, 125, 0, 0.2)",
+            }}
+          />
+          <div
+            className="position-absolute"
+            style={{
+              right: "0",
+              left: "0",
+              bottom: "0",
+              height: "36px",
+              background: "linear-gradient(180deg, #4020ff 0%, #2612aa 100%)",
+              borderTop: "4px solid #2fd1ff",
+            }}
+          />
         </div>
 
         {isLoading ? (
@@ -575,164 +623,16 @@ export default function VoucherPage() {
                     const discountMeta = getDiscountTypeMeta(discountKey);
 
                     return (
-                      <div key={`${issuerKey}-${discountKey}`} className="mb-4">
-                        <div
-                          className="mb-3 fw-medium"
-                          style={{
-                            fontSize: "0.84rem",
-                            color: "#667085",
-                            letterSpacing: "0.02em",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          {discountMeta.title}
-                        </div>
-
-                        <div className="row g-4">
-                          {discountVouchers.map((voucher) => (
-                            <div key={voucher.id} className="col-12 col-lg-6">
-                              <div
-                                className={`${styles.voucherCard} position-relative rounded-4 bg-white overflow-hidden h-100`}
-                                style={{
-                                  border: "1px solid rgba(233, 236, 239, 0.95)",
-                                  boxShadow:
-                                    "0 12px 30px rgba(16, 24, 40, 0.08)",
-                                }}
-                              >
-                                <div className="d-flex h-100">
-                                  <div
-                                    className={`${styles.voucherSide} d-flex flex-column align-items-center justify-content-center text-white text-center`}
-                                    style={{
-                                      width: "135px",
-                                      minWidth: "135px",
-                                      background:
-                                        "linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%)",
-                                      padding: "18px 10px",
-                                    }}
-                                  >
-                                    <div
-                                      className="fw-bold"
-                                      style={{
-                                        fontSize: "1rem",
-                                        lineHeight: 1.05,
-                                      }}
-                                    >
-                                      Nexamart
-                                    </div>
-                                    <div
-                                      className="fw-bold rounded-2 mt-1 mb-3 px-2 py-1"
-                                      style={{
-                                        backgroundColor:
-                                          "rgba(255,255,255,0.95)",
-                                        color: "#ff6b6b",
-                                        fontSize: "0.78rem",
-                                        lineHeight: 1,
-                                      }}
-                                    >
-                                      {issuerMeta.label}
-                                    </div>
-                                    <div style={{ fontSize: "0.72rem" }}>
-                                      Free
-                                    </div>
-                                    <div style={{ fontSize: "0.72rem" }}>
-                                      {voucher.title}
-                                    </div>
-                                  </div>
-
-                                  <div className="flex-grow-1 p-3 p-md-4">
-                                    <div className="d-flex align-items-start justify-content-between gap-3">
-                                      <div className="flex-grow-1">
-                                        <div
-                                          className="d-inline-flex align-items-center mb-2"
-                                          style={{
-                                            fontSize: "0.72rem",
-                                            fontWeight: 700,
-                                            color: "#b42318",
-                                            backgroundColor: "#fff1f3",
-                                            borderRadius: "999px",
-                                            padding: "4px 10px",
-                                          }}
-                                        >
-                                          {voucher.code}
-                                        </div>
-                                        <div
-                                          className="fw-semibold text-dark"
-                                          style={{
-                                            fontSize: "1.05rem",
-                                            lineHeight: 1.2,
-                                          }}
-                                        >
-                                          {getVoucherHeading(voucher)}
-                                        </div>
-
-                                        <div
-                                          className="text-muted mt-1"
-                                          style={{
-                                            fontSize: "0.84rem",
-                                            maxWidth: "85%",
-                                          }}
-                                        >
-                                          {getVoucherSubtext(voucher)}
-                                        </div>
-                                      </div>
-
-                                      <div
-                                        className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                                        style={{
-                                          width: "20px",
-                                          height: "20px",
-                                          fontSize: "0.75rem",
-                                          color: "#1570ef",
-                                          border:
-                                            "1px solid rgba(21, 112, 239, 0.32)",
-                                          backgroundColor: "#f5faff",
-                                        }}
-                                        title={`ID ${voucher.id} - ${voucher.status}`}
-                                      >
-                                        i
-                                      </div>
-                                    </div>
-
-                                    <div
-                                      className="d-flex align-items-end justify-content-between mt-4 pt-3"
-                                      style={{
-                                        borderTop:
-                                          "1px dashed rgba(255, 107, 107, 0.24)",
-                                      }}
-                                    >
-                                      <div
-                                        className="text-muted"
-                                        style={{ fontSize: "0.8rem" }}
-                                      >
-                                        Exp: {formatDate(voucher.validTo)}
-                                      </div>
-
-                                      <VoucherClaimButton
-                                        voucherId={Number(voucher.id)}
-                                        voucherCode={voucher.code}
-                                        voucherStatus={voucher.status}
-                                        claimStartAt={voucher.claimStartAt}
-                                        claimEndAt={voucher.claimEndAt}
-                                        totalQuota={voucher.totalQuota}
-                                        claimedCount={voucher.claimedCount}
-                                        className={`${styles.voucherSaveBtn} btn text-white fw-semibold px-3 py-1`}
-                                        style={{
-                                          background:
-                                            "linear-gradient(135deg, #ff6b6b 0%, #e03131 100%)",
-                                          borderRadius: "999px",
-                                          fontSize: "0.82rem",
-                                          boxShadow:
-                                            "0 8px 18px rgba(224, 49, 49, 0.22)",
-                                        }}
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      <VouucherIssuerSection
+                        key={`${issuerKey}-${discountKey}`}
+                        discountKey={discountKey}
+                        discountVouchers={discountVouchers}
+                        getDiscountTypeMeta={getDiscountTypeMeta}
+                        issuerKey={issuerKey}
+                        issuerMeta={issuerMeta}
+                        getVoucherHeading={getVoucherHeading}
+                        getVoucherSubtext={getVoucherSubtext}
+                      />
                     );
                   },
                 )}
@@ -794,85 +694,329 @@ export default function VoucherPage() {
                 </div>
               ) : (
                 <div className="row g-3">
-                  {categoryVouchers.map((voucher) => (
-                    <div
-                      key={`category-${voucher.id}`}
-                      className="col-12 col-md-6 col-xl-4"
-                    >
+                  {categoryVouchers.map((voucher: any) => {
+                    const categoryImageUrl = voucher.scopeRules?.filter(
+                      (rule: any) =>
+                        rule.scopeType === "CATEGORY" &&
+                        (rule.includeExclude || "INCLUDE") !== "EXCLUDE",
+                    )?.[0].category.category_icon;
+                    return (
                       <div
-                        className="rounded-4 bg-white h-100 p-3"
-                        style={{
-                          border: "1px solid rgba(233, 236, 239, 0.95)",
-                          boxShadow: "0 8px 20px rgba(16, 24, 40, 0.06)",
-                        }}
+                        key={`category-${voucher.id}`}
+                        className="col-12 col-md-6 col-xl-4"
                       >
                         <div
-                          className="d-inline-flex align-items-center mb-2"
+                          className={`${styles.voucherCard} rounded-4 bg-white h-100 overflow-hidden`}
                           style={{
-                            fontSize: "0.72rem",
-                            fontWeight: 700,
-                            color: "#b42318",
-                            backgroundColor: "#fff1f3",
-                            borderRadius: "999px",
-                            padding: "4px 10px",
+                            border: "1px solid rgba(233, 236, 239, 0.95)",
+                            boxShadow: "0 8px 20px rgba(16, 24, 40, 0.06)",
                           }}
                         >
-                          {voucher.code}
-                        </div>
+                          <div className="d-flex h-100">
+                            <div
+                              className={`${styles.voucherSide} d-flex flex-column align-items-center justify-content-center text-white text-center`}
+                              style={{
+                                width: "112px",
+                                minWidth: "112px",
 
-                        <div
-                          className="fw-semibold"
-                          style={{ fontSize: "1rem" }}
-                        >
-                          {getVoucherHeading(voucher)}
-                        </div>
+                                backgroundImage: `url(${categoryImageUrl})`,
 
-                        <div
-                          className="text-muted mt-1"
-                          style={{ fontSize: "0.85rem", minHeight: "42px" }}
-                        >
-                          {getVoucherSubtext(voucher)}
-                        </div>
+                                backgroundSize: "cover",
+                                backgroundPosition: "center",
 
-                        <div
-                          className="d-flex align-items-center justify-content-between mt-3 pt-2"
-                          style={{
-                            borderTop: "1px dashed rgba(255, 107, 107, 0.24)",
-                          }}
-                        >
-                          <div
-                            className="text-muted"
-                            style={{ fontSize: "0.8rem" }}
-                          >
-                            Exp: {formatDate(voucher.validTo)}
+                                padding: "16px 8px",
+                              }}
+                            >
+                              {/* <div
+                                className="fw-bold"
+                                style={{
+                                  fontSize: "0.95rem",
+                                  lineHeight: 1.05,
+                                }}
+                              >
+                                Nexamart
+                              </div>
+                              <div
+                                className="fw-bold rounded-2 mt-1 mb-2 px-2 py-1"
+                                style={{
+                                  backgroundColor: "rgba(255,255,255,0.95)",
+                                  color: "#ff6b6b",
+                                  fontSize: "0.72rem",
+                                  lineHeight: 1,
+                                }}
+                              >
+                                Category
+                              </div>
+                              <div style={{ fontSize: "0.7rem" }}>Free</div>
+                              <div style={{ fontSize: "0.7rem" }}>
+                                {voucher.title}
+                              </div> */}
+                            </div>
+
+                            <div className="flex-grow-1 p-3">
+                              <div
+                                className="d-inline-flex align-items-center mb-2"
+                                style={{
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  color: "#b42318",
+                                  backgroundColor: "#fff1f3",
+                                  borderRadius: "999px",
+                                  padding: "4px 10px",
+                                }}
+                              >
+                                {voucher.code}
+                              </div>
+
+                              <div
+                                className="fw-semibold"
+                                style={{ fontSize: "1rem" }}
+                              >
+                                {getVoucherHeading(voucher)}
+                              </div>
+
+                              <div
+                                className="text-muted mt-1"
+                                style={{
+                                  fontSize: "0.85rem",
+                                  minHeight: "42px",
+                                }}
+                              >
+                                {getVoucherSubtext(voucher)}
+                              </div>
+
+                              <div
+                                className="d-flex align-items-center justify-content-between mt-3 pt-2"
+                                style={{
+                                  borderTop:
+                                    "1px dashed rgba(255, 107, 107, 0.24)",
+                                }}
+                              >
+                                <div
+                                  className="text-muted"
+                                  style={{ fontSize: "0.8rem" }}
+                                >
+                                  Exp: {formatDate(voucher.validTo)}
+                                </div>
+
+                                <VoucherClaimButton
+                                  voucherId={Number(voucher.id)}
+                                  voucherCode={voucher.code}
+                                  voucherStatus={voucher.status}
+                                  claimStartAt={voucher.claimStartAt}
+                                  claimEndAt={voucher.claimEndAt}
+                                  totalQuota={voucher.totalQuota}
+                                  claimedCount={voucher.claimedCount}
+                                  className={`${styles.voucherSaveBtn} btn text-white fw-semibold px-3 py-1`}
+                                  style={{
+                                    // background:
+                                    //   "linear-gradient(135deg, #ff6b6b 0%, #e03131 100%)",
+                                    backgroundColor: "#1570ef",
+                                    borderRadius: "999px",
+                                    fontSize: "0.82rem",
+                                    // boxShadow:
+                                    //   "0 8px 18px rgba(224, 49, 49, 0.22)",
+                                    boxShadow:
+                                      "0 8px 18px rgba(21, 112, 239, 0.3)",
+                                  }}
+                                />
+                              </div>
+                            </div>
                           </div>
-
-                          <VoucherClaimButton
-                            voucherId={Number(voucher.id)}
-                            voucherCode={voucher.code}
-                            voucherStatus={voucher.status}
-                            claimStartAt={voucher.claimStartAt}
-                            claimEndAt={voucher.claimEndAt}
-                            totalQuota={voucher.totalQuota}
-                            claimedCount={voucher.claimedCount}
-                            className={`${styles.voucherSaveBtn} btn text-white fw-semibold px-3 py-1`}
-                            style={{
-                              background:
-                                "linear-gradient(135deg, #ff6b6b 0%, #e03131 100%)",
-                              borderRadius: "999px",
-                              fontSize: "0.82rem",
-                              boxShadow: "0 8px 18px rgba(224, 49, 49, 0.22)",
-                            }}
-                          />
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </section>
           </>
         )}
+        <section className="mb-5">
+          <div
+            className="overflow-hidden rounded-4"
+            style={{
+              border: "1px solid rgba(233, 236, 239, 0.95)",
+              boxShadow: "0 12px 30px rgba(16, 24, 40, 0.08)",
+            }}
+          >
+            <img
+              src={CATEGORY_BANNER_URL}
+              alt="Voucher category banner"
+              className="w-100 d-block"
+              style={{ maxHeight: "360px", objectFit: "cover" }}
+            />
+          </div>
+        </section>
+
+        <section className="mb-5">
+          <div
+            className="d-flex align-items-center justify-content-between mb-3 px-1"
+            style={{
+              borderBottom: "1px solid rgba(220, 53, 69, 0.12)",
+              paddingBottom: "10px",
+            }}
+          >
+            <h3
+              className="fw-semibold mb-0"
+              style={{ fontSize: "1.05rem", color: "#b42318" }}
+            >
+              Vouchers cho nhan hang
+            </h3>
+            <span
+              className="fw-medium"
+              style={{
+                fontSize: "0.78rem",
+                color: "#b42318",
+                backgroundColor: "rgba(220, 53, 69, 0.08)",
+                borderRadius: "999px",
+                padding: "6px 12px",
+              }}
+            >
+              {categoryVouchers.length} vouchers
+            </span>
+          </div>
+
+          {categoryVouchers.length === 0 ? (
+            <div className="alert alert-secondary mb-0">
+              Chua co voucher nhan hang.
+            </div>
+          ) : (
+            <div className="row g-3">
+              {brandVouchers.map((voucher: any) => {
+                const brandImageUrl = voucher.scopeRules?.filter(
+                  (rule: any) =>
+                    rule.scopeType === "BRAND" &&
+                    (rule.includeExclude || "INCLUDE") !== "EXCLUDE",
+                )?.[0].brand.logo;
+                return (
+                  <div
+                    key={`brand-${voucher.id}`}
+                    className="col-12 col-md-6 col-xl-4"
+                  >
+                    <div
+                      className={`${styles.voucherCard} rounded-4 bg-white h-100 overflow-hidden`}
+                      style={{
+                        border: "1px solid rgba(233, 236, 239, 0.95)",
+                        boxShadow: "0 8px 20px rgba(16, 24, 40, 0.06)",
+                      }}
+                    >
+                      <div className="d-flex h-100">
+                        <div
+                          className={`${styles.voucherSide} d-flex flex-column align-items-center justify-content-center text-white text-center`}
+                          style={{
+                            width: "112px",
+                            minWidth: "112px",
+
+                            backgroundImage: `url(${brandImageUrl + "?w=50&h=50&cm=pad_resize"})`,
+
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+
+                            padding: "16px 8px",
+                          }}
+                        >
+                          {/* <div
+                                className="fw-bold"
+                                style={{
+                                  fontSize: "0.95rem",
+                                  lineHeight: 1.05,
+                                }}
+                              >
+                                Nexamart
+                              </div>
+                              <div
+                                className="fw-bold rounded-2 mt-1 mb-2 px-2 py-1"
+                                style={{
+                                  backgroundColor: "rgba(255,255,255,0.95)",
+                                  color: "#ff6b6b",
+                                  fontSize: "0.72rem",
+                                  lineHeight: 1,
+                                }}
+                              >
+                                Category
+                              </div>
+                              <div style={{ fontSize: "0.7rem" }}>Free</div>
+                              <div style={{ fontSize: "0.7rem" }}>
+                                {voucher.title}
+                              </div> */}
+                        </div>
+
+                        <div className="flex-grow-1 p-3">
+                          <div
+                            className="d-inline-flex align-items-center mb-2"
+                            style={{
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              color: "#b42318",
+                              backgroundColor: "#fff1f3",
+                              borderRadius: "999px",
+                              padding: "4px 10px",
+                            }}
+                          >
+                            {voucher.code}
+                          </div>
+
+                          <div
+                            className="fw-semibold"
+                            style={{ fontSize: "1rem" }}
+                          >
+                            {getVoucherHeading(voucher)}
+                          </div>
+
+                          <div
+                            className="text-muted mt-1"
+                            style={{
+                              fontSize: "0.85rem",
+                              minHeight: "42px",
+                            }}
+                          >
+                            {getVoucherSubtext(voucher)}
+                          </div>
+
+                          <div
+                            className="d-flex align-items-center justify-content-between mt-3 pt-2"
+                            style={{
+                              borderTop: "1px dashed rgba(255, 107, 107, 0.24)",
+                            }}
+                          >
+                            <div
+                              className="text-muted"
+                              style={{ fontSize: "0.8rem" }}
+                            >
+                              Exp: {formatDate(voucher.validTo)}
+                            </div>
+
+                            <VoucherClaimButton
+                              voucherId={Number(voucher.id)}
+                              voucherCode={voucher.code}
+                              voucherStatus={voucher.status}
+                              claimStartAt={voucher.claimStartAt}
+                              claimEndAt={voucher.claimEndAt}
+                              totalQuota={voucher.totalQuota}
+                              claimedCount={voucher.claimedCount}
+                              className={`${styles.voucherSaveBtn} btn text-white fw-semibold px-3 py-1`}
+                              style={{
+                                // background:
+                                //   "linear-gradient(135deg, #ff6b6b 0%, #e03131 100%)",
+                                backgroundColor: "#1570ef",
+                                borderRadius: "999px",
+                                fontSize: "0.82rem",
+                                // boxShadow:
+                                //   "0 8px 18px rgba(224, 49, 49, 0.22)",
+                                boxShadow: "0 8px 18px rgba(21, 112, 239, 0.3)",
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
