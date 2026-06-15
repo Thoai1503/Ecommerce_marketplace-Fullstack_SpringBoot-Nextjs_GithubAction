@@ -23,7 +23,7 @@ import io.jsonwebtoken.security.Keys;
 public class JWTService {
 	private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    @Value("${app.jwt.secret:${spring.security.oauth2.resourceserver.jwt.secret:your-256-bit-secret}}")
+    @Value("${app.jwt.secret}")
     private String secret;
 	
 //	public String createToken(User user) {
