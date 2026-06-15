@@ -55,7 +55,7 @@ public class SecurityConfig {
 				.authorizeHttpRequests((authorize) -> authorize
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
 //						.requestMatchers("/api/admin/**").hasRole("ADMIN")
-						
+						.requestMatchers("/api/orders").permitAll()
 //						.requestMatchers("/login","/api/product/**","/api/categories/**","/product/**","/auth/login","/shops/**","/api/vouchers","/static").permitAll()
 						.anyRequest().authenticated())
 				.addFilterBefore(customFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)

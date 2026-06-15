@@ -64,8 +64,8 @@ public class Routes {
     public RouterFunction<ServerResponse> orderServiceRoute() {
             return route("order-service")
                             .route(RequestPredicates.path("/api/orders/**"), http(orderServiceUrl))
-                            .filter(circuitBreaker("orderServiceCircuitBreaker",
-                                            URI.create("forward:/fallbackRoute")))
+//                            .filter(circuitBreaker("orderServiceCircuitBreaker",
+//                                            URI.create("forward:/fallbackRoute")))
                             .build();
     }
 
