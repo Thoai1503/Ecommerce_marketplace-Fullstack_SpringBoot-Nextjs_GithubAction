@@ -53,7 +53,7 @@ const RegisterContent: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/users/register`, {
+      const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -275,7 +275,10 @@ const RegisterContent: React.FC = () => {
 
             <p className="text-center text-sm text-gray-600">
               Already verified?{" "}
-              <a href="/login" className="font-semibold text-blue-600 hover:underline">
+              <a
+                href="/login"
+                className="font-semibold text-blue-600 hover:underline"
+              >
                 Log in
               </a>
             </p>
