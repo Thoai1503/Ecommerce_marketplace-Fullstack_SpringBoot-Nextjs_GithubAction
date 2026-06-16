@@ -1,7 +1,9 @@
 package docker_test.com.controllers;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -11,6 +13,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import docker_test.com.dto.LoginRequest;
 import docker_test.com.dto.RefreshTokenRequest;
+import docker_test.com.models.User;
+import docker_test.com.repository.UserRepository;
 import docker_test.com.services.AuthService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.Cookie;
@@ -21,10 +25,27 @@ import jakarta.servlet.http.HttpServletResponse;
 @RequestMapping("/auth")
 public class AuthController {
     private final AuthService authService;
-
+    private final UserRepository userRepository ;
     public AuthController(AuthService authService) {
         this.authService = authService;
+        this.userRepository = UserRepository.Instance();
     }
+    
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getById(@PathVariable int id) {
+
+        User user = userRepository.GetById(id);
+
+        if (user == null) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("User not found");
+        }
+
+        user.setPasswordHash(null);
+        return ResponseEntity.ok(user);
+    }
+
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req, HttpServletResponse response) {

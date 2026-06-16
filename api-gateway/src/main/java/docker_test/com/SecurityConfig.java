@@ -69,7 +69,7 @@ public class SecurityConfig {
 						.requestMatchers("/api/admin/**").hasRole("ADMIN")
 						.requestMatchers("/users/**","/api/notifications/**","/api/cart/**").hasAnyRole("BUYER","SELLER")
 						//.requestMatchers("/api/orders/**").hasAnyRole("BUYER","SELLER","ADMIN")
-						.requestMatchers("/login","/api/product/**","/api/categories/**","/product/**","/auth/login","/shops/**","/api/vouchers","/static","/api/orders","/product-variant/**","/users/register").permitAll()
+						.requestMatchers("/login","/api/product/**","/api/categories/**","/product/**","/auth/login","/shops/**","/api/vouchers","/static","/api/orders","/product-variant/**","/auth/register").permitAll()
 						.anyRequest().authenticated())
 				.addFilterBefore(customFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
 				.build();

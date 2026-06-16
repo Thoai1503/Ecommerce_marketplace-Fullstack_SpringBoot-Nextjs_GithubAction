@@ -38,6 +38,7 @@ public class CustomFilter extends OncePerRequestFilter {
         return path.equals("/auth/login")
                 || path.equals("/login")
                 || path.equals("/api/product");
+       //         || path.equals("/users/register");		
     }
 	  
     @Override
@@ -45,7 +46,8 @@ public class CustomFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
-       
+
+    	
          String requestURI = request.getRequestURI();
         System.out.println(requestURI);
 
