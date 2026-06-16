@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import docker_test.com.dto.AdminOrderListItemDTO;
@@ -50,6 +51,7 @@ public class OrderController {
 	}
 
 	@PostMapping
+//	@Transactional
 	public ResponseEntity<OrderResponeDTO> placeOrder(@Valid @RequestBody OrderDTO dto) {
 		dto.getOrder_shipment().forEach(shipment -> 
 		{
