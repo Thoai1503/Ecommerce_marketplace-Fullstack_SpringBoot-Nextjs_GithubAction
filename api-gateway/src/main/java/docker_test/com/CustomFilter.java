@@ -37,7 +37,8 @@ public class CustomFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         return path.equals("/auth/login")
                 || path.equals("/login")
-                || path.equals("/api/product");
+                || path.equals("/api/product")
+                ||path.equals("/auth/register");
        //         || path.equals("/users/register");		
     }
 	  

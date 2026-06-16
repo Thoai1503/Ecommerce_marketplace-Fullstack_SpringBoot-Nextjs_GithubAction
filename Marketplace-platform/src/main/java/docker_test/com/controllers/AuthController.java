@@ -1,5 +1,6 @@
 package docker_test.com.controllers;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,9 +14,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import docker_test.com.dto.LoginRequest;
 import docker_test.com.dto.RefreshTokenRequest;
+import docker_test.com.dto.RegisterRequest;
 import docker_test.com.models.User;
 import docker_test.com.repository.UserRepository;
 import docker_test.com.services.AuthService;
+import docker_test.com.services.EmailVerificationService;
+import docker_test.com.utils.PasswordUtil;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +28,8 @@ import jakarta.servlet.http.HttpServletResponse;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+    @Autowired
+    private EmailVerificationService emailVerificationService;
     private final AuthService authService;
     private final UserRepository userRepository ;
     public AuthController(AuthService authService) {
@@ -58,6 +64,63 @@ public class AuthController {
         }
     }
 
+    
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody RegisterRequest req,HttpServletResponse response) {
+
+        // ✅ validate
+        if (req.getEmail() == null || req.getEmail().isBlank()
+                || req.getPassword() == null || req.getPassword().isBlank()) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body("Email và mật khẩu không được để trống");
+        }
+
+        if (userRepository.existsByEmail(req.getEmail())) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body("Email đã tồn tại");
+        }
+
+        try {
+            User user = new User();
+            user.setEmail(req.getEmail());
+            user.setFullName(req.getFullName());
+            user.setIsVerified(0);
+
+            // 🔐 HASH PASSWORD (BẮT BUỘC)
+            user.setPasswordHash(
+                    PasswordUtil.hash(req.getPassword())
+            );
+
+            User created = userRepository.Create(user);
+            try {
+                emailVerificationService.sendVerificationEmail(created);
+            } catch (Exception mailError) {
+                System.err.println("Failed to send verification email to " + created.getEmail());
+                mailError.printStackTrace();
+            }
+            
+            System.out.println("Created user: " + created.toString());
+
+            // ❌ không trả password
+            created.setPasswordHash(null);
+            
+            System.out.println("User registered successfully: " + created.toString());
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(created);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Register failed");
+        }
+    }
+
+    
     @GetMapping({ "/me", "/verify" })
     public ResponseEntity<?> me(@RequestHeader(value = "Authorization", required = false) String authorization) {
         try {
