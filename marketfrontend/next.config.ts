@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "res.cloudinary.com",
-        pathname: "/dizx3mbgw/**", // cụ thể hơn cho res.cloudinary.com/dizx3mbgw
+        pathname: "/dus85dyli/**", // cụ thể hơn cho res.cloudinary.com/dus85dyli
       },
       {
         protocol: "https",
