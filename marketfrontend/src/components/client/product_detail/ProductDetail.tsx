@@ -146,14 +146,12 @@ const readJsonResponse = async <T,>(response: Response): Promise<T | null> => {
 
 type ProductDetailProps = {
   data: IProduct;
-
-  productSlug?: string; // ← Thêm prop này để fix lỗi
+  productSlug?: string;
 };
 
 const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
   const { userId } = useUserAuth();
   const [shop, setShop] = useState<any>(null);
-  console.log("Product Detail User ID:", userId);
   Cart.setup({ path: "/api/cart", baseUrl: API_URL });
   const { mutate: addToCart } = useAddToCartMutation();
   const [shopProducts, setShopProducts] = useState<any[]>([]);
@@ -262,7 +260,6 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
         if (!res.ok) return;
 
         const freshProduct = await res.json();
-        console.log("Fresh product detail:", freshProduct);
 
         if (!cancelled) {
           setClientProduct(freshProduct);
@@ -438,7 +435,8 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
   if (isOwnShopProduct) {
     return (
       <div className="container py-5">
-        <div className="alert alert-info rounded-4 border-0 shadow-sm">
+        <div className="alert alert-info rounded-3 border-0 shadow-sm">
+          <i className="bi bi-info-circle me-2"></i>
           Sản phẩm của chính shop bạn không hiển thị ở giao diện mua hàng khi
           đang đăng nhập bằng tài khoản này.
         </div>
@@ -475,7 +473,7 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
           localStorage.setItem("preLoginCart", JSON.stringify(preLoginCart));
           notifyCartUpdated();
           message.success(
-            "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
+            "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập.",
           );
           return;
         } else {
@@ -483,7 +481,7 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
           localStorage.setItem("preLoginCart", JSON.stringify(pushedItem));
           notifyCartUpdated();
           message.success(
-            "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
+            "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập.",
           );
           return;
         }
@@ -494,22 +492,16 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
       notifyCartUpdated();
 
       message.success(
-        "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập. Vui lòng kiểm tra giỏ hàng của bạn.",
+        "Sản phẩm đã được thêm vào giỏ hàng trước khi đăng nhập.",
       );
-      //      message.error("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng");
       return;
     }
     if (selectedVariant === null) {
       message.warning("Vui lòng chọn phân loại sản phẩm");
       return;
     }
-    const formData = new FormData();
-    Object.entries(cart).forEach(([key, value]) => {
-      formData.append(key, String(value));
-    });
     addToCart(cart, {
       onSuccess: (data) => {
-        console.log("Added to cart:", data);
         window.dispatchEvent(new Event("cart-updated"));
         message.success("Thêm vào giỏ hàng thành công");
       },
@@ -591,11 +583,7 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
       }
     }
   }, [detailData]);
-  console.log("Product Detail Props:", JSON.stringify(data, null, 2));
-  console.log("Product Detail Data:", JSON.stringify(detailData, null, 2));
-  console.log("Product Detail id:", userId);
 
-  // Trong ProductDetail.tsx
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -636,741 +624,195 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="container my-5">
-        <div className="app-content-area">
-          <div className="container-fluid">
-            <div>
-              <div className="row">
-                <div className="col-12">
-                  <div className="card">
-                    <div className="card-body p-5">
-                      <div className="row g-4 align-items-start">
-                        {/* Left - Gallery */}
-                        <div className="col-xl-5 col-lg-6 col-12">
-                          <div className="product" id="product">
-                            <div className="position-relative overflow-hidden rounded border">
-                              <Image
-                                src={displayImage}
-                                alt="Product image"
-                                className="img-fluid transition-all"
-                                width={600}
-                                height={600}
-                                priority
-                                style={{
-                                  transition: "all 0.3s ease-in-out",
-                                }}
-                              />
-                            </div>
-                          </div>
+      <div className="product-detail-wrapper">
+        {/* PRODUCT IMAGE & INFO SECTION */}
+        <div className="product-main-section">
+          <div className="container-lg">
+            <div className="product-grid">
+              {/* LEFT - GALLERY */}
+              <div className="product-gallery-col">
+                <div className="product-gallery">
+                  {/* Main Image */}
+                  <div className="main-image-container">
+                    <Image
+                      src={displayImage}
+                      alt="Product image"
+                      width={600}
+                      height={600}
+                      priority
+                      className="main-image"
+                    />
+                    {detailData.stock_quantity === 0 && (
+                      <div className="stock-badge">Hết hàng</div>
+                    )}
+                  </div>
 
-                          {/* Thumbnails */}
-                          <div className="product-tools mt-4">
-                            <div
-                              className="thumbnails row g-3"
-                              id="product-thumbnails"
-                            >
-                              {productImages.map((pro) => (
-                                <div className="col-3" key={pro.id}>
-                                  <div
-                                    className={`thumbnails-img border rounded overflow-hidden cursor-pointer position-relative ${
-                                      mainImage === pro.image_url
-                                        ? "border-primary border-3"
-                                        : ""
-                                    }`}
-                                    onMouseEnter={() =>
-                                      setHoveredImage(pro.image_url)
-                                    }
-                                    onMouseLeave={() => setHoveredImage(null)}
-                                    onClick={() => setMainImage(pro.image_url)}
-                                    style={{
-                                      cursor: "pointer",
-                                      transition: "all 0.2s ease",
-                                    }}
-                                  >
-                                    <Image
-                                      src={pro.image_url}
-                                      alt={`Thumbnail ${pro.id}`}
-                                      className="img-fluid"
-                                      width={150}
-                                      height={150}
-                                      style={{
-                                        transition: "transform 0.2s ease",
-                                      }}
-                                    />
-                                    {/* Overlay khi hover */}
-                                    <div
-                                      className="position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-25 opacity-0"
-                                      style={{
-                                        transition: "opacity 0.2s ease",
-                                      }}
-                                    ></div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right - Product Info */}
-                        <div className="col-xl-7 col-lg-6 col-12">
-                          <div className="my-3 pe-xl-2">
-                            <h3>{detailData.product_name}</h3>
-                            <div className="mb-3">
-                              <span className="me-2 text-dark fw-bold">
-                                4.4{" "}
-                                <i className="bi bi-star-fill text-success"></i>
-                              </span>
-                              <span className="me-2">592 Customer Reviews</span>
-                              <span className="text-muted">
-                                | Đã bán: {soldCount.toLocaleString("vi-VN")}
-                              </span>
-                            </div>
-                            <hr className="my-3" />
-                            <div className="mb-5">
-                              <h4 className="mb-1">
-                                {formatPrice(
-                                  variant?.price ?? detailData.price,
-                                )}
-                                đ
-                                {detailData.original_price && (
-                                  <span className="text-muted text-decoration-line-through ms-2">
-                                    {formatPrice(detailData.original_price)}đ
-                                  </span>
-                                )}
-                              </h4>
-
-                              <small className="text-muted">
-                                inclusive of all taxes
-                              </small>
-                            </div>
-                            {/* Color */}
-                            <div className="mb-4">
-                              <h4 className="mb-3">Classify</h4>
-
-                              <div className="d-flex flex-wrap gap-3">
-                                {/* Variant 1 - màu xanh */}
-                                {/* <div
-                                  className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === "xanh" ? "border-danger border-2" : "border-secondary"}`}
-                                  onClick={() => setSelectedVariant("xanh")}
-                                  style={{ width: "110px", cursor: "pointer" }}
-                                >
-                                  <Image
-                                    src="/assets/images/ecommerce/product-1.jpg"
-                                    alt="Màu xanh"
-                                    width={80}
-                                    height={80}
-                                    className="img-fluid rounded mb-2"
-                                  />
-                                  <div className="small fw-medium">màu xanh</div>
-                                  {selectedVariant === "xanh" && (
-                                    <i className="bi bi-check-circle-fill text-danger position-absolute top-0 end-0 m-1"></i>
-                                  )}
-                                </div> */}
-
-                                {/* Variant 2 - màu xám */}
-                                {/* <div
-                                  className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === "xam" ? "border-danger border-2" : "border-secondary"}`}
-                                  onClick={() => setSelectedVariant("xam")}
-                                  style={{ width: "110px", cursor: "pointer" }}
-                                >
-                                  <Image
-                                    src="/assets/images/ecommerce/product-2.jpg"
-                                    alt="Màu xám"
-                                    width={80}
-                                    height={80}
-                                    className="img-fluid rounded mb-2"
-                                  />
-                                  <div className="small fw-medium">màu xám</div>
-                                  {selectedVariant === "xam" && (
-                                    <i className="bi bi-check-circle-fill text-danger position-absolute top-0 end-0 m-1"></i>
-                                  )}
-                                </div> */}
-
-                                {detailData.variants &&
-                                  detailData.variants.length > 1 &&
-                                  detailData.variants.map((variant) => (
-                                    <div
-                                      key={variant.id}
-                                      className={`variant-item text-center position-relative border rounded p-2 ${selectedVariant === variant.id ? "border-danger border-2" : "border-secondary"}`}
-                                      onClick={() => {
-                                        setSelectedVariant(variant.id);
-                                        setVariant(variant);
-                                      }}
-                                      style={{
-                                        width: "110px",
-                                        cursor: "pointer",
-                                      }}
-                                    >
-                                      <Image
-                                        src={
-                                          variant.image_url ||
-                                          "/assets/images/ecommerce/product-1.jpg"
-                                        }
-                                        alt={
-                                          (variant as any).name ||
-                                          variant.sku ||
-                                          detailData.product_name ||
-                                          "Product variant"
-                                        }
-                                        width={80}
-                                        height={80}
-                                        className="img-fluid rounded mb-2"
-                                      />
-                                      <div className="small fw-medium">
-                                        {variant.sku}
-                                      </div>
-                                      {selectedVariant == variant.id && (
-                                        <i className="bi bi-check-circle-fill text-danger position-absolute top-0 end-0 m-1"></i>
-                                      )}
-                                    </div>
-                                  ))}
-                              </div>
-                            </div>
-                            {/* Buttons */}
-                            <div className="row g-3">
-                              <div className="col-md-6">
-                                <button
-                                  className="btn btn-danger w-100"
-                                  disabled={isOwnShopProduct}
-                                  onClick={() => {
-                                    handleAddToCart({
-                                      user_id: userId!,
-                                      product_id: detailData.id,
-                                      variant_id: Number(selectedVariant),
-                                      quantity: 1,
-                                    });
-                                  }}
-                                >
-                                  <i className="bi bi-cart me-2"></i>
-                                  {isOwnShopProduct
-                                    ? "Cannot Buy Own Product"
-                                    : "Add To Cart"}
-                                </button>
-                              </div>
-                              <div className="col-md-6">
-                                <button
-                                  className={`btn w-100 ${
-                                    isWishlisted
-                                      ? "btn-outline-danger"
-                                      : "btn-outline-secondary"
-                                  }`}
-                                  disabled={wishlistSaving || isOwnShopProduct}
-                                  onClick={handleWishlistToggle}
-                                  aria-pressed={isWishlisted}
-                                >
-                                  <i
-                                    className={`bi ${
-                                      isWishlisted
-                                        ? "bi-heart-fill"
-                                        : "bi-heart"
-                                    } me-2`}
-                                  ></i>
-                                  {wishlistSaving
-                                    ? "Saving..."
-                                    : isWishlisted
-                                      ? "Wishlisted"
-                                      : "Wishlist"}
-                                </button>
-                              </div>
-                            </div>
-                            {isOwnShopProduct && (
-                              <div className="alert alert-warning mt-3 mb-0 py-2">
-                                You cannot buy products from your own shop.
-                              </div>
-                            )}
-                            <hr className="mt-4 mb-2" />
-                            variant
-                          </div>
-                        </div>
+                  {/* Thumbnails */}
+                  <div className="thumbnails-container">
+                    {productImages.map((pro) => (
+                      <div
+                        key={pro.id}
+                        className={`thumbnail ${
+                          mainImage === pro.image_url ? "active" : ""
+                        }`}
+                        onMouseEnter={() => setHoveredImage(pro.image_url)}
+                        onMouseLeave={() => setHoveredImage(null)}
+                        onClick={() => setMainImage(pro.image_url)}
+                      >
+                        <Image
+                          src={pro.image_url}
+                          alt={`Thumbnail`}
+                          width={100}
+                          height={100}
+                          className="thumbnail-image"
+                        />
                       </div>
-                      <div className="shop-header mt-4 p-4 rounded text-white">
-                        {isShopSectionLoading ? (
-                          <div className="shop-header-inner">
-                            <div className="shop-header-left d-flex align-items-center gap-3">
-                              <Skeleton className="shop-skeleton-avatar" />
-                              <div className="d-flex flex-column gap-2 flex-grow-1">
-                                <Skeleton className="shop-skeleton-title" />
-                                <Skeleton className="shop-skeleton-line short" />
-                                <Skeleton className="shop-skeleton-line" />
-                                <div className="d-flex gap-2 mt-1 flex-wrap">
-                                  <Skeleton className="shop-skeleton-button" />
-                                  <Skeleton className="shop-skeleton-button" />
-                                </div>
-                              </div>
-                            </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
 
-                            <div className="shop-header-right">
-                              {Array.from({ length: 4 }).map((_, index) => (
-                                <div className="shop-stat-item" key={index}>
-                                  <Skeleton className="shop-skeleton-stat-label" />
-                                  <Skeleton className="shop-skeleton-stat-value" />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="shop-header-inner">
-                            {/* LEFT */}
-                            <div className="shop-header-left d-flex align-items-center gap-3">
-                              <img
-                                src={
-                                  shop?.shop_logo ||
-                                  "/assets/images/avatar-shop.png"
-                                }
-                                width={70}
-                                height={70}
-                                className="rounded-circle border border-white"
-                              />
+              {/* RIGHT - PRODUCT INFO */}
+              <div className="product-info-col">
+                <div className="product-info-container">
+                  {/* Title */}
+                  <h1 className="product-title">{detailData.product_name}</h1>
 
-                              <div>
-                                <div className="fw-bold fs-5">
-                                  {shop?.shop_name || "Loading..."}
-                                </div>
-
-                                <small className="opacity-75">
-                                  Online recently
-                                </small>
-                                {shopDescription && (
-                                  <div className="small opacity-75 mt-1 shop-description">
-                                    {shopDescription}
-                                  </div>
-                                )}
-
-                                <div className="mt-2 d-flex gap-2">
-                                  <button className="btn btn-outline-light btn-sm">
-                                    💬 Chat Now
-                                  </button>
-
-                                  <button
-                                    className="btn btn-outline-light btn-sm"
-                                    onClick={() =>
-                                      (window.location.href = `/shop/${detailData.shop_id}`)
-                                    }
-                                  >
-                                    🏪 View Shop
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* RIGHT */}
-                            <div className="shop-header-right">
-                              <div className="shop-stat-item">
-                                <div className="small opacity-75">Products</div>
-                                <div className="stat-number">
-                                  {shopProducts.length}
-                                </div>
-                              </div>
-
-                              <div className="shop-stat-item">
-                                <div className="small opacity-75">Ratings</div>
-                                <div className="stat-number">
-                                  {shop?.rating || 0}
-                                </div>
-                              </div>
-
-                              <div className="shop-stat-item">
-                                <div className="small opacity-75">
-                                  Response Rate
-                                </div>
-                                <div className="stat-number">
-                                  {shop?.response_rate || 0}%
-                                </div>
-                              </div>
-
-                              <div className="shop-stat-item">
-                                <div className="small opacity-75">
-                                  Response Time
-                                </div>
-                                <div className="stat-number">
-                                  {shop?.response_time || 0}h
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                  {/* Rating & Sales */}
+                  <div className="rating-section">
+                    <div className="rating-row">
+                      <div className="rating-stars">
+                        <span className="rating-value">4.4</span>
+                        <div className="stars">
+                          {[...Array(5)].map((_, i) => (
+                            <i key={i} className="bi bi-star-fill"></i>
+                          ))}
+                        </div>
+                        <span className="rating-count">(592 đánh giá)</span>
                       </div>
-                      <div className="row g-4 mt-1 align-items-start">
-                        <div className="col-xl-9 col-12">
-                          {/* Accordion */}
-                          <div className="accordion" id="ecommerceAccordion">
-                            <div className="accordion-item">
-                              <h2 className="accordion-header">
-                                <button
-                                  className="accordion-button"
-                                  type="button"
-                                  aria-expanded="true"
-                                >
-                                  Product Details
-                                </button>
-                              </h2>
-                              <div
-                                id="productDetails"
-                                className="product-details-panel"
-                              >
-                                <div className="accordion-body product-details-body">
-                                  <div className="product-detail-grid">
-                                    <div className="product-detail-row">
-                                      <div className="product-detail-label">
-                                        Description
-                                      </div>
-                                      <div className="product-detail-value">
-                                        {hasDescription ? (
-                                          <div
-                                            className="product-description"
-                                            dangerouslySetInnerHTML={{
-                                              __html: descriptionHtml,
-                                            }}
-                                          />
-                                        ) : (
-                                          <span className="text-muted">
-                                            Chưa có mô tả sản phẩm.
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    {visibleAttributes.length > 0 ? (
-                                      visibleAttributes.map((attribute) => (
-                                        <div
-                                          className="product-detail-row"
-                                          key={attribute.id}
-                                        >
-                                          <div className="product-detail-label">
-                                            {getProductAttributeName(attribute)}
-                                          </div>
-                                          <div className="product-detail-value">
-                                            {getProductAttributeValue(
-                                              attribute,
-                                            ) || "-"}
-                                          </div>
-                                        </div>
-                                      ))
-                                    ) : (
-                                      <div className="product-detail-row">
-                                        <div className="product-detail-label">
-                                          Product Attributes
-                                        </div>
-                                        <div className="product-detail-value text-muted">
-                                          Chưa có thuộc tính sản phẩm.
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    <div className="product-detail-row">
-                                      <div className="product-detail-label">
-                                        Shop Description
-                                      </div>
-                                      <div className="product-detail-value">
-                                        {shopDescription || (
-                                          <span className="text-muted">
-                                            Chưa có mô tả shop.
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="accordion-item">
-                              <h2 className="accordion-header">
-                                <button
-                                  className="accordion-button collapsed"
-                                  type="button"
-                                  data-bs-toggle="collapse"
-                                  data-bs-target="#specifications"
-                                >
-                                  Specifications
-                                </button>
-                              </h2>
-                              <div
-                                id="specifications"
-                                className="accordion-collapse collapse"
-                                data-bs-parent="#ecommerceAccordion"
-                              >
-                                <div className="accordion-body product-details-body">
-                                  <table className="table table-striped">
-                                    <tbody>
-                                      <tr>
-                                        <th className="w-25">Weight</th>
-                                        <td>
-                                          {detailData.weight
-                                            ? `${detailData.weight} g`
-                                            : "-"}
-                                        </td>
-                                      </tr>
-                                      <tr>
-                                        <th>Dimensions</th>
-                                        <td>
-                                          {[
-                                            detailData.length,
-                                            detailData.width,
-                                            detailData.height,
-                                          ].every(Boolean)
-                                            ? `${detailData.length} x ${detailData.width} x ${detailData.height} cm`
-                                            : "-"}
-                                        </td>
-                                      </tr>
-                                      <tr>
-                                        <th>Stock</th>
-                                        <td>
-                                          {detailData.stock_quantity ?? "-"}
-                                        </td>
-                                      </tr>
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Ratings & Reviews */}
-                          <div className="mt-5">
-                            <h3 className="mb-4">Ratings & Reviews</h3>
-
-                            <div className="row align-items-center mb-4">
-                              <div className="col-md-4 text-center mb-4 mb-md-0">
-                                <h2 className="display-3 fw-bold">4.5</h2>
-                                <div className="text-success">
-                                  <i className="bi bi-star-fill"></i>
-                                  <i className="bi bi-star-fill"></i>
-                                  <i className="bi bi-star-fill"></i>
-                                  <i className="bi bi-star-fill"></i>
-                                  <i className="bi bi-star-fill"></i>
-                                </div>
-                                <p className="mb-0">595 Verified Buyers</p>
-                              </div>
-
-                              <div className="col-md-8">
-                                <div className="d-flex align-items-center mb-2">
-                                  <div className="text-nowrap me-3 text-muted">
-                                    5 <i className="bi bi-star-fill ms-1"></i>
-                                  </div>
-                                  <div
-                                    className="progress w-100"
-                                    style={{ height: "6px" }}
-                                  >
-                                    <div
-                                      className="progress-bar bg-success"
-                                      role="progressbar"
-                                      style={{ width: "60%" }}
-                                      aria-valuenow={60}
-                                      aria-valuemin={0}
-                                      aria-valuemax={100}
-                                    ></div>
-                                  </div>
-                                  <span className="text-muted ms-3">420</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Sample Reviews */}
-                            <div className="border-top py-4">
-                              <span className="badge bg-light text-dark border px-3 py-2 rounded-pill mb-2">
-                                4.4{" "}
-                                <i className="bi bi-star-fill text-success"></i>
-                              </span>
-                              <p>
-                                It's awesome, I never thought about Dash UI that
-                                awesome shoes...
-                              </p>
-                              <div className="text-muted small">
-                                James Ennis{" "}
-                                <span className="ms-3">28 Nov 2023</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="col-xl-3 col-12">
-                          <div className="shop-sidebar-sticky d-flex flex-column gap-3">
-                            <div className="card border-0 shadow-sm">
-                              <div className="card-body p-3">
-                                <h6 className="fw-bold mb-3 text-danger">
-                                  Shop vouchers
-                                </h6>
-
-                                {isShopSectionLoading ? (
-                                  <div className="d-flex flex-column gap-2">
-                                    {Array.from({ length: 3 }).map(
-                                      (_, index) => (
-                                        <div
-                                          key={index}
-                                          className="shop-sidebar-voucher rounded border"
-                                        >
-                                          <Skeleton className="shop-skeleton-voucher-title" />
-                                          <Skeleton className="shop-skeleton-voucher-line" />
-                                          <Skeleton className="shop-skeleton-voucher-button mt-2" />
-                                        </div>
-                                      ),
-                                    )}
-                                  </div>
-                                ) : shopVouchers.length > 0 ? (
-                                  <div className="d-flex flex-column gap-2">
-                                    {shopVouchers.slice(0, 4).map((voucher) => (
-                                      <div
-                                        key={voucher.id}
-                                        className="shop-sidebar-voucher rounded border"
-                                      >
-                                        <div className="fw-semibold text-danger small text-truncate">
-                                          {voucher.code}
-                                        </div>
-                                        <div className="small text-muted text-truncate">
-                                          Min order:{" "}
-                                          {Number(
-                                            voucher.minOrderValue ??
-                                              voucher.min_order_value ??
-                                              0,
-                                          ).toLocaleString("vi-VN")}
-                                          đ
-                                        </div>
-                                        <div className="shop-sidebar-voucher-action mt-2">
-                                          <VoucherClaimButton
-                                            voucherId={Number(voucher.id)}
-                                            voucherCode={voucher.code}
-                                            voucherStatus={voucher.status}
-                                            claimStartAt={
-                                              voucher.claimStartAt ??
-                                              voucher.claim_start_at
-                                            }
-                                            claimEndAt={
-                                              voucher.claimEndAt ??
-                                              voucher.claim_end_at
-                                            }
-                                            totalQuota={Number(
-                                              voucher.totalQuota ??
-                                                voucher.total_quota ??
-                                                0,
-                                            )}
-                                            claimedCount={Number(
-                                              voucher.claimedCount ??
-                                                voucher.claimed_count ??
-                                                0,
-                                            )}
-                                            claimLabel="Lưu"
-                                            claimedLabel="Đã lưu"
-                                            claimingLabel="Đang lưu..."
-                                            successMessage={`Voucher ${voucher.code} đã được lưu.`}
-                                            className="shop-voucher-save-button"
-                                            onClaimSuccess={async () => {
-                                              try {
-                                                const voucherRes = await fetch(
-                                                  `${API_URL}/api/vouchers`,
-                                                  { cache: "no-store" },
-                                                );
-                                                const voucherJson =
-                                                  voucherRes.ok
-                                                    ? await readJsonResponse<any>(
-                                                        voucherRes,
-                                                      )
-                                                    : null;
-                                                const vouchers = Array.isArray(
-                                                  voucherJson,
-                                                )
-                                                  ? voucherJson
-                                                  : [];
-                                                setShopVouchers(
-                                                  getVisibleShopVouchers(
-                                                    vouchers,
-                                                    detailData.shop_id,
-                                                  ),
-                                                );
-                                              } catch (error) {
-                                                console.error(
-                                                  "Failed to refresh vouchers:",
-                                                  error,
-                                                );
-                                              }
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="text-muted small">
-                                    Chưa có voucher khả dụng.
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="card border-0 shadow-sm">
-                              <div className="card-body p-3">
-                                <h6 className="fw-bold mb-3">
-                                  Top sản phẩm bán chạy
-                                </h6>
-
-                                {isShopSectionLoading ? (
-                                  <div className="d-flex flex-column gap-3">
-                                    {Array.from({ length: 4 }).map(
-                                      (_, index) => (
-                                        <div
-                                          key={index}
-                                          className="d-flex gap-2 align-items-center shop-sidebar-product"
-                                        >
-                                          <Skeleton className="shop-skeleton-product-thumb" />
-                                          <div style={{ minWidth: 0, flex: 1 }}>
-                                            <Skeleton className="shop-skeleton-product-title" />
-                                            <Skeleton className="shop-skeleton-product-line" />
-                                            <Skeleton className="shop-skeleton-product-line short" />
-                                          </div>
-                                        </div>
-                                      ),
-                                    )}
-                                  </div>
-                                ) : topSellingProducts.length > 0 ? (
-                                  <div className="d-flex flex-column gap-3">
-                                    {topSellingProducts.map((item) => (
-                                      <Link
-                                        key={item.id}
-                                        href={`/${item.product_slug}.p${item.id}?id=${item.id}`}
-                                        className="text-decoration-none text-dark"
-                                      >
-                                        <div className="d-flex gap-2 align-items-center shop-sidebar-product">
-                                          <img
-                                            src={
-                                              item.image_url ||
-                                              "/assets/images/ecommerce/product-1.jpg"
-                                            }
-                                            width={52}
-                                            height={52}
-                                            className="rounded border"
-                                            style={{ objectFit: "cover" }}
-                                          />
-                                          <div style={{ minWidth: 0 }}>
-                                            <div className="small fw-semibold text-truncate">
-                                              {item.product_name}
-                                            </div>
-                                            <div className="small text-danger fw-bold">
-                                              {formatPrice(item.price)}đ
-                                            </div>
-                                            <div className="small text-muted">
-                                              Đã bán:{" "}
-                                              {Number(
-                                                item.sold_count ??
-                                                  item.soldCount ??
-                                                  0,
-                                              ).toLocaleString("vi-VN")}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </Link>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="text-muted small">
-                                    Chưa có dữ liệu bán chạy.
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                      <div className="sales-count">
+                        <span className="label">Đã bán:</span>
+                        <span className="value">
+                          {soldCount.toLocaleString("vi-VN")}
+                        </span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="divider"></div>
+
+                  {/* Price */}
+                  <div className="price-section">
+                    <div className="current-price">
+                      {formatPrice(variant?.price ?? detailData.price)}
+                      <span className="currency">₫</span>
+                    </div>
+                    {detailData.original_price && (
+                      <div className="original-price">
+                        {formatPrice(detailData.original_price)}₫
+                      </div>
+                    )}
+                    {detailData.original_price && (
+                      <div className="discount-badge">
+                        -
+                        {Math.round(
+                          ((detailData.original_price -
+                            (variant?.price ?? detailData.price)) /
+                            detailData.original_price) *
+                            100,
+                        )}
+                        %
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Variants */}
+                  {detailData.variants && detailData.variants.length > 0 && (
+                    <div className="variants-section">
+                      <div className="section-title">Chọn loại sản phẩm</div>
+                      <div className="variants-grid">
+                        {detailData.variants.map((v) => (
+                          <div
+                            key={v.id}
+                            className={`variant-option ${
+                              selectedVariant === v.id ? "selected" : ""
+                            }`}
+                            onClick={() => {
+                              setSelectedVariant(v.id);
+                              setVariant(v);
+                            }}
+                          >
+                            <div className="variant-image">
+                              <Image
+                                src={
+                                  v.image_url ||
+                                  "/assets/images/ecommerce/product-1.jpg"
+                                }
+                                alt={v.sku}
+                                width={80}
+                                height={80}
+                              />
+                            </div>
+                            <div className="variant-info">
+                              <span className="variant-name">{v.sku}</span>
+                              <span className="variant-price">
+                                {formatPrice(v.price)}₫
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stock Info */}
+                  <div className="stock-section">
+                    <span className="label">Kho hàng:</span>
+                    <span
+                      className={`value ${detailData.stock_quantity > 0 ? "in-stock" : "out-of-stock"}`}
+                    >
+                      {detailData.stock_quantity > 0
+                        ? `${detailData.stock_quantity} sản phẩm`
+                        : "Hết hàng"}
+                    </span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="action-buttons">
+                    <button
+                      className="btn-add-to-cart"
+                      disabled={
+                        isOwnShopProduct || detailData.stock_quantity === 0
+                      }
+                      onClick={() => {
+                        handleAddToCart({
+                          user_id: userId!,
+                          product_id: detailData.id,
+                          variant_id: Number(selectedVariant),
+                          quantity: 1,
+                        });
+                      }}
+                    >
+                      <i className="bi bi-bag-fill"></i>
+                      {detailData.stock_quantity === 0
+                        ? "Hết hàng"
+                        : "Thêm vào giỏ"}
+                    </button>
+                    <button
+                      className={`btn-wishlist ${
+                        isWishlisted ? "wishlisted" : ""
+                      }`}
+                      disabled={wishlistSaving || isOwnShopProduct}
+                      onClick={handleWishlistToggle}
+                    >
+                      <i
+                        className={`bi ${
+                          isWishlisted ? "bi-heart-fill" : "bi-heart"
+                        }`}
+                      ></i>
+                      {isWishlisted ? "Đã lưu" : "Lưu"}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1378,284 +820,1175 @@ const ProductDetail = ({ data, productSlug }: ProductDetailProps) => {
           </div>
         </div>
 
+        {/* SHOP SECTION */}
+        <div className="shop-section">
+          <div className="container-lg">
+            {isShopSectionLoading ? (
+              <div className="shop-loading">
+                <Skeleton style={{ height: "200px", borderRadius: "12px" }} />
+              </div>
+            ) : (
+              <div className="shop-card">
+                <div className="shop-left">
+                  <img
+                    src={shop?.shop_logo || "/assets/images/avatar-shop.png"}
+                    alt="Shop logo"
+                    className="shop-avatar"
+                  />
+                  <div className="shop-info">
+                    <h3 className="shop-name">{shop?.shop_name}</h3>
+                    <p className="shop-status">Online gần đây</p>
+                    {shopDescription && (
+                      <p className="shop-desc">{shopDescription}</p>
+                    )}
+                    <div className="shop-actions">
+                      <button className="shop-btn">
+                        <i className="bi bi-chat-left-dots"></i> Chat
+                      </button>
+                      <button
+                        className="shop-btn"
+                        onClick={() =>
+                          (window.location.href = `/shop/${detailData.shop_id}`)
+                        }
+                      >
+                        <i className="bi bi-shop"></i> Xem cửa hàng
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="shop-stats">
+                  <div className="stat">
+                    <span className="stat-label">Sản phẩm</span>
+                    <span className="stat-value">{shopProducts.length}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Đánh giá</span>
+                    <span className="stat-value">{shop?.rating || 0}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Tỉ lệ trả lời</span>
+                    <span className="stat-value">
+                      {shop?.response_rate || 0}%
+                    </span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Thời gian trả lời</span>
+                    <span className="stat-value">
+                      {shop?.response_time || 0}h
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* CONTENT SECTION */}
+        <div className="content-section">
+          <div className="container-lg">
+            <div className="content-grid">
+              {/* MAIN CONTENT */}
+              <div className="main-content">
+                {/* PRODUCT DETAILS */}
+                <div className="details-card">
+                  <h2 className="card-title">Thông tin sản phẩm</h2>
+                  <div className="details-list">
+                    {/* Description */}
+                    <div className="detail-item">
+                      <span className="detail-label">Mô tả:</span>
+                      <div className="detail-value">
+                        {hasDescription ? (
+                          <div
+                            className="product-description"
+                            dangerouslySetInnerHTML={{
+                              __html: descriptionHtml,
+                            }}
+                          />
+                        ) : (
+                          <span className="text-muted">
+                            Chưa có mô tả sản phẩm
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Attributes */}
+                    {visibleAttributes.length > 0 && (
+                      <>
+                        {visibleAttributes.map((attribute) => (
+                          <div className="detail-item" key={attribute.id}>
+                            <span className="detail-label">
+                              {getProductAttributeName(attribute)}:
+                            </span>
+                            <span className="detail-value">
+                              {getProductAttributeValue(attribute) || "-"}
+                            </span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Specifications */}
+                    <div className="detail-item">
+                      <span className="detail-label">Trọng lượng:</span>
+                      <span className="detail-value">
+                        {detailData.weight ? `${detailData.weight}g` : "-"}
+                      </span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Kích thước:</span>
+                      <span className="detail-value">
+                        {[
+                          detailData.length,
+                          detailData.width,
+                          detailData.height,
+                        ].every(Boolean)
+                          ? `${detailData.length} x ${detailData.width} x ${detailData.height} cm`
+                          : "-"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RATINGS & REVIEWS */}
+                <div className="reviews-card">
+                  <h2 className="card-title">Đánh giá từ khách hàng</h2>
+                  <div className="reviews-summary">
+                    <div className="rating-overview">
+                      <div className="average-rating">
+                        <div className="rating-number">4.5</div>
+                        <div className="rating-stars-large">
+                          {[...Array(5)].map((_, i) => (
+                            <i key={i} className="bi bi-star-fill"></i>
+                          ))}
+                        </div>
+                        <div className="review-count">Từ 595 đánh giá</div>
+                      </div>
+
+                      <div className="rating-breakdown">
+                        <div className="rating-row">
+                          <span>
+                            5 <i className="bi bi-star-fill"></i>
+                          </span>
+                          <div className="progress">
+                            <div
+                              className="progress-bar"
+                              style={{ width: "60%" }}
+                            ></div>
+                          </div>
+                          <span>420</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="review-sample">
+                      <div className="review-item">
+                        <div className="review-rating">
+                          4.4 <i className="bi bi-star-fill"></i>
+                        </div>
+                        <p className="review-text">
+                          Sản phẩm rất tốt, vượt quá mong đợi của tôi...
+                        </p>
+                        <div className="review-meta">
+                          James Ennis
+                          <span>28 Nov 2023</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SIDEBAR */}
+              <div className="sidebar">
+                {/* VOUCHERS */}
+                <div className="sidebar-card">
+                  <h3 className="sidebar-title">
+                    <i className="bi bi-ticket-perforated"></i> Mã giảm giá
+                  </h3>
+                  {isShopSectionLoading ? (
+                    <div className="voucher-loading">
+                      {[...Array(3)].map((_, i) => (
+                        <Skeleton
+                          key={i}
+                          style={{
+                            height: "80px",
+                            marginBottom: "8px",
+                            borderRadius: "8px",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : shopVouchers.length > 0 ? (
+                    <div className="vouchers-list">
+                      {shopVouchers.slice(0, 4).map((voucher) => (
+                        <div className="voucher-item" key={voucher.id}>
+                          <div className="voucher-code">{voucher.code}</div>
+                          <div className="voucher-info">
+                            Min đơn:{" "}
+                            {Number(
+                              voucher.minOrderValue ??
+                                voucher.min_order_value ??
+                                0,
+                            ).toLocaleString("vi-VN")}
+                            ₫
+                          </div>
+                          <VoucherClaimButton
+                            voucherId={Number(voucher.id)}
+                            voucherCode={voucher.code}
+                            voucherStatus={voucher.status}
+                            claimStartAt={
+                              voucher.claimStartAt ?? voucher.claim_start_at
+                            }
+                            claimEndAt={
+                              voucher.claimEndAt ?? voucher.claim_end_at
+                            }
+                            totalQuota={Number(
+                              voucher.totalQuota ?? voucher.total_quota ?? 0,
+                            )}
+                            claimedCount={Number(
+                              voucher.claimedCount ??
+                                voucher.claimed_count ??
+                                0,
+                            )}
+                            claimLabel="Lưu"
+                            claimedLabel="Đã lưu"
+                            claimingLabel="Đang lưu..."
+                            successMessage={`Voucher ${voucher.code} đã được lưu.`}
+                            className="voucher-claim-btn"
+                            onClaimSuccess={async () => {
+                              try {
+                                const voucherRes = await fetch(
+                                  `${API_URL}/api/vouchers`,
+                                  { cache: "no-store" },
+                                );
+                                const voucherJson = voucherRes.ok
+                                  ? await readJsonResponse<any>(voucherRes)
+                                  : null;
+                                const vouchers = Array.isArray(voucherJson)
+                                  ? voucherJson
+                                  : [];
+                                setShopVouchers(
+                                  getVisibleShopVouchers(
+                                    vouchers,
+                                    detailData.shop_id,
+                                  ),
+                                );
+                              } catch (error) {
+                                console.error(
+                                  "Failed to refresh vouchers:",
+                                  error,
+                                );
+                              }
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state">Chưa có mã giảm giá</div>
+                  )}
+                </div>
+
+                {/* TOP PRODUCTS */}
+                <div className="sidebar-card">
+                  <h3 className="sidebar-title">
+                    <i className="bi bi-fire"></i> Sản phẩm bán chạy
+                  </h3>
+                  {isShopSectionLoading ? (
+                    <div className="products-loading">
+                      {[...Array(3)].map((_, i) => (
+                        <Skeleton
+                          key={i}
+                          style={{
+                            height: "70px",
+                            marginBottom: "8px",
+                            borderRadius: "8px",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : topSellingProducts.length > 0 ? (
+                    <div className="products-list">
+                      {topSellingProducts.map((item) => (
+                        <Link
+                          key={item.id}
+                          href={`/${item.product_slug}.p${item.id}?id=${item.id}`}
+                          className="product-item"
+                        >
+                          <img
+                            src={
+                              item.image_url ||
+                              "/assets/images/ecommerce/product-1.jpg"
+                            }
+                            alt={item.product_name}
+                            className="product-item-image"
+                          />
+                          <div className="product-item-info">
+                            <div className="product-item-name">
+                              {item.product_name}
+                            </div>
+                            <div className="product-item-price">
+                              {formatPrice(item.price)}₫
+                            </div>
+                            <div className="product-item-sold">
+                              Đã bán:{" "}
+                              {Number(item.sold_count ?? 0).toLocaleString(
+                                "vi-VN",
+                              )}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state">Chưa có dữ liệu bán chạy</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <style jsx>{`
-          .thumbnails-img:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          * {
+            --primary-color: #d70018;
+            --primary-dark: #b5000f;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --text-light: #9ca3af;
+            --border-color: #e5e7eb;
+            --bg-light: #f9fafb;
+            --bg-lighter: #fafbfc;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
           }
 
-          .thumbnails-img:hover .bg-dark {
-            opacity: 1 !important;
+          .product-detail-wrapper {
+            background: #ffffff;
+            font-family:
+              -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+              "Ubuntu", "Cantarell", sans-serif;
           }
 
-          .thumbnails-img img:hover {
-            transform: scale(1.1);
+          /* MAIN SECTION */
+          .product-main-section {
+            padding: 40px 0;
+            border-bottom: 1px solid var(--border-color);
           }
 
-          .variant-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-          }
-
-          .shop-header {
-            background: linear-gradient(135deg, #1cc7d0, #1a4fff);
-            transition: 0.3s;
-          }
-
-          .shop-header-inner {
-            align-items: center;
-            display: flex;
-            gap: 18px;
-            justify-content: space-between;
-          }
-
-          .shop-header-left {
-            flex: 0 1 42%;
-            min-width: 280px;
-          }
-
-          .shop-header-right {
-            column-gap: 18px;
+          .product-grid {
             display: grid;
-            flex: 1 1 auto;
-            grid-template-columns: repeat(4, minmax(120px, 1fr));
-            row-gap: 10px;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            align-items: start;
+          }
+
+          /* GALLERY */
+          .product-gallery {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+          }
+
+          .main-image-container {
+            position: relative;
+            background: var(--bg-lighter);
+            border-radius: 12px;
+            overflow: hidden;
+            aspect-ratio: 1;
+          }
+
+          .main-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+          }
+
+          .main-image-container:hover .main-image {
+            transform: scale(1.02);
+          }
+
+          .stock-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+          }
+
+          .thumbnails-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+          }
+
+          .thumbnail {
+            aspect-ratio: 1;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+
+          .thumbnail:hover {
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-sm);
+          }
+
+          .thumbnail.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(215, 0, 24, 0.1);
+          }
+
+          .thumbnail-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          /* PRODUCT INFO */
+          .product-info-col {
+            display: flex;
+            flex-direction: column;
+          }
+
+          .product-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.3;
+            margin-bottom: 16px;
+          }
+
+          /* RATING */
+          .rating-section {
+            margin-bottom: 24px;
+          }
+
+          .rating-row {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+          }
+
+          .rating-stars {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .rating-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+          }
+
+          .stars {
+            display: flex;
+            gap: 2px;
+            color: #fbbf24;
+            font-size: 0.875rem;
+          }
+
+          .rating-count {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+          }
+
+          .sales-count {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+          }
+
+          .sales-count .label {
+            color: var(--text-secondary);
+          }
+
+          .sales-count .value {
+            font-weight: 600;
+            color: var(--text-primary);
+          }
+
+          .divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 24px 0;
+          }
+
+          /* PRICE */
+          .price-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+          }
+
+          .current-price {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+          }
+
+          .currency {
+            font-size: 1.25rem;
+          }
+
+          .original-price {
+            font-size: 1rem;
+            color: var(--text-light);
+            text-decoration: line-through;
+          }
+
+          .discount-badge {
+            background: #fecaca;
+            color: var(--primary-dark);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.875rem;
+          }
+
+          /* VARIANTS */
+          .variants-section {
+            margin-bottom: 24px;
+          }
+
+          .section-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+          }
+
+          .variants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 12px;
+          }
+
+          .variant-option {
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
             text-align: center;
           }
 
-          .shop-stat-item {
-            min-width: 0;
+          .variant-option:hover {
+            border-color: var(--primary-color);
           }
 
-          .shop-header:hover {
-            opacity: 0.95;
+          .variant-option.selected {
+            border-color: var(--primary-color);
+            background: rgba(215, 0, 24, 0.05);
           }
 
-          .shop-sidebar-sticky {
-            position: sticky;
-            top: 80px;
-          }
-
-          .shop-sidebar-voucher {
-            background: #fff5f5;
-            border-color: #ffd6d6 !important;
-            padding: 10px;
-          }
-
-          :global(.shop-voucher-save-button) {
-            background: #d70018;
-            border: 0;
-            border-radius: 4px;
-            color: #fff;
-            font-size: 12px;
-            font-weight: 700;
-            height: 28px;
-            min-width: 70px;
-            padding: 0 10px;
-          }
-
-          :global(.shop-voucher-save-button:disabled) {
-            cursor: not-allowed;
-            opacity: 0.72;
-          }
-
-          .shop-sidebar-product {
-            border-radius: 8px;
-            padding: 6px;
-            transition: background 0.18s ease;
-          }
-
-          .shop-sidebar-product:hover {
-            background: #f8fafc;
-          }
-
-          :global(.shop-skeleton-avatar) {
-            border-radius: 999px;
-            flex: 0 0 70px;
-            height: 70px;
-            width: 70px;
-          }
-
-          :global(.shop-skeleton-title) {
-            height: 22px;
-            width: 180px;
-          }
-
-          :global(.shop-skeleton-line) {
-            height: 12px;
-            width: min(100%, 280px);
-          }
-
-          :global(.shop-skeleton-line.short),
-          :global(.shop-skeleton-product-line.short) {
-            width: 120px;
-          }
-
-          :global(.shop-skeleton-button) {
-            border-radius: 999px;
-            height: 32px;
-            width: 110px;
-          }
-
-          :global(.shop-skeleton-stat-label) {
-            height: 12px;
-            margin: 0 auto 8px;
-            width: 86px;
-          }
-
-          :global(.shop-skeleton-stat-value) {
-            height: 22px;
-            margin: 0 auto;
-            width: 52px;
-          }
-
-          :global(.shop-skeleton-voucher-title) {
-            height: 14px;
+          .variant-image {
+            aspect-ratio: 1;
             margin-bottom: 8px;
-            width: 78px;
-          }
-
-          :global(.shop-skeleton-voucher-line) {
-            height: 12px;
-            width: 100%;
-          }
-
-          :global(.shop-skeleton-voucher-button) {
-            border-radius: 4px;
-            height: 28px;
-            width: 72px;
-          }
-
-          :global(.shop-skeleton-product-thumb) {
-            border-radius: 8px;
-            flex: 0 0 52px;
-            height: 52px;
-            width: 52px;
-          }
-
-          :global(.shop-skeleton-product-title) {
-            height: 14px;
-            margin-bottom: 8px;
-            width: 100%;
-          }
-
-          :global(.shop-skeleton-product-line) {
-            height: 12px;
-            margin-bottom: 6px;
-            width: 78%;
-          }
-
-          .stat-number {
-            color: #ffd700; /* vàng */
-            font-weight: bold;
-            font-size: 18px;
-          }
-
-          .product-details-body {
-            display: block !important;
-            min-height: 160px;
-            background: #ffffff;
-            color: #111827;
-            padding: 24px;
-            overflow: visible !important;
-          }
-
-          .product-details-panel {
-            display: block !important;
-            height: auto !important;
-            max-height: none !important;
-            overflow: visible !important;
-            visibility: visible !important;
-          }
-
-          .product-detail-grid {
-            display: block;
-            border: 1px solid #dbe3ef;
-            border-radius: 8px;
             overflow: hidden;
-            background: #ffffff;
+            border-radius: 6px;
           }
 
-          .product-detail-row {
-            display: grid;
-            grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
-            border-bottom: 1px solid #dbe3ef;
+          .variant-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
           }
 
-          .product-detail-row:last-child {
-            border-bottom: 0;
-          }
-
-          .product-detail-label {
-            background: #f8fafc;
-            color: #4b5563;
+          .variant-name {
+            display: block;
+            font-size: 0.75rem;
             font-weight: 600;
-            padding: 14px 16px;
-            border-right: 1px solid #dbe3ef;
+            color: var(--text-primary);
+            margin-bottom: 4px;
           }
 
-          .product-detail-value {
-            color: #111827;
-            padding: 14px 16px;
-            min-width: 0;
-            word-break: break-word;
+          .variant-price {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--primary-color);
+          }
+
+          /* STOCK */
+          .stock-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            padding: 12px 0;
+          }
+
+          .stock-section .label {
+            font-weight: 600;
+            color: var(--text-primary);
+          }
+
+          .stock-section .value {
+            font-weight: 600;
+          }
+
+          .stock-section .value.in-stock {
+            color: #10b981;
+          }
+
+          .stock-section .value.out-of-stock {
+            color: var(--primary-color);
+          }
+
+          /* ACTION BUTTONS */
+          .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+          }
+
+          .btn-add-to-cart,
+          .btn-wishlist {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          }
+
+          .btn-add-to-cart {
+            background: var(--primary-color);
+            color: white;
+          }
+
+          .btn-add-to-cart:hover:not(:disabled) {
+            background: var(--primary-dark);
+            box-shadow: var(--shadow-md);
+          }
+
+          .btn-add-to-cart:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
+
+          .btn-wishlist {
+            background: var(--bg-light);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            min-width: 50px;
+          }
+
+          .btn-wishlist:hover:not(:disabled) {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+          }
+
+          .btn-wishlist.wishlisted {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+          }
+
+          /* SHOP SECTION */
+          .shop-section {
+            padding: 32px 0;
+            background: var(--bg-lighter);
+            border-bottom: 1px solid var(--border-color);
+          }
+
+          .shop-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 32px;
+            align-items: center;
+          }
+
+          .shop-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+          }
+
+          .shop-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--border-color);
+          }
+
+          .shop-info {
+            flex: 1;
+          }
+
+          .shop-name {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 4px 0;
+          }
+
+          .shop-status {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin: 0 0 8px 0;
+          }
+
+          .shop-desc {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin: 8px 0;
+            line-height: 1.4;
+          }
+
+          .shop-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+          }
+
+          .shop-btn {
+            padding: 8px 16px;
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-primary);
+          }
+
+          .shop-btn:hover {
+            background: white;
+            border-color: var(--text-light);
+          }
+
+          .shop-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            text-align: center;
+          }
+
+          .stat {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+          }
+
+          .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+          }
+
+          .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+          }
+
+          /* CONTENT SECTION */
+          .content-section {
+            padding: 40px 0;
+          }
+
+          .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 32px;
+          }
+
+          /* DETAILS CARD */
+          .details-card,
+          .reviews-card,
+          .sidebar-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+          }
+
+          .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+          }
+
+          .details-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+          }
+
+          .detail-item {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 16px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+          }
+
+          .detail-item:last-child {
+            border-bottom: none;
+          }
+
+          .detail-label {
+            font-weight: 600;
+            color: var(--text-primary);
+          }
+
+          .detail-value {
+            color: var(--text-secondary);
+            line-height: 1.6;
+          }
+
+          .product-description {
+            line-height: 1.8;
+          }
+
+          .product-description :global(p) {
+            margin-bottom: 12px;
           }
 
           .product-description :global(img) {
             max-width: 100%;
             height: auto;
+            border-radius: 8px;
+            margin: 16px 0;
           }
 
-          .product-description :global(p) {
-            color: #111827;
-            font-size: 15px;
-            line-height: 1.7;
+          /* REVIEWS CARD */
+          .reviews-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
           }
 
-          .product-description :global(p:last-child) {
-            margin-bottom: 0;
+          .rating-overview {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
           }
 
-          @media (max-width: 576px) {
-            .product-detail-row {
+          .average-rating {
+            text-align: center;
+          }
+
+          .rating-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+          }
+
+          .rating-stars-large {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            color: #fbbf24;
+            font-size: 1.125rem;
+            margin: 8px 0;
+          }
+
+          .review-count {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+          }
+
+          .rating-breakdown {
+            width: 100%;
+          }
+
+          .rating-row {
+            display: grid;
+            grid-template-columns: 40px 1fr 40px;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+          }
+
+          .progress {
+            height: 6px;
+            background: var(--bg-light);
+            border-radius: 3px;
+            overflow: hidden;
+          }
+
+          .progress-bar {
+            height: 100%;
+            background: #10b981;
+            transition: width 0.3s ease;
+          }
+
+          .review-sample {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+
+          .review-item {
+            padding: 16px;
+            background: var(--bg-lighter);
+            border-radius: 8px;
+          }
+
+          .review-rating {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+          }
+
+          .review-rating i {
+            color: #fbbf24;
+            font-size: 0.875rem;
+          }
+
+          .review-text {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.6;
+          }
+
+          .review-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 8px;
+          }
+
+          /* SIDEBAR */
+          .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+          }
+
+          .sidebar-card {
+            position: sticky;
+            top: 100px;
+          }
+
+          .sidebar-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+
+          .sidebar-title i {
+            color: var(--primary-color);
+            font-size: 1.125rem;
+          }
+
+          /* VOUCHERS */
+          .vouchers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+
+          .voucher-item {
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 12px;
+            background: #fef5f5;
+            transition: all 0.2s ease;
+          }
+
+          .voucher-item:hover {
+            border-color: #fca5a5;
+            box-shadow: var(--shadow-sm);
+          }
+
+          .voucher-code {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 0.875rem;
+            margin-bottom: 4px;
+          }
+
+          .voucher-info {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+          }
+
+          .voucher-claim-btn {
+            width: 100% !important;
+            padding: 6px 8px !important;
+            font-size: 0.75rem !important;
+            height: auto !important;
+          }
+
+          /* TOP PRODUCTS */
+          .products-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
+
+          .product-item {
+            display: grid;
+            grid-template-columns: 60px 1fr;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: var(--bg-light);
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+          }
+
+          .product-item:hover {
+            background: #f0f0f0;
+          }
+
+          .product-item-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+          }
+
+          .product-item-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+          }
+
+          .product-item-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+
+          .product-item-price {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--primary-color);
+          }
+
+          .product-item-sold {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+          }
+
+          .empty-state {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-light);
+            font-size: 0.875rem;
+          }
+
+          /* RESPONSIVE */
+          @media (max-width: 1024px) {
+            .product-grid {
+              grid-template-columns: 1fr;
+              gap: 32px;
+            }
+
+            .content-grid {
               grid-template-columns: 1fr;
             }
 
-            .product-detail-label {
-              border-right: 0;
-              border-bottom: 1px solid #dbe3ef;
-            }
-          }
-
-          @media (max-width: 1200px) {
-            .shop-header-inner {
-              align-items: flex-start;
-              flex-direction: column;
-            }
-
-            .shop-header-left {
-              flex: none;
-              min-width: 0;
-              width: 100%;
-            }
-
-            .shop-header-right {
-              grid-template-columns: repeat(2, minmax(130px, 1fr));
-              width: 100%;
-            }
-          }
-
-          @media (max-width: 576px) {
-            .shop-header-right {
+            .shop-card {
               grid-template-columns: 1fr;
-              text-align: left;
+              gap: 24px;
             }
-          }
 
-          @media (max-width: 1199px) {
-            .shop-sidebar-sticky {
+            .shop-stats {
+              grid-template-columns: repeat(2, 1fr);
+            }
+
+            .reviews-summary {
+              grid-template-columns: 1fr;
+            }
+
+            .sidebar-card {
               position: static;
-              top: auto;
+            }
+          }
+
+          @media (max-width: 640px) {
+            .product-main-section {
+              padding: 24px 0;
+            }
+
+            .product-title {
+              font-size: 1.375rem;
+            }
+
+            .current-price {
+              font-size: 1.5rem;
+            }
+
+            .action-buttons {
+              grid-template-columns: 1fr;
+            }
+
+            .detail-item {
+              grid-template-columns: 100px 1fr;
+            }
+
+            .shop-left {
+              gap: 12px;
+            }
+
+            .shop-avatar {
+              width: 60px;
+              height: 60px;
+            }
+
+            .shop-stats {
+              grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stat-value {
+              font-size: 1rem;
+            }
+
+            .rating-row {
+              grid-template-columns: 30px 1fr 30px;
             }
           }
         `}</style>
