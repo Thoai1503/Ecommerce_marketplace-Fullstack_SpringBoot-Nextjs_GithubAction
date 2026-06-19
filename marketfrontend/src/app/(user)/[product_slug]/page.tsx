@@ -12,8 +12,8 @@ interface PageProps {
 // Fetch chung (tái sử dụng)
 async function getProduct(productId: number) {
   const res = await fetch(`${INTERNAL_API}/product/${productId}`, {
-    next: { revalidate: 1800 }, // Cache 30 phút - bạn có thể chỉnh
-    // cache: "no-store" // chỉ dùng nếu muốn luôn fresh
+    //  next: { revalidate: 1800 }, // Cache 30 phút - bạn có thể chỉnh
+    cache: "no-store", // chỉ dùng nếu muốn luôn fresh
   });
   console.log(`Status code from API for product ${productId}:`, res.status);
 
@@ -59,7 +59,7 @@ export async function generateMetadata({
     ].filter(Boolean),
 
     alternates: {
-      canonical: `https://nexamart.duckdns.org/product/${product_slug}`, // thay domain của bạn
+      canonical: `https://nexamart.duckdns.org/${product_slug}`, // thay domain của bạn
     },
 
     openGraph: {
