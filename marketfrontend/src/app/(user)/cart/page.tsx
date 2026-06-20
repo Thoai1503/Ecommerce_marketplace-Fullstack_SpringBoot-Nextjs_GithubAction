@@ -72,9 +72,7 @@ const getShopDisplayName = (shop: any, fallback = "Loading shop name...") =>
 
 const isAuthQueryError = (error: unknown) => {
   const err = error as any;
-  const status = Number(
-    err?.status ?? err?.response?.status ?? err?.code ?? 0,
-  );
+  const status = Number(err?.status ?? err?.response?.status ?? err?.code ?? 0);
   const message = String(err?.message ?? err?.error ?? "").toLowerCase();
 
   return (
@@ -416,10 +414,7 @@ const ShoppingCart: React.FC = () => {
         acc[shopId].items.push(item);
         return acc;
       },
-      {} as Record<
-        number,
-        GroupedCartByShop & { items: EnrichedCartItem[] }
-      >,
+      {} as Record<number, GroupedCartByShop & { items: EnrichedCartItem[] }>,
     );
   }, [enrichedCartItems]);
 
@@ -468,7 +463,8 @@ const ShoppingCart: React.FC = () => {
 
   // ===== Checkbox logic =====
   const isAllSelected =
-    selectableItems.length > 0 && selectableItems.every((item) => item.selected);
+    selectableItems.length > 0 &&
+    selectableItems.every((item) => item.selected);
   const isIndeterminate =
     selectableItems.some((item) => item.selected) && !isAllSelected;
 
@@ -529,7 +525,9 @@ const ShoppingCart: React.FC = () => {
     setCartItems((prev) =>
       prev.map((item) =>
         item.product?.shop?.id === shopId &&
-        selectableShopItems.some((selectableItem) => selectableItem.id === item.id)
+        selectableShopItems.some(
+          (selectableItem) => selectableItem.id === item.id,
+        )
           ? { ...item, selected: !allSelected }
           : item,
       ),
@@ -826,205 +824,211 @@ const ShoppingCart: React.FC = () => {
                 </div>
 
                 {/* Products */}
-                {displayItems.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className={`card-body ${
-                      index < displayItems.length - 1 ? "border-bottom" : ""
-                    } ${item.isLocked ? "bg-light" : ""}`}
-                  >
-                    <div className="row align-items-center g-3">
-                      {/* Product Info */}
-                      <div className="col-md-5">
-                        <div className="d-flex align-items-center gap-3">
-                          <input
-                            type="checkbox"
-                            className="form-check-input"
-                            checked={item.selected && !item.isLocked}
-                            disabled={item.isLocked}
-                            onChange={() => toggleItemSelection(item.id)}
-                            style={{ width: "20px", height: "20px" }}
-                          />
-                          <div
-                            className="bg-light rounded overflow-hidden border flex-shrink-0"
-                            style={{ width: "96px", height: "96px" }}
-                          >
-                            <img
-                              src={
-                                item.productVariant?.imageUrl ??
-                                "/placeholder.png"
-                              }
-                              alt={item?.product?.name}
-                              className="w-100 h-100 object-fit-cover"
+                {displayItems.map((item, index) => {
+                  console.log("displayItems", displayItems);
+                  return (
+                    <div
+                      key={item.id}
+                      className={`card-body ${
+                        index < displayItems.length - 1 ? "border-bottom" : ""
+                      } ${item.isLocked ? "bg-light" : ""}`}
+                    >
+                      <div className="row align-items-center g-3">
+                        {/* Product Info */}
+                        <div className="col-md-5">
+                          <div className="d-flex align-items-center gap-3">
+                            <input
+                              type="checkbox"
+                              className="form-check-input"
+                              checked={item.selected && !item.isLocked}
+                              disabled={item.isLocked}
+                              onChange={() => toggleItemSelection(item.id)}
+                              style={{ width: "20px", height: "20px" }}
                             />
-                          </div>
-                          <div className="flex-grow-1 min-w-0">
-                            <h6 className="fw-bold mb-1 text-truncate">
-                              {item?.product?.name ||
-                                "Uploading product..."}
-                            </h6>
-                            <div className="small text-muted mb-1">
-                              Shop:{" "}
-                              {item?.product?.shop?.id ? (
-                                <Link
-                                  href={`/shop/${item.product.shop.id}`}
-                                  className="text-muted text-decoration-none shop-name-inline"
-                                >
-                                  {getShopDisplayName(item.product.shop)}
-                                </Link>
-                              ) : (
-                                getShopDisplayName(
-                                  item?.product?.shop,
-                                  "Uploading shop name...",
-                                )
-                              )}
-                            </div>
-                            {(item?.productVariant ||
-                              item.productVariant?.id) && (
-                              <div className="small text-muted d-flex align-items-center gap-1">
-                                Classify:{" "}
-                                <span className="text-dark fw-medium">
-                                  {item?.productVariant?.variantName ||
-                                    "Uploading variant name..."}
-                                </span>
-                                <i className="bi bi-chevron-down"></i>
-                              </div>
-                            )}
-                            {item.isLocked && (
-                              <div className="mt-2">
-                                <span className="badge bg-secondary">
-                                  {item.lockedReason || "Uploading locked reason..."}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Price & Actions */}
-                      <div className="col-md-7">
-                        <div className="row align-items-center g-3 text-center">
-                          {/* Price */}
-                          <div className="col-6 col-md-3">
-                            <div className="d-md-none small text-muted mb-1">
-                              Unit price
-                            </div>
-                            <div className="fw-bold">
-                              {formatCurrency(item.productVariant?.price ?? 0)}
-                            </div>
-                          </div>
-
-                          {/* Quantity */}
-                          <div className="col-6 col-md-3">
-                            <div className="d-md-none small text-muted mb-1">
-                             Quantity
-                            </div>
                             <div
-                              className="btn-group"
-                              role="group"
-                              style={{
-                                opacity:
-                                  updatingItems.has(item.id) || item.isLocked
-                                    ? 0.6
-                                    : 1,
-                                pointerEvents: item.isLocked ? "none" : "auto",
-                              }}
+                              className="bg-light rounded overflow-hidden border flex-shrink-0"
+                              style={{ width: "96px", height: "96px" }}
                             >
-                              <button
-                                className="btn btn-outline-secondary btn-sm"
-                                onClick={() => updateQuantity(item.id, -1)}
-                                disabled={
-                                  item.isLocked ||
-                                  updatingItems.has(item.id) ||
-                                  item.quantity <= 1
+                              <img
+                                src={
+                                  item.productVariant?.imageUrl ??
+                                  "/placeholder.png"
                                 }
-                              >
-                                <i className="bi bi-dash"></i>
-                              </button>
-                              <input
-                                type="text"
-                                className="form-control form-control-sm text-center"
-                                value={
-                                  updatingItems.has(item.id)
-                                    ? "..."
-                                    : item.quantity
-                                }
-                                readOnly
-                                style={{ width: "50px" }}
+                                alt={item?.product?.name}
+                                className="w-100 h-100 object-fit-cover"
                               />
-                              <button
-                                className="btn btn-outline-secondary btn-sm"
-                                onClick={() => updateQuantity(item.id, 1)}
-                                disabled={
-                                  item.isLocked ||
-                                  updatingItems.has(item.id)
-                                }
-                              >
-                                <i className="bi bi-plus"></i>
-                              </button>
                             </div>
-                            {stockWarning[item.id] && (
-                              <div
-                                className="text-danger mt-1"
-                                style={{ fontSize: "11px" }}
-                              >
-                                <i className="bi bi-exclamation-triangle-fill me-1"></i>
-                                {stockWarning[item.id]}
+                            <div className="flex-grow-1 min-w-0">
+                              <h6 className="fw-bold mb-1 text-truncate">
+                                {item?.product?.name || "Uploading product..."}
+                              </h6>
+                              <div className="small text-muted mb-1">
+                                Shop:{" "}
+                                {item?.product?.shop?.id ? (
+                                  <Link
+                                    href={`/shop/${item.product.shop.id}`}
+                                    className="text-muted text-decoration-none shop-name-inline"
+                                  >
+                                    {getShopDisplayName(item.product.shop)}
+                                  </Link>
+                                ) : (
+                                  getShopDisplayName(
+                                    item?.product?.shop,
+                                    "Uploading shop name...",
+                                  )
+                                )}
                               </div>
-                            )}
-                            {(item.stockQuantity ?? 0) > 0 &&
-                              !item.isLocked &&
-                              (item.stockQuantity ?? 0) <= 5 && (
-                                <div
-                                  className="text-warning mt-1"
-                                  style={{ fontSize: "11px" }}
-                                >
-                                  <i className="bi bi-clock-history me-1"></i>
-                                  Còn {item.stockQuantity} sản phẩm
+                              {(item?.productVariant ||
+                                item.productVariant?.id) && (
+                                <div className="small text-muted d-flex align-items-center gap-1">
+                                  Classify:{" "}
+                                  <span className="text-dark fw-medium">
+                                    {item?.productVariant?.variantName ||
+                                      "Uploading variant name..."}
+                                  </span>
+                                  <i className="bi bi-chevron-down"></i>
                                 </div>
                               )}
-                          </div>
-
-                          {/* Subtotal */}
-                          <div className="col-6 col-md-3">
-                            <div className="d-md-none small text-muted mb-1">
-                              Thành tiền
-                            </div>
-                            <div
-                              className={`fw-bold ${
-                                item.isLocked ? "text-muted" : "text-primary"
-                              }`}
-                            >
-                              {formatCurrency(
-                                (item.productVariant?.price ?? 0) *
-                                  item.quantity,
+                              {item.isLocked && (
+                                <div className="mt-2">
+                                  <span className="badge bg-secondary">
+                                    {item.lockedReason ||
+                                      "Uploading locked reason..."}
+                                  </span>
+                                </div>
                               )}
                             </div>
                           </div>
+                        </div>
 
-                          {/* Delete */}
-                          <div className="col-6 col-md-3">
-                            <button
-                              className="btn btn-link text-danger p-2"
-                              onClick={() => removeItem(item.id)}
-                              disabled={updatingItems.has(item.id)}
-                              title="Xoa san pham"
-                            >
-                              {updatingItems.has(item.id) ? (
-                                <span
-                                  className="spinner-border spinner-border-sm"
-                                  role="status"
+                        {/* Price & Actions */}
+                        <div className="col-md-7">
+                          <div className="row align-items-center g-3 text-center">
+                            {/* Price */}
+                            <div className="col-6 col-md-3">
+                              <div className="d-md-none small text-muted mb-1">
+                                Unit price
+                              </div>
+                              <div className="fw-bold">
+                                {formatCurrency(
+                                  item.productVariant?.price ?? 0,
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Quantity */}
+                            <div className="col-6 col-md-3">
+                              <div className="d-md-none small text-muted mb-1">
+                                Quantity
+                              </div>
+                              <div
+                                className="btn-group"
+                                role="group"
+                                style={{
+                                  opacity:
+                                    updatingItems.has(item.id) || item.isLocked
+                                      ? 0.6
+                                      : 1,
+                                  pointerEvents: item.isLocked
+                                    ? "none"
+                                    : "auto",
+                                }}
+                              >
+                                <button
+                                  className="btn btn-outline-secondary btn-sm"
+                                  onClick={() => updateQuantity(item.id, -1)}
+                                  disabled={
+                                    item.isLocked ||
+                                    updatingItems.has(item.id) ||
+                                    item.quantity <= 1
+                                  }
+                                >
+                                  <i className="bi bi-dash"></i>
+                                </button>
+                                <input
+                                  type="text"
+                                  className="form-control form-control-sm text-center"
+                                  value={
+                                    updatingItems.has(item.id)
+                                      ? "..."
+                                      : item.quantity
+                                  }
+                                  readOnly
+                                  style={{ width: "50px" }}
                                 />
-                              ) : (
-                                <i className="bi bi-trash"></i>
+                                <button
+                                  className="btn btn-outline-secondary btn-sm"
+                                  onClick={() => updateQuantity(item.id, 1)}
+                                  disabled={
+                                    item.isLocked || updatingItems.has(item.id)
+                                  }
+                                >
+                                  <i className="bi bi-plus"></i>
+                                </button>
+                              </div>
+                              {stockWarning[item.id] && (
+                                <div
+                                  className="text-danger mt-1"
+                                  style={{ fontSize: "11px" }}
+                                >
+                                  <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                                  {stockWarning[item.id]}
+                                </div>
                               )}
-                            </button>
+                              {(item.stockQuantity ?? 0) > 0 &&
+                                !item.isLocked &&
+                                (item.stockQuantity ?? 0) <= 5 && (
+                                  <div
+                                    className="text-warning mt-1"
+                                    style={{ fontSize: "11px" }}
+                                  >
+                                    <i className="bi bi-clock-history me-1"></i>
+                                    Còn {item.stockQuantity} sản phẩm
+                                  </div>
+                                )}
+                            </div>
+
+                            {/* Subtotal */}
+                            <div className="col-6 col-md-3">
+                              <div className="d-md-none small text-muted mb-1">
+                                Thành tiền
+                              </div>
+                              <div
+                                className={`fw-bold ${
+                                  item.isLocked ? "text-muted" : "text-primary"
+                                }`}
+                              >
+                                {formatCurrency(
+                                  (item.productVariant?.price ?? 0) *
+                                    item.quantity,
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Delete */}
+                            <div className="col-6 col-md-3">
+                              <button
+                                className="btn btn-link text-danger p-2"
+                                onClick={() => removeItem(item.id)}
+                                disabled={updatingItems.has(item.id)}
+                                title="Xoa san pham"
+                              >
+                                {updatingItems.has(item.id) ? (
+                                  <span
+                                    className="spinner-border spinner-border-sm"
+                                    role="status"
+                                  />
+                                ) : (
+                                  <i className="bi bi-trash"></i>
+                                )}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             );
           })}
@@ -1033,8 +1037,6 @@ const ShoppingCart: React.FC = () => {
         {/* Right Column: Summary */}
         <div className="col-lg-4">
           <div style={{ top: "88px" }}>
-
-
             {/* Payment Summary */}
             <div className="card shadow-sm mb-3">
               <div className="card-body">
