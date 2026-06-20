@@ -40,7 +40,7 @@ export default function GoSellerButton() {
         cursor: "pointer",
       }}
     >
-      Human Sales Channel
+      Kênh Người Bán
     </button>
   );
 }
